@@ -4,7 +4,8 @@ import { ElcamosoMark, ElcamosoLogo } from "@/components/ElcamosoLogo";
 import { BrandLoader } from "@/components/BrandLoader";
 import { useSettings } from "@/lib/drive/useSettings";
 import { useReducedMotion } from "@/lib/drive/useReducedMotion";
-import { getTuning } from "@/lib/drive/settings";
+import { getProfileGain, getTuning } from "@/lib/drive/settings";
+import { useHaptics } from "@/lib/drive/useHaptics";
 import { useDriveSession } from "@/lib/drive/useDriveSession";
 import { getProfile } from "@/lib/sound/profiles";
 
@@ -38,6 +39,16 @@ function DriveScreen() {
     volume: settings.volume,
     demoMotion: settings.demoMotion,
     tuning: getTuning(settings, settings.profileId),
+    profileGain: getProfileGain(settings, settings.profileId),
+    motionSensitivity: settings.motionSensitivity,
+    motionNoiseFloor: settings.motionNoiseFloor,
+  });
+
+  useHaptics({
+    enabled: settings.haptics,
+    active: status === "driving",
+    throttle: state.throttle,
+    regen: state.regen,
   });
   const [showSafety, setShowSafety] = useState(false);
   const navigate = useNavigate();

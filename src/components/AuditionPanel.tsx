@@ -2,7 +2,12 @@ import { ElcamosoMark } from "@/components/ElcamosoLogo";
 import { useAudition } from "@/lib/drive/useAudition";
 import { useReducedMotion } from "@/lib/drive/useReducedMotion";
 import { useSettings } from "@/lib/drive/useSettings";
-import { DEFAULT_TUNING, getTuning, type ProfileTuning } from "@/lib/drive/settings";
+import {
+  DEFAULT_TUNING,
+  getProfileGain,
+  getTuning,
+  type ProfileTuning,
+} from "@/lib/drive/settings";
 import { getProfile } from "@/lib/sound/profiles";
 
 /**
@@ -14,11 +19,17 @@ export function AuditionPanel({ profileId }: { profileId: string }) {
   const reducedMotion = useReducedMotion();
   const profile = getProfile(profileId);
   const tuning = getTuning(settings, profileId);
+  const profileGain = getProfileGain(settings, profileId);
   const { active, state, start, stop, targetKmh, setTarget } = useAudition({
     profileId,
     volume: settings.volume,
     tuning,
+    profileGain,
   });
+
+  const setGain = (value: number) => {
+    update({ profileGain: { ...settings.profileGain, [profileId]: value } });
+  };
 
   const setTuning = (next: Partial<ProfileTuning>) => {
     update({
@@ -41,7 +52,7 @@ export function AuditionPanel({ profileId }: { profileId: string }) {
             className="h-8 w-auto"
           />
           <div>
-            <h2 className="text-lg font-light">Audition — {profile.name}</h2>
+            <h2 className="text-lg font-light">Audition: {profile.name}</h2>
             <p className="mt-1 text-xs tracking-[0.18em] text-muted-foreground uppercase">
               Simulated motion · no sensors
             </p>
@@ -100,6 +111,31 @@ export function AuditionPanel({ profileId }: { profileId: string }) {
             value={continuous ? "—" : state.gear ? `D${state.gear}` : "—"}
           />
         </dl>
+      </div>
+
+      <div className="mt-12 border-t border-border pt-8">
+        <div className="flex items-baseline justify-between">
+          <label htmlFor="profile-gain" className="text-sm">
+            Profile balance
+          </label>
+          <span className="text-xs text-muted-foreground tabular-nums">
+            {profileGain.toFixed(2)}x
+          </span>
+        </div>
+        <input
+          id="profile-gain"
+          type="range"
+          min={0.4}
+          max={1.6}
+          step={0.05}
+          value={profileGain}
+          onChange={(e) => setGain(Number(e.target.value))}
+          className="mt-4 h-px w-full appearance-none bg-border accent-foreground"
+        />
+        <p className="mt-3 text-xs text-muted-foreground">
+          Level this profile against the others. Master volume and the safety limiter stay
+          in control, so dynamics are preserved.
+        </p>
       </div>
 
       <div className="mt-12 border-t border-border pt-8">
