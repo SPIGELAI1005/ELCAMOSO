@@ -34,6 +34,8 @@ export class SoundEngine {
   private ctx: AudioContext | null = null;
   private master: GainNode | null = null;
   private limiter: DynamicsCompressorNode | null = null;
+  private analyser: AnalyserNode | null = null;
+  private meterBuffer: Float32Array<ArrayBuffer> | null = null;
   private body: GainNode | null = null;
   private accents: GainNode | null = null;
   private beds: GainNode | null = null;
@@ -92,6 +94,13 @@ export class SoundEngine {
     limiter.release.value = 0.25;
     limiter.connect(ctx.destination);
 
+    // Metering tap: reads the post-limiter signal so the headroom meter shows
+    // what actually reaches the speakers.
+    const analyser = ctx.createAnalyser();
+    analyser.fftSize = 1024;
+    analyser.smoothingTimeConstant = 0.6;
+    limiter.connect(analyser);
+
     const master = ctx.createGain();
     master.gain.value = 0.0001;
     master.connect(limiter);
@@ -115,6 +124,8 @@ export class SoundEngine {
     filter.connect(body);
 
     this.limiter = limiter;
+    this.analyser = analyser;
+    this.meterBuffer = new Float32Array(analyser.fftSize);
     this.master = master;
     this.body = body;
     this.accents = accents;
@@ -366,6 +377,36 @@ export class SoundEngine {
     }
   }
 
+  /* ---------------------------------------------------------------- meter */
+
+  /**
+   * Live loudness reading. `headroom` is how much room is left before the
+   * output ceiling (1 = silent, 0 = at the ceiling) and `reduction` shows how
+   * hard the safety limiter is working.
+   */
+  getMeter(): { peak: number; rms: number; headroom: number; reduction: number } | null {
+    const analyser = this.analyser;
+    const buf = this.meterBuffer;
+    if (!analyser || !buf) return null;
+    analyser.getFloatTimeDomainData(buf);
+    let peak = 0;
+    let sum = 0;
+    for (let i = 0; i < buf.length; i += 1) {
+      const v = buf[i] ?? 0;
+      const a = Math.abs(v);
+      if (a > peak) peak = a;
+      sum += v * v;
+    }
+    const rms = Math.sqrt(sum / buf.length);
+    const ceiling = SoundEngine.MAX_GAIN;
+    return {
+      peak: Math.min(1, peak),
+      rms: Math.min(1, rms),
+      headroom: Math.max(0, 1 - Math.min(1, peak / ceiling)),
+      reduction: this.limiter ? Math.abs(this.limiter.reduction) : 0,
+    };
+  }
+
   /* ------------------------------------------------------------- per-frame */
 
   update(state: DriveState) {
@@ -449,7 +490,11 @@ export class SoundEngine {
       this.fireAccent(spec.kind, clock.next, spec.tone, level, clock.step, state);
       clock.step += 1;
       const swing =
-        spec.kind === "clack" || spec.kind === "chug"
+        spec.kind === "putt"
+          ? clock.step % 2
+            ? 0.62
+            : 1.38
+          : spec.kind === "clack" || spec.kind === "chug"
           ? clock.step % 2
             ? 0.74
             : 1.26
@@ -479,9 +524,99 @@ export class SoundEngine {
         return this.fireCreak(at, tone, level, step);
       case "laugh":
         return this.fireLaugh(at, tone, level, state);
+      case "rotor":
+        return this.fireRotor(at, tone, level, step, state);
+      case "putt":
+        return this.firePutt(at, tone, level, step);
       default:
         return this.fireBurst(kind, at, tone, level, step);
     }
+  }
+
+  /**
+   * One rotor blade passing overhead: a low thump with the characteristic slap
+   * of air, so the helicopter chops rather than hums.
+   */
+  private fireRotor(at: number, tone: number, level: number, step: number, state: DriveState) {
+    const ctx = this.ctx;
+    const out = this.bus();
+    if (!ctx || !out) return;
+
+    // body thump
+    const osc = ctx.createOscillator();
+    const og = ctx.createGain();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(tone * (step % 2 ? 1.08 : 1), at);
+    osc.frequency.exponentialRampToValueAtTime(tone * 0.6, at + 0.09);
+    og.gain.setValueAtTime(0.0001, at);
+    og.gain.exponentialRampToValueAtTime(Math.max(0.0002, level), at + 0.008);
+    og.gain.exponentialRampToValueAtTime(0.0001, at + 0.12);
+    osc.connect(og);
+    og.connect(out);
+    osc.start(at);
+    osc.stop(at + 0.16);
+
+    // blade slap: a short band of air pushed aside
+    const src = ctx.createBufferSource();
+    src.buffer = this.getNoise(ctx, "white");
+    src.loop = true;
+    const bp = ctx.createBiquadFilter();
+    bp.type = "bandpass";
+    bp.Q.value = 1.4;
+    bp.frequency.setValueAtTime(tone * 9, at);
+    bp.frequency.exponentialRampToValueAtTime(tone * 4, at + 0.08);
+    const sg = ctx.createGain();
+    const slap = level * (0.4 + state.load * 0.6);
+    sg.gain.setValueAtTime(0.0001, at);
+    sg.gain.exponentialRampToValueAtTime(Math.max(0.0002, slap), at + 0.006);
+    sg.gain.exponentialRampToValueAtTime(0.0001, at + 0.1);
+    src.connect(bp);
+    bp.connect(sg);
+    sg.connect(out);
+    src.start(at);
+    src.stop(at + 0.14);
+  }
+
+  /** A single-cylinder tractor stroke: putt ... putt ... with a lazy offbeat. */
+  private firePutt(at: number, tone: number, level: number, step: number) {
+    const ctx = this.ctx;
+    const out = this.bus();
+    if (!ctx || !out) return;
+    const osc = ctx.createOscillator();
+    const lp = ctx.createBiquadFilter();
+    const gain = ctx.createGain();
+    osc.type = "square";
+    osc.frequency.setValueAtTime(tone * (step % 2 ? 0.94 : 1.06), at);
+    osc.frequency.exponentialRampToValueAtTime(tone * 0.55, at + 0.13);
+    lp.type = "lowpass";
+    lp.frequency.setValueAtTime(tone * 7, at);
+    lp.frequency.exponentialRampToValueAtTime(tone * 2.4, at + 0.14);
+    gain.gain.setValueAtTime(0.0001, at);
+    gain.gain.exponentialRampToValueAtTime(Math.max(0.0002, level), at + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001, at + 0.2);
+    osc.connect(lp);
+    lp.connect(gain);
+    gain.connect(out);
+    osc.start(at);
+    osc.stop(at + 0.24);
+
+    // exhaust puff through the stack
+    const src = ctx.createBufferSource();
+    src.buffer = this.getNoise(ctx, "pink");
+    src.loop = true;
+    const bp = ctx.createBiquadFilter();
+    bp.type = "bandpass";
+    bp.Q.value = 1.1;
+    bp.frequency.value = tone * 5;
+    const sg = ctx.createGain();
+    sg.gain.setValueAtTime(0.0001, at);
+    sg.gain.exponentialRampToValueAtTime(Math.max(0.0002, level * 0.45), at + 0.012);
+    sg.gain.exponentialRampToValueAtTime(0.0001, at + 0.16);
+    src.connect(bp);
+    bp.connect(sg);
+    sg.connect(out);
+    src.start(at);
+    src.stop(at + 0.2);
   }
 
   private bus() {
@@ -1023,6 +1158,8 @@ export class SoundEngine {
     this.ctx = null;
     this.master = null;
     this.limiter = null;
+    this.analyser = null;
+    this.meterBuffer = null;
     this.body = null;
     this.accents = null;
     this.beds = null;

@@ -27,12 +27,16 @@ export function useAudition({
   const [active, setActive] = useState(false);
   const [state, setState] = useState<DriveState>(IDLE_STATE);
   const [targetKmh, setTargetKmh] = useState(60);
+  const [meter, setMeter] = useState<{ peak: number; rms: number; headroom: number; reduction: number } | null>(
+    null,
+  );
 
   const engineRef = useRef<SoundEngine | null>(null);
   const stateRef = useRef<DriveState>(IDLE_STATE);
   const speedRef = useRef(0);
   const targetRef = useRef(60);
   const lastTick = useRef(0);
+  const lastMeter = useRef(0);
   const rafId = useRef<number | null>(null);
 
   const profileRef = useRef(getProfile(profileId));
@@ -69,6 +73,12 @@ export function useAudition({
     stateRef.current = next;
     engineRef.current?.update(next);
     setState(next);
+    // Loudness readout is sampled a few times a second: enough for a meter,
+    // cheap enough to sit inside the animation loop.
+    if (now - lastMeter.current > 120) {
+      lastMeter.current = now;
+      setMeter(engineRef.current?.getMeter() ?? null);
+    }
     rafId.current = requestAnimationFrame(loop);
   }, []);
 
@@ -80,6 +90,7 @@ export function useAudition({
     speedRef.current = 0;
     stateRef.current = IDLE_STATE;
     setState(IDLE_STATE);
+    setMeter(null);
     setActive(false);
   }, []);
 
@@ -109,5 +120,5 @@ export function useAudition({
 
   useEffect(() => () => stop(), [stop]);
 
-  return { active, state, start, stop, targetKmh, setTarget };
+  return { active, state, start, stop, targetKmh, setTarget, meter };
 }

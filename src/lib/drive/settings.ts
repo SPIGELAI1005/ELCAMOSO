@@ -472,12 +472,14 @@ export function readRawStored(): string | null {
 /* ---------------------------------------------------------------- transfer */
 
 const BACKUP_KIND = "elcamoso.settings.backup";
-const BACKUP_VERSION = 2;
+const BACKUP_VERSION = 3;
 
 export interface SettingsBackup {
   kind: typeof BACKUP_KIND;
   version: number;
   exportedAt: string;
+  /** app fields the importer can report on, even across versions */
+  app: { name: "ELCAMOSO" };
   settings: ElcamosoSettings;
 }
 
@@ -486,6 +488,7 @@ export function buildBackup(): SettingsBackup {
     kind: BACKUP_KIND,
     version: BACKUP_VERSION,
     exportedAt: new Date().toISOString(),
+    app: { name: "ELCAMOSO" },
     settings: readSettings(),
   };
 }
@@ -506,16 +509,197 @@ export function exportSettingsFile() {
   URL.revokeObjectURL(url);
 }
 
-/** Validates and normalises an imported backup into usable settings. */
-export function parseBackup(raw: string): ElcamosoSettings {
-  const data: unknown = JSON.parse(raw);
-  const payload = isRecord(data) && isRecord(data["settings"]) ? data["settings"] : data;
-  if (!isRecord(payload)) throw new Error("This file is not an ELCAMOSO backup.");
-  return sanitizeSettings(payload).settings;
+/* ------------------------------------------------------ version migration */
+
+/**
+ * Older exports used different field names and had no Studio sounds. Each step
+ * lifts a payload one version forward, so any earlier backup arrives in the
+ * current shape instead of being rejected.
+ */
+function migratePayload(payload: Record<string, unknown>, version: number) {
+  const notes: string[] = [];
+  const p: Record<string, unknown> = { ...payload };
+
+  if (version < 2) {
+    // v1: single "profile"/"sensitivity" fields, one shared gain, no Garage.
+    if (p["profile"] !== undefined && p["profileId"] === undefined) {
+      p["profileId"] = p["profile"];
+      notes.push("Renamed the saved sound to the current field.");
+    }
+    if (p["sensitivity"] !== undefined && p["motionSensitivity"] === undefined) {
+      p["motionSensitivity"] = p["sensitivity"];
+      notes.push("Carried motion sensitivity over from the older format.");
+    }
+    if (typeof p["gain"] === "number" && !isRecord(p["profileGain"])) {
+      const id = typeof p["profileId"] === "string" ? p["profileId"] : DEFAULT_PROFILE_ID;
+      p["profileGain"] = { [id]: p["gain"] };
+      notes.push("Turned the old single gain into a per-sound balance.");
+    }
+    if (p["acknowledged"] !== undefined && p["safetyAcknowledged"] === undefined) {
+      p["safetyAcknowledged"] = p["acknowledged"];
+    }
+    if (!Array.isArray(p["customSounds"])) p["customSounds"] = [];
+    if (!Array.isArray(p["favourites"])) p["favourites"] = [];
+  }
+
+  if (version < 3) {
+    // v2: no onboarding step and no drive counter.
+    if (p["onboardingStep"] === undefined) {
+      p["onboardingStep"] = p["onboarded"] === true ? 2 : 0;
+      notes.push("Rebuilt the setup progress from the saved setup state.");
+    }
+    if (p["driveCount"] === undefined) p["driveCount"] = 0;
+    if (p["devPanel"] === undefined) p["devPanel"] = false;
+  }
+
+  return { payload: p, notes };
 }
 
-export async function importSettingsFile(file: File) {
+export type ImportMode = "merge" | "replace";
+
+export interface ImportReport {
+  version: number;
+  mode: ImportMode;
+  /** custom sounds that arrived and were kept */
+  soundsAdded: number;
+  /** custom sounds already present under the same id */
+  soundsSkipped: number;
+  favouritesAdded: number;
+  tuningsMerged: number;
+  /** compatibility steps applied to an older file */
+  migrations: string[];
+  /** values that had to be repaired to fit the current app */
+  repairs: SettingsIssue[];
+}
+
+interface ParsedBackup {
+  settings: ElcamosoSettings;
+  report: Omit<ImportReport, "mode" | "soundsAdded" | "soundsSkipped" | "favouritesAdded" | "tuningsMerged">;
+}
+
+/** Validates, migrates and normalises a backup file into usable settings. */
+export function parseBackup(raw: string): ParsedBackup {
+  let data: unknown;
+  try {
+    data = JSON.parse(raw);
+  } catch {
+    throw new Error("This file is not valid JSON.");
+  }
+  if (!isRecord(data)) throw new Error("This file is not an ELCAMOSO backup.");
+
+  const kind = typeof data["kind"] === "string" ? data["kind"] : "";
+  if (kind && kind !== BACKUP_KIND) {
+    throw new Error("This backup was made by a different app.");
+  }
+
+  const version = num(data["version"], 1, 1, 99);
+  const body = isRecord(data["settings"]) ? data["settings"] : data;
+  if (!isRecord(body)) throw new Error("This backup has no settings in it.");
+  if (version > BACKUP_VERSION) {
+    // A newer file is still readable: unknown fields are simply dropped.
+    const { settings, issues } = sanitizeSettings(body);
+    return {
+      settings,
+      report: {
+        version,
+        migrations: ["This backup came from a newer version; unknown values were skipped."],
+        repairs: issues,
+      },
+    };
+  }
+
+  const { payload, notes } = migratePayload(body, version);
+  const { settings, issues } = sanitizeSettings(payload);
+  return { settings, report: { version, migrations: notes, repairs: issues } };
+}
+
+/**
+ * Merges an imported backup into the current setup: Studio sounds, favourites,
+ * tuning and balances are added alongside what is already here, and existing
+ * ids are never overwritten.
+ */
+export function mergeBackup(
+  current: ElcamosoSettings,
+  incoming: ElcamosoSettings,
+): { settings: ElcamosoSettings; soundsAdded: number; soundsSkipped: number; favouritesAdded: number; tuningsMerged: number } {
+  const existingIds = new Set(current.customSounds.map((s) => s.id));
+  const added: CustomSound[] = [];
+  let soundsSkipped = 0;
+  for (const sound of incoming.customSounds) {
+    if (existingIds.has(sound.id)) {
+      soundsSkipped += 1;
+      continue;
+    }
+    existingIds.add(sound.id);
+    added.push(sound);
+  }
+
+  const favourites = Array.from(new Set([...current.favourites, ...incoming.favourites]));
+  const favouritesAdded = favourites.length - current.favourites.length;
+
+  const tuning = { ...current.tuning };
+  let tuningsMerged = 0;
+  for (const [id, value] of Object.entries(incoming.tuning)) {
+    if (!tuning[id]) {
+      tuning[id] = value;
+      tuningsMerged += 1;
+    }
+  }
+
+  const profileGain = { ...incoming.profileGain, ...current.profileGain };
+
+  const settings: ElcamosoSettings = {
+    ...current,
+    volume: incoming.volume,
+    reducedMotion: incoming.reducedMotion,
+    haptics: incoming.haptics,
+    motionSensitivity: incoming.motionSensitivity,
+    motionNoiseFloor: incoming.motionNoiseFloor,
+    calibratedAt: incoming.calibratedAt,
+    customSounds: [...current.customSounds, ...added],
+    favourites,
+    tuning,
+    profileGain,
+    driveCount: Math.max(current.driveCount, incoming.driveCount),
+  };
+
+  // Keep the imported sound selected only if it can actually be resolved here.
+  const known = new Set([
+    ...SOUND_PROFILES.map((s) => s.id),
+    ...settings.customSounds.map((s) => s.id),
+  ]);
+  if (known.has(incoming.profileId)) settings.profileId = incoming.profileId;
+
+  return { settings, soundsAdded: added.length, soundsSkipped, favouritesAdded, tuningsMerged };
+}
+
+export async function importSettingsFile(
+  file: File,
+  mode: ImportMode = "merge",
+): Promise<ImportReport> {
   const text = await file.text();
-  const next = parseBackup(text);
-  return writeSettings(next);
+  const { settings: incoming, report } = parseBackup(text);
+
+  if (mode === "replace") {
+    writeSettings(incoming);
+    return {
+      ...report,
+      mode,
+      soundsAdded: incoming.customSounds.length,
+      soundsSkipped: 0,
+      favouritesAdded: incoming.favourites.length,
+      tuningsMerged: Object.keys(incoming.tuning).length,
+    };
+  }
+
+  const merged = mergeBackup(readSettings(), incoming);
+  writeSettings(merged.settings);
+  return {
+    ...report,
+    mode,
+    soundsAdded: merged.soundsAdded,
+    soundsSkipped: merged.soundsSkipped,
+    favouritesAdded: merged.favouritesAdded,
+    tuningsMerged: merged.tuningsMerged,
+  };
 }

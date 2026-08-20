@@ -9,6 +9,7 @@ import {
   type ProfileTuning,
 } from "@/lib/drive/settings";
 import { getProfile } from "@/lib/sound/profiles";
+import { HeadroomMeter } from "@/components/HeadroomMeter";
 
 /**
  * Audition mode - preview the selected profile with simulated motion and
@@ -20,7 +21,7 @@ export function AuditionPanel({ profileId }: { profileId: string }) {
   const profile = getProfile(profileId);
   const tuning = getTuning(settings, profileId);
   const profileGain = getProfileGain(settings, profileId);
-  const { active, state, start, stop, targetKmh, setTarget } = useAudition({
+  const { active, state, start, stop, targetKmh, setTarget, meter } = useAudition({
     profileId,
     volume: settings.volume,
     tuning,
@@ -38,6 +39,15 @@ export function AuditionPanel({ profileId }: { profileId: string }) {
   };
 
   const continuous = profile.drivetrainMode === "continuous";
+  const headroom = (
+    <HeadroomMeter
+      className="mt-10 border-t border-border pt-6"
+      meter={meter}
+      profile={profile}
+      volume={settings.volume}
+      profileGain={profileGain}
+    />
+  );
 
   return (
     <section className="mt-16 border border-border p-6 sm:p-8">
@@ -176,6 +186,7 @@ export function AuditionPanel({ profileId }: { profileId: string }) {
           />
         </div>
       </div>
+      {headroom}
     </section>
   );
 }
