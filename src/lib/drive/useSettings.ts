@@ -18,11 +18,31 @@ export function useSettings() {
 
   useEffect(() => {
     const sync = () => {
-      setSettings(readSettings());
-      setLoadReport(getLastLoadReport());
+      // Never let a storage failure keep the app in a loading state: fall back
+      // to defaults so Drive stays reachable.
+      try {
+        setSettings(readSettings());
+        setLoadReport(getLastLoadReport());
+      } catch (error) {
+        setSettings(DEFAULT_SETTINGS);
+        setLoadReport({
+          status: "corrupt",
+          at: Date.now(),
+          issues: [
+            {
+              field: "storage",
+              detail: error instanceof Error ? error.message : "unreadable",
+            },
+          ],
+          source: "fallback",
+        });
+      }
     };
-    sync();
-    setLoaded(true);
+    try {
+      sync();
+    } finally {
+      setLoaded(true);
+    }
     window.addEventListener("elcamoso:settings", sync);
     window.addEventListener("storage", sync);
     return () => {
@@ -30,6 +50,7 @@ export function useSettings() {
       window.removeEventListener("storage", sync);
     };
   }, []);
+
 
   // Studio creations must be resolvable by id everywhere the engine looks them up.
   const customProfiles = useMemo(() => {
