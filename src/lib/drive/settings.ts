@@ -590,7 +590,7 @@ export function readRawStored(): string | null {
 /* ---------------------------------------------------------------- transfer */
 
 const BACKUP_KIND = "elcamoso.settings.backup";
-const BACKUP_VERSION = 3;
+const BACKUP_VERSION = 4;
 
 export interface SettingsBackup {
   kind: typeof BACKUP_KIND;
