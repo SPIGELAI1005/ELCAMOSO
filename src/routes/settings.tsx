@@ -260,10 +260,11 @@ function Settings() {
         <section className="mt-12 border-t border-border pt-8">
           <p className="text-base">Transfer</p>
           <p className="mt-2 text-sm text-muted-foreground">
-            Export your profiles, tuning and drive settings as a file, then import it on
-            another device.
+            Export your sounds, tuning and drive settings as a file, then import it on
+            another device. Older exports are upgraded automatically, and merging keeps
+            everything you already have.
           </p>
-          <div className="mt-6 flex flex-wrap gap-4">
+          <div className="mt-6 flex flex-wrap items-center gap-4">
             <button
               onClick={() => exportSettingsFile()}
               className="h-12 rounded-full border border-border px-8 text-[11px] tracking-[0.24em] uppercase hover:bg-secondary"
@@ -271,10 +272,22 @@ function Settings() {
               Export
             </button>
             <button
-              onClick={() => fileRef.current?.click()}
+              onClick={() => {
+                importMode.current = "merge";
+                fileRef.current?.click();
+              }}
               className="h-12 rounded-full border border-border px-8 text-[11px] tracking-[0.24em] uppercase hover:bg-secondary"
             >
-              Import
+              Import and merge
+            </button>
+            <button
+              onClick={() => {
+                importMode.current = "replace";
+                fileRef.current?.click();
+              }}
+              className="h-12 rounded-full border border-border px-8 text-[11px] tracking-[0.24em] text-muted-foreground uppercase hover:bg-secondary hover:text-foreground"
+            >
+              Import and replace
             </button>
             <input
               ref={fileRef}
@@ -291,7 +304,15 @@ function Settings() {
           {transferNote ? (
             <p className="mt-4 text-sm text-muted-foreground">{transferNote}</p>
           ) : null}
+          {transferDetails.length ? (
+            <ul className="mt-3 space-y-1 text-xs text-muted-foreground">
+              {transferDetails.map((line) => (
+                <li key={line}>{line}</li>
+              ))}
+            </ul>
+          ) : null}
         </section>
+
 
 
         <section className="mt-12 border-t border-border pt-8">
