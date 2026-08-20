@@ -80,6 +80,8 @@ function Sounds() {
           );
         })}
 
+        <AuditionPanel profileId={settings.profileId} />
+
 
         <div className="mt-16 flex flex-wrap items-center gap-8">
           <Link
