@@ -31,6 +31,7 @@ type Step = 0 | 1 | 2;
 function Onboarding() {
   const navigate = useNavigate();
   const { settings, update } = useSettings();
+  const reducedMotion = useReducedMotion();
   const [step, setStep] = useState<Step>(0);
   const [sensorState, setSensorState] = useState<"idle" | "asking" | "ready" | "denied">(
     "idle",
