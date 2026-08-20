@@ -5,6 +5,8 @@ export interface ElcamosoSettings {
   volume: number;
   demoMotion: boolean;
   safetyAcknowledged: boolean;
+  onboarded: boolean;
+  lastDriveAt: number | null;
 }
 
 const KEY = "elcamoso.settings";
@@ -14,6 +16,8 @@ export const DEFAULT_SETTINGS: ElcamosoSettings = {
   volume: 0.7,
   demoMotion: false,
   safetyAcknowledged: false,
+  onboarded: false,
+  lastDriveAt: null,
 };
 
 export function readSettings(): ElcamosoSettings {
@@ -29,7 +33,11 @@ export function readSettings(): ElcamosoSettings {
 export function writeSettings(next: Partial<ElcamosoSettings>) {
   if (typeof window === "undefined") return DEFAULT_SETTINGS;
   const merged = { ...readSettings(), ...next };
-  window.localStorage.setItem(KEY, JSON.stringify(merged));
+  try {
+    window.localStorage.setItem(KEY, JSON.stringify(merged));
+  } catch {
+    /* storage unavailable — keep the session in memory only */
+  }
   window.dispatchEvent(new CustomEvent("elcamoso:settings"));
   return merged;
 }
