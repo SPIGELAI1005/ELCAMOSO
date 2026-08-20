@@ -213,7 +213,7 @@ export class SoundEngine {
   setVolume(value: number) {
     this.volume = value;
     if (this.ctx && this.master) {
-      this.master.gain.setTargetAtTime(Math.max(0.0001, value), this.ctx.currentTime, 0.2);
+      this.master.gain.setTargetAtTime(this.safeVolume(value), this.ctx.currentTime, 0.2);
     }
   }
 
@@ -253,7 +253,8 @@ export class SoundEngine {
 
     if (this.master) {
       const duck = 1 - state.regen * 0.35;
-      this.master.gain.setTargetAtTime(this.volume * (0.55 + state.load * 0.45) * duck, t, 0.12);
+      const target = this.safeVolume(this.volume * (0.55 + state.load * 0.45) * duck);
+      this.master.gain.setTargetAtTime(target, t, 0.12);
     }
 
     if (v.rhythm) this.scheduleRhythm(state);
