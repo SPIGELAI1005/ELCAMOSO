@@ -854,6 +854,8 @@ export async function importSettingsFile(
       soundsSkipped: 0,
       favouritesAdded: incoming.favourites.length,
       tuningsMerged: Object.keys(incoming.tuning).length,
+      playlistsAdded: incoming.playlists.length,
+      snippetsAdded: incoming.snippets.length,
     };
   }
 
@@ -866,5 +868,8 @@ export async function importSettingsFile(
     soundsSkipped: merged.soundsSkipped,
     favouritesAdded: merged.favouritesAdded,
     tuningsMerged: merged.tuningsMerged,
+    playlistsAdded: merged.playlistsAdded,
+    snippetsAdded: merged.snippetsAdded,
   };
 }
+
