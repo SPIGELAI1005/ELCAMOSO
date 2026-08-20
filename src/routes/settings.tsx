@@ -1,12 +1,15 @@
-import { useRef, useState } from "react";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { useRef, useEffect, useState } from "react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { BrandNav } from "@/components/BrandNav";
 import { useSettings } from "@/lib/drive/useSettings";
 import {
+  clearStoredSettings,
   exportSettingsFile,
   getProfileGain,
   importSettingsFile,
+  resetOnboarding,
 } from "@/lib/drive/settings";
+import { DiagnosticsPanel } from "@/components/DiagnosticsPanel";
 import { hapticsSupported } from "@/lib/drive/useHaptics";
 import { getProfile } from "@/lib/sound/profiles";
 
@@ -32,7 +35,12 @@ export const Route = createFileRoute("/settings")({
 });
 
 function Settings() {
-  const { settings, update } = useSettings();
+  const { settings, update, loaded, loadReport } = useSettings();
+  const navigate = useNavigate();
+  const [recoveryNote, setRecoveryNote] = useState<string | null>(null);
+  // Resolved after hydration so server and client HTML always match.
+  const [canVibrate, setCanVibrate] = useState(true);
+  useEffect(() => setCanVibrate(hapticsSupported()), []);
   const fileRef = useRef<HTMLInputElement | null>(null);
   const [transferNote, setTransferNote] = useState<string | null>(null);
   const profileGain = getProfileGain(settings, settings.profileId);
@@ -133,7 +141,7 @@ function Settings() {
               <p className="mt-2 text-sm text-muted-foreground">
                 Optional vibration that follows throttle and regen intensity as secondary
                 confirmation. The speed and RPM display stays unchanged.
-                {hapticsSupported() ? "" : " This device does not support vibration."}
+                {canVibrate ? "" : " This device does not support vibration."}
               </p>
             </div>
             <Toggle
@@ -229,6 +237,27 @@ function Settings() {
         </section>
 
         <section className="mt-12 border-t border-border pt-8">
+          <p className="text-base">Studio &amp; Garage</p>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Design your own sound, then keep every creation and favourite in one place.
+          </p>
+          <div className="mt-6 flex flex-wrap gap-4">
+            <Link
+              to="/studio"
+              className="inline-flex h-12 items-center rounded-full border border-border px-8 text-[11px] tracking-[0.24em] uppercase hover:bg-secondary"
+            >
+              Studio
+            </Link>
+            <Link
+              to="/garage"
+              className="inline-flex h-12 items-center rounded-full border border-border px-8 text-[11px] tracking-[0.24em] uppercase hover:bg-secondary"
+            >
+              Garage
+            </Link>
+          </div>
+        </section>
+
+        <section className="mt-12 border-t border-border pt-8">
           <p className="text-base">Transfer</p>
           <p className="mt-2 text-sm text-muted-foreground">
             Export your profiles, tuning and drive settings as a file, then import it on
@@ -263,6 +292,75 @@ function Settings() {
             <p className="mt-4 text-sm text-muted-foreground">{transferNote}</p>
           ) : null}
         </section>
+
+
+        <section className="mt-12 border-t border-border pt-8">
+          <p className="text-base">Setup and recovery</p>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Run the guided setup again, or clear everything saved on this device if the
+            app ever gets stuck. Drive stays reachable either way.
+          </p>
+          <div className="mt-6 flex flex-wrap gap-4">
+            <button
+              onClick={() => {
+                resetOnboarding();
+                setRecoveryNote("Onboarding reset. Starting setup again.");
+                void navigate({ to: "/onboarding" });
+              }}
+              className="h-12 rounded-full border border-border px-8 text-[11px] tracking-[0.24em] uppercase hover:bg-secondary"
+            >
+              Reset onboarding
+            </button>
+            <button
+              onClick={() => {
+                resetOnboarding();
+                setRecoveryNote("Onboarding state cleared. You can set it up later.");
+              }}
+              className="h-12 rounded-full border border-border px-8 text-[11px] tracking-[0.24em] uppercase hover:bg-secondary"
+            >
+              Clear onboarding state
+            </button>
+            <button
+              onClick={() => {
+                clearStoredSettings();
+                setRecoveryNote("All saved data cleared on this device.");
+              }}
+              className="h-12 rounded-full border border-border px-8 text-[11px] tracking-[0.24em] uppercase hover:bg-secondary"
+            >
+              Clear all saved data
+            </button>
+            <Link
+              to="/drive"
+              className="inline-flex h-12 items-center rounded-full border border-border px-8 text-[11px] tracking-[0.24em] uppercase hover:bg-secondary"
+            >
+              Go to Drive
+            </Link>
+          </div>
+          {recoveryNote ? (
+            <p className="mt-4 text-sm text-muted-foreground">{recoveryNote}</p>
+          ) : null}
+        </section>
+
+        <section className="mt-12 border-t border-border pt-8">
+          <div className="flex items-start justify-between gap-8">
+            <div>
+              <p className="text-base">Diagnostics panel</p>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Shows the last storage load result and the flags that decide which screen
+                you land on. Useful if setup ever repeats itself.
+              </p>
+            </div>
+            <Toggle
+              checked={settings.devPanel}
+              onChange={(v) => update({ devPanel: v })}
+              label="Diagnostics panel"
+            />
+          </div>
+        </section>
+
+        {settings.devPanel ? (
+          <DiagnosticsPanel settings={settings} loadReport={loadReport} loaded={loaded} />
+        ) : null}
 
         <section className="mt-12 border-t border-border pt-8">
           <p className="text-base">Your drive stays yours.</p>
