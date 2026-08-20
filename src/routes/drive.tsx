@@ -133,6 +133,7 @@ function Driving({
   throttle,
   regen,
   waveResponse,
+  reducedMotion,
   rpm,
   gear,
   continuous,
@@ -145,6 +146,7 @@ function Driving({
   throttle: number;
   regen: number;
   waveResponse: number;
+  reducedMotion: boolean;
   rpm: number;
   gear: number;
   continuous: boolean;
@@ -159,6 +161,7 @@ function Driving({
         throttle={throttle}
         regen={regen}
         waveResponse={waveResponse}
+        reducedMotion={reducedMotion}
         className="h-10 w-auto"
       />
 
