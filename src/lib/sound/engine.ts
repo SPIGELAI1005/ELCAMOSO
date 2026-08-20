@@ -370,14 +370,18 @@ export class SoundEngine {
   async stop() {
     const ctx = this.ctx;
     if (!ctx) return;
+    if (this.swapTimer) clearTimeout(this.swapTimer);
+    this.swapTimer = null;
     if (this.master) this.master.gain.setTargetAtTime(0.0001, ctx.currentTime, 0.2);
     await new Promise((r) => setTimeout(r, 380));
     this.teardownVoices();
     await ctx.close();
     this.ctx = null;
     this.master = null;
+    this.limiter = null;
     this.body = null;
     this.accents = null;
     this.filter = null;
+    this.profile = null;
   }
 }
