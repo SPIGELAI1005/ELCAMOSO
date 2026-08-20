@@ -26,15 +26,17 @@ export function useSettings() {
       } catch (error) {
         setSettings(DEFAULT_SETTINGS);
         setLoadReport({
-          status: "corrupt",
+          outcome: "corrupt",
           at: Date.now(),
+          size: 0,
           issues: [
             {
               field: "storage",
               detail: error instanceof Error ? error.message : "unreadable",
             },
           ],
-          source: "fallback",
+          message:
+            "Saved settings could not be read on this device, so defaults are in use. Drive still works.",
         });
       }
     };
