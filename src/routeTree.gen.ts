@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as DriveRouteImport } from './routes/drive'
+import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as SoundsRouteImport } from './routes/sounds'
 
@@ -30,6 +31,11 @@ const DriveRoute = DriveRouteImport.update({
   path: '/drive',
   getParentRoute: () => rootRouteImport,
 } as any)
+const OnboardingRoute = OnboardingRouteImport.update({
+  id: '/onboarding',
+  path: '/onboarding',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
@@ -45,6 +51,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/drive': typeof DriveRoute
+  '/onboarding': typeof OnboardingRoute
   '/settings': typeof SettingsRoute
   '/sounds': typeof SoundsRoute
 }
@@ -52,6 +59,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/drive': typeof DriveRoute
+  '/onboarding': typeof OnboardingRoute
   '/settings': typeof SettingsRoute
   '/sounds': typeof SoundsRoute
 }
@@ -60,21 +68,30 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/drive': typeof DriveRoute
+  '/onboarding': typeof OnboardingRoute
   '/settings': typeof SettingsRoute
   '/sounds': typeof SoundsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/about' | '/drive' | '/settings' | '/sounds'
+  fullPaths: '/' | '/about' | '/drive' | '/onboarding' | '/settings' | '/sounds'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/about' | '/drive' | '/settings' | '/sounds'
-  id: '__root__' | '/' | '/about' | '/drive' | '/settings' | '/sounds'
+  to: '/' | '/about' | '/drive' | '/onboarding' | '/settings' | '/sounds'
+  id:
+    | '__root__'
+    | '/'
+    | '/about'
+    | '/drive'
+    | '/onboarding'
+    | '/settings'
+    | '/sounds'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AboutRoute: typeof AboutRoute
   DriveRoute: typeof DriveRoute
+  OnboardingRoute: typeof OnboardingRoute
   SettingsRoute: typeof SettingsRoute
   SoundsRoute: typeof SoundsRoute
 }
@@ -102,6 +119,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DriveRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/onboarding': {
+      id: '/onboarding'
+      path: '/onboarding'
+      fullPath: '/onboarding'
+      preLoaderRoute: typeof OnboardingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/settings': {
       id: '/settings'
       path: '/settings'
@@ -123,6 +147,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AboutRoute: AboutRoute,
   DriveRoute: DriveRoute,
+  OnboardingRoute: OnboardingRoute,
   SettingsRoute: SettingsRoute,
   SoundsRoute: SoundsRoute,
 }
