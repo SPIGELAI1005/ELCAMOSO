@@ -72,13 +72,13 @@ export function computeDriveState({
   // pick highest gear that keeps rpm under ~85% of redline
   let gear = 1;
   for (let i = 0; i < t.gearRatios.length; i += 1) {
-    const rpm = t.idleRpm + kmh * t.gearRatios[i];
+    const rpm = t.idleRpm + kmh * t.gearRatios[i]!;
     if (rpm < t.redlineRpm * 0.85 || i === 0) gear = i + 1;
     if (rpm < t.redlineRpm * 0.85) break;
   }
   const targetRpm = Math.min(
     t.redlineRpm,
-    t.idleRpm + kmh * t.gearRatios[gear - 1] + throttle * 900,
+    t.idleRpm + kmh * t.gearRatios[gear - 1]! + throttle * 900,
   );
   const shift = clamp(dt / t.shiftSmoothing, 0, 1);
   const rpm = previous.rpm + (targetRpm - previous.rpm) * shift;

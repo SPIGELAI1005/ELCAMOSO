@@ -4,10 +4,10 @@ type Variant = "full" | "mark" | "wordmark";
 
 interface MarkProps {
   /** 0..1 — how many waves are lit / how far sound radiates */
-  intensity?: number;
+  intensity?: number | undefined;
   /** animate waves in on mount */
-  animate?: boolean;
-  className?: string;
+  animate?: boolean | undefined;
+  className?: string | undefined;
 }
 
 const WAVES = [
@@ -60,8 +60,8 @@ export function ElcamosoWordmark({ className }: { className?: string }) {
 }
 
 interface LogoProps extends MarkProps {
-  variant?: Variant;
-  wordmarkClassName?: string;
+  variant?: Variant | undefined;
+  wordmarkClassName?: string | undefined;
 }
 
 export function ElcamosoLogo({

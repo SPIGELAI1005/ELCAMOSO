@@ -95,5 +95,5 @@ export const SOUND_PROFILES: SoundProfile[] = [
 export const DEFAULT_PROFILE_ID = "gt-v8";
 
 export function getProfile(id: string | null | undefined): SoundProfile {
-  return SOUND_PROFILES.find((p) => p.id === id) ?? SOUND_PROFILES[0];
+  return SOUND_PROFILES.find((p) => p.id === id) ?? SOUND_PROFILES[0]!;
 }
