@@ -1,29 +1,32 @@
-# Welcome to your Lovable project
+# ELCAMOSO
 
-This project was built with [Lovable](https://lovable.dev).
+Your EV. Your sound.
 
-## Build with Lovable
+ELCAMOSO is a motion-responsive sound experience for electric vehicles.
 
-Open your project in the [Lovable editor](https://lovable.dev) and keep building.
+It uses smartphone speed and motion data to create dynamic sound profiles that react to the
+drive in real time.
 
-- **Ship faster**: describe what you want to build and Lovable handles the code.
-- **Stay in sync**: connect the project to GitHub and every change made in Lovable is committed straight to your repository.
-- **Full ownership**: this code is yours. Push to your repository and your changes sync back into Lovable, ready for your next prompt.
+## Architecture
+
+- `src/lib/drive/model.ts` — the shared `DriveState` telemetry interface (speed, acceleration,
+  throttle, regen, virtual RPM, gear, load) and the model that derives it.
+- `src/lib/drive/useDriveSession.ts` — geolocation/demo motion source plus the render loop that
+  feeds telemetry into the sound engine.
+- `src/lib/sound/profiles.ts` — sound profiles. Each declares a `drivetrainMode`:
+  - `virtual-transmission` (GT V8, Racing V10): speed → gear → virtual RPM → synthesis.
+  - `continuous` (Cyber Pulse): speed, acceleration, throttle and regen → one continuous
+    sound-state parameter → synthesis.
+- `src/lib/sound/engine.ts` — Web Audio synthesis consuming `DriveState` through the strategy
+  declared by the active profile.
+- `src/components/ElcamosoLogo.tsx` — the O ))) mark, wordmark and full lockup as SVG/CSS.
+
+ELCAMOSO is architected as a motion-to-sound platform, not an engine simulator: future profiles
+(turbine, cinematic, ambient, manufacturer EV signatures) map the same telemetry differently.
 
 ## Development
 
-Prefer working locally? You need Node.js and npm — [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
-
 ```sh
-git clone <this-repository-url>
-cd <repository-name>
 npm i
 npm run dev
 ```
-
-## Built with
-
-- TanStack Start
-- TypeScript
-- React
-- Tailwind CSS
