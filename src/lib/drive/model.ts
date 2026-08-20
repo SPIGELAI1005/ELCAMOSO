@@ -1,4 +1,5 @@
 import type { SoundProfile } from "@/lib/sound/profiles";
+import { DEFAULT_TUNING, type ProfileTuning } from "@/lib/drive/settings";
 
 /** Common telemetry every sound strategy consumes. */
 export interface DriveState {
