@@ -11,7 +11,11 @@ import {
   type CustomSound,
   type StudioTweaks,
 } from "@/lib/drive/settings";
-import { SOUND_PROFILES, getProfile } from "@/lib/sound/profiles";
+import {
+  SOUND_PROFILES,
+  getProfile,
+  registerCustomProfiles,
+} from "@/lib/sound/profiles";
 
 export const Route = createFileRoute("/studio")({
   component: Studio,
@@ -54,12 +58,14 @@ function Studio() {
   );
 
   // Register the live draft so the preview engine can resolve it by id.
-  const previewProfile = useMemo(() => materializeCustom(draft), [draft]);
-  useMemo(() => {
-    const registry = [...settings.customSounds.map(materializeCustom), previewProfile];
-    void import("@/lib/sound/profiles").then((m) => m.registerCustomProfiles(registry));
-    return null;
-  }, [previewProfile, settings.customSounds]);
+  const previewProfile = useMemo(() => {
+    const profile = materializeCustom(draft);
+    registerCustomProfiles([
+      ...settings.customSounds.map(materializeCustom),
+      profile,
+    ]);
+    return profile;
+  }, [draft, settings.customSounds]);
 
   const { active, state, start, stop, targetKmh, setTarget } = useAudition({
     profileId: PREVIEW_ID,
