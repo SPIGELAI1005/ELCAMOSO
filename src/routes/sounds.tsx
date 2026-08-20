@@ -29,6 +29,7 @@ export const Route = createFileRoute("/sounds")({
 
 function Sounds() {
   const { settings, update } = useSettings();
+  const reducedMotion = useReducedMotion();
 
   return (
     <main className="min-h-screen">
