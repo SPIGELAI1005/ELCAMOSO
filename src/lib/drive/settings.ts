@@ -1,5 +1,18 @@
 import { DEFAULT_PROFILE_ID, getProfile, SOUND_PROFILES } from "@/lib/sound/profiles";
 import type { SoundProfile } from "@/lib/sound/profiles";
+import {
+  DEFAULT_ENVIRONMENT_ID,
+  ENVIRONMENTS,
+  getEnvironment,
+  normalizeMix,
+  type LayerMix,
+} from "@/lib/sound/environments";
+import {
+  MAX_SNIPPET_BYTES,
+  SNIPPET_TRIGGERS,
+  type SnippetTrigger,
+  type SoundSnippet,
+} from "@/lib/sound/snippets";
 
 /** Per-profile fine-tuning of how motion translates into sound state. */
 export interface ProfileTuning {
@@ -53,7 +66,12 @@ export interface CustomSound {
   createdAt: number;
   tweaks: StudioTweaks;
   note?: string;
+  /** driving environment saved with the sound */
+  environmentId?: string;
+  /** per-layer mixer saved with the sound */
+  mix?: LayerMix;
 }
+
 
 /** Turns a Studio recipe into a playable profile. */
 export function materializeCustom(sound: CustomSound): SoundProfile {
@@ -74,6 +92,9 @@ export function materializeCustom(sound: CustomSound): SoundProfile {
     custom: true,
     baseId: base.id,
     createdAt: sound.createdAt,
+    environmentId: getEnvironment(sound.environmentId).id,
+    mix: normalizeMix(sound.mix),
+
     voice: {
       ...v,
       baseFrequency: v.baseFrequency * t.pitch,
@@ -125,8 +146,24 @@ export interface ElcamosoSettings {
   customSounds: CustomSound[];
   /** profile ids marked as favourites */
   favourites: string[];
+  /** curated lists of profiles for quick jumps */
+  playlists: Playlist[];
+  /** recorded or uploaded snippets mapped to driving states */
+  snippets: SoundSnippet[];
+  /** driving environment used for audition, demo and drive */
+  environmentId: string;
+  /** global per-layer mixer applied to built-in profiles */
+  layerMix: LayerMix;
   /** show the diagnostics panel in Settings */
   devPanel: boolean;
+}
+
+/** A curated set of profiles you can step through while driving. */
+export interface Playlist {
+  id: string;
+  name: string;
+  profileIds: string[];
+  createdAt: number;
 }
 
 const KEY = "elcamoso.settings";
@@ -149,8 +186,13 @@ export const DEFAULT_SETTINGS: ElcamosoSettings = {
   profileGain: {},
   customSounds: [],
   favourites: [],
+  playlists: [],
+  snippets: [],
+  environmentId: DEFAULT_ENVIRONMENT_ID,
+  layerMix: normalizeMix(undefined),
   devPanel: false,
 };
+
 
 export function getTuning(settings: ElcamosoSettings, profileId: string): ProfileTuning {
   return { ...DEFAULT_TUNING, ...(settings.tuning?.[profileId] ?? {}) };
@@ -207,11 +249,75 @@ function sanitizeCustomSounds(v: unknown): CustomSound[] {
       createdAt: num(item["createdAt"], Date.now(), 0, Number.MAX_SAFE_INTEGER),
       tweaks: sanitizeTweaks(item["tweaks"]),
       note: typeof item["note"] === "string" ? item["note"].slice(0, 160) : "",
+      environmentId: getEnvironment(
+        typeof item["environmentId"] === "string" ? item["environmentId"] : null,
+      ).id,
+      mix: normalizeMix(item["mix"]),
     });
     if (out.length >= 60) break;
   }
   return out;
 }
+
+function sanitizePlaylists(v: unknown, knownIds: Set<string>): Playlist[] {
+  if (!Array.isArray(v)) return [];
+  const seen = new Set<string>();
+  const out: Playlist[] = [];
+  for (const item of v) {
+    if (!isRecord(item)) continue;
+    const id = str(item["id"], "");
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
+    const profileIds = Array.isArray(item["profileIds"])
+      ? Array.from(
+          new Set(
+            item["profileIds"].filter(
+              (p): p is string => typeof p === "string" && knownIds.has(p),
+            ),
+          ),
+        ).slice(0, 40)
+      : [];
+    out.push({
+      id,
+      name: str(item["name"], "Untitled list").slice(0, 40),
+      profileIds,
+      createdAt: num(item["createdAt"], Date.now(), 0, Number.MAX_SAFE_INTEGER),
+    });
+    if (out.length >= 20) break;
+  }
+  return out;
+}
+
+function sanitizeSnippets(v: unknown): SoundSnippet[] {
+  if (!Array.isArray(v)) return [];
+  const triggers = new Set(SNIPPET_TRIGGERS.map((t) => t.id));
+  const seen = new Set<string>();
+  const out: SoundSnippet[] = [];
+  for (const item of v) {
+    if (!isRecord(item)) continue;
+    const id = str(item["id"], "");
+    const dataUrl = str(item["dataUrl"], "");
+    if (!id || seen.has(id) || !dataUrl.startsWith("data:audio")) continue;
+    if (dataUrl.length > MAX_SNIPPET_BYTES * 1.4) continue;
+    seen.add(id);
+    const rawTrigger = str(item["trigger"], "throttle");
+    out.push({
+      id,
+      name: str(item["name"], "Snippet").slice(0, 40),
+      dataUrl,
+      trigger: (triggers.has(rawTrigger as SnippetTrigger)
+        ? rawTrigger
+        : "throttle") as SnippetTrigger,
+      level: num(item["level"], 0.8, 0, 1.5),
+      rate: num(item["rate"], 1, 0.5, 2),
+      createdAt: num(item["createdAt"], Date.now(), 0, Number.MAX_SAFE_INTEGER),
+      everySeconds: num(item["everySeconds"], 25, 5, 300),
+    });
+    if (out.length >= 12) break;
+  }
+  return out;
+}
+
 
 export interface SettingsIssue {
   field: string;
@@ -288,6 +394,13 @@ export function sanitizeSettings(input: unknown): {
     typeof rawProfileId === "string" && knownIds.has(rawProfileId),
   );
 
+  const playlists = sanitizePlaylists(p["playlists"], knownIds);
+  const snippets = sanitizeSnippets(p["snippets"]);
+  const rawEnvironment = typeof p["environmentId"] === "string" ? p["environmentId"] : null;
+  if (rawEnvironment && !ENVIRONMENTS.some((e) => e.id === rawEnvironment)) {
+    issues.push({ field: "environmentId", detail: "Unknown environment; open road used." });
+  }
+
   const onboarded = bool(p["onboarded"], false);
   const safetyAcknowledged = bool(p["safetyAcknowledged"], false);
 
@@ -309,8 +422,13 @@ export function sanitizeSettings(input: unknown): {
     profileGain,
     customSounds,
     favourites,
+    playlists,
+    snippets,
+    environmentId: getEnvironment(rawEnvironment).id,
+    layerMix: normalizeMix(p["layerMix"]),
     devPanel: bool(p["devPanel"], false),
   };
+
 
   // A drive that was already acknowledged implies setup is finished. Repairing
   // this here is what keeps inconsistent flags from bouncing you to onboarding.
@@ -552,6 +670,17 @@ function migratePayload(payload: Record<string, unknown>, version: number) {
     if (p["devPanel"] === undefined) p["devPanel"] = false;
   }
 
+  if (version < 4) {
+    // v3: no environments, layer mixer, playlists or snippets.
+    if (p["environmentId"] === undefined) {
+      p["environmentId"] = DEFAULT_ENVIRONMENT_ID;
+      notes.push("Placed older sounds on the open road environment.");
+    }
+    if (p["layerMix"] === undefined) p["layerMix"] = normalizeMix(undefined);
+    if (!Array.isArray(p["playlists"])) p["playlists"] = [];
+    if (!Array.isArray(p["snippets"])) p["snippets"] = [];
+  }
+
   return { payload: p, notes };
 }
 
@@ -566,16 +695,20 @@ export interface ImportReport {
   soundsSkipped: number;
   favouritesAdded: number;
   tuningsMerged: number;
+  playlistsAdded: number;
+  snippetsAdded: number;
   /** compatibility steps applied to an older file */
   migrations: string[];
   /** values that had to be repaired to fit the current app */
   repairs: SettingsIssue[];
 }
 
+
 interface ParsedBackup {
   settings: ElcamosoSettings;
-  report: Omit<ImportReport, "mode" | "soundsAdded" | "soundsSkipped" | "favouritesAdded" | "tuningsMerged">;
+  report: Pick<ImportReport, "version" | "migrations" | "repairs">;
 }
+
 
 /** Validates, migrates and normalises a backup file into usable settings. */
 export function parseBackup(raw: string): ParsedBackup {

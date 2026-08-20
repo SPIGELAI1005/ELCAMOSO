@@ -1,3 +1,5 @@
+import type { LayerMix } from "@/lib/sound/environments";
+
 export type DrivetrainMode = "virtual-transmission" | "continuous";
 
 export type ProfileCategory =
@@ -122,7 +124,12 @@ export interface SoundProfile {
   /** the built-in profile a custom sound was derived from */
   baseId?: string;
   createdAt?: number;
+  /** driving environment the sound was designed in */
+  environmentId?: string;
+  /** per-layer mixer saved with a Studio sound */
+  mix?: LayerMix;
 }
+
 
 const GT_BOX = {
   gearRatios: [13.2, 8.1, 5.6, 4.1, 3.2, 2.6],
