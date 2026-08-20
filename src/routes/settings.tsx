@@ -8,6 +8,7 @@ import {
   getProfileGain,
   importSettingsFile,
   resetOnboarding,
+  type ImportMode,
 } from "@/lib/drive/settings";
 import { DiagnosticsPanel } from "@/components/DiagnosticsPanel";
 import { hapticsSupported } from "@/lib/drive/useHaptics";
