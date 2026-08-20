@@ -13,6 +13,8 @@ interface MarkProps {
   waveResponse?: number | undefined;
   /** animate waves in on mount */
   animate?: boolean | undefined;
+  /** calmer feedback: opacity only, no looping radiation */
+  reducedMotion?: boolean | undefined;
   className?: string | undefined;
 }
 
@@ -28,11 +30,13 @@ export function ElcamosoMark({
   regen = 0,
   waveResponse = 1,
   animate = false,
+  reducedMotion = false,
   className,
 }: MarkProps) {
   const drive = Math.min(1, Math.max(0, throttle));
   const brake = Math.min(1, Math.max(0, regen));
-  const live = drive > 0.02 || brake > 0.02;
+  const live = !reducedMotion && (drive > 0.02 || brake > 0.02);
+  const animateIn = animate && !reducedMotion;
   // faster, tighter motion for high-response profiles
   const cycle = 2400 / (0.55 + waveResponse * (0.5 + drive));
 
@@ -49,12 +53,12 @@ export function ElcamosoMark({
         r="17"
         stroke="currentColor"
         strokeWidth="3.4"
-        style={animate ? { animation: "wave-in 400ms ease-out both" } : undefined}
+        style={animateIn ? { animation: "wave-in 400ms ease-out both" } : undefined}
       />
       {WAVES.map((wave, i) => {
         const lit = Math.min(1, Math.max(0, intensity * 3 - i));
         // regen pulls waves in slightly, throttle pushes them out
-        const shift = drive * (1.4 + i * 1.1) - brake * (1.2 + i * 0.9);
+        const shift = reducedMotion ? 0 : drive * (1.4 + i * 1.1) - brake * (1.2 + i * 0.9);
         return (
           <path
             key={wave.d}
@@ -66,8 +70,10 @@ export function ElcamosoMark({
               opacity: (0.1 + lit * 0.9) * (1 - brake * 0.45),
               transform: `translateX(${shift}px)`,
               transformOrigin: "20px 36px",
-              transition: "opacity 260ms ease-out, transform 220ms ease-out",
-              ...(animate
+              transition: reducedMotion
+                ? "opacity 400ms ease-out"
+                : "opacity 260ms ease-out, transform 220ms ease-out",
+              ...(animateIn
                 ? { animation: `wave-in 400ms ease-out ${250 + i * 220}ms both` }
                 : live
                   ? {
@@ -81,6 +87,7 @@ export function ElcamosoMark({
     </svg>
   );
 }
+
 
 export function ElcamosoWordmark({ className }: { className?: string }) {
   return <span className={cn("wordmark", className)}>Elcamoso</span>;
