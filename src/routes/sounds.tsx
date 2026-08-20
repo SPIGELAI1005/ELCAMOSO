@@ -61,6 +61,7 @@ function Sounds() {
                       <ElcamosoMark
                         intensity={selected ? 1 : 0.34}
                         waveResponse={profile.voice.waveResponse}
+                        reducedMotion={reducedMotion}
                         className="h-6 w-auto shrink-0"
                       />
                       <span className="flex-1">
