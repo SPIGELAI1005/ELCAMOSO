@@ -30,7 +30,7 @@ export const Route = createFileRoute("/drive")({
 });
 
 function DriveScreen() {
-  const { settings, update } = useSettings();
+  const { settings, update, loaded } = useSettings();
   const profile = getProfile(settings.profileId);
   const reducedMotion = useReducedMotion();
   const { status, error, state, start, stop } = useDriveSession({
