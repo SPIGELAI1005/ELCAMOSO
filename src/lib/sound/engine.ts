@@ -397,7 +397,7 @@ export class SoundEngine {
       } catch {
         /* already stopped */
       }
-      voice.loopSrc = undefined as unknown as AudioBufferSourceNode | undefined;
+      delete voice.loopSrc;
     });
   }
 
