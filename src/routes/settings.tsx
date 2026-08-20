@@ -84,12 +84,36 @@ function Settings() {
         </section>
 
         <section className="mt-12 border-t border-border pt-8">
+          <div className="flex items-start justify-between gap-8">
+            <div>
+              <p className="text-base">Reduced Motion</p>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Calmer O ))) feedback and onboarding — the mark responds with light
+                instead of movement.
+              </p>
+            </div>
+            <Toggle
+              checked={settings.reducedMotion}
+              onChange={(v) => update({ reducedMotion: v })}
+              label="Reduced Motion"
+            />
+          </div>
+        </section>
+
+        <section className="mt-12 border-t border-border pt-8">
           <p className="text-base">Sound Profile</p>
           <p className="mt-2 text-sm text-muted-foreground">
             {getProfile(settings.profileId).name} ·{" "}
             <Link to="/sounds" className="text-foreground underline underline-offset-4">
               Change
             </Link>
+          </p>
+          <p className="mt-4 text-sm text-muted-foreground">
+            Audition any profile with simulated motion and fine-tune its response in{" "}
+            <Link to="/sounds" className="text-foreground underline underline-offset-4">
+              Sounds
+            </Link>
+            .
           </p>
         </section>
 
