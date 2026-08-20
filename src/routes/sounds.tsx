@@ -1,8 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { BrandNav } from "@/components/BrandNav";
 import { ElcamosoMark } from "@/components/ElcamosoLogo";
+import { AuditionPanel } from "@/components/AuditionPanel";
 import { PROFILE_CATEGORIES, SOUND_PROFILES } from "@/lib/sound/profiles";
 import { useSettings } from "@/lib/drive/useSettings";
+import { useReducedMotion } from "@/lib/drive/useReducedMotion";
 
 export const Route = createFileRoute("/sounds")({
   component: Sounds,
