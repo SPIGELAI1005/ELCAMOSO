@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useRef, useEffect, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { BrandNav } from "@/components/BrandNav";
 import { useSettings } from "@/lib/drive/useSettings";
@@ -38,6 +38,9 @@ function Settings() {
   const { settings, update, loaded, loadReport } = useSettings();
   const navigate = useNavigate();
   const [recoveryNote, setRecoveryNote] = useState<string | null>(null);
+  // Resolved after hydration so server and client HTML always match.
+  const [canVibrate, setCanVibrate] = useState(true);
+  useEffect(() => setCanVibrate(hapticsSupported()), []);
   const fileRef = useRef<HTMLInputElement | null>(null);
   const [transferNote, setTransferNote] = useState<string | null>(null);
   const profileGain = getProfileGain(settings, settings.profileId);
@@ -138,7 +141,7 @@ function Settings() {
               <p className="mt-2 text-sm text-muted-foreground">
                 Optional vibration that follows throttle and regen intensity as secondary
                 confirmation. The speed and RPM display stays unchanged.
-                {hapticsSupported() ? "" : " This device does not support vibration."}
+                {canVibrate ? "" : " This device does not support vibration."}
               </p>
             </div>
             <Toggle
