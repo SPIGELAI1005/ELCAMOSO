@@ -10,6 +10,9 @@ import {
 } from "@/lib/drive/settings";
 import { getProfile } from "@/lib/sound/profiles";
 import { HeadroomMeter } from "@/components/HeadroomMeter";
+import { EnvironmentPicker } from "@/components/EnvironmentPicker";
+import { LayerMixer } from "@/components/LayerMixer";
+import { QuickJump } from "@/components/QuickJump";
 
 /**
  * Audition mode - preview the selected profile with simulated motion and
@@ -26,6 +29,9 @@ export function AuditionPanel({ profileId }: { profileId: string }) {
     volume: settings.volume,
     tuning,
     profileGain,
+    environmentId: settings.environmentId,
+    mix: settings.layerMix,
+    snippets: settings.snippets,
   });
 
   const setGain = (value: number) => {
@@ -51,6 +57,11 @@ export function AuditionPanel({ profileId }: { profileId: string }) {
 
   return (
     <section className="mt-16 border border-border p-6 sm:p-8">
+      <QuickJump
+        className="mb-10 border-b border-border pb-8"
+        settings={settings}
+        onSelect={(id) => update({ profileId: id })}
+      />
       <div className="flex flex-wrap items-center justify-between gap-6">
         <div className="flex items-center gap-5">
           <ElcamosoMark
@@ -186,6 +197,17 @@ export function AuditionPanel({ profileId }: { profileId: string }) {
           />
         </div>
       </div>
+      <EnvironmentPicker
+        className="mt-12 border-t border-border pt-8"
+        value={settings.environmentId}
+        onChange={(environmentId) => update({ environmentId })}
+      />
+
+      <LayerMixer
+        className="mt-12 border-t border-border pt-8"
+        mix={settings.layerMix}
+        onChange={(layerMix) => update({ layerMix })}
+      />
       {headroom}
     </section>
   );
