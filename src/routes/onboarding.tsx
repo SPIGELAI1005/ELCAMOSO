@@ -134,12 +134,20 @@ function Onboarding() {
 
         <div className="flex w-full flex-col gap-4">
           {step === 0 ? (
-            <button
-              onClick={() => setStep(1)}
-              className="h-14 rounded-full bg-primary text-sm tracking-[0.22em] text-primary-foreground uppercase"
-            >
-              Continue
-            </button>
+            <>
+              <button
+                onClick={() => setStep(1)}
+                className="h-14 rounded-full bg-primary text-sm tracking-[0.22em] text-primary-foreground uppercase"
+              >
+                Continue
+              </button>
+              <button
+                onClick={finish}
+                className="min-h-11 text-xs tracking-[0.24em] text-muted-foreground uppercase"
+              >
+                Skip setup
+              </button>
+            </>
           ) : step === 1 ? (
             <>
               <button
