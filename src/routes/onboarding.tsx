@@ -2,6 +2,7 @@ import { useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { ElcamosoMark } from "@/components/ElcamosoLogo";
 import { useSettings } from "@/lib/drive/useSettings";
+import { useReducedMotion } from "@/lib/drive/useReducedMotion";
 import { getProfile } from "@/lib/sound/profiles";
 
 export const Route = createFileRoute("/onboarding")({
