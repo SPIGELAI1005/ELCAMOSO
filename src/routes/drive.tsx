@@ -95,6 +95,7 @@ function DriveScreen() {
           throttle={state.throttle}
           regen={state.regen}
           waveResponse={profile.voice.waveResponse}
+          reducedMotion={reducedMotion}
           rpm={state.rpm}
           gear={state.gear}
           continuous={profile.drivetrainMode === "continuous"}
@@ -104,7 +105,12 @@ function DriveScreen() {
         />
       ) : (
         <div className="flex flex-1 flex-col items-center justify-center gap-10 text-center">
-          <ElcamosoMark animate waveResponse={profile.voice.waveResponse} className="h-14 w-auto" />
+          <ElcamosoMark
+            animate
+            waveResponse={profile.voice.waveResponse}
+            reducedMotion={reducedMotion}
+            className="h-14 w-auto"
+          />
           <div>
             <p className="text-2xl font-light">{profile.name}</p>
             <p className="mt-3 text-sm text-muted-foreground">{profile.traits.join(" · ")}</p>
