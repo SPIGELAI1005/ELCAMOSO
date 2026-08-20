@@ -73,7 +73,8 @@ function Onboarding() {
         <ElcamosoMark
           animate={step === 0}
           intensity={0.4 + step * 0.3}
-          throttle={step === 2 ? 0.5 : 0.15}
+          throttle={reducedMotion ? 0 : step === 2 ? 0.5 : 0.15}
+          reducedMotion={reducedMotion}
           className="h-14 w-auto"
         />
 

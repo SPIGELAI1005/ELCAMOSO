@@ -3,6 +3,8 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { ElcamosoMark, ElcamosoLogo } from "@/components/ElcamosoLogo";
 import { BrandLoader } from "@/components/BrandLoader";
 import { useSettings } from "@/lib/drive/useSettings";
+import { useReducedMotion } from "@/lib/drive/useReducedMotion";
+import { getTuning } from "@/lib/drive/settings";
 import { useDriveSession } from "@/lib/drive/useDriveSession";
 import { getProfile } from "@/lib/sound/profiles";
 
