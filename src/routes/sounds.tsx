@@ -37,36 +37,49 @@ function Sounds() {
           Each profile reads the same motion and interprets it differently.
         </p>
 
-        <div className="mt-16 divide-y divide-border border-y border-border">
-          {SOUND_PROFILES.map((profile) => {
-            const selected = settings.profileId === profile.id;
-            return (
-              <button
-                key={profile.id}
-                onClick={() => update({ profileId: profile.id })}
-                className="flex w-full items-center gap-6 py-8 text-left transition-opacity hover:opacity-80"
-                aria-pressed={selected}
-              >
-                <ElcamosoMark
-                  intensity={selected ? 1 : 0.34}
-                  className="h-6 w-auto shrink-0"
-                />
-                <span className="flex-1">
-                  <span className="block text-xl font-light">{profile.name}</span>
-                  <span className="mt-2 block text-xs tracking-[0.18em] text-muted-foreground uppercase">
-                    {profile.traits.join(" • ")}
-                  </span>
-                  <span className="mt-3 block max-w-md text-sm text-muted-foreground">
-                    {profile.description}
-                  </span>
-                </span>
-                <span className="text-[11px] tracking-[0.24em] text-muted-foreground uppercase">
-                  {selected ? "Selected" : ""}
-                </span>
-              </button>
-            );
-          })}
-        </div>
+        {PROFILE_CATEGORIES.map((category) => {
+          const items = SOUND_PROFILES.filter((p) => p.category === category);
+          if (!items.length) return null;
+          return (
+            <section key={category} className="mt-16">
+              <h2 className="text-[11px] tracking-[0.34em] text-muted-foreground uppercase">
+                {category}
+              </h2>
+              <div className="mt-6 divide-y divide-border border-y border-border">
+                {items.map((profile) => {
+                  const selected = settings.profileId === profile.id;
+                  return (
+                    <button
+                      key={profile.id}
+                      onClick={() => update({ profileId: profile.id })}
+                      className="flex w-full items-center gap-6 py-8 text-left transition-opacity hover:opacity-80"
+                      aria-pressed={selected}
+                    >
+                      <ElcamosoMark
+                        intensity={selected ? 1 : 0.34}
+                        waveResponse={profile.voice.waveResponse}
+                        className="h-6 w-auto shrink-0"
+                      />
+                      <span className="flex-1">
+                        <span className="block text-xl font-light">{profile.name}</span>
+                        <span className="mt-2 block text-xs tracking-[0.18em] text-muted-foreground uppercase">
+                          {profile.traits.join(" • ")}
+                        </span>
+                        <span className="mt-3 block max-w-md text-sm text-muted-foreground">
+                          {profile.description}
+                        </span>
+                      </span>
+                      <span className="text-[11px] tracking-[0.24em] text-muted-foreground uppercase">
+                        {selected ? "Selected" : ""}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
+          );
+        })}
+
 
         <div className="mt-16 flex flex-wrap items-center gap-8">
           <Link
