@@ -1,4 +1,5 @@
-import { DEFAULT_PROFILE_ID } from "@/lib/sound/profiles";
+import { DEFAULT_PROFILE_ID, getProfile, SOUND_PROFILES } from "@/lib/sound/profiles";
+import type { SoundProfile } from "@/lib/sound/profiles";
 
 /** Per-profile fine-tuning of how motion translates into sound state. */
 export interface ProfileTuning {
@@ -15,6 +16,87 @@ export const DEFAULT_TUNING: ProfileTuning = { throttle: 1, response: 1, regen: 
 /** Per-profile balance gain so profiles sit at a comparable loudness. */
 export const DEFAULT_PROFILE_GAIN = 1;
 
+/* ------------------------------------------------------------------ studio */
+
+/** A Studio creation: a built-in profile reshaped by a handful of dials. */
+export interface StudioTweaks {
+  /** 0.5..2 overall pitch of the core voice */
+  pitch: number;
+  /** 0.4..2 how open and bright the sound is */
+  brightness: number;
+  /** 0..2 texture, grit and air */
+  grit: number;
+  /** 0..2 level of the atmospheric beds (water, gravel, wind) */
+  texture: number;
+  /** 0..2 speed of the rhythmic layer (hooves, bells, chuffs) */
+  rhythm: number;
+  /** 0..2 detune spread and character */
+  character: number;
+  /** signature one-shots such as horns, laughs and whinnies */
+  signals: boolean;
+}
+
+export const DEFAULT_TWEAKS: StudioTweaks = {
+  pitch: 1,
+  brightness: 1,
+  grit: 1,
+  texture: 1,
+  rhythm: 1,
+  character: 1,
+  signals: true,
+};
+
+export interface CustomSound {
+  id: string;
+  name: string;
+  baseId: string;
+  createdAt: number;
+  tweaks: StudioTweaks;
+  note?: string;
+}
+
+/** Turns a Studio recipe into a playable profile. */
+export function materializeCustom(sound: CustomSound): SoundProfile {
+  const base = getProfile(sound.baseId);
+  const t = { ...DEFAULT_TWEAKS, ...sound.tweaks };
+  const v = base.voice;
+  const scaleRhythm = <T extends { baseRate: number; rateScale: number } | undefined>(r: T) =>
+    r ? { ...r, baseRate: r.baseRate * t.rhythm, rateScale: r.rateScale * t.rhythm } : undefined;
+
+  const profile: SoundProfile = {
+    ...base,
+    id: sound.id,
+    name: sound.name,
+    category: "Garage",
+    description: sound.note?.trim()
+      ? sound.note.trim()
+      : `A Studio sound built from ${base.name}.`,
+    custom: true,
+    baseId: base.id,
+    createdAt: sound.createdAt,
+    voice: {
+      ...v,
+      baseFrequency: v.baseFrequency * t.pitch,
+      filterBase: v.filterBase * t.brightness,
+      filterRange: v.filterRange * t.brightness,
+      noise: Math.min(1, v.noise * t.grit),
+      detune: v.detune * t.character,
+      textures: (v.textures ?? []).map((tex) => ({
+        ...tex,
+        level: Math.min(1, tex.level * t.texture),
+      })),
+      signals: t.signals ? v.signals : [],
+    },
+  };
+  const rhythm = scaleRhythm(v.rhythm);
+  const rhythmB = scaleRhythm(v.rhythmB);
+  if (rhythm) profile.voice.rhythm = rhythm;
+  if (rhythmB) profile.voice.rhythmB = rhythmB;
+  return profile;
+}
+
+/* ---------------------------------------------------------------- settings */
+
 export interface ElcamosoSettings {
   profileId: string;
   /** master volume, 0..1 */
@@ -22,7 +104,11 @@ export interface ElcamosoSettings {
   demoMotion: boolean;
   safetyAcknowledged: boolean;
   onboarded: boolean;
+  /** last onboarding step reached, 0..2 */
+  onboardingStep: number;
   lastDriveAt: number | null;
+  /** number of drives started, shown in the Garage */
+  driveCount: number;
   /** calmer O ))) motion and transitions */
   reducedMotion: boolean;
   /** vibration feedback that follows throttle and regen */
@@ -35,6 +121,12 @@ export interface ElcamosoSettings {
   tuning: Record<string, ProfileTuning>;
   /** per-profile balance gain, 0.4..1.6 */
   profileGain: Record<string, number>;
+  /** Studio creations kept in the Garage */
+  customSounds: CustomSound[];
+  /** profile ids marked as favourites */
+  favourites: string[];
+  /** show the diagnostics panel in Settings */
+  devPanel: boolean;
 }
 
 const KEY = "elcamoso.settings";
@@ -45,7 +137,9 @@ export const DEFAULT_SETTINGS: ElcamosoSettings = {
   demoMotion: false,
   safetyAcknowledged: false,
   onboarded: false,
+  onboardingStep: 0,
   lastDriveAt: null,
+  driveCount: 0,
   reducedMotion: false,
   haptics: false,
   motionSensitivity: 1,
@@ -53,6 +147,9 @@ export const DEFAULT_SETTINGS: ElcamosoSettings = {
   calibratedAt: null,
   tuning: {},
   profileGain: {},
+  customSounds: [],
+  favourites: [],
+  devPanel: false,
 };
 
 export function getTuning(settings: ElcamosoSettings, profileId: string): ProfileTuning {
@@ -66,19 +163,272 @@ export function getProfileGain(settings: ElcamosoSettings, profileId: string): n
     : DEFAULT_PROFILE_GAIN;
 }
 
+/* ------------------------------------------------------- validation layer */
+
+const isRecord = (v: unknown): v is Record<string, unknown> =>
+  typeof v === "object" && v !== null && !Array.isArray(v);
+
+const num = (v: unknown, fallback: number, min: number, max: number) =>
+  typeof v === "number" && Number.isFinite(v) ? Math.min(max, Math.max(min, v)) : fallback;
+
+const bool = (v: unknown, fallback: boolean) => (typeof v === "boolean" ? v : fallback);
+
+const str = (v: unknown, fallback: string) =>
+  typeof v === "string" && v.trim() ? v : fallback;
+
+function sanitizeTweaks(v: unknown): StudioTweaks {
+  const r = isRecord(v) ? v : {};
+  return {
+    pitch: num(r["pitch"], 1, 0.5, 2),
+    brightness: num(r["brightness"], 1, 0.4, 2),
+    grit: num(r["grit"], 1, 0, 2),
+    texture: num(r["texture"], 1, 0, 2),
+    rhythm: num(r["rhythm"], 1, 0, 2),
+    character: num(r["character"], 1, 0, 2),
+    signals: bool(r["signals"], true),
+  };
+}
+
+function sanitizeCustomSounds(v: unknown): CustomSound[] {
+  if (!Array.isArray(v)) return [];
+  const baseIds = new Set(SOUND_PROFILES.map((p) => p.id));
+  const seen = new Set<string>();
+  const out: CustomSound[] = [];
+  for (const item of v) {
+    if (!isRecord(item)) continue;
+    const id = str(item["id"], "");
+    const baseId = str(item["baseId"], DEFAULT_PROFILE_ID);
+    if (!id || seen.has(id) || !baseIds.has(baseId)) continue;
+    seen.add(id);
+    out.push({
+      id,
+      name: str(item["name"], "Untitled sound").slice(0, 40),
+      baseId,
+      createdAt: num(item["createdAt"], Date.now(), 0, Number.MAX_SAFE_INTEGER),
+      tweaks: sanitizeTweaks(item["tweaks"]),
+      note: typeof item["note"] === "string" ? item["note"].slice(0, 160) : "",
+    });
+    if (out.length >= 60) break;
+  }
+  return out;
+}
+
+export interface SettingsIssue {
+  field: string;
+  detail: string;
+}
+
+/**
+ * Normalises any stored value into a complete, in-range settings object and
+ * reports what had to be repaired, so a partial or corrupted entry can never
+ * trap the app in an inconsistent state.
+ */
+export function sanitizeSettings(input: unknown): {
+  settings: ElcamosoSettings;
+  issues: SettingsIssue[];
+} {
+  const issues: SettingsIssue[] = [];
+  if (!isRecord(input)) {
+    if (input !== undefined && input !== null) {
+      issues.push({ field: "root", detail: "Stored value was not an object; defaults used." });
+    }
+    return { settings: { ...DEFAULT_SETTINGS }, issues };
+  }
+  const p = input;
+
+  const check = <T>(field: string, value: T, fallback: T, ok: boolean) => {
+    if (!ok) issues.push({ field, detail: `Invalid value repaired to ${String(fallback)}.` });
+    return ok ? value : fallback;
+  };
+
+  const tuning: Record<string, ProfileTuning> = {};
+  if (isRecord(p["tuning"])) {
+    for (const [id, value] of Object.entries(p["tuning"])) {
+      if (!isRecord(value)) {
+        issues.push({ field: `tuning.${id}`, detail: "Dropped: not an object." });
+        continue;
+      }
+      tuning[id] = {
+        throttle: num(value["throttle"], 1, 0.2, 2),
+        response: num(value["response"], 1, 0.2, 2),
+        regen: num(value["regen"], 1, 0, 2),
+      };
+    }
+  } else if (p["tuning"] !== undefined) {
+    issues.push({ field: "tuning", detail: "Dropped: not an object." });
+  }
+
+  const profileGain: Record<string, number> = {};
+  if (isRecord(p["profileGain"])) {
+    for (const [id, value] of Object.entries(p["profileGain"])) {
+      profileGain[id] = num(value, 1, 0.4, 1.6);
+    }
+  } else if (p["profileGain"] !== undefined) {
+    issues.push({ field: "profileGain", detail: "Dropped: not an object." });
+  }
+
+  const customSounds = sanitizeCustomSounds(p["customSounds"]);
+  if (p["customSounds"] !== undefined && !Array.isArray(p["customSounds"])) {
+    issues.push({ field: "customSounds", detail: "Dropped: not a list." });
+  }
+
+  const favourites = Array.isArray(p["favourites"])
+    ? p["favourites"].filter((f): f is string => typeof f === "string").slice(0, 60)
+    : [];
+
+  const knownIds = new Set([
+    ...SOUND_PROFILES.map((s) => s.id),
+    ...customSounds.map((s) => s.id),
+  ]);
+  const rawProfileId = p["profileId"];
+  const profileId = check(
+    "profileId",
+    typeof rawProfileId === "string" ? rawProfileId : DEFAULT_PROFILE_ID,
+    DEFAULT_PROFILE_ID,
+    typeof rawProfileId === "string" && knownIds.has(rawProfileId),
+  );
+
+  const onboarded = bool(p["onboarded"], false);
+  const safetyAcknowledged = bool(p["safetyAcknowledged"], false);
+
+  const settings: ElcamosoSettings = {
+    profileId,
+    volume: num(p["volume"], DEFAULT_SETTINGS.volume, 0, 1),
+    demoMotion: bool(p["demoMotion"], false),
+    safetyAcknowledged,
+    onboarded,
+    onboardingStep: num(p["onboardingStep"], 0, 0, 2),
+    lastDriveAt: typeof p["lastDriveAt"] === "number" ? p["lastDriveAt"] : null,
+    driveCount: num(p["driveCount"], 0, 0, 1e9),
+    reducedMotion: bool(p["reducedMotion"], false),
+    haptics: bool(p["haptics"], false),
+    motionSensitivity: num(p["motionSensitivity"], 1, 0.4, 2),
+    motionNoiseFloor: num(p["motionNoiseFloor"], 0, 0, 10),
+    calibratedAt: typeof p["calibratedAt"] === "number" ? p["calibratedAt"] : null,
+    tuning,
+    profileGain,
+    customSounds,
+    favourites,
+    devPanel: bool(p["devPanel"], false),
+  };
+
+  // A drive that was already acknowledged implies setup is finished. Repairing
+  // this here is what keeps inconsistent flags from bouncing you to onboarding.
+  if (!settings.onboarded && (settings.safetyAcknowledged || settings.driveCount > 0)) {
+    settings.onboarded = true;
+    issues.push({
+      field: "onboarded",
+      detail: "Set to true: this device has already acknowledged safety or driven.",
+    });
+  }
+
+  return { settings, issues };
+}
+
+/* ------------------------------------------------------------ load report */
+
+export type LoadOutcome = "empty" | "ok" | "repaired" | "corrupt" | "unavailable" | "server";
+
+export interface LoadReport {
+  outcome: LoadOutcome;
+  at: number;
+  /** bytes of the stored entry */
+  size: number;
+  issues: SettingsIssue[];
+  message: string;
+}
+
+let lastLoad: LoadReport = {
+  outcome: "server",
+  at: 0,
+  size: 0,
+  issues: [],
+  message: "Not loaded yet.",
+};
+
+export function getLastLoadReport(): LoadReport {
+  return lastLoad;
+}
+
 export function readSettings(): ElcamosoSettings {
-  if (typeof window === "undefined") return DEFAULT_SETTINGS;
-  try {
-    const raw = window.localStorage.getItem(KEY);
-    return raw ? { ...DEFAULT_SETTINGS, ...JSON.parse(raw) } : DEFAULT_SETTINGS;
-  } catch {
+  if (typeof window === "undefined") {
+    lastLoad = {
+      outcome: "server",
+      at: Date.now(),
+      size: 0,
+      issues: [],
+      message: "Rendered on the server: defaults used.",
+    };
     return DEFAULT_SETTINGS;
   }
+  let raw: string | null = null;
+  try {
+    raw = window.localStorage.getItem(KEY);
+  } catch {
+    lastLoad = {
+      outcome: "unavailable",
+      at: Date.now(),
+      size: 0,
+      issues: [],
+      message: "Storage is blocked on this device: settings stay in memory only.",
+    };
+    return DEFAULT_SETTINGS;
+  }
+
+  if (!raw) {
+    lastLoad = {
+      outcome: "empty",
+      at: Date.now(),
+      size: 0,
+      issues: [],
+      message: "No saved settings yet: defaults used.",
+    };
+    return DEFAULT_SETTINGS;
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    lastLoad = {
+      outcome: "corrupt",
+      at: Date.now(),
+      size: raw.length,
+      issues: [{ field: "root", detail: "Stored JSON could not be parsed." }],
+      message: "Saved settings were unreadable and have been reset to defaults.",
+    };
+    try {
+      window.localStorage.removeItem(KEY);
+    } catch {
+      /* nothing else to do */
+    }
+    return DEFAULT_SETTINGS;
+  }
+
+  const { settings, issues } = sanitizeSettings(parsed);
+  lastLoad = {
+    outcome: issues.length ? "repaired" : "ok",
+    at: Date.now(),
+    size: raw.length,
+    issues,
+    message: issues.length
+      ? `Loaded with ${issues.length} repaired value${issues.length === 1 ? "" : "s"}.`
+      : "Loaded successfully.",
+  };
+  if (issues.length) {
+    // persist the repair so the same problem is not re-read next time
+    try {
+      window.localStorage.setItem(KEY, JSON.stringify(settings));
+    } catch {
+      /* keep the repaired copy in memory */
+    }
+  }
+  return settings;
 }
 
 export function writeSettings(next: Partial<ElcamosoSettings>) {
   if (typeof window === "undefined") return DEFAULT_SETTINGS;
-  const merged = { ...readSettings(), ...next };
+  const merged = sanitizeSettings({ ...readSettings(), ...next }).settings;
   try {
     window.localStorage.setItem(KEY, JSON.stringify(merged));
   } catch {
@@ -88,10 +438,41 @@ export function writeSettings(next: Partial<ElcamosoSettings>) {
   return merged;
 }
 
+/** Clears the onboarding flags so the guided setup can be run again. */
+export function resetOnboarding() {
+  return writeSettings({
+    onboarded: false,
+    safetyAcknowledged: false,
+    onboardingStep: 0,
+    driveCount: 0,
+  });
+}
+
+/** Wipes every stored value: the last-resort recovery. */
+export function clearStoredSettings() {
+  if (typeof window === "undefined") return DEFAULT_SETTINGS;
+  try {
+    window.localStorage.removeItem(KEY);
+  } catch {
+    /* nothing else to do */
+  }
+  window.dispatchEvent(new CustomEvent("elcamoso:settings"));
+  return DEFAULT_SETTINGS;
+}
+
+export function readRawStored(): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    return window.localStorage.getItem(KEY);
+  } catch {
+    return null;
+  }
+}
+
 /* ---------------------------------------------------------------- transfer */
 
 const BACKUP_KIND = "elcamoso.settings.backup";
-const BACKUP_VERSION = 1;
+const BACKUP_VERSION = 2;
 
 export interface SettingsBackup {
   kind: typeof BACKUP_KIND;
@@ -125,57 +506,12 @@ export function exportSettingsFile() {
   URL.revokeObjectURL(url);
 }
 
-const isRecord = (v: unknown): v is Record<string, unknown> =>
-  typeof v === "object" && v !== null && !Array.isArray(v);
-
-const num = (v: unknown, fallback: number, min: number, max: number) =>
-  typeof v === "number" && Number.isFinite(v) ? Math.min(max, Math.max(min, v)) : fallback;
-
-const bool = (v: unknown, fallback: boolean) => (typeof v === "boolean" ? v : fallback);
-
 /** Validates and normalises an imported backup into usable settings. */
 export function parseBackup(raw: string): ElcamosoSettings {
   const data: unknown = JSON.parse(raw);
   const payload = isRecord(data) && isRecord(data["settings"]) ? data["settings"] : data;
   if (!isRecord(payload)) throw new Error("This file is not an ELCAMOSO backup.");
-
-  const tuning: Record<string, ProfileTuning> = {};
-  if (isRecord(payload["tuning"])) {
-    for (const [id, value] of Object.entries(payload["tuning"])) {
-      if (!isRecord(value)) continue;
-      tuning[id] = {
-        throttle: num(value["throttle"], 1, 0.2, 2),
-        response: num(value["response"], 1, 0.2, 2),
-        regen: num(value["regen"], 1, 0, 2),
-      };
-    }
-  }
-
-  const profileGain: Record<string, number> = {};
-  if (isRecord(payload["profileGain"])) {
-    for (const [id, value] of Object.entries(payload["profileGain"])) {
-      profileGain[id] = num(value, 1, 0.4, 1.6);
-    }
-  }
-
-  return {
-    ...DEFAULT_SETTINGS,
-    profileId:
-      typeof payload["profileId"] === "string" ? payload["profileId"] : DEFAULT_PROFILE_ID,
-    volume: num(payload["volume"], DEFAULT_SETTINGS.volume, 0, 1),
-    demoMotion: bool(payload["demoMotion"], false),
-    safetyAcknowledged: bool(payload["safetyAcknowledged"], false),
-    onboarded: bool(payload["onboarded"], false),
-    reducedMotion: bool(payload["reducedMotion"], false),
-    haptics: bool(payload["haptics"], false),
-    motionSensitivity: num(payload["motionSensitivity"], 1, 0.4, 2),
-    motionNoiseFloor: num(payload["motionNoiseFloor"], 0, 0, 10),
-    calibratedAt:
-      typeof payload["calibratedAt"] === "number" ? payload["calibratedAt"] : null,
-    lastDriveAt: typeof payload["lastDriveAt"] === "number" ? payload["lastDriveAt"] : null,
-    tuning,
-    profileGain,
-  };
+  return sanitizeSettings(payload).settings;
 }
 
 export async function importSettingsFile(file: File) {
