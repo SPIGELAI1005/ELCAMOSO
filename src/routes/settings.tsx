@@ -42,18 +42,46 @@ function Settings() {
   const [canVibrate, setCanVibrate] = useState(true);
   useEffect(() => setCanVibrate(hapticsSupported()), []);
   const fileRef = useRef<HTMLInputElement | null>(null);
+  const importMode = useRef<ImportMode>("merge");
   const [transferNote, setTransferNote] = useState<string | null>(null);
+  const [transferDetails, setTransferDetails] = useState<string[]>([]);
   const profileGain = getProfileGain(settings, settings.profileId);
 
   const handleImport = async (file: File | undefined) => {
     if (!file) return;
     try {
-      await importSettingsFile(file);
-      setTransferNote("Settings imported.");
-    } catch {
-      setTransferNote("That file could not be read as an ELCAMOSO backup.");
+      const report = await importSettingsFile(file, importMode.current);
+      setTransferNote(
+        report.mode === "merge"
+          ? "Backup merged into your current setup."
+          : "Backup imported and your previous setup was replaced.",
+      );
+      const details = [
+        `Backup format v${report.version}.`,
+        `${report.soundsAdded} sound${report.soundsAdded === 1 ? "" : "s"} added` +
+          (report.soundsSkipped
+            ? `, ${report.soundsSkipped} already here and kept as they were.`
+            : "."),
+        report.favouritesAdded
+          ? `${report.favouritesAdded} favourite${report.favouritesAdded === 1 ? "" : "s"} added.`
+          : "",
+        report.tuningsMerged
+          ? `${report.tuningsMerged} motion tuning set${report.tuningsMerged === 1 ? "" : "s"} merged.`
+          : "",
+        ...report.migrations,
+        ...report.repairs.map((r) => `Repaired ${r.field}: ${r.detail}`),
+      ].filter(Boolean);
+      setTransferDetails(details);
+    } catch (error) {
+      setTransferNote(
+        error instanceof Error
+          ? error.message
+          : "That file could not be read as an ELCAMOSO backup.",
+      );
+      setTransferDetails([]);
     }
   };
+
 
   return (
     <main className="min-h-screen">
