@@ -8,9 +8,12 @@ import {
 
 export function useSettings() {
   const [settings, setSettings] = useState<ElcamosoSettings>(DEFAULT_SETTINGS);
+  /** false until the stored settings have been read on the client */
+  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     setSettings(readSettings());
+    setLoaded(true);
     const sync = () => setSettings(readSettings());
     window.addEventListener("elcamoso:settings", sync);
     window.addEventListener("storage", sync);
@@ -24,5 +27,5 @@ export function useSettings() {
     setSettings(writeSettings(next));
   }, []);
 
-  return { settings, update };
+  return { settings, update, loaded };
 }

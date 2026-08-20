@@ -30,7 +30,7 @@ export const Route = createFileRoute("/drive")({
 });
 
 function DriveScreen() {
-  const { settings, update } = useSettings();
+  const { settings, update, loaded } = useSettings();
   const profile = getProfile(settings.profileId);
   const reducedMotion = useReducedMotion();
   const { status, error, state, start, stop } = useDriveSession({
@@ -43,11 +43,11 @@ function DriveScreen() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    if (typeof window === "undefined" || !loaded) return;
     if (!settings.onboarded && !settings.safetyAcknowledged) {
       void navigate({ to: "/onboarding" });
     }
-  }, [navigate, settings.onboarded, settings.safetyAcknowledged]);
+  }, [navigate, loaded, settings.onboarded, settings.safetyAcknowledged]);
 
   const handleStart = () => {
     if (!settings.safetyAcknowledged) {

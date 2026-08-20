@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { ElcamosoMark } from "@/components/ElcamosoLogo";
 import { useSettings } from "@/lib/drive/useSettings";
@@ -31,13 +31,18 @@ type Step = 0 | 1 | 2;
 
 function Onboarding() {
   const navigate = useNavigate();
-  const { settings, update } = useSettings();
+  const { settings, update, loaded } = useSettings();
   const reducedMotion = useReducedMotion();
   const [step, setStep] = useState<Step>(0);
   const [sensorState, setSensorState] = useState<"idle" | "asking" | "ready" | "denied">(
     "idle",
   );
   const profile = getProfile(settings.profileId);
+
+  // Already set up? Go straight to the drive screen.
+  useEffect(() => {
+    if (loaded && settings.onboarded) void navigate({ to: "/drive" });
+  }, [loaded, settings.onboarded, navigate]);
 
   const enableSensors = async () => {
     setSensorState("asking");
@@ -129,12 +134,20 @@ function Onboarding() {
 
         <div className="flex w-full flex-col gap-4">
           {step === 0 ? (
-            <button
-              onClick={() => setStep(1)}
-              className="h-14 rounded-full bg-primary text-sm tracking-[0.22em] text-primary-foreground uppercase"
-            >
-              Continue
-            </button>
+            <>
+              <button
+                onClick={() => setStep(1)}
+                className="h-14 rounded-full bg-primary text-sm tracking-[0.22em] text-primary-foreground uppercase"
+              >
+                Continue
+              </button>
+              <button
+                onClick={finish}
+                className="min-h-11 text-xs tracking-[0.24em] text-muted-foreground uppercase"
+              >
+                Skip setup
+              </button>
+            </>
           ) : step === 1 ? (
             <>
               <button
