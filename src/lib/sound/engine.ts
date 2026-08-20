@@ -32,7 +32,7 @@ export class SoundEngine {
     return Math.min(SoundEngine.MAX_GAIN, Math.max(0.0001, value));
   }
 
-  async start(profile: SoundProfile) {
+  async start(profile: SoundProfile, options?: { signature?: boolean }) {
     if (this.ctx) {
       this.setProfile(profile);
       return;
