@@ -754,7 +754,15 @@ export function parseBackup(raw: string): ParsedBackup {
 export function mergeBackup(
   current: ElcamosoSettings,
   incoming: ElcamosoSettings,
-): { settings: ElcamosoSettings; soundsAdded: number; soundsSkipped: number; favouritesAdded: number; tuningsMerged: number } {
+): {
+  settings: ElcamosoSettings;
+  soundsAdded: number;
+  soundsSkipped: number;
+  favouritesAdded: number;
+  tuningsMerged: number;
+  playlistsAdded: number;
+  snippetsAdded: number;
+} {
   const existingIds = new Set(current.customSounds.map((s) => s.id));
   const added: CustomSound[] = [];
   let soundsSkipped = 0;
@@ -781,6 +789,17 @@ export function mergeBackup(
 
   const profileGain = { ...incoming.profileGain, ...current.profileGain };
 
+  const playlistIds = new Set(current.playlists.map((p) => p.id));
+  const playlists = [
+    ...current.playlists,
+    ...incoming.playlists.filter((p) => !playlistIds.has(p.id)),
+  ];
+  const snippetIds = new Set(current.snippets.map((s) => s.id));
+  const snippets = [
+    ...current.snippets,
+    ...incoming.snippets.filter((s) => !snippetIds.has(s.id)),
+  ].slice(0, 12);
+
   const settings: ElcamosoSettings = {
     ...current,
     volume: incoming.volume,
@@ -791,6 +810,10 @@ export function mergeBackup(
     calibratedAt: incoming.calibratedAt,
     customSounds: [...current.customSounds, ...added],
     favourites,
+    playlists,
+    snippets,
+    environmentId: incoming.environmentId,
+    layerMix: incoming.layerMix,
     tuning,
     profileGain,
     driveCount: Math.max(current.driveCount, incoming.driveCount),
@@ -803,8 +826,17 @@ export function mergeBackup(
   ]);
   if (known.has(incoming.profileId)) settings.profileId = incoming.profileId;
 
-  return { settings, soundsAdded: added.length, soundsSkipped, favouritesAdded, tuningsMerged };
+  return {
+    settings,
+    soundsAdded: added.length,
+    soundsSkipped,
+    favouritesAdded,
+    tuningsMerged,
+    playlistsAdded: playlists.length - current.playlists.length,
+    snippetsAdded: snippets.length - current.snippets.length,
+  };
 }
+
 
 export async function importSettingsFile(
   file: File,
