@@ -1,4 +1,5 @@
 import type { SoundProfile } from "@/lib/sound/profiles";
+import { DEFAULT_TUNING, type ProfileTuning } from "@/lib/drive/settings";
 
 /** Common telemetry every sound strategy consumes. */
 export interface DriveState {
@@ -38,6 +39,8 @@ export interface ModelInput {
   previous: DriveState;
   profile: SoundProfile;
   dt: number;
+  /** per-profile sensitivity multipliers */
+  tuning?: ProfileTuning | undefined;
 }
 
 export function computeDriveState({
@@ -46,15 +49,17 @@ export function computeDriveState({
   previous,
   profile,
   dt,
+  tuning,
 }: ModelInput): DriveState {
-  const throttleTarget = clamp(acceleration / 2.6 + speed / 60);
-  const regenTarget = clamp(-acceleration / 2.6);
+  const tune = { ...DEFAULT_TUNING, ...(tuning ?? {}) };
+  const throttleTarget = clamp((acceleration / 2.6 + speed / 60) * tune.throttle);
+  const regenTarget = clamp((-acceleration / 2.6) * tune.regen);
   const smooth = clamp(dt / 0.28, 0, 1);
   const throttle = previous.throttle + (throttleTarget - previous.throttle) * smooth;
   const regen = previous.regen + (regenTarget - previous.regen) * smooth;
 
   if (profile.drivetrainMode === "continuous") {
-    const load = clamp(speed / 42 + throttle * 0.35 - regen * 0.25);
+    const load = clamp((speed / 42 + throttle * 0.35 - regen * 0.25) * tune.response);
     return {
       speed,
       acceleration,
@@ -82,7 +87,9 @@ export function computeDriveState({
   );
   const shift = clamp(dt / t.shiftSmoothing, 0, 1);
   const rpm = previous.rpm + (targetRpm - previous.rpm) * shift;
-  const load = clamp((rpm - t.idleRpm) / (t.redlineRpm - t.idleRpm) + throttle * 0.2);
+  const load = clamp(
+    ((rpm - t.idleRpm) / (t.redlineRpm - t.idleRpm) + throttle * 0.2) * tune.response,
+  );
 
   return {
     speed,

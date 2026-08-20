@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { computeDriveState, IDLE_STATE, type DriveState } from "@/lib/drive/model";
 import { SoundEngine } from "@/lib/sound/engine";
 import { getProfile } from "@/lib/sound/profiles";
+import type { ProfileTuning } from "@/lib/drive/settings";
 
 export type DriveStatus = "idle" | "starting" | "driving" | "error";
 
@@ -9,9 +10,12 @@ interface Options {
   profileId: string;
   volume: number;
   demoMotion: boolean;
+  tuning?: ProfileTuning | undefined;
 }
 
-export function useDriveSession({ profileId, volume, demoMotion }: Options) {
+export function useDriveSession({ profileId, volume, demoMotion, tuning }: Options) {
+  const tuningRef = useRef<ProfileTuning | undefined>(tuning);
+  tuningRef.current = tuning;
   const [status, setStatus] = useState<DriveStatus>("idle");
   const [error, setError] = useState<string | null>(null);
   const [state, setState] = useState<DriveState>(IDLE_STATE);
@@ -63,6 +67,7 @@ export function useDriveSession({ profileId, volume, demoMotion }: Options) {
       previous: stateRef.current,
       profile: profileRef.current,
       dt,
+      tuning: tuningRef.current,
     });
     stateRef.current = next;
     engineRef.current?.update(next);

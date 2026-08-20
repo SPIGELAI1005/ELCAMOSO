@@ -1,8 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { BrandNav } from "@/components/BrandNav";
 import { ElcamosoMark } from "@/components/ElcamosoLogo";
+import { AuditionPanel } from "@/components/AuditionPanel";
 import { PROFILE_CATEGORIES, SOUND_PROFILES } from "@/lib/sound/profiles";
 import { useSettings } from "@/lib/drive/useSettings";
+import { useReducedMotion } from "@/lib/drive/useReducedMotion";
 
 export const Route = createFileRoute("/sounds")({
   component: Sounds,
@@ -27,6 +29,7 @@ export const Route = createFileRoute("/sounds")({
 
 function Sounds() {
   const { settings, update } = useSettings();
+  const reducedMotion = useReducedMotion();
 
   return (
     <main className="min-h-screen">
@@ -58,6 +61,7 @@ function Sounds() {
                       <ElcamosoMark
                         intensity={selected ? 1 : 0.34}
                         waveResponse={profile.voice.waveResponse}
+                        reducedMotion={reducedMotion}
                         className="h-6 w-auto shrink-0"
                       />
                       <span className="flex-1">
@@ -79,6 +83,8 @@ function Sounds() {
             </section>
           );
         })}
+
+        <AuditionPanel profileId={settings.profileId} />
 
 
         <div className="mt-16 flex flex-wrap items-center gap-8">

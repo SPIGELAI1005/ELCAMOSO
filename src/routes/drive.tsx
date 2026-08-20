@@ -3,6 +3,8 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { ElcamosoMark, ElcamosoLogo } from "@/components/ElcamosoLogo";
 import { BrandLoader } from "@/components/BrandLoader";
 import { useSettings } from "@/lib/drive/useSettings";
+import { useReducedMotion } from "@/lib/drive/useReducedMotion";
+import { getTuning } from "@/lib/drive/settings";
 import { useDriveSession } from "@/lib/drive/useDriveSession";
 import { getProfile } from "@/lib/sound/profiles";
 
@@ -30,10 +32,12 @@ export const Route = createFileRoute("/drive")({
 function DriveScreen() {
   const { settings, update } = useSettings();
   const profile = getProfile(settings.profileId);
+  const reducedMotion = useReducedMotion();
   const { status, error, state, start, stop } = useDriveSession({
     profileId: settings.profileId,
     volume: settings.volume,
     demoMotion: settings.demoMotion,
+    tuning: getTuning(settings, settings.profileId),
   });
   const [showSafety, setShowSafety] = useState(false);
   const navigate = useNavigate();
@@ -91,6 +95,7 @@ function DriveScreen() {
           throttle={state.throttle}
           regen={state.regen}
           waveResponse={profile.voice.waveResponse}
+          reducedMotion={reducedMotion}
           rpm={state.rpm}
           gear={state.gear}
           continuous={profile.drivetrainMode === "continuous"}
@@ -100,7 +105,12 @@ function DriveScreen() {
         />
       ) : (
         <div className="flex flex-1 flex-col items-center justify-center gap-10 text-center">
-          <ElcamosoMark animate waveResponse={profile.voice.waveResponse} className="h-14 w-auto" />
+          <ElcamosoMark
+            animate
+            waveResponse={profile.voice.waveResponse}
+            reducedMotion={reducedMotion}
+            className="h-14 w-auto"
+          />
           <div>
             <p className="text-2xl font-light">{profile.name}</p>
             <p className="mt-3 text-sm text-muted-foreground">{profile.traits.join(" · ")}</p>
@@ -123,6 +133,7 @@ function Driving({
   throttle,
   regen,
   waveResponse,
+  reducedMotion,
   rpm,
   gear,
   continuous,
@@ -135,6 +146,7 @@ function Driving({
   throttle: number;
   regen: number;
   waveResponse: number;
+  reducedMotion: boolean;
   rpm: number;
   gear: number;
   continuous: boolean;
@@ -149,6 +161,7 @@ function Driving({
         throttle={throttle}
         regen={regen}
         waveResponse={waveResponse}
+        reducedMotion={reducedMotion}
         className="h-10 w-auto"
       />
 

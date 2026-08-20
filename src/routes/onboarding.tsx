@@ -2,6 +2,7 @@ import { useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { ElcamosoMark } from "@/components/ElcamosoLogo";
 import { useSettings } from "@/lib/drive/useSettings";
+import { useReducedMotion } from "@/lib/drive/useReducedMotion";
 import { getProfile } from "@/lib/sound/profiles";
 
 export const Route = createFileRoute("/onboarding")({
@@ -31,6 +32,7 @@ type Step = 0 | 1 | 2;
 function Onboarding() {
   const navigate = useNavigate();
   const { settings, update } = useSettings();
+  const reducedMotion = useReducedMotion();
   const [step, setStep] = useState<Step>(0);
   const [sensorState, setSensorState] = useState<"idle" | "asking" | "ready" | "denied">(
     "idle",
@@ -73,7 +75,8 @@ function Onboarding() {
         <ElcamosoMark
           animate={step === 0}
           intensity={0.4 + step * 0.3}
-          throttle={step === 2 ? 0.5 : 0.15}
+          throttle={reducedMotion ? 0 : step === 2 ? 0.5 : 0.15}
+          reducedMotion={reducedMotion}
           className="h-14 w-auto"
         />
 
@@ -88,6 +91,13 @@ function Onboarding() {
             <p className="text-xs tracking-[0.2em] text-muted-foreground uppercase">
               Your drive stays yours
             </p>
+            <button
+              onClick={() => update({ reducedMotion: !settings.reducedMotion })}
+              aria-pressed={settings.reducedMotion}
+              className="mx-auto inline-flex min-h-11 items-center rounded-full border border-border px-6 text-[11px] tracking-[0.24em] text-muted-foreground uppercase hover:text-foreground"
+            >
+              Reduced motion {settings.reducedMotion ? "on" : "off"}
+            </button>
           </div>
         ) : step === 1 ? (
           <div className="flex flex-col gap-6">

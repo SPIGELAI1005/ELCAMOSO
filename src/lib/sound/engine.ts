@@ -8,6 +8,7 @@ import type { SoundProfile } from "@/lib/sound/profiles";
 export class SoundEngine {
   private ctx: AudioContext | null = null;
   private master: GainNode | null = null;
+  private limiter: DynamicsCompressorNode | null = null;
   private body: GainNode | null = null;
   private accents: GainNode | null = null;
   private filter: BiquadFilterNode | null = null;
@@ -19,12 +20,19 @@ export class SoundEngine {
   private nextRhythmTime = 0;
   private rhythmStep = 0;
   private noiseBuffer: AudioBuffer | null = null;
+  private swapTimer: ReturnType<typeof setTimeout> | null = null;
+  /** hard ceiling applied before the limiter so no profile can spike */
+  static readonly MAX_GAIN = 0.85;
 
   get running() {
     return this.ctx !== null;
   }
 
-  async start(profile: SoundProfile) {
+  private safeVolume(value: number) {
+    return Math.min(SoundEngine.MAX_GAIN, Math.max(0.0001, value));
+  }
+
+  async start(profile: SoundProfile, options?: { signature?: boolean }) {
     if (this.ctx) {
       this.setProfile(profile);
       return;
@@ -33,16 +41,25 @@ export class SoundEngine {
     await ctx.resume();
     this.ctx = ctx;
 
+    // Output chain: everything → master → limiter → speakers.
+    const limiter = ctx.createDynamicsCompressor();
+    limiter.threshold.value = -8;
+    limiter.knee.value = 6;
+    limiter.ratio.value = 20;
+    limiter.attack.value = 0.003;
+    limiter.release.value = 0.25;
+    limiter.connect(ctx.destination);
+
     const master = ctx.createGain();
     master.gain.value = 0.0001;
-    master.connect(ctx.destination);
+    master.connect(limiter);
 
     const body = ctx.createGain();
     body.gain.value = 1;
     body.connect(master);
 
     const accents = ctx.createGain();
-    accents.gain.value = 0;
+    accents.gain.value = 1;
     accents.connect(master);
 
     const filter = ctx.createBiquadFilter();
@@ -51,17 +68,20 @@ export class SoundEngine {
     filter.Q.value = 1.2;
     filter.connect(body);
 
+    this.limiter = limiter;
     this.master = master;
     this.body = body;
     this.accents = accents;
     this.filter = filter;
 
     // Startup: a soft ELCAMOSO signature, then the profile breathes in to idle.
-    const signatureEnd = this.playSignature();
+    const withSignature = options?.signature !== false;
+    const signatureEnd = withSignature ? this.playSignature() : ctx.currentTime + 0.4;
     this.setProfile(profile);
     master.gain.setValueAtTime(0.0001, ctx.currentTime);
-    master.gain.setTargetAtTime(this.volume * 0.55, signatureEnd - 0.35, 0.55);
+    master.gain.setTargetAtTime(this.safeVolume(this.volume * 0.55), signatureEnd - 0.35, 0.55);
   }
+
 
   /**
    * Short, original ELCAMOSO sonic signature — two soft rising sines that open
@@ -74,7 +94,7 @@ export class SoundEngine {
     const now = ctx.currentTime + 0.05;
     const bus = ctx.createGain();
     bus.gain.value = 0.5;
-    bus.connect(ctx.destination);
+    bus.connect(this.limiter ?? ctx.destination);
     [392, 587.33].forEach((freq, i) => {
       const at = now + i * 0.22;
       const osc = ctx.createOscillator();
@@ -103,14 +123,43 @@ export class SoundEngine {
     return this.noiseBuffer;
   }
 
+  /**
+   * Switching profiles never jumps in loudness: the current body is faded out,
+   * the new voices are built silently, then faded back in.
+   */
   setProfile(profile: SoundProfile) {
+    const ctx = this.ctx;
+    const body = this.body;
+    if (!ctx || !this.filter) {
+      this.profile = profile;
+      return;
+    }
+    if (this.profile?.id === profile.id && this.voices.length) return;
+    if (!this.voices.length || !body) {
+      this.buildProfile(profile);
+      return;
+    }
+    if (this.swapTimer) clearTimeout(this.swapTimer);
+    const fade = 0.18;
+    body.gain.cancelScheduledValues(ctx.currentTime);
+    body.gain.setValueAtTime(body.gain.value, ctx.currentTime);
+    body.gain.linearRampToValueAtTime(0.0001, ctx.currentTime + fade);
+    this.swapTimer = setTimeout(() => {
+      const c = this.ctx;
+      if (!c || !this.body) return;
+      this.buildProfile(profile);
+      this.body.gain.setValueAtTime(0.0001, c.currentTime);
+      this.body.gain.linearRampToValueAtTime(1, c.currentTime + 0.35);
+    }, fade * 1000 + 30);
+  }
+
+  private buildProfile(profile: SoundProfile) {
     const ctx = this.ctx;
     const filter = this.filter;
     if (!ctx || !filter) {
       this.profile = profile;
       return;
     }
-    if (this.profile?.id === profile.id && this.voices.length) return;
     this.teardownVoices();
     this.profile = profile;
     this.nextRhythmTime = ctx.currentTime + 0.2;
@@ -165,7 +214,7 @@ export class SoundEngine {
   setVolume(value: number) {
     this.volume = value;
     if (this.ctx && this.master) {
-      this.master.gain.setTargetAtTime(Math.max(0.0001, value), this.ctx.currentTime, 0.2);
+      this.master.gain.setTargetAtTime(this.safeVolume(value), this.ctx.currentTime, 0.2);
     }
   }
 
@@ -205,7 +254,8 @@ export class SoundEngine {
 
     if (this.master) {
       const duck = 1 - state.regen * 0.35;
-      this.master.gain.setTargetAtTime(this.volume * (0.55 + state.load * 0.45) * duck, t, 0.12);
+      const target = this.safeVolume(this.volume * (0.55 + state.load * 0.45) * duck);
+      this.master.gain.setTargetAtTime(target, t, 0.12);
     }
 
     if (v.rhythm) this.scheduleRhythm(state);
@@ -242,7 +292,7 @@ export class SoundEngine {
     const out = this.accents;
     if (!ctx || !out) return;
     const gain = ctx.createGain();
-    gain.connect(ctx.destination);
+    gain.connect(out);
     gain.gain.setValueAtTime(0.0001, at);
 
     if (kind === "bell") {
@@ -321,14 +371,18 @@ export class SoundEngine {
   async stop() {
     const ctx = this.ctx;
     if (!ctx) return;
+    if (this.swapTimer) clearTimeout(this.swapTimer);
+    this.swapTimer = null;
     if (this.master) this.master.gain.setTargetAtTime(0.0001, ctx.currentTime, 0.2);
     await new Promise((r) => setTimeout(r, 380));
     this.teardownVoices();
     await ctx.close();
     this.ctx = null;
     this.master = null;
+    this.limiter = null;
     this.body = null;
     this.accents = null;
     this.filter = null;
+    this.profile = null;
   }
 }
