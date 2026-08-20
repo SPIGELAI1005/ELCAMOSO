@@ -31,13 +31,18 @@ type Step = 0 | 1 | 2;
 
 function Onboarding() {
   const navigate = useNavigate();
-  const { settings, update } = useSettings();
+  const { settings, update, loaded } = useSettings();
   const reducedMotion = useReducedMotion();
   const [step, setStep] = useState<Step>(0);
   const [sensorState, setSensorState] = useState<"idle" | "asking" | "ready" | "denied">(
     "idle",
   );
   const profile = getProfile(settings.profileId);
+
+  // Already set up? Go straight to the drive screen.
+  useEffect(() => {
+    if (loaded && settings.onboarded) void navigate({ to: "/drive" });
+  }, [loaded, settings.onboarded, navigate]);
 
   const enableSensors = async () => {
     setSensorState("asking");
