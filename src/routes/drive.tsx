@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { ElcamosoMark, ElcamosoLogo } from "@/components/ElcamosoLogo";
 import { BrandLoader } from "@/components/BrandLoader";
 import { useSettings } from "@/lib/drive/useSettings";
@@ -36,17 +36,26 @@ function DriveScreen() {
     demoMotion: settings.demoMotion,
   });
   const [showSafety, setShowSafety] = useState(false);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (!settings.onboarded && !settings.safetyAcknowledged) {
+      void navigate({ to: "/onboarding" });
+    }
+  }, [navigate, settings.onboarded, settings.safetyAcknowledged]);
 
   const handleStart = () => {
     if (!settings.safetyAcknowledged) {
       setShowSafety(true);
       return;
     }
+    update({ lastDriveAt: Date.now() });
     void start();
   };
 
   const acknowledge = () => {
-    update({ safetyAcknowledged: true });
+    update({ safetyAcknowledged: true, onboarded: true, lastDriveAt: Date.now() });
     setShowSafety(false);
     void start();
   };
@@ -79,6 +88,9 @@ function DriveScreen() {
         <Driving
           kmh={kmh}
           load={state.load}
+          throttle={state.throttle}
+          regen={state.regen}
+          waveResponse={profile.voice.waveResponse}
           rpm={state.rpm}
           gear={state.gear}
           continuous={profile.drivetrainMode === "continuous"}
@@ -88,7 +100,7 @@ function DriveScreen() {
         />
       ) : (
         <div className="flex flex-1 flex-col items-center justify-center gap-10 text-center">
-          <ElcamosoMark animate className="h-14 w-auto" />
+          <ElcamosoMark animate waveResponse={profile.voice.waveResponse} className="h-14 w-auto" />
           <div>
             <p className="text-2xl font-light">{profile.name}</p>
             <p className="mt-3 text-sm text-muted-foreground">{profile.traits.join(" · ")}</p>
@@ -108,6 +120,9 @@ function DriveScreen() {
 function Driving({
   kmh,
   load,
+  throttle,
+  regen,
+  waveResponse,
   rpm,
   gear,
   continuous,
@@ -117,6 +132,9 @@ function Driving({
 }: {
   kmh: number;
   load: number;
+  throttle: number;
+  regen: number;
+  waveResponse: number;
   rpm: number;
   gear: number;
   continuous: boolean;
@@ -126,7 +144,13 @@ function Driving({
 }) {
   return (
     <div className="flex flex-1 flex-col items-center justify-between py-12 text-center">
-      <ElcamosoMark intensity={load} className="h-10 w-auto" />
+      <ElcamosoMark
+        intensity={load}
+        throttle={throttle}
+        regen={regen}
+        waveResponse={waveResponse}
+        className="h-10 w-auto"
+      />
 
       <div className="flex flex-col items-center gap-10">
         <div>

@@ -112,3 +112,15 @@
     transition-duration: 0.001ms !important;
   }
 }
+
+@keyframes wave-radiate {
+  0% {
+    opacity: 0.25;
+  }
+  35% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.25;
+  }
+}
