@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useState } from "react";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { ElcamosoMark, ElcamosoLogo } from "@/components/ElcamosoLogo";
 import { BrandLoader } from "@/components/BrandLoader";
 import { useSettings } from "@/lib/drive/useSettings";
@@ -51,26 +51,31 @@ function DriveScreen() {
     regen: state.regen,
   });
   const [showSafety, setShowSafety] = useState(false);
-  const navigate = useNavigate();
 
-  useEffect(() => {
-    if (typeof window === "undefined" || !loaded) return;
-    if (!settings.onboarded && !settings.safetyAcknowledged) {
-      void navigate({ to: "/onboarding" });
-    }
-  }, [navigate, loaded, settings.onboarded, settings.safetyAcknowledged]);
+  /**
+   * Safety fallback: Drive is always reachable once settings have loaded. A
+   * first-time visitor is offered setup inline instead of being redirected, so
+   * inconsistent onboarding flags can never bounce you back and forth.
+   */
+  const needsSetup = loaded && !settings.onboarded && !settings.safetyAcknowledged;
 
   const handleStart = () => {
     if (!settings.safetyAcknowledged) {
       setShowSafety(true);
       return;
     }
-    update({ lastDriveAt: Date.now() });
+    update({ lastDriveAt: Date.now(), driveCount: settings.driveCount + 1 });
     void start();
   };
 
   const acknowledge = () => {
-    update({ safetyAcknowledged: true, onboarded: true, lastDriveAt: Date.now() });
+    update({
+      safetyAcknowledged: true,
+      onboarded: true,
+      onboardingStep: 2,
+      lastDriveAt: Date.now(),
+      driveCount: settings.driveCount + 1,
+    });
     setShowSafety(false);
     void start();
   };
@@ -116,6 +121,14 @@ function DriveScreen() {
         />
       ) : (
         <div className="flex flex-1 flex-col items-center justify-center gap-10 text-center">
+          {needsSetup ? (
+            <Link
+              to="/onboarding"
+              className="rounded-full border border-border px-6 py-3 text-[11px] tracking-[0.24em] text-muted-foreground uppercase hover:text-foreground"
+            >
+              New here? Run the 3-step setup
+            </Link>
+          ) : null}
           <ElcamosoMark
             animate
             waveResponse={profile.voice.waveResponse}

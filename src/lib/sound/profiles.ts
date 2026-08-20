@@ -6,10 +6,43 @@ export type ProfileCategory =
   | "Future"
   | "Nautical"
   | "Festive"
-  | "Playful";
+  | "Playful"
+  | "Heritage"
+  | "Garage";
 
 export type LfoTarget = "pitch" | "filter" | "amp";
-export type RhythmKind = "clack" | "bell" | "blat" | "chug";
+
+/** Rhythmic events that keep time with your speed. */
+export type RhythmKind =
+  | "clack"
+  | "bell"
+  | "blat"
+  | "chug"
+  | "gallop"
+  | "splash"
+  | "creak"
+  | "laugh";
+
+/** Continuous atmospheric beds layered under the main voice. */
+export type TextureKind =
+  | "water"
+  | "wind"
+  | "gravel"
+  | "steam"
+  | "crowd"
+  | "rumble"
+  | "sizzle";
+
+/** Occasional signature one-shots that give a profile personality. */
+export type SignalKind =
+  | "horn"
+  | "laugh"
+  | "hohoho"
+  | "whistle"
+  | "seagull"
+  | "whip"
+  | "neigh"
+  | "beam";
 
 export interface RhythmSpec {
   kind: RhythmKind;
@@ -21,6 +54,50 @@ export interface RhythmSpec {
   tone: number;
 }
 
+export interface TextureSpec {
+  kind: TextureKind;
+  /** 0..1 level at full load */
+  level: number;
+  /** centre frequency of the band */
+  tone: number;
+  /** how strongly the bed follows speed, 0..1 (0 = always present) */
+  speedScale?: number;
+  /** slow surge rate in Hz, for swell and wash movement */
+  surge?: number;
+}
+
+export interface SignalSpec {
+  kind: SignalKind;
+  /** average seconds between events at rest */
+  everySeconds: number;
+  /** random +/- variation in seconds */
+  jitter?: number;
+  level: number;
+  tone: number;
+  /** true = fires more often the faster you go */
+  speedLinked?: boolean;
+}
+
+export interface ProfileVoice {
+  baseFrequency: number;
+  harmonics: number[];
+  /** how quickly the mark's waves fill with load */
+  waveResponse: number;
+  filterBase: number;
+  filterRange: number;
+  noise: number;
+  detune: number;
+  wave: OscillatorType;
+  lfoRate?: number;
+  lfoDepth?: number;
+  lfoTarget?: LfoTarget;
+  rhythm?: RhythmSpec;
+  /** additional rhythmic layer, e.g. wheels under hooves */
+  rhythmB?: RhythmSpec;
+  textures?: TextureSpec[];
+  signals?: SignalSpec[];
+}
+
 export interface SoundProfile {
   id: string;
   name: string;
@@ -29,27 +106,18 @@ export interface SoundProfile {
   description: string;
   drivetrainMode: DrivetrainMode;
   /** timbre parameters consumed by the synthesis layer */
-  voice: {
-    baseFrequency: number;
-    harmonics: number[];
-    /** how quickly the mark's waves fill with load */
-    waveResponse: number;
-    filterBase: number;
-    filterRange: number;
-    noise: number;
-    detune: number;
-    wave: OscillatorType;
-    lfoRate?: number;
-    lfoDepth?: number;
-    lfoTarget?: LfoTarget;
-    rhythm?: RhythmSpec;
-  };
+  voice: ProfileVoice;
   transmission?: {
     gearRatios: number[];
     idleRpm: number;
     redlineRpm: number;
     shiftSmoothing: number;
   };
+  /** true for user-made profiles created in the Studio */
+  custom?: boolean;
+  /** the built-in profile a custom sound was derived from */
+  baseId?: string;
+  createdAt?: number;
 }
 
 const GT_BOX = {
@@ -83,6 +151,10 @@ export const SOUND_PROFILES: SoundProfile[] = [
       noise: 0.16,
       detune: 7,
       wave: "sawtooth",
+      textures: [
+        { kind: "rumble", level: 0.3, tone: 90, speedScale: 0.7, surge: 0.5 },
+        { kind: "wind", level: 0.16, tone: 1400, speedScale: 1 },
+      ],
     },
     transmission: GT_BOX,
   },
@@ -102,6 +174,10 @@ export const SOUND_PROFILES: SoundProfile[] = [
       noise: 0.1,
       detune: 4,
       wave: "sawtooth",
+      textures: [
+        { kind: "sizzle", level: 0.14, tone: 4200, speedScale: 1 },
+        { kind: "wind", level: 0.2, tone: 1800, speedScale: 1 },
+      ],
     },
     transmission: RACE_BOX,
   },
@@ -110,7 +186,7 @@ export const SOUND_PROFILES: SoundProfile[] = [
     name: "Cyber Pulse",
     category: "Future",
     traits: ["Electric", "Futuristic", "Immersive"],
-    description: "One continuous rise. No shifts - only motion, glide and regeneration.",
+    description: "One continuous rise. No shifts, only motion, glide and regeneration.",
     drivetrainMode: "continuous",
     voice: {
       baseFrequency: 62,
@@ -121,6 +197,7 @@ export const SOUND_PROFILES: SoundProfile[] = [
       noise: 0.05,
       detune: 11,
       wave: "sawtooth",
+      textures: [{ kind: "sizzle", level: 0.1, tone: 5200, speedScale: 1, surge: 0.3 }],
     },
   },
   {
@@ -139,6 +216,10 @@ export const SOUND_PROFILES: SoundProfile[] = [
       noise: 0.12,
       detune: 3,
       wave: "sawtooth",
+      textures: [
+        { kind: "wind", level: 0.26, tone: 2200, speedScale: 1 },
+        { kind: "crowd", level: 0.08, tone: 700, speedScale: 0.3, surge: 0.12 },
+      ],
     },
     transmission: { ...RACE_BOX, shiftSmoothing: 0.06, redlineRpm: 8600 },
   },
@@ -147,7 +228,7 @@ export const SOUND_PROFILES: SoundProfile[] = [
     name: "Rally Car",
     category: "Motorsport",
     traits: ["Gravel", "Turbo", "Raw"],
-    description: "Loose-surface energy with turbo whistle and a gritty texture.",
+    description: "Loose-surface energy: turbo whistle, stone spray and a gritty texture.",
     drivetrainMode: "virtual-transmission",
     voice: {
       baseFrequency: 30,
@@ -155,12 +236,19 @@ export const SOUND_PROFILES: SoundProfile[] = [
       waveResponse: 1,
       filterBase: 340,
       filterRange: 3800,
-      noise: 0.42,
+      noise: 0.34,
       detune: 12,
       wave: "square",
       lfoRate: 0.8,
       lfoDepth: 900,
       lfoTarget: "filter",
+      textures: [
+        { kind: "gravel", level: 0.34, tone: 2600, speedScale: 1, surge: 3.2 },
+        { kind: "rumble", level: 0.22, tone: 110, speedScale: 0.8 },
+      ],
+      signals: [
+        { kind: "whistle", everySeconds: 9, jitter: 4, level: 0.1, tone: 3200, speedLinked: true },
+      ],
     },
     transmission: { ...GT_BOX, redlineRpm: 7400, shiftSmoothing: 0.1 },
   },
@@ -177,12 +265,17 @@ export const SOUND_PROFILES: SoundProfile[] = [
       waveResponse: 0.7,
       filterBase: 180,
       filterRange: 2600,
-      noise: 0.18,
+      noise: 0.14,
       detune: 18,
       wave: "triangle",
       lfoRate: 0.14,
       lfoDepth: 700,
       lfoTarget: "filter",
+      textures: [
+        { kind: "rumble", level: 0.32, tone: 60, speedScale: 0.5, surge: 0.18 },
+        { kind: "sizzle", level: 0.08, tone: 6000, speedScale: 0.8, surge: 0.22 },
+      ],
+      signals: [{ kind: "beam", everySeconds: 14, jitter: 7, level: 0.07, tone: 900 }],
     },
   },
   {
@@ -204,6 +297,8 @@ export const SOUND_PROFILES: SoundProfile[] = [
       lfoRate: 6.5,
       lfoDepth: 55,
       lfoTarget: "pitch",
+      textures: [{ kind: "sizzle", level: 0.07, tone: 7200, speedScale: 0.6, surge: 0.9 }],
+      signals: [{ kind: "beam", everySeconds: 8, jitter: 5, level: 0.09, tone: 1500 }],
     },
   },
   {
@@ -211,7 +306,8 @@ export const SOUND_PROFILES: SoundProfile[] = [
     name: "Speed Boat",
     category: "Nautical",
     traits: ["Spray", "Planing", "Open Water"],
-    description: "Outboard bite with water rushing past as the hull comes up on plane.",
+    description:
+      "Outboard bite with water rushing past the hull and spray thrown up as you come on plane.",
     drivetrainMode: "continuous",
     voice: {
       baseFrequency: 70,
@@ -219,10 +315,17 @@ export const SOUND_PROFILES: SoundProfile[] = [
       waveResponse: 1.05,
       filterBase: 420,
       filterRange: 4400,
-      noise: 0.55,
+      noise: 0.3,
       detune: 9,
       wave: "sawtooth",
-      rhythm: { kind: "chug", baseRate: 6, rateScale: 26, level: 0.1, tone: 160 },
+      rhythm: { kind: "splash", baseRate: 1.1, rateScale: 4.5, level: 0.22, tone: 900 },
+      rhythmB: { kind: "chug", baseRate: 7, rateScale: 30, level: 0.07, tone: 190 },
+      textures: [
+        { kind: "water", level: 0.44, tone: 1500, speedScale: 1, surge: 0.55 },
+        { kind: "water", level: 0.22, tone: 320, speedScale: 0.8, surge: 0.3 },
+        { kind: "wind", level: 0.18, tone: 2600, speedScale: 1 },
+      ],
+      signals: [{ kind: "seagull", everySeconds: 17, jitter: 9, level: 0.07, tone: 1700 }],
     },
   },
   {
@@ -230,7 +333,8 @@ export const SOUND_PROFILES: SoundProfile[] = [
     name: "Cruise Ship",
     category: "Nautical",
     traits: ["Enormous", "Slow", "Serene"],
-    description: "A vast low horn and engine-room hum. Motion measured in decks, not metres.",
+    description:
+      "A vast low horn, engine-room hum and the endless wash of water down the hull.",
     drivetrainMode: "continuous",
     voice: {
       baseFrequency: 32,
@@ -238,12 +342,20 @@ export const SOUND_PROFILES: SoundProfile[] = [
       waveResponse: 0.5,
       filterBase: 120,
       filterRange: 900,
-      noise: 0.22,
+      noise: 0.12,
       detune: 14,
       wave: "sine",
       lfoRate: 0.09,
       lfoDepth: 260,
       lfoTarget: "filter",
+      textures: [
+        { kind: "water", level: 0.3, tone: 700, speedScale: 0.85, surge: 0.16 },
+        { kind: "rumble", level: 0.34, tone: 55, speedScale: 0.4, surge: 0.1 },
+      ],
+      signals: [
+        { kind: "horn", everySeconds: 21, jitter: 8, level: 0.16, tone: 82 },
+        { kind: "seagull", everySeconds: 26, jitter: 12, level: 0.05, tone: 1500 },
+      ],
     },
   },
   {
@@ -251,7 +363,7 @@ export const SOUND_PROFILES: SoundProfile[] = [
     name: "Santa Sleigh",
     category: "Festive",
     traits: ["Bells", "Snow", "Joyful"],
-    description: "Sleigh bells that ring faster the quicker you glide.",
+    description: "Sleigh bells that ring faster the quicker you glide, with a warm ho ho ho.",
     drivetrainMode: "continuous",
     voice: {
       baseFrequency: 96,
@@ -259,29 +371,93 @@ export const SOUND_PROFILES: SoundProfile[] = [
       waveResponse: 1.1,
       filterBase: 600,
       filterRange: 3800,
-      noise: 0.14,
+      noise: 0.1,
       detune: 8,
       wave: "triangle",
-      rhythm: { kind: "bell", baseRate: 2.2, rateScale: 9, level: 0.14, tone: 2100 },
+      rhythm: { kind: "bell", baseRate: 2.4, rateScale: 10, level: 0.16, tone: 2100 },
+      rhythmB: { kind: "clack", baseRate: 0.9, rateScale: 3.4, level: 0.07, tone: 260 },
+      textures: [{ kind: "wind", level: 0.2, tone: 1100, speedScale: 0.9, surge: 0.4 }],
+      signals: [{ kind: "hohoho", everySeconds: 19, jitter: 8, level: 0.14, tone: 150 }],
     },
   },
   {
     id: "wild-west-carriage",
     name: "Wild West Carriage",
-    category: "Playful",
+    category: "Heritage",
     traits: ["Hooves", "Wooden", "Dusty"],
-    description: "Galloping hooves and creaking timber, keeping time with your speed.",
+    description:
+      "Four-beat hooves on hard ground, wooden wheels grinding gravel and the crack of a whip.",
     drivetrainMode: "continuous",
     voice: {
       baseFrequency: 58,
       harmonics: [1, 2.03, 3.1],
       waveResponse: 0.9,
-      filterBase: 260,
-      filterRange: 1600,
-      noise: 0.3,
+      filterBase: 240,
+      filterRange: 1400,
+      noise: 0.08,
       detune: 16,
       wave: "triangle",
-      rhythm: { kind: "clack", baseRate: 1.6, rateScale: 8, level: 0.2, tone: 420 },
+      rhythm: { kind: "gallop", baseRate: 0.9, rateScale: 2.6, level: 0.3, tone: 380 },
+      rhythmB: { kind: "creak", baseRate: 0.5, rateScale: 1.3, level: 0.12, tone: 180 },
+      textures: [
+        { kind: "gravel", level: 0.3, tone: 2100, speedScale: 1, surge: 2.4 },
+        { kind: "wind", level: 0.12, tone: 900, speedScale: 0.6 },
+      ],
+      signals: [
+        { kind: "whip", everySeconds: 13, jitter: 7, level: 0.16, tone: 2600, speedLinked: true },
+        { kind: "neigh", everySeconds: 24, jitter: 12, level: 0.12, tone: 420 },
+      ],
+    },
+  },
+  {
+    id: "romanian-85-carriage",
+    name: "Romanian '85 Carriage",
+    category: "Heritage",
+    traits: ["Cobblestone", "Iron-Rimmed", "Village"],
+    description:
+      "A single patient horse, iron-rimmed wheels ringing on cobbles and a cart that creaks with every rut.",
+    drivetrainMode: "continuous",
+    voice: {
+      baseFrequency: 46,
+      harmonics: [1, 2.02, 2.98],
+      waveResponse: 0.7,
+      filterBase: 200,
+      filterRange: 1100,
+      noise: 0.07,
+      detune: 13,
+      wave: "triangle",
+      rhythm: { kind: "clack", baseRate: 1.4, rateScale: 4.2, level: 0.26, tone: 720 },
+      rhythmB: { kind: "creak", baseRate: 0.34, rateScale: 1.1, level: 0.16, tone: 150 },
+      textures: [
+        { kind: "gravel", level: 0.2, tone: 1500, speedScale: 0.9, surge: 1.6 },
+        { kind: "rumble", level: 0.14, tone: 95, speedScale: 0.7, surge: 0.7 },
+      ],
+      signals: [
+        { kind: "neigh", everySeconds: 20, jitter: 10, level: 0.13, tone: 380 },
+        { kind: "whistle", everySeconds: 30, jitter: 14, level: 0.05, tone: 1900 },
+      ],
+    },
+  },
+  {
+    id: "laughing-machine",
+    name: "Laughing Machine",
+    category: "Playful",
+    traits: ["Giggling", "Contagious", "Absurd"],
+    description:
+      "The faster you go, the harder it laughs. Accelerate hard and the whole cabin cracks up.",
+    drivetrainMode: "continuous",
+    voice: {
+      baseFrequency: 88,
+      harmonics: [1, 2.01, 3.04],
+      waveResponse: 1.2,
+      filterBase: 420,
+      filterRange: 2200,
+      noise: 0.04,
+      detune: 9,
+      wave: "triangle",
+      rhythm: { kind: "laugh", baseRate: 0.35, rateScale: 2.1, level: 0.24, tone: 190 },
+      textures: [{ kind: "crowd", level: 0.16, tone: 800, speedScale: 0.9, surge: 0.35 }],
+      signals: [{ kind: "laugh", everySeconds: 11, jitter: 5, level: 0.2, tone: 130 }],
     },
   },
   {
@@ -297,22 +473,23 @@ export const SOUND_PROFILES: SoundProfile[] = [
       waveResponse: 1,
       filterBase: 140,
       filterRange: 900,
-      noise: 0.3,
+      noise: 0.24,
       detune: 24,
       wave: "square",
       lfoRate: 11,
       lfoDepth: 140,
       lfoTarget: "pitch",
-      rhythm: { kind: "blat", baseRate: 0.7, rateScale: 5, level: 0.22, tone: 90 },
+      rhythm: { kind: "blat", baseRate: 0.7, rateScale: 5, level: 0.24, tone: 90 },
+      signals: [{ kind: "laugh", everySeconds: 15, jitter: 8, level: 0.14, tone: 170 }],
     },
     transmission: { ...GT_BOX, redlineRpm: 5200 },
   },
   {
     id: "steam-train",
     name: "Steam Train",
-    category: "Playful",
+    category: "Heritage",
     traits: ["Chuffing", "Iron", "Nostalgic"],
-    description: "Pistons and steam that quicken as the line opens up ahead.",
+    description: "Pistons, escaping steam and a far-off whistle as the line opens up ahead.",
     drivetrainMode: "continuous",
     voice: {
       baseFrequency: 38,
@@ -320,10 +497,18 @@ export const SOUND_PROFILES: SoundProfile[] = [
       waveResponse: 0.8,
       filterBase: 200,
       filterRange: 1800,
-      noise: 0.5,
+      noise: 0.18,
       detune: 10,
       wave: "triangle",
-      rhythm: { kind: "chug", baseRate: 1.2, rateScale: 7, level: 0.22, tone: 220 },
+      rhythm: { kind: "chug", baseRate: 1.2, rateScale: 7, level: 0.26, tone: 220 },
+      rhythmB: { kind: "clack", baseRate: 0.8, rateScale: 5.5, level: 0.08, tone: 1400 },
+      textures: [
+        { kind: "steam", level: 0.3, tone: 3400, speedScale: 0.8, surge: 0.9 },
+        { kind: "rumble", level: 0.2, tone: 80, speedScale: 0.9 },
+      ],
+      signals: [
+        { kind: "whistle", everySeconds: 18, jitter: 9, level: 0.16, tone: 900, speedLinked: true },
+      ],
     },
   },
   {
@@ -345,6 +530,7 @@ export const SOUND_PROFILES: SoundProfile[] = [
       lfoRate: 14,
       lfoDepth: 30,
       lfoTarget: "amp",
+      signals: [{ kind: "laugh", everySeconds: 22, jitter: 10, level: 0.1, tone: 220 }],
     },
     transmission: { ...RACE_BOX, idleRpm: 1400, redlineRpm: 11000, shiftSmoothing: 0.07 },
   },
@@ -361,9 +547,13 @@ export const SOUND_PROFILES: SoundProfile[] = [
       waveResponse: 1.1,
       filterBase: 500,
       filterRange: 6200,
-      noise: 0.62,
+      noise: 0.42,
       detune: 5,
       wave: "sawtooth",
+      textures: [
+        { kind: "wind", level: 0.34, tone: 2400, speedScale: 1, surge: 0.25 },
+        { kind: "rumble", level: 0.2, tone: 70, speedScale: 0.8 },
+      ],
     },
   },
 ];
@@ -373,12 +563,35 @@ export const PROFILE_CATEGORIES: ProfileCategory[] = [
   "Motorsport",
   "Future",
   "Nautical",
+  "Heritage",
   "Festive",
   "Playful",
+  "Garage",
 ];
 
 export const DEFAULT_PROFILE_ID = "gt-v8";
 
+/* ------------------------------------------------ custom profile registry */
+
+let CUSTOM_PROFILES: SoundProfile[] = [];
+
+/** Studio-made profiles are registered at runtime so getProfile can resolve them. */
+export function registerCustomProfiles(list: SoundProfile[]) {
+  CUSTOM_PROFILES = list;
+}
+
+export function getCustomProfiles(): SoundProfile[] {
+  return CUSTOM_PROFILES;
+}
+
+export function allProfiles(): SoundProfile[] {
+  return [...SOUND_PROFILES, ...CUSTOM_PROFILES];
+}
+
 export function getProfile(id: string | null | undefined): SoundProfile {
-  return SOUND_PROFILES.find((p) => p.id === id) ?? SOUND_PROFILES[0]!;
+  return (
+    CUSTOM_PROFILES.find((p) => p.id === id) ??
+    SOUND_PROFILES.find((p) => p.id === id) ??
+    SOUND_PROFILES[0]!
+  );
 }

@@ -4,6 +4,8 @@ import { ElcamosoLogo } from "@/components/ElcamosoLogo";
 const LINKS = [
   { to: "/drive", label: "Drive" },
   { to: "/sounds", label: "Sounds" },
+  { to: "/studio", label: "Studio" },
+  { to: "/garage", label: "Garage" },
   { to: "/settings", label: "Settings" },
 ] as const;
 
