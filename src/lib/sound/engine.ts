@@ -8,11 +8,17 @@ import type { SoundProfile } from "@/lib/sound/profiles";
 export class SoundEngine {
   private ctx: AudioContext | null = null;
   private master: GainNode | null = null;
+  private body: GainNode | null = null;
+  private accents: GainNode | null = null;
   private filter: BiquadFilterNode | null = null;
   private voices: { osc: OscillatorNode; gain: GainNode; ratio: number }[] = [];
   private noise: { src: AudioBufferSourceNode; gain: GainNode } | null = null;
+  private lfo: { osc: OscillatorNode; gain: GainNode } | null = null;
   private profile: SoundProfile | null = null;
   private volume = 0.7;
+  private nextRhythmTime = 0;
+  private rhythmStep = 0;
+  private noiseBuffer: AudioBuffer | null = null;
 
   get running() {
     return this.ctx !== null;
@@ -28,40 +34,73 @@ export class SoundEngine {
     this.ctx = ctx;
 
     const master = ctx.createGain();
-    master.gain.value = 0;
+    master.gain.value = 0.0001;
+    master.connect(ctx.destination);
+
+    const body = ctx.createGain();
+    body.gain.value = 1;
+    body.connect(master);
+
+    const accents = ctx.createGain();
+    accents.gain.value = 0;
+    accents.connect(master);
+
     const filter = ctx.createBiquadFilter();
     filter.type = "lowpass";
-    filter.frequency.value = 400;
+    filter.frequency.value = 300;
     filter.Q.value = 1.2;
-    filter.connect(master);
-    master.connect(ctx.destination);
+    filter.connect(body);
+
     this.master = master;
+    this.body = body;
+    this.accents = accents;
     this.filter = filter;
 
-    this.playSignature();
+    // Startup: a soft ELCAMOSO signature, then the profile breathes in to idle.
+    const signatureEnd = this.playSignature();
     this.setProfile(profile);
-    master.gain.setTargetAtTime(this.volume, ctx.currentTime + 0.9, 0.6);
+    master.gain.setValueAtTime(0.0001, ctx.currentTime);
+    master.gain.setTargetAtTime(this.volume * 0.55, signatureEnd - 0.35, 0.55);
   }
 
-  /** Short, original ELCAMOSO sonic signature — two soft rising sines. */
+  /**
+   * Short, original ELCAMOSO sonic signature — two soft rising sines that open
+   * outward like the O))) mark. Deliberately not a starter-motor imitation.
+   * Returns the time the signature finishes.
+   */
   private playSignature() {
     const ctx = this.ctx;
-    if (!ctx) return;
-    const now = ctx.currentTime;
+    if (!ctx) return 0;
+    const now = ctx.currentTime + 0.05;
+    const bus = ctx.createGain();
+    bus.gain.value = 0.5;
+    bus.connect(ctx.destination);
     [392, 587.33].forEach((freq, i) => {
+      const at = now + i * 0.22;
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.type = "sine";
-      osc.frequency.setValueAtTime(freq * 0.75, now + i * 0.18);
-      osc.frequency.exponentialRampToValueAtTime(freq, now + i * 0.18 + 0.45);
-      gain.gain.setValueAtTime(0.0001, now + i * 0.18);
-      gain.gain.exponentialRampToValueAtTime(0.12, now + i * 0.18 + 0.12);
-      gain.gain.exponentialRampToValueAtTime(0.0001, now + i * 0.18 + 0.9);
+      osc.frequency.setValueAtTime(freq * 0.75, at);
+      osc.frequency.exponentialRampToValueAtTime(freq, at + 0.5);
+      gain.gain.setValueAtTime(0.0001, at);
+      gain.gain.exponentialRampToValueAtTime(0.11, at + 0.16);
+      gain.gain.exponentialRampToValueAtTime(0.0001, at + 1.0);
       osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start(now + i * 0.18);
-      osc.stop(now + i * 0.18 + 1);
+      gain.connect(bus);
+      osc.start(at);
+      osc.stop(at + 1.1);
     });
+    return now + 1.3;
+  }
+
+  private getNoiseBuffer(ctx: AudioContext) {
+    if (!this.noiseBuffer) {
+      const buffer = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < data.length; i += 1) data[i] = Math.random() * 2 - 1;
+      this.noiseBuffer = buffer;
+    }
+    return this.noiseBuffer;
   }
 
   setProfile(profile: SoundProfile) {
@@ -71,8 +110,11 @@ export class SoundEngine {
       this.profile = profile;
       return;
     }
+    if (this.profile?.id === profile.id && this.voices.length) return;
     this.teardownVoices();
     this.profile = profile;
+    this.nextRhythmTime = ctx.currentTime + 0.2;
+    this.rhythmStep = 0;
 
     profile.voice.harmonics.forEach((ratio, i) => {
       const osc = ctx.createOscillator();
@@ -88,11 +130,8 @@ export class SoundEngine {
     });
 
     if (profile.voice.noise > 0) {
-      const buffer = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
-      const data = buffer.getChannelData(0);
-      for (let i = 0; i < data.length; i += 1) data[i] = Math.random() * 2 - 1;
       const src = ctx.createBufferSource();
-      src.buffer = buffer;
+      src.buffer = this.getNoiseBuffer(ctx);
       src.loop = true;
       const gain = ctx.createGain();
       gain.gain.value = 0;
@@ -101,12 +140,32 @@ export class SoundEngine {
       src.start();
       this.noise = { src, gain };
     }
+
+    const { lfoRate, lfoDepth, lfoTarget } = profile.voice;
+    if (lfoRate && lfoDepth && lfoTarget) {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.value = lfoRate;
+      gain.gain.value = lfoDepth;
+      osc.connect(gain);
+      if (lfoTarget === "pitch") {
+        this.voices.forEach(({ osc: v }) => gain.connect(v.detune));
+      } else if (lfoTarget === "filter") {
+        gain.connect(filter.frequency);
+      } else if (this.body) {
+        gain.gain.value = Math.min(0.5, lfoDepth / 100);
+        gain.connect(this.body.gain);
+      }
+      osc.start();
+      this.lfo = { osc, gain };
+    }
   }
 
   setVolume(value: number) {
     this.volume = value;
     if (this.ctx && this.master) {
-      this.master.gain.setTargetAtTime(value, this.ctx.currentTime, 0.15);
+      this.master.gain.setTargetAtTime(Math.max(0.0001, value), this.ctx.currentTime, 0.2);
     }
   }
 
@@ -123,7 +182,7 @@ export class SoundEngine {
     } else {
       fundamental = v.baseFrequency * (1 + state.load * 2.6 + state.throttle * 0.5);
     }
-    fundamental = Math.max(18, Math.min(900, fundamental));
+    fundamental = Math.max(18, Math.min(1600, fundamental));
 
     this.voices.forEach(({ osc, gain, ratio }, i) => {
       osc.frequency.setTargetAtTime(fundamental * ratio, t, 0.05);
@@ -135,6 +194,10 @@ export class SoundEngine {
     this.filter.frequency.setTargetAtTime(cutoff, t, 0.08);
     this.filter.Q.setTargetAtTime(profile.drivetrainMode === "continuous" ? 4 : 1.2, t, 0.3);
 
+    if (this.lfo && v.lfoRate) {
+      this.lfo.osc.frequency.setTargetAtTime(v.lfoRate * (0.7 + state.load * 1.2), t, 0.2);
+    }
+
     if (this.noise) {
       const level = v.noise * (0.25 + state.load * 0.9) + state.regen * v.noise * 0.6;
       this.noise.gain.gain.setTargetAtTime(level * 0.35, t, 0.15);
@@ -144,6 +207,88 @@ export class SoundEngine {
       const duck = 1 - state.regen * 0.35;
       this.master.gain.setTargetAtTime(this.volume * (0.55 + state.load * 0.45) * duck, t, 0.12);
     }
+
+    if (v.rhythm) this.scheduleRhythm(state);
+  }
+
+  /** Rhythmic accents (hooves, bells, chuffs, blats) that follow speed. */
+  private scheduleRhythm(state: DriveState) {
+    const ctx = this.ctx;
+    const spec = this.profile?.voice.rhythm;
+    if (!ctx || !spec || !this.accents) return;
+    const horizon = ctx.currentTime + 0.25;
+    if (this.nextRhythmTime < ctx.currentTime) this.nextRhythmTime = ctx.currentTime + 0.02;
+    const rate = Math.max(0.4, spec.baseRate + spec.rateScale * state.load);
+    const interval = 1 / rate;
+    const level = spec.level * (0.35 + state.load * 0.85);
+
+    while (this.nextRhythmTime < horizon) {
+      this.fireAccent(spec.kind, this.nextRhythmTime, spec.tone, level, this.rhythmStep);
+      this.rhythmStep += 1;
+      // gallop / chuff feel: alternate slightly uneven spacing
+      const swing = spec.kind === "clack" || spec.kind === "chug" ? (this.rhythmStep % 2 ? 0.72 : 1.28) : 1;
+      this.nextRhythmTime += interval * swing;
+    }
+  }
+
+  private fireAccent(
+    kind: string,
+    at: number,
+    tone: number,
+    level: number,
+    step: number,
+  ) {
+    const ctx = this.ctx;
+    const out = this.accents;
+    if (!ctx || !out) return;
+    const gain = ctx.createGain();
+    gain.connect(ctx.destination);
+    gain.gain.setValueAtTime(0.0001, at);
+
+    if (kind === "bell") {
+      const osc = ctx.createOscillator();
+      osc.type = "triangle";
+      osc.frequency.setValueAtTime(tone * (step % 3 === 0 ? 1.26 : 1), at);
+      gain.gain.exponentialRampToValueAtTime(level, at + 0.005);
+      gain.gain.exponentialRampToValueAtTime(0.0001, at + 0.28);
+      osc.connect(gain);
+      osc.start(at);
+      osc.stop(at + 0.3);
+      return;
+    }
+
+    if (kind === "blat") {
+      const osc = ctx.createOscillator();
+      const lp = ctx.createBiquadFilter();
+      lp.type = "lowpass";
+      lp.frequency.value = 700;
+      osc.type = "sawtooth";
+      osc.frequency.setValueAtTime(tone * 1.4, at);
+      osc.frequency.exponentialRampToValueAtTime(tone * 0.55, at + 0.34);
+      gain.gain.linearRampToValueAtTime(level, at + 0.03);
+      gain.gain.exponentialRampToValueAtTime(0.0001, at + 0.4);
+      osc.connect(lp);
+      lp.connect(gain);
+      osc.start(at);
+      osc.stop(at + 0.45);
+      return;
+    }
+
+    // clack (hooves / wood) and chug (steam, outboard) are filtered noise bursts
+    const src = ctx.createBufferSource();
+    src.buffer = this.getNoiseBuffer(ctx);
+    src.loop = true;
+    const bp = ctx.createBiquadFilter();
+    bp.type = kind === "clack" ? "bandpass" : "lowpass";
+    bp.frequency.setValueAtTime(tone * (step % 2 ? 0.85 : 1.15), at);
+    bp.Q.value = kind === "clack" ? 7 : 1;
+    const decay = kind === "clack" ? 0.07 : 0.16;
+    gain.gain.exponentialRampToValueAtTime(level, at + 0.006);
+    gain.gain.exponentialRampToValueAtTime(0.0001, at + decay);
+    src.connect(bp);
+    bp.connect(gain);
+    src.start(at);
+    src.stop(at + decay + 0.05);
   }
 
   private teardownVoices() {
@@ -163,6 +308,14 @@ export class SoundEngine {
       }
       this.noise = null;
     }
+    if (this.lfo) {
+      try {
+        this.lfo.osc.stop();
+      } catch {
+        /* already stopped */
+      }
+      this.lfo = null;
+    }
   }
 
   async stop() {
@@ -174,6 +327,8 @@ export class SoundEngine {
     await ctx.close();
     this.ctx = null;
     this.master = null;
+    this.body = null;
+    this.accents = null;
     this.filter = null;
   }
 }
