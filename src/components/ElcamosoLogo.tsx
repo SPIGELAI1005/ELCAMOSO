@@ -102,18 +102,31 @@ export function ElcamosoLogo({
   variant = "full",
   intensity = 1,
   animate = false,
+  reducedMotion = false,
   className,
   wordmarkClassName,
 }: LogoProps) {
   if (variant === "mark") {
-    return <ElcamosoMark intensity={intensity} animate={animate} className={className} />;
+    return (
+      <ElcamosoMark
+        intensity={intensity}
+        animate={animate}
+        reducedMotion={reducedMotion}
+        className={className}
+      />
+    );
   }
   if (variant === "wordmark") {
     return <ElcamosoWordmark className={cn("text-base", className)} />;
   }
   return (
     <span className={cn("inline-flex items-center gap-3", className)}>
-      <ElcamosoMark intensity={intensity} animate={animate} className="h-5 w-auto" />
+      <ElcamosoMark
+        intensity={intensity}
+        animate={animate}
+        reducedMotion={reducedMotion}
+        className="h-5 w-auto"
+      />
       <ElcamosoWordmark className={cn("text-sm", wordmarkClassName)} />
     </span>
   );
