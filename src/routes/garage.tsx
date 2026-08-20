@@ -4,8 +4,13 @@ import { BrandNav } from "@/components/BrandNav";
 import { ElcamosoMark } from "@/components/ElcamosoLogo";
 import { useSettings } from "@/lib/drive/useSettings";
 import { useReducedMotion } from "@/lib/drive/useReducedMotion";
-import { materializeCustom, type CustomSound } from "@/lib/drive/settings";
-import { SOUND_PROFILES, getProfile } from "@/lib/sound/profiles";
+import { SnippetStudio } from "@/components/SnippetStudio";
+import {
+  materializeCustom,
+  type CustomSound,
+  type Playlist,
+} from "@/lib/drive/settings";
+import { SOUND_PROFILES, allProfiles, getProfile } from "@/lib/sound/profiles";
 
 export const Route = createFileRoute("/garage")({
   component: Garage,
@@ -79,6 +84,38 @@ function Garage() {
         : [...settings.favourites, id],
     });
   };
+
+  const createPlaylist = () => {
+    const list: Playlist = {
+      id: `list-${Date.now().toString(36)}`,
+      name: `Playlist ${settings.playlists.length + 1}`,
+      profileIds: [],
+      createdAt: Date.now(),
+    };
+    update({ playlists: [...settings.playlists, list] });
+  };
+
+  const renamePlaylist = (id: string, name: string) =>
+    update({
+      playlists: settings.playlists.map((l) => (l.id === id ? { ...l, name } : l)),
+    });
+
+  const removePlaylist = (id: string) =>
+    update({ playlists: settings.playlists.filter((l) => l.id !== id) });
+
+  const togglePlaylistItem = (listId: string, profileId: string) =>
+    update({
+      playlists: settings.playlists.map((l) =>
+        l.id === listId
+          ? {
+              ...l,
+              profileIds: l.profileIds.includes(profileId)
+                ? l.profileIds.filter((p) => p !== profileId)
+                : [...l.profileIds, profileId],
+            }
+          : l,
+      ),
+    });
 
   const active = getProfile(settings.profileId);
 
