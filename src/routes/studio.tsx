@@ -70,6 +70,7 @@ function Studio() {
   const { active, state, start, stop, targetKmh, setTarget } = useAudition({
     profileId: PREVIEW_ID,
     volume: settings.volume,
+    refreshKey: previewProfile,
   });
 
   const set = (next: Partial<StudioTweaks>) => setTweaks((t) => ({ ...t, ...next }));

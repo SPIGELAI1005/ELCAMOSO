@@ -208,14 +208,14 @@ export class SoundEngine {
    * Switching profiles never jumps in loudness: the current body is faded out,
    * the new voices are built silently, then faded back in.
    */
-  setProfile(profile: SoundProfile) {
+  setProfile(profile: SoundProfile, force = false) {
     const ctx = this.ctx;
     const body = this.body;
     if (!ctx || !this.filter) {
       this.profile = profile;
       return;
     }
-    if (this.profile?.id === profile.id && this.voices.length) return;
+    if (!force && this.profile?.id === profile.id && this.voices.length) return;
     if (!this.voices.length || !body) {
       this.buildProfile(profile);
       return;

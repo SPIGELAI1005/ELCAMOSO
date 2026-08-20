@@ -9,13 +9,21 @@ interface Options {
   volume: number;
   tuning?: ProfileTuning | undefined;
   profileGain?: number;
+  /** change this to rebuild the voice while keeping the same profile id */
+  refreshKey?: unknown;
 }
 
 /**
  * Audition mode: a motion simulator that drives the sound engine without any
  * sensors, so a profile can be previewed and tuned before a real drive.
  */
-export function useAudition({ profileId, volume, tuning, profileGain = 1 }: Options) {
+export function useAudition({
+  profileId,
+  volume,
+  tuning,
+  profileGain = 1,
+  refreshKey,
+}: Options) {
   const [active, setActive] = useState(false);
   const [state, setState] = useState<DriveState>(IDLE_STATE);
   const [targetKmh, setTargetKmh] = useState(60);
@@ -96,8 +104,8 @@ export function useAudition({ profileId, volume, tuning, profileGain = 1 }: Opti
   }, [profileGain]);
 
   useEffect(() => {
-    engineRef.current?.setProfile(getProfile(profileId));
-  }, [profileId]);
+    engineRef.current?.setProfile(getProfile(profileId), true);
+  }, [profileId, refreshKey]);
 
   useEffect(() => () => stop(), [stop]);
 
