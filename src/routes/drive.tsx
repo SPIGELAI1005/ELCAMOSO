@@ -31,7 +31,7 @@ export const Route = createFileRoute("/drive")({
 });
 
 function DriveScreen() {
-  const { settings, update, loaded } = useSettings();
+  const { settings, update, loaded, loadReport } = useSettings();
   const profile = getProfile(settings.profileId);
   const reducedMotion = useReducedMotion();
   const { status, error, state, start, stop } = useDriveSession({
@@ -58,6 +58,11 @@ function DriveScreen() {
    * inconsistent onboarding flags can never bounce you back and forth.
    */
   const needsSetup = loaded && !settings.onboarded && !settings.safetyAcknowledged;
+  /** storage problems never block Drive: defaults are used and it is said plainly */
+  const storageWarning =
+    loaded && (loadReport.outcome === "corrupt" || loadReport.outcome === "unavailable")
+      ? "Saved settings could not be read on this device, so defaults are in use. Drive works as normal."
+      : null;
 
   const handleStart = () => {
     if (!settings.safetyAcknowledged) {
@@ -121,6 +126,9 @@ function DriveScreen() {
         />
       ) : (
         <div className="flex flex-1 flex-col items-center justify-center gap-10 text-center">
+          {storageWarning ? (
+            <p className="max-w-sm text-xs text-muted-foreground">{storageWarning}</p>
+          ) : null}
           {needsSetup ? (
             <Link
               to="/onboarding"
