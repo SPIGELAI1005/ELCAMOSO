@@ -75,7 +75,8 @@ export class SoundEngine {
     this.filter = filter;
 
     // Startup: a soft ELCAMOSO signature, then the profile breathes in to idle.
-    const signatureEnd = this.playSignature();
+    const withSignature = options?.signature !== false;
+    const signatureEnd = withSignature ? this.playSignature() : ctx.currentTime + 0.4;
     this.setProfile(profile);
     master.gain.setValueAtTime(0.0001, ctx.currentTime);
     master.gain.setTargetAtTime(this.safeVolume(this.volume * 0.55), signatureEnd - 0.35, 0.55);
