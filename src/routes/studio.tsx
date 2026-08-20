@@ -5,6 +5,10 @@ import { ElcamosoMark } from "@/components/ElcamosoLogo";
 import { useSettings } from "@/lib/drive/useSettings";
 import { useReducedMotion } from "@/lib/drive/useReducedMotion";
 import { useAudition } from "@/lib/drive/useAudition";
+import { EnvironmentPicker } from "@/components/EnvironmentPicker";
+import { LayerMixer } from "@/components/LayerMixer";
+import { SnippetStudio } from "@/components/SnippetStudio";
+import { DEFAULT_LAYER_MIX, type LayerMix } from "@/lib/sound/environments";
 import {
   DEFAULT_TWEAKS,
   materializeCustom,
@@ -50,11 +54,22 @@ function Studio() {
   const [name, setName] = useState("My Sound");
   const [note, setNote] = useState("");
   const [tweaks, setTweaks] = useState<StudioTweaks>(DEFAULT_TWEAKS);
+  const [environmentId, setEnvironmentId] = useState(settings.environmentId);
+  const [mix, setMix] = useState<LayerMix>(settings.layerMix ?? DEFAULT_LAYER_MIX);
   const [saved, setSaved] = useState<string | null>(null);
 
   const draft: CustomSound = useMemo(
-    () => ({ id: PREVIEW_ID, name, baseId, createdAt: Date.now(), tweaks, note }),
-    [name, baseId, tweaks, note],
+    () => ({
+      id: PREVIEW_ID,
+      name,
+      baseId,
+      createdAt: Date.now(),
+      tweaks,
+      note,
+      environmentId,
+      mix,
+    }),
+    [name, baseId, tweaks, note, environmentId, mix],
   );
 
   // Register the live draft so the preview engine can resolve it by id.
@@ -71,6 +86,9 @@ function Studio() {
     profileId: PREVIEW_ID,
     volume: settings.volume,
     refreshKey: previewProfile,
+    environmentId,
+    mix,
+    snippets: settings.snippets,
   });
 
   const set = (next: Partial<StudioTweaks>) => setTweaks((t) => ({ ...t, ...next }));
@@ -243,6 +261,24 @@ function Studio() {
             Signature moments (horns, whinnies, laughter)
           </label>
         </section>
+
+        <EnvironmentPicker
+          className="mt-12 border-t border-border pt-8"
+          value={environmentId}
+          onChange={setEnvironmentId}
+        />
+
+        <LayerMixer
+          className="mt-12 border-t border-border pt-8"
+          mix={mix}
+          onChange={setMix}
+        />
+
+        <SnippetStudio
+          className="mt-12 border-t border-border pt-8"
+          snippets={settings.snippets}
+          onChange={(snippets) => update({ snippets })}
+        />
 
         <section className="mt-12 border-t border-border pt-8">
           <h2 className="text-[11px] tracking-[0.34em] text-muted-foreground uppercase">
