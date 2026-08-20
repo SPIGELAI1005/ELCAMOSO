@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { BrandNav } from "@/components/BrandNav";
 import { ElcamosoMark } from "@/components/ElcamosoLogo";
 import { AuditionPanel } from "@/components/AuditionPanel";
-import { PROFILE_CATEGORIES, SOUND_PROFILES } from "@/lib/sound/profiles";
+import { PROFILE_CATEGORIES, allProfiles } from "@/lib/sound/profiles";
 import { useSettings } from "@/lib/drive/useSettings";
 import { useReducedMotion } from "@/lib/drive/useReducedMotion";
 
@@ -31,6 +31,15 @@ function Sounds() {
   const { settings, update } = useSettings();
   const reducedMotion = useReducedMotion();
 
+  const toggleFavourite = (id: string) => {
+    const has = settings.favourites.includes(id);
+    update({
+      favourites: has
+        ? settings.favourites.filter((f) => f !== id)
+        : [...settings.favourites, id],
+    });
+  };
+
   return (
     <main className="min-h-screen">
       <BrandNav />
@@ -41,7 +50,7 @@ function Sounds() {
         </p>
 
         {PROFILE_CATEGORIES.map((category) => {
-          const items = SOUND_PROFILES.filter((p) => p.category === category);
+          const items = allProfiles().filter((p) => p.category === category);
           if (!items.length) return null;
           return (
             <section key={category} className="mt-16">
@@ -76,6 +85,33 @@ function Sounds() {
                       <span className="text-[11px] tracking-[0.24em] text-muted-foreground uppercase">
                         {selected ? "Selected" : ""}
                       </span>
+                      <span
+                        role="button"
+                        tabIndex={0}
+                        aria-label={
+                          settings.favourites.includes(profile.id)
+                            ? `Unstar ${profile.name}`
+                            : `Star ${profile.name}`
+                        }
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleFavourite(profile.id);
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            toggleFavourite(profile.id);
+                          }
+                        }}
+                        className={`shrink-0 text-lg leading-none ${
+                          settings.favourites.includes(profile.id)
+                            ? "text-foreground"
+                            : "text-muted-foreground hover:text-foreground"
+                        }`}
+                      >
+                        {settings.favourites.includes(profile.id) ? "\u2605" : "\u2606"}
+                      </span>
                     </button>
                   );
                 })}
@@ -94,9 +130,18 @@ function Sounds() {
           >
             Start Drive
           </Link>
-          <p className="text-xs tracking-[0.2em] text-muted-foreground uppercase">
-            Studio &amp; Garage coming later
-          </p>
+          <Link
+            to="/studio"
+            className="inline-flex h-14 items-center rounded-full border border-border px-10 text-xs tracking-[0.24em] uppercase hover:bg-secondary"
+          >
+            Open Studio
+          </Link>
+          <Link
+            to="/garage"
+            className="inline-flex h-14 items-center rounded-full border border-border px-10 text-xs tracking-[0.24em] uppercase hover:bg-secondary"
+          >
+            Garage
+          </Link>
         </div>
       </div>
     </main>
