@@ -5,6 +5,8 @@ export type ProfileCategory =
   | "Motorsport"
   | "Future"
   | "Nautical"
+  | "Aviation"
+  | "Nature"
   | "Festive"
   | "Playful"
   | "Heritage"
@@ -21,7 +23,9 @@ export type RhythmKind =
   | "gallop"
   | "splash"
   | "creak"
-  | "laugh";
+  | "laugh"
+  | "rotor"
+  | "putt";
 
 /** Continuous atmospheric beds layered under the main voice. */
 export type TextureKind =
@@ -556,6 +560,146 @@ export const SOUND_PROFILES: SoundProfile[] = [
       ],
     },
   },
+  {
+    id: "helicopter",
+    name: "Helicopter",
+    category: "Aviation",
+    traits: ["Chopping", "Powerful", "Hovering"],
+    description:
+      "Rotor blades beating the air over a turbine whine. The chop quickens the harder you push.",
+    drivetrainMode: "continuous",
+    voice: {
+      baseFrequency: 76,
+      harmonics: [1, 2.01, 3.04, 5.02],
+      waveResponse: 0.95,
+      filterBase: 420,
+      filterRange: 3400,
+      noise: 0.3,
+      detune: 8,
+      wave: "sawtooth",
+      lfoRate: 5.4,
+      lfoDepth: 620,
+      lfoTarget: "filter",
+      rhythm: { kind: "rotor", baseRate: 5.5, rateScale: 9, level: 0.3, tone: 58 },
+      textures: [
+        { kind: "wind", level: 0.3, tone: 1900, speedScale: 0.8, surge: 0.5 },
+        { kind: "rumble", level: 0.26, tone: 75, speedScale: 0.6, surge: 0.35 },
+      ],
+    },
+  },
+  {
+    id: "private-jet",
+    name: "Private Jet",
+    category: "Aviation",
+    traits: ["Refined", "Spooling", "Effortless"],
+    description:
+      "Twin turbofans spooling up behind a calm cabin. Smooth thrust with a long, expensive sigh on lift-off.",
+    drivetrainMode: "continuous",
+    voice: {
+      baseFrequency: 150,
+      harmonics: [1, 2.03, 3.01, 4.5, 6.02],
+      waveResponse: 1.05,
+      filterBase: 620,
+      filterRange: 7200,
+      noise: 0.46,
+      detune: 6,
+      wave: "sawtooth",
+      lfoRate: 0.2,
+      lfoDepth: 420,
+      lfoTarget: "filter",
+      textures: [
+        { kind: "wind", level: 0.38, tone: 3000, speedScale: 1, surge: 0.18 },
+        { kind: "sizzle", level: 0.12, tone: 6400, speedScale: 0.9 },
+        { kind: "rumble", level: 0.18, tone: 65, speedScale: 0.7 },
+      ],
+      signals: [{ kind: "beam", everySeconds: 26, jitter: 12, level: 0.05, tone: 1100 }],
+    },
+  },
+  {
+    id: "wiesn-tractor",
+    name: "Oide Wiesn Tractor",
+    category: "Heritage",
+    traits: ["Single-Cylinder", "Stubborn", "Bavarian"],
+    description:
+      "An old field tractor putt-putting down the lane: slow strokes, a smoky stack and a cheerful crowd somewhere past the hedge.",
+    drivetrainMode: "virtual-transmission",
+    voice: {
+      baseFrequency: 20,
+      harmonics: [1, 2.02, 3.06],
+      waveResponse: 0.6,
+      filterBase: 160,
+      filterRange: 1100,
+      noise: 0.2,
+      detune: 22,
+      wave: "square",
+      rhythm: { kind: "putt", baseRate: 2.2, rateScale: 7.5, level: 0.3, tone: 120 },
+      rhythmB: { kind: "creak", baseRate: 0.24, rateScale: 0.7, level: 0.1, tone: 140 },
+      textures: [
+        { kind: "rumble", level: 0.28, tone: 85, speedScale: 0.6, surge: 1.1 },
+        { kind: "crowd", level: 0.1, tone: 760, speedScale: 0.25, surge: 0.2 },
+      ],
+      signals: [
+        { kind: "hohoho", everySeconds: 28, jitter: 12, level: 0.09, tone: 140 },
+        { kind: "whistle", everySeconds: 34, jitter: 15, level: 0.05, tone: 1500 },
+      ],
+    },
+    transmission: { gearRatios: [18, 12, 8.5, 6.4], idleRpm: 480, redlineRpm: 2400, shiftSmoothing: 0.3 },
+  },
+  {
+    id: "open-wind",
+    name: "Open Wind",
+    category: "Nature",
+    traits: ["Airy", "Calm", "Weightless"],
+    description:
+      "Only air. A soft rush that opens as you gather speed and settles into a sigh when you lift off.",
+    drivetrainMode: "continuous",
+    voice: {
+      baseFrequency: 40,
+      harmonics: [1, 2.5],
+      waveResponse: 0.55,
+      filterBase: 220,
+      filterRange: 1800,
+      noise: 0.6,
+      detune: 15,
+      wave: "sine",
+      lfoRate: 0.12,
+      lfoDepth: 260,
+      lfoTarget: "filter",
+      textures: [
+        { kind: "wind", level: 0.5, tone: 1200, speedScale: 1, surge: 0.22 },
+        { kind: "wind", level: 0.26, tone: 3200, speedScale: 1, surge: 0.45 },
+        { kind: "rumble", level: 0.12, tone: 60, speedScale: 0.5, surge: 0.14 },
+      ],
+    },
+  },
+  {
+    id: "storm-glider",
+    name: "Storm Glider",
+    category: "Nature",
+    traits: ["Gusting", "Wild", "Cinematic"],
+    description:
+      "Wind with weather in it: gusts that swell and tear past you, with distant thunder rolling underneath.",
+    drivetrainMode: "continuous",
+    voice: {
+      baseFrequency: 34,
+      harmonics: [1, 1.98, 3.4],
+      waveResponse: 0.7,
+      filterBase: 180,
+      filterRange: 2600,
+      noise: 0.55,
+      detune: 26,
+      wave: "triangle",
+      lfoRate: 0.35,
+      lfoDepth: 900,
+      lfoTarget: "filter",
+      textures: [
+        { kind: "wind", level: 0.46, tone: 900, speedScale: 0.9, surge: 0.7 },
+        { kind: "wind", level: 0.3, tone: 4200, speedScale: 1, surge: 1.3 },
+        { kind: "rumble", level: 0.3, tone: 50, speedScale: 0.4, surge: 0.09 },
+      ],
+      signals: [{ kind: "beam", everySeconds: 20, jitter: 10, level: 0.07, tone: 260 }],
+    },
+  },
 ];
 
 export const PROFILE_CATEGORIES: ProfileCategory[] = [
@@ -563,6 +707,8 @@ export const PROFILE_CATEGORIES: ProfileCategory[] = [
   "Motorsport",
   "Future",
   "Nautical",
+  "Aviation",
+  "Nature",
   "Heritage",
   "Festive",
   "Playful",
@@ -594,4 +740,28 @@ export function getProfile(id: string | null | undefined): SoundProfile {
     SOUND_PROFILES.find((p) => p.id === id) ??
     SOUND_PROFILES[0]!
   );
+}
+
+/**
+ * Rough perceived-intensity estimate for a profile, 0..1. Used to warn before
+ * switching into something that will feel much louder than the current sound.
+ */
+export function estimateIntensity(profile: SoundProfile): number {
+  const v = profile.voice;
+  const textures = (v.textures ?? []).reduce((sum, t) => sum + t.level, 0);
+  const rhythms = (v.rhythm?.level ?? 0) + (v.rhythmB?.level ?? 0);
+  const signals = (v.signals ?? []).reduce((sum, s) => sum + s.level, 0);
+  const brightness = Math.min(1, v.filterRange / 7000);
+  const raw =
+    v.noise * 0.5 + textures * 0.55 + rhythms * 0.7 + signals * 0.4 + brightness * 0.45;
+  return Math.max(0, Math.min(1, raw / 1.9));
+}
+
+export type IntensityBand = "gentle" | "balanced" | "intense";
+
+export function intensityBand(profile: SoundProfile): IntensityBand {
+  const value = estimateIntensity(profile);
+  if (value < 0.34) return "gentle";
+  if (value < 0.62) return "balanced";
+  return "intense";
 }
