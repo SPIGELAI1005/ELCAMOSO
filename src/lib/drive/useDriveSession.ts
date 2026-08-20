@@ -9,9 +9,12 @@ interface Options {
   profileId: string;
   volume: number;
   demoMotion: boolean;
+  tuning?: ProfileTuning | undefined;
 }
 
-export function useDriveSession({ profileId, volume, demoMotion }: Options) {
+export function useDriveSession({ profileId, volume, demoMotion, tuning }: Options) {
+  const tuningRef = useRef<ProfileTuning | undefined>(tuning);
+  tuningRef.current = tuning;
   const [status, setStatus] = useState<DriveStatus>("idle");
   const [error, setError] = useState<string | null>(null);
   const [state, setState] = useState<DriveState>(IDLE_STATE);
