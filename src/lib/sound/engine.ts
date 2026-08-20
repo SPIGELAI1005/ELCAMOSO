@@ -123,10 +123,10 @@ export class SoundEngine {
   async start(
     profile: SoundProfile,
     options?: {
-      signature?: boolean;
-      environmentId?: string;
-      mix?: LayerMix;
-      snippets?: SoundSnippet[];
+      signature?: boolean | undefined;
+      environmentId?: string | undefined;
+      mix?: LayerMix | undefined;
+      snippets?: SoundSnippet[] | undefined;
     },
   ) {
     if (this.ctx) {
