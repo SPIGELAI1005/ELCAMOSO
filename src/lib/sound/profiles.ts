@@ -434,7 +434,7 @@ export const SOUND_PROFILES: SoundProfile[] = [
       ],
       signals: [
         { kind: "neigh", everySeconds: 20, jitter: 10, level: 0.13, tone: 380 },
-        { kind: "bell" as SignalKind extends never ? never : "whistle", everySeconds: 30, jitter: 14, level: 0.05, tone: 1900 },
+        { kind: "whistle", everySeconds: 30, jitter: 14, level: 0.05, tone: 1900 },
       ],
     },
   },
