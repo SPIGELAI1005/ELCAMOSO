@@ -93,7 +93,7 @@ export class SoundEngine {
     const now = ctx.currentTime + 0.05;
     const bus = ctx.createGain();
     bus.gain.value = 0.5;
-    bus.connect(ctx.destination);
+    bus.connect(this.limiter ?? ctx.destination);
     [392, 587.33].forEach((freq, i) => {
       const at = now + i * 0.22;
       const osc = ctx.createOscillator();
@@ -122,14 +122,43 @@ export class SoundEngine {
     return this.noiseBuffer;
   }
 
+  /**
+   * Switching profiles never jumps in loudness: the current body is faded out,
+   * the new voices are built silently, then faded back in.
+   */
   setProfile(profile: SoundProfile) {
+    const ctx = this.ctx;
+    const body = this.body;
+    if (!ctx || !this.filter) {
+      this.profile = profile;
+      return;
+    }
+    if (this.profile?.id === profile.id && this.voices.length) return;
+    if (!this.voices.length || !body) {
+      this.buildProfile(profile);
+      return;
+    }
+    if (this.swapTimer) clearTimeout(this.swapTimer);
+    const fade = 0.18;
+    body.gain.cancelScheduledValues(ctx.currentTime);
+    body.gain.setValueAtTime(body.gain.value, ctx.currentTime);
+    body.gain.linearRampToValueAtTime(0.0001, ctx.currentTime + fade);
+    this.swapTimer = setTimeout(() => {
+      const c = this.ctx;
+      if (!c || !this.body) return;
+      this.buildProfile(profile);
+      this.body.gain.setValueAtTime(0.0001, c.currentTime);
+      this.body.gain.linearRampToValueAtTime(1, c.currentTime + 0.35);
+    }, fade * 1000 + 30);
+  }
+
+  private buildProfile(profile: SoundProfile) {
     const ctx = this.ctx;
     const filter = this.filter;
     if (!ctx || !filter) {
       this.profile = profile;
       return;
     }
-    if (this.profile?.id === profile.id && this.voices.length) return;
     this.teardownVoices();
     this.profile = profile;
     this.nextRhythmTime = ctx.currentTime + 0.2;
