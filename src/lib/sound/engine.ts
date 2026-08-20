@@ -291,7 +291,7 @@ export class SoundEngine {
     const out = this.accents;
     if (!ctx || !out) return;
     const gain = ctx.createGain();
-    gain.connect(ctx.destination);
+    gain.connect(out);
     gain.gain.setValueAtTime(0.0001, at);
 
     if (kind === "bell") {
