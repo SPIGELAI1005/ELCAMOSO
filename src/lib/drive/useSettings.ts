@@ -32,13 +32,11 @@ export function useSettings() {
   }, []);
 
   // Studio creations must be resolvable by id everywhere the engine looks them up.
-  const customProfiles = useMemo(
-    () => settings.customSounds.map(materializeCustom),
-    [settings.customSounds],
-  );
-  useEffect(() => {
-    registerCustomProfiles(customProfiles);
-  }, [customProfiles]);
+  const customProfiles = useMemo(() => {
+    const list = settings.customSounds.map(materializeCustom);
+    registerCustomProfiles(list);
+    return list;
+  }, [settings.customSounds]);
 
   const update = useCallback((next: Partial<ElcamosoSettings>) => {
     setSettings(writeSettings(next));
