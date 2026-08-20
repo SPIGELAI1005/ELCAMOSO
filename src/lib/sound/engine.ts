@@ -98,7 +98,7 @@ export class SoundEngine {
 
 
   /**
-   * Short, original ELCAMOSO sonic signature — two soft rising sines that open
+   * Short, original ELCAMOSO sonic signature - two soft rising sines that open
    * outward like the O))) mark. Deliberately not a starter-motor imitation.
    * Returns the time the signature finishes.
    */

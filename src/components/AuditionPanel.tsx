@@ -11,7 +11,7 @@ import {
 import { getProfile } from "@/lib/sound/profiles";
 
 /**
- * Audition mode — preview the selected profile with simulated motion and
+ * Audition mode - preview the selected profile with simulated motion and
  * fine-tune how it reacts, before any real drive starts.
  */
 export function AuditionPanel({ profileId }: { profileId: string }) {
@@ -108,7 +108,7 @@ export function AuditionPanel({ profileId }: { profileId: string }) {
           />
           <Readout
             label={continuous ? "Mode" : "Gear"}
-            value={continuous ? "—" : state.gear ? `D${state.gear}` : "—"}
+            value={continuous ? " - " : state.gear ? `D${state.gear}` : " - "}
           />
         </dl>
       </div>

@@ -3,11 +3,11 @@ import { cn } from "@/lib/utils";
 type Variant = "full" | "mark" | "wordmark";
 
 interface MarkProps {
-  /** 0..1 — how many waves are lit / how far sound radiates */
+  /** 0..1 - how many waves are lit / how far sound radiates */
   intensity?: number | undefined;
-  /** 0..1 virtual throttle demand — drives outward radiation */
+  /** 0..1 virtual throttle demand - drives outward radiation */
   throttle?: number | undefined;
-  /** 0..1 regeneration — pulls the waves inward and dims them */
+  /** 0..1 regeneration - pulls the waves inward and dims them */
   regen?: number | undefined;
   /** profile character: higher = tighter, faster wave motion */
   waveResponse?: number | undefined;

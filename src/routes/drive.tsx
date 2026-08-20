@@ -13,12 +13,12 @@ export const Route = createFileRoute("/drive")({
   component: DriveScreen,
   head: () => ({
     meta: [
-      { title: "Drive — ELCAMOSO" },
+      { title: "Drive - ELCAMOSO" },
       {
         name: "description",
         content: "Start a drive and let your sound profile follow the movement of your EV.",
       },
-      { property: "og:title", content: "Drive — ELCAMOSO" },
+      { property: "og:title", content: "Drive - ELCAMOSO" },
       {
         property: "og:description",
         content: "Start a drive and let your sound profile follow the movement of your EV.",

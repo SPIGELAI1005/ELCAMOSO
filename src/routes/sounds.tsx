@@ -10,12 +10,12 @@ export const Route = createFileRoute("/sounds")({
   component: Sounds,
   head: () => ({
     meta: [
-      { title: "Sounds — ELCAMOSO" },
+      { title: "Sounds - ELCAMOSO" },
       {
         name: "description",
         content: "Choose a sound personality for your EV: GT V8, Racing V10, Cyber Pulse, Space Ship, Santa Sleigh and more.",
       },
-      { property: "og:title", content: "Sounds — ELCAMOSO" },
+      { property: "og:title", content: "Sounds - ELCAMOSO" },
       {
         property: "og:description",
         content: "Choose a sound personality for your EV: GT V8, Racing V10, Cyber Pulse, Space Ship, Santa Sleigh and more.",

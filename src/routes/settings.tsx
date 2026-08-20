@@ -14,12 +14,12 @@ export const Route = createFileRoute("/settings")({
   component: Settings,
   head: () => ({
     meta: [
-      { title: "Settings — ELCAMOSO" },
+      { title: "Settings - ELCAMOSO" },
       {
         name: "description",
         content: "Sound volume, driving sensors and privacy for your ELCAMOSO drives.",
       },
-      { property: "og:title", content: "Settings — ELCAMOSO" },
+      { property: "og:title", content: "Settings - ELCAMOSO" },
       {
         property: "og:description",
         content: "Sound volume, driving sensors and privacy for your ELCAMOSO drives.",
@@ -199,7 +199,7 @@ function Settings() {
             <div>
               <p className="text-base">Reduced Motion</p>
               <p className="mt-2 text-sm text-muted-foreground">
-                Calmer O ))) feedback and onboarding — the mark responds with light
+                Calmer O ))) feedback and onboarding - the mark responds with light
                 instead of movement.
               </p>
             </div>

@@ -9,13 +9,13 @@ export const Route = createFileRoute("/onboarding")({
   component: Onboarding,
   head: () => ({
     meta: [
-      { title: "Get started — ELCAMOSO" },
+      { title: "Get started - ELCAMOSO" },
       {
         name: "description",
         content:
           "Set up ELCAMOSO in three steps: how motion becomes sound, driving sensors, and your first drive.",
       },
-      { property: "og:title", content: "Get started — ELCAMOSO" },
+      { property: "og:title", content: "Get started - ELCAMOSO" },
       {
         property: "og:description",
         content: "Set up ELCAMOSO in three steps and let your sound follow your drive.",
@@ -87,10 +87,10 @@ function Onboarding() {
 
         {step === 0 ? (
           <div className="flex flex-col gap-6">
-            <h1 className="text-3xl font-light">Your EV. Your sound.</h1>
+            <h1 className="text-3xl font-light">Your EV. Your Sound. More Emotion.</h1>
             <p className="text-sm leading-relaxed text-muted-foreground">
-              ELCAMOSO listens to how your car moves — speed, acceleration and
-              deceleration — and shapes a sound that follows it in real time. Nothing is
+              ELCAMOSO listens to how your car moves - speed, acceleration and
+              deceleration - and shapes a sound that follows it in real time. Nothing is
               played back; everything is generated as you drive.
             </p>
             <p className="text-xs tracking-[0.2em] text-muted-foreground uppercase">
@@ -123,7 +123,7 @@ function Onboarding() {
             <h1 className="text-3xl font-light">You&apos;re set</h1>
             <p className="text-sm leading-relaxed text-muted-foreground">
               Your sound is <span className="text-foreground">{profile.name}</span>. You can
-              change it any time in Sounds — your choice and settings are remembered for
+              change it any time in Sounds - your choice and settings are remembered for
               next time.
             </p>
             <p className="text-xs leading-relaxed text-muted-foreground">
