@@ -9,11 +9,11 @@ const LINKS = [
 
 export function BrandNav() {
   return (
-    <header className="flex items-center justify-between px-6 py-6 sm:px-10">
+    <header className="flex flex-wrap items-center justify-between gap-x-6 gap-y-4 px-6 py-6 sm:px-10">
       <Link to="/" aria-label="ELCAMOSO home">
         <ElcamosoLogo variant="full" />
       </Link>
-      <nav className="flex items-center gap-6 text-xs tracking-[0.18em] uppercase">
+      <nav className="flex items-center gap-5 text-[11px] tracking-[0.18em] uppercase sm:gap-6 sm:text-xs">
         {LINKS.map((link) => (
           <Link
             key={link.to}
