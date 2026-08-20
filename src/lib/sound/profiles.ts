@@ -110,7 +110,7 @@ export const SOUND_PROFILES: SoundProfile[] = [
     name: "Cyber Pulse",
     category: "Future",
     traits: ["Electric", "Futuristic", "Immersive"],
-    description: "One continuous rise. No shifts — only motion, glide and regeneration.",
+    description: "One continuous rise. No shifts - only motion, glide and regeneration.",
     drivetrainMode: "continuous",
     voice: {
       baseFrequency: 62,

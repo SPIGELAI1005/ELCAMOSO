@@ -4,26 +4,37 @@ import { SoundEngine } from "@/lib/sound/engine";
 import { getProfile } from "@/lib/sound/profiles";
 import type { ProfileTuning } from "@/lib/drive/settings";
 
+export interface DemoControls {
+  /** 0..1 pedal demand */
+  throttle: number;
+  /** 0..1 extra acceleration bias */
+  accel: number;
+  /** 0..1 regeneration braking */
+  regen: number;
+}
+
 interface Options {
   profileId: string;
   volume: number;
+  profileGain: number;
   tuning?: ProfileTuning | undefined;
-  profileGain?: number;
 }
 
+export const DEMO_DEFAULTS: DemoControls = { throttle: 0.3, accel: 0.5, regen: 0 };
+
 /**
- * Audition mode: a motion simulator that drives the sound engine without any
- * sensors, so a profile can be previewed and tuned before a real drive.
+ * Demo drive: a full simulated vehicle so sound behaviour can be previewed with
+ * throttle, acceleration and regen even when no motion sensors are available.
  */
-export function useAudition({ profileId, volume, tuning, profileGain = 1 }: Options) {
+export function useDemoDrive({ profileId, volume, profileGain, tuning }: Options) {
   const [active, setActive] = useState(false);
   const [state, setState] = useState<DriveState>(IDLE_STATE);
-  const [targetKmh, setTargetKmh] = useState(60);
+  const [controls, setControlsState] = useState<DemoControls>(DEMO_DEFAULTS);
 
   const engineRef = useRef<SoundEngine | null>(null);
   const stateRef = useRef<DriveState>(IDLE_STATE);
+  const controlsRef = useRef<DemoControls>(DEMO_DEFAULTS);
   const speedRef = useRef(0);
-  const targetRef = useRef(60);
   const lastTick = useRef(0);
   const rafId = useRef<number | null>(null);
 
@@ -32,22 +43,28 @@ export function useAudition({ profileId, volume, tuning, profileGain = 1 }: Opti
   const tuningRef = useRef<ProfileTuning | undefined>(tuning);
   tuningRef.current = tuning;
 
-  const setTarget = useCallback((kmh: number) => {
-    targetRef.current = kmh;
-    setTargetKmh(kmh);
+  const setControls = useCallback((next: Partial<DemoControls>) => {
+    controlsRef.current = { ...controlsRef.current, ...next };
+    setControlsState(controlsRef.current);
   }, []);
+
+  const reset = useCallback(() => {
+    speedRef.current = 0;
+    setControls(DEMO_DEFAULTS);
+  }, [setControls]);
 
   const loop = useCallback(() => {
     const now = performance.now();
     const dt = Math.min(0.5, Math.max(0.001, (now - lastTick.current) / 1000));
     lastTick.current = now;
 
-    const target = targetRef.current / 3.6;
-    const rate = target > speedRef.current ? 2.6 : 3.4;
-    const delta = target - speedRef.current;
-    const step = Math.sign(delta) * Math.min(Math.abs(delta), rate * dt);
+    const { throttle, accel, regen } = controlsRef.current;
+    const drag = 0.02 * speedRef.current + 0.25;
+    const push = throttle * (1.6 + accel * 4.4);
+    const brake = regen * 4.2;
+    const a = push - brake - (speedRef.current > 0 ? drag : 0);
     const previousSpeed = speedRef.current;
-    speedRef.current = Math.max(0, previousSpeed + step);
+    speedRef.current = Math.max(0, Math.min(80, previousSpeed + a * dt));
     const acceleration = (speedRef.current - previousSpeed) / dt;
 
     const next = computeDriveState({
@@ -58,9 +75,15 @@ export function useAudition({ profileId, volume, tuning, profileGain = 1 }: Opti
       dt,
       tuning: tuningRef.current,
     });
-    stateRef.current = next;
-    engineRef.current?.update(next);
-    setState(next);
+    // the operator's pedals win over the derived estimate in demo drive
+    const blended: DriveState = {
+      ...next,
+      throttle: Math.max(next.throttle, throttle),
+      regen: Math.max(next.regen, regen),
+    };
+    stateRef.current = blended;
+    engineRef.current?.update(blended);
+    setState(blended);
     rafId.current = requestAnimationFrame(loop);
   }, []);
 
@@ -78,7 +101,7 @@ export function useAudition({ profileId, volume, tuning, profileGain = 1 }: Opti
   const start = useCallback(async () => {
     if (engineRef.current) return;
     const engine = new SoundEngine();
-    await engine.start(profileRef.current, { signature: false });
+    await engine.start(profileRef.current);
     engine.setProfileGain(profileGain);
     engine.setVolume(volume);
     engineRef.current = engine;
@@ -101,5 +124,5 @@ export function useAudition({ profileId, volume, tuning, profileGain = 1 }: Opti
 
   useEffect(() => () => stop(), [stop]);
 
-  return { active, state, start, stop, targetKmh, setTarget };
+  return { active, state, controls, setControls, reset, start, stop };
 }

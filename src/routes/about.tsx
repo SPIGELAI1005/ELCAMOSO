@@ -5,13 +5,13 @@ export const Route = createFileRoute("/about")({
   component: About,
   head: () => ({
     meta: [
-      { title: "About — ELCAMOSO" },
+      { title: "About - ELCAMOSO" },
       {
         name: "description",
         content:
           "ELCAMOSO is a motion-to-sound platform for electric vehicles. Electric Car Motion Sound.",
       },
-      { property: "og:title", content: "About — ELCAMOSO" },
+      { property: "og:title", content: "About - ELCAMOSO" },
       {
         property: "og:description",
         content: "ELCAMOSO is a motion-to-sound platform for electric vehicles.",
@@ -32,7 +32,7 @@ function About() {
         <p className="mt-6 text-sm leading-relaxed text-muted-foreground">
           ELCAMOSO is a motion-to-sound platform for electric vehicles. Speed, acceleration
           and deceleration from your phone are translated in real time into a sound profile
-          that belongs to the movement of the car — not to a button press.
+          that belongs to the movement of the car - not to a button press.
         </p>
         <p className="mt-6 text-sm leading-relaxed text-muted-foreground">
           Profiles can behave like a virtual transmission or rise continuously with motion,
@@ -40,7 +40,7 @@ function About() {
           manufacturer-designed EV signatures all fit the same model.
         </p>
         <p className="mt-10 text-xs tracking-[0.28em] text-muted-foreground uppercase">
-          ELCAMOSO — Electric Car Motion Sound
+          ELCAMOSO - Electric Car Motion Sound
         </p>
         <p className="mt-10 text-sm text-muted-foreground">
           Your drive stays yours. Motion data is processed on this device only.

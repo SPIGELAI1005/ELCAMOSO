@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useSettings } from "@/lib/drive/useSettings";
 
 /**
- * True when the user asked for calmer motion — either in ELCAMOSO settings or
+ * True when the user asked for calmer motion - either in ELCAMOSO settings or
  * through the operating system's reduce-motion preference.
  */
 export function useReducedMotion() {

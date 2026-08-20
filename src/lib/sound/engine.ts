@@ -17,6 +17,8 @@ export class SoundEngine {
   private lfo: { osc: OscillatorNode; gain: GainNode } | null = null;
   private profile: SoundProfile | null = null;
   private volume = 0.7;
+  /** per-profile balance gain, 0.4..1.6 */
+  private profileGain = 1;
   private nextRhythmTime = 0;
   private rhythmStep = 0;
   private noiseBuffer: AudioBuffer | null = null;
@@ -26,6 +28,18 @@ export class SoundEngine {
 
   get running() {
     return this.ctx !== null;
+  }
+
+  /** Per-profile balance so profiles sit at the same perceived level. */
+  setProfileGain(gain: number) {
+    this.profileGain = Math.min(1.6, Math.max(0.2, gain));
+    if (this.ctx && this.master) {
+      this.master.gain.setTargetAtTime(
+        this.safeVolume(this.volume * this.profileGain * 0.8),
+        this.ctx.currentTime,
+        0.25,
+      );
+    }
   }
 
   private safeVolume(value: number) {
@@ -79,12 +93,12 @@ export class SoundEngine {
     const signatureEnd = withSignature ? this.playSignature() : ctx.currentTime + 0.4;
     this.setProfile(profile);
     master.gain.setValueAtTime(0.0001, ctx.currentTime);
-    master.gain.setTargetAtTime(this.safeVolume(this.volume * 0.55), signatureEnd - 0.35, 0.55);
+    master.gain.setTargetAtTime(this.safeVolume(this.volume * this.profileGain * 0.55), signatureEnd - 0.35, 0.55);
   }
 
 
   /**
-   * Short, original ELCAMOSO sonic signature — two soft rising sines that open
+   * Short, original ELCAMOSO sonic signature - two soft rising sines that open
    * outward like the O))) mark. Deliberately not a starter-motor imitation.
    * Returns the time the signature finishes.
    */
@@ -214,7 +228,11 @@ export class SoundEngine {
   setVolume(value: number) {
     this.volume = value;
     if (this.ctx && this.master) {
-      this.master.gain.setTargetAtTime(this.safeVolume(value), this.ctx.currentTime, 0.2);
+      this.master.gain.setTargetAtTime(
+        this.safeVolume(value * this.profileGain),
+        this.ctx.currentTime,
+        0.2,
+      );
     }
   }
 
@@ -254,7 +272,9 @@ export class SoundEngine {
 
     if (this.master) {
       const duck = 1 - state.regen * 0.35;
-      const target = this.safeVolume(this.volume * (0.55 + state.load * 0.45) * duck);
+      const target = this.safeVolume(
+        this.volume * this.profileGain * (0.55 + state.load * 0.45) * duck,
+      );
       this.master.gain.setTargetAtTime(target, t, 0.12);
     }
 

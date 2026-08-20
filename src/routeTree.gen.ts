@@ -11,6 +11,8 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AboutRouteImport } from './routes/about'
+import { Route as CalibrateRouteImport } from './routes/calibrate'
+import { Route as DemoRouteImport } from './routes/demo'
 import { Route as DriveRouteImport } from './routes/drive'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as SettingsRouteImport } from './routes/settings'
@@ -24,6 +26,16 @@ const IndexRoute = IndexRouteImport.update({
 const AboutRoute = AboutRouteImport.update({
   id: '/about',
   path: '/about',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CalibrateRoute = CalibrateRouteImport.update({
+  id: '/calibrate',
+  path: '/calibrate',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DemoRoute = DemoRouteImport.update({
+  id: '/demo',
+  path: '/demo',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DriveRoute = DriveRouteImport.update({
@@ -50,6 +62,8 @@ const SoundsRoute = SoundsRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/calibrate': typeof CalibrateRoute
+  '/demo': typeof DemoRoute
   '/drive': typeof DriveRoute
   '/onboarding': typeof OnboardingRoute
   '/settings': typeof SettingsRoute
@@ -58,6 +72,8 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/calibrate': typeof CalibrateRoute
+  '/demo': typeof DemoRoute
   '/drive': typeof DriveRoute
   '/onboarding': typeof OnboardingRoute
   '/settings': typeof SettingsRoute
@@ -67,6 +83,8 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/calibrate': typeof CalibrateRoute
+  '/demo': typeof DemoRoute
   '/drive': typeof DriveRoute
   '/onboarding': typeof OnboardingRoute
   '/settings': typeof SettingsRoute
@@ -74,13 +92,31 @@ export interface FileRoutesById {
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/about' | '/drive' | '/onboarding' | '/settings' | '/sounds'
+  fullPaths:
+    | '/'
+    | '/about'
+    | '/calibrate'
+    | '/demo'
+    | '/drive'
+    | '/onboarding'
+    | '/settings'
+    | '/sounds'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/about' | '/drive' | '/onboarding' | '/settings' | '/sounds'
+  to:
+    | '/'
+    | '/about'
+    | '/calibrate'
+    | '/demo'
+    | '/drive'
+    | '/onboarding'
+    | '/settings'
+    | '/sounds'
   id:
     | '__root__'
     | '/'
     | '/about'
+    | '/calibrate'
+    | '/demo'
     | '/drive'
     | '/onboarding'
     | '/settings'
@@ -90,6 +126,8 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AboutRoute: typeof AboutRoute
+  CalibrateRoute: typeof CalibrateRoute
+  DemoRoute: typeof DemoRoute
   DriveRoute: typeof DriveRoute
   OnboardingRoute: typeof OnboardingRoute
   SettingsRoute: typeof SettingsRoute
@@ -110,6 +148,20 @@ declare module '@tanstack/react-router' {
       path: '/about'
       fullPath: '/about'
       preLoaderRoute: typeof AboutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/calibrate': {
+      id: '/calibrate'
+      path: '/calibrate'
+      fullPath: '/calibrate'
+      preLoaderRoute: typeof CalibrateRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/demo': {
+      id: '/demo'
+      path: '/demo'
+      fullPath: '/demo'
+      preLoaderRoute: typeof DemoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/drive': {
@@ -146,6 +198,8 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AboutRoute: AboutRoute,
+  CalibrateRoute: CalibrateRoute,
+  DemoRoute: DemoRoute,
   DriveRoute: DriveRoute,
   OnboardingRoute: OnboardingRoute,
   SettingsRoute: SettingsRoute,

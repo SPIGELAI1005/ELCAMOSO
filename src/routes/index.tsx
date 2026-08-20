@@ -6,12 +6,12 @@ export const Route = createFileRoute("/")({
   component: Landing,
   head: () => ({
     meta: [
-      { title: "ELCAMOSO — Your EV. Your sound." },
+      { title: "ELCAMOSO · Your EV. Your Sound. More Emotion." },
       {
         name: "description",
         content: "Motion-responsive sound experiences for electric cars.",
       },
-      { property: "og:title", content: "ELCAMOSO — Your EV. Your sound." },
+      { property: "og:title", content: "ELCAMOSO · Your EV. Your Sound. More Emotion." },
       {
         property: "og:description",
         content: "Motion-responsive sound experiences for electric cars.",
@@ -46,7 +46,9 @@ function Landing() {
             <h1 className="animate-rise text-4xl leading-[1.05] font-light tracking-tight sm:text-6xl">
               Your EV.
               <br />
-              Your sound.
+              Your Sound.
+              <br />
+              More Emotion.
             </h1>
             <p
               className="animate-rise max-w-sm text-base text-muted-foreground"

@@ -11,9 +11,25 @@ interface Options {
   volume: number;
   demoMotion: boolean;
   tuning?: ProfileTuning | undefined;
+  /** per-profile balance gain */
+  profileGain?: number;
+  /** calibrated device motion sensitivity */
+  motionSensitivity?: number;
+  /** calibrated sensor noise floor in m/s^2 */
+  motionNoiseFloor?: number;
 }
 
-export function useDriveSession({ profileId, volume, demoMotion, tuning }: Options) {
+export function useDriveSession({
+  profileId,
+  volume,
+  demoMotion,
+  tuning,
+  profileGain = 1,
+  motionSensitivity = 1,
+  motionNoiseFloor = 0,
+}: Options) {
+  const calibrationRef = useRef({ motionSensitivity, motionNoiseFloor });
+  calibrationRef.current = { motionSensitivity, motionNoiseFloor };
   const tuningRef = useRef<ProfileTuning | undefined>(tuning);
   tuningRef.current = tuning;
   const [status, setStatus] = useState<DriveStatus>("idle");
@@ -58,8 +74,12 @@ export function useDriveSession({ profileId, volume, demoMotion, tuning }: Optio
     }
 
     const speed = rawSpeed.current;
-    const acceleration = (speed - lastSpeed.current) / dt;
+    const rawAccel = (speed - lastSpeed.current) / dt;
     lastSpeed.current = speed;
+    // calibration: ignore sensor noise, then scale to this device
+    const { motionSensitivity: sens, motionNoiseFloor: floor } = calibrationRef.current;
+    const deadzoned = Math.abs(rawAccel) < floor * 0.35 ? 0 : rawAccel;
+    const acceleration = deadzoned * sens;
 
     const next = computeDriveState({
       speed,
@@ -81,6 +101,7 @@ export function useDriveSession({ profileId, volume, demoMotion, tuning }: Optio
     try {
       const engine = new SoundEngine();
       await engine.start(profileRef.current);
+      engine.setProfileGain(profileGain);
       engine.setVolume(volume);
       engineRef.current = engine;
 
@@ -119,11 +140,15 @@ export function useDriveSession({ profileId, volume, demoMotion, tuning }: Optio
       setStatus("error");
       setError("Location unavailable");
     }
-  }, [demoMotion, loop, volume]);
+  }, [demoMotion, loop, profileGain, volume]);
 
   useEffect(() => {
     if (engineRef.current) engineRef.current.setVolume(volume);
   }, [volume]);
+
+  useEffect(() => {
+    engineRef.current?.setProfileGain(profileGain);
+  }, [profileGain]);
 
   useEffect(() => {
     if (engineRef.current) engineRef.current.setProfile(getProfile(profileId));
