@@ -8,6 +8,7 @@ import type { SoundProfile } from "@/lib/sound/profiles";
 export class SoundEngine {
   private ctx: AudioContext | null = null;
   private master: GainNode | null = null;
+  private limiter: DynamicsCompressorNode | null = null;
   private body: GainNode | null = null;
   private accents: GainNode | null = null;
   private filter: BiquadFilterNode | null = null;
@@ -19,9 +20,16 @@ export class SoundEngine {
   private nextRhythmTime = 0;
   private rhythmStep = 0;
   private noiseBuffer: AudioBuffer | null = null;
+  private swapTimer: ReturnType<typeof setTimeout> | null = null;
+  /** hard ceiling applied before the limiter so no profile can spike */
+  static readonly MAX_GAIN = 0.85;
 
   get running() {
     return this.ctx !== null;
+  }
+
+  private safeVolume(value: number) {
+    return Math.min(SoundEngine.MAX_GAIN, Math.max(0.0001, value));
   }
 
   async start(profile: SoundProfile) {
@@ -33,16 +41,25 @@ export class SoundEngine {
     await ctx.resume();
     this.ctx = ctx;
 
+    // Output chain: everything → master → limiter → speakers.
+    const limiter = ctx.createDynamicsCompressor();
+    limiter.threshold.value = -8;
+    limiter.knee.value = 6;
+    limiter.ratio.value = 20;
+    limiter.attack.value = 0.003;
+    limiter.release.value = 0.25;
+    limiter.connect(ctx.destination);
+
     const master = ctx.createGain();
     master.gain.value = 0.0001;
-    master.connect(ctx.destination);
+    master.connect(limiter);
 
     const body = ctx.createGain();
     body.gain.value = 1;
     body.connect(master);
 
     const accents = ctx.createGain();
-    accents.gain.value = 0;
+    accents.gain.value = 1;
     accents.connect(master);
 
     const filter = ctx.createBiquadFilter();
@@ -51,6 +68,7 @@ export class SoundEngine {
     filter.Q.value = 1.2;
     filter.connect(body);
 
+    this.limiter = limiter;
     this.master = master;
     this.body = body;
     this.accents = accents;
@@ -60,8 +78,9 @@ export class SoundEngine {
     const signatureEnd = this.playSignature();
     this.setProfile(profile);
     master.gain.setValueAtTime(0.0001, ctx.currentTime);
-    master.gain.setTargetAtTime(this.volume * 0.55, signatureEnd - 0.35, 0.55);
+    master.gain.setTargetAtTime(this.safeVolume(this.volume * 0.55), signatureEnd - 0.35, 0.55);
   }
+
 
   /**
    * Short, original ELCAMOSO sonic signature — two soft rising sines that open
