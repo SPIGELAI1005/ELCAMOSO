@@ -303,7 +303,7 @@ function LiveTest({
       const m = Math.hypot(a.x ?? 0, a.y ?? 0, a.z ?? 0);
       if (!Number.isFinite(m)) return;
       raw.current = m;
-      setHasSensor(true);
+      if (m > 0.02) setHasSensor(true);
     };
     window.addEventListener("devicemotion", onMotion);
 
