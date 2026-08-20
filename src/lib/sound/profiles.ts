@@ -31,7 +31,7 @@ export const SOUND_PROFILES: SoundProfile[] = [
     id: "gt-v8",
     name: "GT V8",
     traits: ["Deep", "Mechanical", "Powerful"],
-    description: "A wide, low-slung character with weight behind every движение of the pedal.",
+    description: "A wide, low-slung character with weight behind every movement.",
     drivetrainMode: "virtual-transmission",
     voice: {
       baseFrequency: 26,
