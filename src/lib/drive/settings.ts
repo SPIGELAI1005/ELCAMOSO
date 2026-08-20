@@ -85,7 +85,7 @@ export function materializeCustom(sound: CustomSound): SoundProfile {
         ...tex,
         level: Math.min(1, tex.level * t.texture),
       })),
-      signals: t.signals ? v.signals : [],
+      signals: t.signals ? (v.signals ?? []) : [],
     },
   };
   const rhythm = scaleRhythm(v.rhythm);
