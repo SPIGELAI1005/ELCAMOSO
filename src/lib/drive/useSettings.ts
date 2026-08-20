@@ -1,20 +1,28 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   DEFAULT_SETTINGS,
+  getLastLoadReport,
+  materializeCustom,
   readSettings,
   writeSettings,
   type ElcamosoSettings,
+  type LoadReport,
 } from "@/lib/drive/settings";
+import { registerCustomProfiles } from "@/lib/sound/profiles";
 
 export function useSettings() {
   const [settings, setSettings] = useState<ElcamosoSettings>(DEFAULT_SETTINGS);
   /** false until the stored settings have been read on the client */
   const [loaded, setLoaded] = useState(false);
+  const [loadReport, setLoadReport] = useState<LoadReport>(() => getLastLoadReport());
 
   useEffect(() => {
-    setSettings(readSettings());
+    const sync = () => {
+      setSettings(readSettings());
+      setLoadReport(getLastLoadReport());
+    };
+    sync();
     setLoaded(true);
-    const sync = () => setSettings(readSettings());
     window.addEventListener("elcamoso:settings", sync);
     window.addEventListener("storage", sync);
     return () => {
@@ -23,9 +31,19 @@ export function useSettings() {
     };
   }, []);
 
+  // Studio creations must be resolvable by id everywhere the engine looks them up.
+  const customProfiles = useMemo(
+    () => settings.customSounds.map(materializeCustom),
+    [settings.customSounds],
+  );
+  useEffect(() => {
+    registerCustomProfiles(customProfiles);
+  }, [customProfiles]);
+
   const update = useCallback((next: Partial<ElcamosoSettings>) => {
     setSettings(writeSettings(next));
+    setLoadReport(getLastLoadReport());
   }, []);
 
-  return { settings, update, loaded };
+  return { settings, update, loaded, loadReport, customProfiles };
 }
