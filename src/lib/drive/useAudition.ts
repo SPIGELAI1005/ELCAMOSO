@@ -8,13 +8,14 @@ interface Options {
   profileId: string;
   volume: number;
   tuning?: ProfileTuning | undefined;
+  profileGain?: number;
 }
 
 /**
  * Audition mode: a motion simulator that drives the sound engine without any
  * sensors, so a profile can be previewed and tuned before a real drive.
  */
-export function useAudition({ profileId, volume, tuning }: Options) {
+export function useAudition({ profileId, volume, tuning, profileGain = 1 }: Options) {
   const [active, setActive] = useState(false);
   const [state, setState] = useState<DriveState>(IDLE_STATE);
   const [targetKmh, setTargetKmh] = useState(60);
@@ -78,16 +79,21 @@ export function useAudition({ profileId, volume, tuning }: Options) {
     if (engineRef.current) return;
     const engine = new SoundEngine();
     await engine.start(profileRef.current, { signature: false });
+    engine.setProfileGain(profileGain);
     engine.setVolume(volume);
     engineRef.current = engine;
     lastTick.current = performance.now();
     setActive(true);
     rafId.current = requestAnimationFrame(loop);
-  }, [loop, volume]);
+  }, [loop, profileGain, volume]);
 
   useEffect(() => {
     engineRef.current?.setVolume(volume);
   }, [volume]);
+
+  useEffect(() => {
+    engineRef.current?.setProfileGain(profileGain);
+  }, [profileGain]);
 
   useEffect(() => {
     engineRef.current?.setProfile(getProfile(profileId));
