@@ -87,7 +87,9 @@ export function computeDriveState({
   );
   const shift = clamp(dt / t.shiftSmoothing, 0, 1);
   const rpm = previous.rpm + (targetRpm - previous.rpm) * shift;
-  const load = clamp((rpm - t.idleRpm) / (t.redlineRpm - t.idleRpm) + throttle * 0.2);
+  const load = clamp(
+    ((rpm - t.idleRpm) / (t.redlineRpm - t.idleRpm) + throttle * 0.2) * tune.response,
+  );
 
   return {
     speed,
