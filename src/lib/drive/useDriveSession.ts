@@ -3,6 +3,8 @@ import { computeDriveState, IDLE_STATE, type DriveState } from "@/lib/drive/mode
 import { SoundEngine } from "@/lib/sound/engine";
 import { getProfile } from "@/lib/sound/profiles";
 import type { ProfileTuning } from "@/lib/drive/settings";
+import type { LayerMix } from "@/lib/sound/environments";
+import type { SoundSnippet } from "@/lib/sound/snippets";
 
 export type DriveStatus = "idle" | "starting" | "driving" | "error";
 
@@ -17,6 +19,12 @@ interface Options {
   motionSensitivity?: number;
   /** calibrated sensor noise floor in m/s^2 */
   motionNoiseFloor?: number;
+  /** driving environment id */
+  environmentId?: string;
+  /** per-layer mixer */
+  mix?: LayerMix;
+  /** custom audio snippets mapped to driving states */
+  snippets?: SoundSnippet[];
 }
 
 export function useDriveSession({
@@ -27,11 +35,16 @@ export function useDriveSession({
   profileGain = 1,
   motionSensitivity = 1,
   motionNoiseFloor = 0,
+  environmentId,
+  mix,
+  snippets,
 }: Options) {
   const calibrationRef = useRef({ motionSensitivity, motionNoiseFloor });
   calibrationRef.current = { motionSensitivity, motionNoiseFloor };
   const tuningRef = useRef<ProfileTuning | undefined>(tuning);
   tuningRef.current = tuning;
+  const spaceRef = useRef({ environmentId, mix, snippets });
+  spaceRef.current = { environmentId, mix, snippets };
   const [status, setStatus] = useState<DriveStatus>("idle");
   const [error, setError] = useState<string | null>(null);
   const [state, setState] = useState<DriveState>(IDLE_STATE);
@@ -100,7 +113,11 @@ export function useDriveSession({
     setStatus("starting");
     try {
       const engine = new SoundEngine();
-      await engine.start(profileRef.current);
+      await engine.start(profileRef.current, {
+      environmentId: spaceRef.current.environmentId,
+      mix: spaceRef.current.mix,
+      snippets: spaceRef.current.snippets,
+    });
       engine.setProfileGain(profileGain);
       engine.setVolume(volume);
       engineRef.current = engine;
@@ -153,6 +170,18 @@ export function useDriveSession({
   useEffect(() => {
     if (engineRef.current) engineRef.current.setProfile(getProfile(profileId));
   }, [profileId]);
+
+  useEffect(() => {
+    if (environmentId) engineRef.current?.setEnvironment(environmentId);
+  }, [environmentId]);
+
+  useEffect(() => {
+    if (mix) engineRef.current?.setMix(mix);
+  }, [mix]);
+
+  useEffect(() => {
+    if (snippets) void engineRef.current?.setSnippets(snippets);
+  }, [snippets]);
 
   useEffect(() => () => stop(), [stop]);
 
