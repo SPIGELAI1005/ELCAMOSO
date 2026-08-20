@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { ElcamosoMark } from "@/components/ElcamosoLogo";
 import { useSettings } from "@/lib/drive/useSettings";
 import { useReducedMotion } from "@/lib/drive/useReducedMotion";
@@ -29,20 +29,31 @@ export const Route = createFileRoute("/onboarding")({
 
 type Step = 0 | 1 | 2;
 
+const STEP_TITLES = ["How it works", "Driving sensors", "Ready to drive"];
+
 function Onboarding() {
   const navigate = useNavigate();
   const { settings, update, loaded } = useSettings();
   const reducedMotion = useReducedMotion();
   const [step, setStep] = useState<Step>(0);
+  const [restored, setRestored] = useState(false);
   const [sensorState, setSensorState] = useState<"idle" | "asking" | "ready" | "denied">(
     "idle",
   );
   const profile = getProfile(settings.profileId);
 
-  // Already set up? Go straight to the drive screen.
+  // Resume where you left off, once, without ever bouncing you elsewhere.
   useEffect(() => {
-    if (loaded && settings.onboarded) void navigate({ to: "/drive" });
-  }, [loaded, settings.onboarded, navigate]);
+    if (!loaded || restored) return;
+    setRestored(true);
+    const saved = Math.min(2, Math.max(0, settings.onboardingStep)) as Step;
+    if (saved > 0) setStep(saved);
+  }, [loaded, restored, settings.onboardingStep]);
+
+  const goTo = (next: Step) => {
+    setStep(next);
+    update({ onboardingStep: next });
+  };
 
   const enableSensors = async () => {
     setSensorState("asking");
@@ -62,7 +73,7 @@ function Onboarding() {
     navigator.geolocation.getCurrentPosition(
       () => {
         setSensorState("ready");
-        setStep(2);
+        goTo(2);
       },
       () => setSensorState("denied"),
       { enableHighAccuracy: true, timeout: 15000 },
@@ -70,7 +81,7 @@ function Onboarding() {
   };
 
   const finish = () => {
-    update({ onboarded: true, safetyAcknowledged: true });
+    update({ onboarded: true, safetyAcknowledged: true, onboardingStep: 2 });
     void navigate({ to: "/drive" });
   };
 
@@ -85,12 +96,21 @@ function Onboarding() {
           className="h-14 w-auto"
         />
 
+        <div>
+          <p className="text-[11px] tracking-[0.34em] text-muted-foreground uppercase">
+            Step {step + 1} of 3
+          </p>
+          <p className="mt-2 text-xs tracking-[0.2em] text-muted-foreground uppercase">
+            {STEP_TITLES[step]}
+          </p>
+        </div>
+
         {step === 0 ? (
           <div className="flex flex-col gap-6">
             <h1 className="text-3xl font-light">Your EV. Your Sound. More Emotion.</h1>
             <p className="text-sm leading-relaxed text-muted-foreground">
-              ELCAMOSO listens to how your car moves - speed, acceleration and
-              deceleration - and shapes a sound that follows it in real time. Nothing is
+              ELCAMOSO listens to how your car moves: speed, acceleration and
+              deceleration, and shapes a sound that follows it in real time. Nothing is
               played back; everything is generated as you drive.
             </p>
             <p className="text-xs tracking-[0.2em] text-muted-foreground uppercase">
@@ -113,7 +133,7 @@ function Onboarding() {
             </p>
             {sensorState === "denied" ? (
               <p className="text-xs text-muted-foreground">
-                Sensors are unavailable. You can still continue and use demo motion from
+                Sensors are unavailable. You can still continue and use Demo Drive from
                 Settings.
               </p>
             ) : null}
@@ -123,7 +143,7 @@ function Onboarding() {
             <h1 className="text-3xl font-light">You&apos;re set</h1>
             <p className="text-sm leading-relaxed text-muted-foreground">
               Your sound is <span className="text-foreground">{profile.name}</span>. You can
-              change it any time in Sounds - your choice and settings are remembered for
+              change it any time in Sounds, and your choice and settings are remembered for
               next time.
             </p>
             <p className="text-xs leading-relaxed text-muted-foreground">
@@ -136,7 +156,7 @@ function Onboarding() {
           {step === 0 ? (
             <>
               <button
-                onClick={() => setStep(1)}
+                onClick={() => goTo(1)}
                 className="h-14 rounded-full bg-primary text-sm tracking-[0.22em] text-primary-foreground uppercase"
               >
                 Continue
@@ -158,8 +178,8 @@ function Onboarding() {
                 {sensorState === "asking" ? "Requesting…" : "Enable sensors"}
               </button>
               <button
-                onClick={() => setStep(2)}
-                className="text-xs tracking-[0.24em] text-muted-foreground uppercase"
+                onClick={() => goTo(2)}
+                className="min-h-11 text-xs tracking-[0.24em] text-muted-foreground uppercase"
               >
                 Skip for now
               </button>
@@ -182,6 +202,13 @@ function Onboarding() {
             />
           ))}
         </div>
+
+        <Link
+          to="/drive"
+          className="min-h-11 text-[11px] tracking-[0.24em] text-muted-foreground uppercase hover:text-foreground"
+        >
+          Go straight to Drive
+        </Link>
       </div>
     </main>
   );
