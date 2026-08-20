@@ -5,12 +5,24 @@ import type {
   SoundProfile,
   TextureSpec,
 } from "@/lib/sound/profiles";
+import {
+  DEFAULT_LAYER_MIX,
+  getEnvironment,
+  normalizeMix,
+  type EnvironmentPreset,
+  type LayerKey,
+  type LayerMix,
+} from "@/lib/sound/environments";
+import type { SoundSnippet } from "@/lib/sound/snippets";
 
 interface TextureNode {
   spec: TextureSpec;
   gain: GainNode;
   filter: BiquadFilterNode;
   src: AudioBufferSourceNode;
+  panner: StereoPannerNode;
+  /** stereo placement phase so beds drift independently */
+  phase: number;
   lfo?: { osc: OscillatorNode; gain: GainNode };
 }
 
@@ -25,10 +37,31 @@ interface SignalClock {
   next: number;
 }
 
+/** One mixable layer: tone shaping, stereo placement, level and reverb send. */
+interface LayerChain {
+  input: GainNode;
+  tone: BiquadFilterNode;
+  panner: StereoPannerNode;
+  out: GainNode;
+  send: GainNode;
+  phase: number;
+}
+
+interface SnippetVoice {
+  snippet: SoundSnippet;
+  buffer: AudioBuffer;
+  /** next allowed play time, so triggers cannot machine-gun */
+  next: number;
+  loopSrc?: AudioBufferSourceNode;
+}
+
 /**
  * Motion-to-sound synthesis. Every profile consumes the same DriveState but maps
  * it through its own strategy (virtual transmission vs. continuous), layering a
  * tonal core, atmospheric beds, speed-locked rhythms and occasional signatures.
+ *
+ * Layers run through their own tone, stereo and reverb-send chain, so a driving
+ * environment can place and rebalance them live as the drive state changes.
  */
 export class SoundEngine {
   private ctx: AudioContext | null = null;
@@ -40,6 +73,16 @@ export class SoundEngine {
   private accents: GainNode | null = null;
   private beds: GainNode | null = null;
   private filter: BiquadFilterNode | null = null;
+  private layers: Partial<Record<LayerKey, LayerChain>> = {};
+  private reverb: ConvolverNode | null = null;
+  private reverbDamp: BiquadFilterNode | null = null;
+  private wet: GainNode | null = null;
+  private environment: EnvironmentPreset = getEnvironment(null);
+  private mix: LayerMix = DEFAULT_LAYER_MIX;
+  private snippets: SnippetVoice[] = [];
+  private snippetToken = 0;
+  private lastThrottle = 0;
+  private lastRegen = 0;
   private voices: { osc: OscillatorNode; gain: GainNode; ratio: number }[] = [];
   private noise: { src: AudioBufferSourceNode; gain: GainNode } | null = null;
   private lfo: { osc: OscillatorNode; gain: GainNode } | null = null;
@@ -55,6 +98,7 @@ export class SoundEngine {
   private swapTimer: ReturnType<typeof setTimeout> | null = null;
   /** hard ceiling applied before the limiter so no profile can spike */
   static readonly MAX_GAIN = 0.85;
+
 
   get running() {
     return this.ctx !== null;
@@ -76,7 +120,15 @@ export class SoundEngine {
     return Math.min(SoundEngine.MAX_GAIN, Math.max(0.0001, value));
   }
 
-  async start(profile: SoundProfile, options?: { signature?: boolean }) {
+  async start(
+    profile: SoundProfile,
+    options?: {
+      signature?: boolean | undefined;
+      environmentId?: string | undefined;
+      mix?: LayerMix | undefined;
+      snippets?: SoundSnippet[] | undefined;
+    },
+  ) {
     if (this.ctx) {
       this.setProfile(profile);
       return;
@@ -85,7 +137,11 @@ export class SoundEngine {
     await ctx.resume();
     this.ctx = ctx;
 
-    // Output chain: everything -> master -> limiter -> speakers.
+    this.environment = getEnvironment(options?.environmentId ?? profile.environmentId);
+    this.mix = normalizeMix(options?.mix ?? profile.mix);
+
+    // Output chain: layers -> tone -> stereo -> (dry + reverb send) -> master
+    // -> limiter -> speakers.
     const limiter = ctx.createDynamicsCompressor();
     limiter.threshold.value = -8;
     limiter.knee.value = 6;
@@ -105,17 +161,47 @@ export class SoundEngine {
     master.gain.value = 0.0001;
     master.connect(limiter);
 
-    const body = ctx.createGain();
-    body.gain.value = 1;
-    body.connect(master);
+    // Shared space: one convolver fed by per-layer sends.
+    const reverb = ctx.createConvolver();
+    reverb.buffer = this.buildImpulse(ctx, this.environment);
+    const reverbDamp = ctx.createBiquadFilter();
+    reverbDamp.type = "lowpass";
+    reverbDamp.frequency.value = 12000 - this.environment.damping * 9000;
+    const wet = ctx.createGain();
+    wet.gain.value = this.environment.wet;
+    reverb.connect(reverbDamp);
+    reverbDamp.connect(wet);
+    wet.connect(master);
 
-    const accents = ctx.createGain();
-    accents.gain.value = 1;
-    accents.connect(master);
+    const makeLayer = (key: LayerKey, phase: number): LayerChain => {
+      const input = ctx.createGain();
+      input.gain.value = 1;
+      const tone = ctx.createBiquadFilter();
+      tone.type = "highshelf";
+      tone.frequency.value = 900;
+      tone.gain.value = 0;
+      const panner = ctx.createStereoPanner();
+      const out = ctx.createGain();
+      out.gain.value = this.mix[key].volume;
+      const send = ctx.createGain();
+      send.gain.value = this.mix[key].wet;
+      input.connect(tone);
+      tone.connect(panner);
+      panner.connect(out);
+      out.connect(master);
+      out.connect(send);
+      send.connect(reverb);
+      return { input, tone, panner, out, send, phase };
+    };
 
-    const beds = ctx.createGain();
-    beds.gain.value = 1;
-    beds.connect(master);
+    const bodyLayer = makeLayer("body", 0);
+    const accentsLayer = makeLayer("accents", 2.1);
+    const bedsLayer = makeLayer("beds", 4.2);
+    this.layers = { body: bodyLayer, accents: accentsLayer, beds: bedsLayer };
+
+    const body = bodyLayer.input;
+    const accents = accentsLayer.input;
+    const beds = bedsLayer.input;
 
     const filter = ctx.createBiquadFilter();
     filter.type = "lowpass";
@@ -127,10 +213,16 @@ export class SoundEngine {
     this.analyser = analyser;
     this.meterBuffer = new Float32Array(analyser.fftSize);
     this.master = master;
+    this.reverb = reverb;
+    this.reverbDamp = reverbDamp;
+    this.wet = wet;
     this.body = body;
     this.accents = accents;
     this.beds = beds;
     this.filter = filter;
+
+    this.applyMix();
+    if (options?.snippets) void this.setSnippets(options.snippets);
 
     // Startup: a soft ELCAMOSO signature, then the profile breathes in to idle.
     const withSignature = options?.signature !== false;
@@ -142,7 +234,214 @@ export class SoundEngine {
       signatureEnd - 0.35,
       0.55,
     );
+    this.fireSnippets("start", ctx.currentTime + 0.25);
   }
+
+  /* ------------------------------------------------------- space and mixer */
+
+  /**
+   * Synthesised impulse response: an exponentially decaying noise tail whose
+   * length and colour follow the environment, so each preset sits in a
+   * believable space without shipping audio files.
+   */
+  private buildImpulse(ctx: AudioContext, env: EnvironmentPreset) {
+    const length = Math.max(1, Math.floor(ctx.sampleRate * env.size));
+    const buffer = ctx.createBuffer(2, length, ctx.sampleRate);
+    const decay = 2.2 + env.damping * 3.5;
+    for (let c = 0; c < 2; c += 1) {
+      const data = buffer.getChannelData(c);
+      let last = 0;
+      for (let i = 0; i < length; i += 1) {
+        const t = i / length;
+        // low-passed noise gives a warmer, less metallic tail
+        const white = Math.random() * 2 - 1;
+        last = last + (white - last) * (1 - env.damping * 0.85);
+        const spread = 1 + (c === 0 ? -env.spread : env.spread) * 0.08;
+        data[i] = last * Math.pow(1 - t, decay) * spread;
+      }
+    }
+    return buffer;
+  }
+
+  /** Swaps the driving environment: space, damping and layer balance. */
+  setEnvironment(id: string) {
+    const env = getEnvironment(id);
+    this.environment = env;
+    const ctx = this.ctx;
+    if (!ctx) return;
+    if (this.reverb) this.reverb.buffer = this.buildImpulse(ctx, env);
+    this.reverbDamp?.frequency.setTargetAtTime(
+      12000 - env.damping * 9000,
+      ctx.currentTime,
+      0.3,
+    );
+    this.wet?.gain.setTargetAtTime(env.wet, ctx.currentTime, 0.4);
+    this.applyMix();
+  }
+
+  /** Per-layer volume, tone tilt and reverb send from the Studio mixer. */
+  setMix(mix: LayerMix) {
+    this.mix = normalizeMix(mix);
+    this.applyMix();
+  }
+
+  private applyMix() {
+    const ctx = this.ctx;
+    if (!ctx) return;
+    const t = ctx.currentTime;
+    (Object.keys(this.layers) as LayerKey[]).forEach((key) => {
+      const chain = this.layers[key];
+      if (!chain) return;
+      const setting = this.mix[key];
+      const balance = this.environment.balance[key];
+      chain.out.gain.setTargetAtTime(
+        Math.max(0.0001, setting.volume * balance),
+        t,
+        0.25,
+      );
+      chain.tone.gain.setTargetAtTime((setting.tone - 1) * 12, t, 0.25);
+      chain.send.gain.setTargetAtTime(setting.wet, t, 0.3);
+    });
+  }
+
+  /**
+   * Moves the layers gently across the stereo field and rebalances them from
+   * the drive state, which is what makes each bed feel like it belongs to the
+   * space rather than sitting flat in the middle.
+   */
+  private updateSpace(state: DriveState, t: number) {
+    const env = this.environment;
+    const motion = Math.min(1, (state.speed * 3.6) / 90);
+    const lift: Record<LayerKey, number> = {
+      body: 1 + state.throttle * env.motion.bodyByThrottle,
+      beds: 1 + motion * env.motion.bedsBySpeed,
+      accents: 1 + state.throttle * env.motion.accentsByThrottle,
+    };
+    (Object.keys(this.layers) as LayerKey[]).forEach((key) => {
+      const chain = this.layers[key];
+      if (!chain) return;
+      const setting = this.mix[key];
+      chain.out.gain.setTargetAtTime(
+        Math.max(0.0001, setting.volume * env.balance[key] * lift[key]),
+        t,
+        0.3,
+      );
+      const drift = Math.sin(t * 0.13 + chain.phase) * env.spread;
+      chain.panner.pan.setTargetAtTime(
+        Math.max(-1, Math.min(1, key === "body" ? drift * 0.2 : drift * 0.6)),
+        t,
+        0.4,
+      );
+    });
+
+    if (this.wet) {
+      const wetTarget = Math.max(
+        0,
+        Math.min(
+          1,
+          env.wet + motion * env.motion.wetBySpeed + state.regen * env.motion.wetByRegen,
+        ),
+      );
+      this.wet.gain.setTargetAtTime(wetTarget, t, 0.35);
+    }
+  }
+
+  /* -------------------------------------------------------------- snippets */
+
+  /** Decodes user recordings/uploads and maps them to their driving states. */
+  async setSnippets(list: SoundSnippet[]) {
+    const ctx = this.ctx;
+    const token = (this.snippetToken += 1);
+    this.stopSnippetBeds();
+    if (!ctx) {
+      this.snippets = [];
+      return;
+    }
+    const voices: SnippetVoice[] = [];
+    for (const snippet of list) {
+      try {
+        const res = await fetch(snippet.dataUrl);
+        const buffer = await ctx.decodeAudioData(await res.arrayBuffer());
+        voices.push({ snippet, buffer, next: 0 });
+      } catch {
+        /* unreadable snippet: skip it rather than break the drive */
+      }
+    }
+    if (token !== this.snippetToken || !this.ctx) return;
+    this.snippets = voices;
+    voices
+      .filter((v) => v.snippet.trigger === "bed")
+      .forEach((voice) => this.startSnippetBed(voice));
+  }
+
+  private startSnippetBed(voice: SnippetVoice) {
+    const ctx = this.ctx;
+    const target = this.layers.beds?.input ?? this.beds;
+    if (!ctx || !target) return;
+    const src = ctx.createBufferSource();
+    src.buffer = voice.buffer;
+    src.loop = true;
+    src.playbackRate.value = voice.snippet.rate;
+    const gain = ctx.createGain();
+    gain.gain.value = Math.min(1, voice.snippet.level) * 0.4;
+    src.connect(gain);
+    gain.connect(target);
+    src.start();
+    voice.loopSrc = src;
+  }
+
+  private stopSnippetBeds() {
+    this.snippets.forEach((voice) => {
+      try {
+        voice.loopSrc?.stop();
+      } catch {
+        /* already stopped */
+      }
+      delete voice.loopSrc;
+    });
+  }
+
+  private fireSnippets(trigger: SoundSnippet["trigger"], at: number) {
+    const ctx = this.ctx;
+    const target = this.layers.accents?.input ?? this.accents;
+    if (!ctx || !target) return;
+    this.snippets
+      .filter((v) => v.snippet.trigger === trigger && at >= v.next)
+      .forEach((voice) => {
+        const cooldown =
+          trigger === "cruise" ? (voice.snippet.everySeconds ?? 25) : voice.buffer.duration + 2.5;
+        voice.next = at + cooldown;
+        const src = ctx.createBufferSource();
+        src.buffer = voice.buffer;
+        src.playbackRate.value = voice.snippet.rate;
+        const gain = ctx.createGain();
+        gain.gain.value = Math.min(1.5, voice.snippet.level) * 0.6;
+        src.connect(gain);
+        gain.connect(target);
+        src.start(at);
+      });
+  }
+
+  /** One-shot audition of a snippet outside a drive (used by the Studio list). */
+  static async previewSnippet(dataUrl: string, rate = 1, level = 1) {
+    const ctx = new AudioContext();
+    try {
+      const res = await fetch(dataUrl);
+      const buffer = await ctx.decodeAudioData(await res.arrayBuffer());
+      const src = ctx.createBufferSource();
+      src.buffer = buffer;
+      src.playbackRate.value = rate;
+      const gain = ctx.createGain();
+      gain.gain.value = Math.min(1, level) * 0.8;
+      src.connect(gain);
+      gain.connect(ctx.destination);
+      src.start();
+      await new Promise((r) => setTimeout(r, (buffer.duration / rate) * 1000 + 200));
+    } finally {
+      await ctx.close();
+    }
+  }
+
 
   /**
    * Short, original ELCAMOSO sonic signature: two soft rising sines that open
@@ -343,12 +642,19 @@ export class SoundEngine {
     const gain = ctx.createGain();
     gain.gain.value = 0.0001;
 
+    // Each bed gets its own placement, so water, gravel and wind occupy
+    // different points in the field instead of stacking in the centre.
+    const panner = ctx.createStereoPanner();
+    const phase = this.textures.length * 1.7;
+
     src.connect(filter);
     filter.connect(gain);
-    gain.connect(beds);
+    gain.connect(panner);
+    panner.connect(beds);
     src.start();
 
-    const node: TextureNode = { spec, gain, filter, src };
+    const node: TextureNode = { spec, gain, filter, src, panner, phase };
+
 
     // Slow surge so water and wind breathe instead of sitting flat.
     if (spec.surge) {
@@ -444,6 +750,14 @@ export class SoundEngine {
     }
 
     this.updateTextures(state, t);
+    this.updateSpace(state, t);
+
+    // Snippet triggers are edge-based so a held pedal cannot retrigger them.
+    if (state.throttle > 0.72 && this.lastThrottle <= 0.72) this.fireSnippets("throttle", t);
+    if (state.regen > 0.5 && this.lastRegen <= 0.5) this.fireSnippets("regen", t);
+    if (state.speed * 3.6 > 20 && state.throttle < 0.5) this.fireSnippets("cruise", t);
+    this.lastThrottle = state.throttle;
+    this.lastRegen = state.regen;
 
     if (this.master) {
       const duck = 1 - state.regen * 0.35;
@@ -459,7 +773,8 @@ export class SoundEngine {
 
   private updateTextures(state: DriveState, t: number) {
     const kmh = state.speed * 3.6;
-    this.textures.forEach(({ spec, gain, filter, src }) => {
+    const spread = this.environment.spread;
+    this.textures.forEach(({ spec, gain, filter, src, panner, phase }) => {
       const follow = spec.speedScale ?? 1;
       const motion = Math.min(1, kmh / 90);
       const amount = spec.level * (1 - follow + follow * (0.12 + motion * 0.95));
@@ -467,11 +782,15 @@ export class SoundEngine {
       const regenLift = spec.kind === "water" || spec.kind === "wind" ? state.regen * 0.2 : 0;
       gain.gain.setTargetAtTime(Math.max(0.0001, amount + regenLift), t, 0.35);
       filter.frequency.setTargetAtTime(spec.tone * (0.8 + motion * 0.6), t, 0.4);
+      // Beds drift wider and faster with speed: motion you can hear moving.
+      const sway = Math.sin(t * (0.18 + motion * 0.5) + phase) * spread;
+      panner.pan.setTargetAtTime(Math.max(-1, Math.min(1, sway)), t, 0.5);
       if (spec.kind === "gravel" || spec.kind === "water") {
         src.playbackRate.setTargetAtTime(0.85 + motion * 0.7, t, 0.5);
       }
     });
   }
+
 
   /* -------------------------------------------------------------- rhythms */
 
@@ -1153,6 +1472,8 @@ export class SoundEngine {
     this.swapTimer = null;
     if (this.master) this.master.gain.setTargetAtTime(0.0001, ctx.currentTime, 0.2);
     await new Promise((r) => setTimeout(r, 380));
+    this.stopSnippetBeds();
+    this.snippets = [];
     this.teardownVoices();
     await ctx.close();
     this.ctx = null;
@@ -1164,6 +1485,11 @@ export class SoundEngine {
     this.accents = null;
     this.beds = null;
     this.filter = null;
+    this.layers = {};
+    this.reverb = null;
+    this.reverbDamp = null;
+    this.wet = null;
     this.profile = null;
   }
 }
+

@@ -3,6 +3,8 @@ import { computeDriveState, IDLE_STATE, type DriveState } from "@/lib/drive/mode
 import { SoundEngine } from "@/lib/sound/engine";
 import { getProfile } from "@/lib/sound/profiles";
 import type { ProfileTuning } from "@/lib/drive/settings";
+import type { LayerMix } from "@/lib/sound/environments";
+import type { SoundSnippet } from "@/lib/sound/snippets";
 
 export interface DemoControls {
   /** 0..1 pedal demand */
@@ -18,6 +20,12 @@ interface Options {
   volume: number;
   profileGain: number;
   tuning?: ProfileTuning | undefined;
+  /** driving environment id */
+  environmentId?: string;
+  /** per-layer mixer */
+  mix?: LayerMix;
+  /** custom audio snippets mapped to driving states */
+  snippets?: SoundSnippet[];
 }
 
 export const DEMO_DEFAULTS: DemoControls = { throttle: 0.3, accel: 0.5, regen: 0 };
@@ -26,7 +34,15 @@ export const DEMO_DEFAULTS: DemoControls = { throttle: 0.3, accel: 0.5, regen: 0
  * Demo drive: a full simulated vehicle so sound behaviour can be previewed with
  * throttle, acceleration and regen even when no motion sensors are available.
  */
-export function useDemoDrive({ profileId, volume, profileGain, tuning }: Options) {
+export function useDemoDrive({
+  profileId,
+  volume,
+  profileGain,
+  tuning,
+  environmentId,
+  mix,
+  snippets,
+}: Options) {
   const [active, setActive] = useState(false);
   const [state, setState] = useState<DriveState>(IDLE_STATE);
   const [controls, setControlsState] = useState<DemoControls>(DEMO_DEFAULTS);
@@ -42,6 +58,8 @@ export function useDemoDrive({ profileId, volume, profileGain, tuning }: Options
   profileRef.current = getProfile(profileId);
   const tuningRef = useRef<ProfileTuning | undefined>(tuning);
   tuningRef.current = tuning;
+  const spaceRef = useRef({ environmentId, mix, snippets });
+  spaceRef.current = { environmentId, mix, snippets };
 
   const setControls = useCallback((next: Partial<DemoControls>) => {
     controlsRef.current = { ...controlsRef.current, ...next };
@@ -101,7 +119,11 @@ export function useDemoDrive({ profileId, volume, profileGain, tuning }: Options
   const start = useCallback(async () => {
     if (engineRef.current) return;
     const engine = new SoundEngine();
-    await engine.start(profileRef.current);
+    await engine.start(profileRef.current, {
+      environmentId: spaceRef.current.environmentId,
+      mix: spaceRef.current.mix,
+      snippets: spaceRef.current.snippets,
+    });
     engine.setProfileGain(profileGain);
     engine.setVolume(volume);
     engineRef.current = engine;
@@ -121,6 +143,18 @@ export function useDemoDrive({ profileId, volume, profileGain, tuning }: Options
   useEffect(() => {
     engineRef.current?.setProfile(getProfile(profileId));
   }, [profileId]);
+
+  useEffect(() => {
+    if (environmentId) engineRef.current?.setEnvironment(environmentId);
+  }, [environmentId]);
+
+  useEffect(() => {
+    if (mix) engineRef.current?.setMix(mix);
+  }, [mix]);
+
+  useEffect(() => {
+    if (snippets) void engineRef.current?.setSnippets(snippets);
+  }, [snippets]);
 
   useEffect(() => () => stop(), [stop]);
 

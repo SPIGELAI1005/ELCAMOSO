@@ -3,6 +3,8 @@ import { computeDriveState, IDLE_STATE, type DriveState } from "@/lib/drive/mode
 import { SoundEngine } from "@/lib/sound/engine";
 import { getProfile } from "@/lib/sound/profiles";
 import type { ProfileTuning } from "@/lib/drive/settings";
+import type { LayerMix } from "@/lib/sound/environments";
+import type { SoundSnippet } from "@/lib/sound/snippets";
 
 interface Options {
   profileId: string;
@@ -11,6 +13,12 @@ interface Options {
   profileGain?: number;
   /** change this to rebuild the voice while keeping the same profile id */
   refreshKey?: unknown;
+  /** driving environment id */
+  environmentId?: string;
+  /** per-layer mixer */
+  mix?: LayerMix;
+  /** custom audio snippets mapped to driving states */
+  snippets?: SoundSnippet[];
 }
 
 /**
@@ -23,6 +31,9 @@ export function useAudition({
   tuning,
   profileGain = 1,
   refreshKey,
+  environmentId,
+  mix,
+  snippets,
 }: Options) {
   const [active, setActive] = useState(false);
   const [state, setState] = useState<DriveState>(IDLE_STATE);
@@ -43,6 +54,8 @@ export function useAudition({
   profileRef.current = getProfile(profileId);
   const tuningRef = useRef<ProfileTuning | undefined>(tuning);
   tuningRef.current = tuning;
+  const spaceRef = useRef({ environmentId, mix, snippets });
+  spaceRef.current = { environmentId, mix, snippets };
 
   const setTarget = useCallback((kmh: number) => {
     targetRef.current = kmh;
@@ -97,7 +110,12 @@ export function useAudition({
   const start = useCallback(async () => {
     if (engineRef.current) return;
     const engine = new SoundEngine();
-    await engine.start(profileRef.current, { signature: false });
+    await engine.start(profileRef.current, {
+      signature: false,
+      environmentId: spaceRef.current.environmentId,
+      mix: spaceRef.current.mix,
+      snippets: spaceRef.current.snippets,
+    });
     engine.setProfileGain(profileGain);
     engine.setVolume(volume);
     engineRef.current = engine;
@@ -117,6 +135,18 @@ export function useAudition({
   useEffect(() => {
     engineRef.current?.setProfile(getProfile(profileId), true);
   }, [profileId, refreshKey]);
+
+  useEffect(() => {
+    if (environmentId) engineRef.current?.setEnvironment(environmentId);
+  }, [environmentId]);
+
+  useEffect(() => {
+    if (mix) engineRef.current?.setMix(mix);
+  }, [mix]);
+
+  useEffect(() => {
+    if (snippets) void engineRef.current?.setSnippets(snippets);
+  }, [snippets]);
 
   useEffect(() => () => stop(), [stop]);
 

@@ -7,6 +7,8 @@ import { useDemoDrive } from "@/lib/drive/useDemoDrive";
 import { useHaptics } from "@/lib/drive/useHaptics";
 import { getProfileGain, getTuning } from "@/lib/drive/settings";
 import { getProfile } from "@/lib/sound/profiles";
+import { EnvironmentPicker } from "@/components/EnvironmentPicker";
+import { QuickJump } from "@/components/QuickJump";
 
 export const Route = createFileRoute("/demo")({
   component: DemoDrive,
@@ -39,6 +41,9 @@ function DemoDrive() {
     volume: settings.volume,
     profileGain: getProfileGain(settings, settings.profileId),
     tuning: getTuning(settings, settings.profileId),
+    environmentId: settings.environmentId,
+    mix: settings.layerMix,
+    snippets: settings.snippets,
   });
 
   useHaptics({
@@ -59,6 +64,18 @@ function DemoDrive() {
           Drive {profile.name} by hand. Throttle, acceleration and regeneration are
           simulated, so you can hear how the profile behaves without any sensors.
         </p>
+
+        <QuickJump
+          className="mt-12"
+          settings={settings}
+          onSelect={(id) => update({ profileId: id })}
+        />
+
+        <EnvironmentPicker
+          className="mt-12 border-t border-border pt-8"
+          value={settings.environmentId}
+          onChange={(environmentId) => update({ environmentId })}
+        />
 
         <section className="mt-12 border border-border p-6 sm:p-8">
           <div className="flex flex-wrap items-center justify-between gap-6">

@@ -4,8 +4,13 @@ import { BrandNav } from "@/components/BrandNav";
 import { ElcamosoMark } from "@/components/ElcamosoLogo";
 import { useSettings } from "@/lib/drive/useSettings";
 import { useReducedMotion } from "@/lib/drive/useReducedMotion";
-import { materializeCustom, type CustomSound } from "@/lib/drive/settings";
-import { SOUND_PROFILES, getProfile } from "@/lib/sound/profiles";
+import { SnippetStudio } from "@/components/SnippetStudio";
+import {
+  materializeCustom,
+  type CustomSound,
+  type Playlist,
+} from "@/lib/drive/settings";
+import { SOUND_PROFILES, allProfiles, getProfile } from "@/lib/sound/profiles";
 
 export const Route = createFileRoute("/garage")({
   component: Garage,
@@ -79,6 +84,38 @@ function Garage() {
         : [...settings.favourites, id],
     });
   };
+
+  const createPlaylist = () => {
+    const list: Playlist = {
+      id: `list-${Date.now().toString(36)}`,
+      name: `Playlist ${settings.playlists.length + 1}`,
+      profileIds: [],
+      createdAt: Date.now(),
+    };
+    update({ playlists: [...settings.playlists, list] });
+  };
+
+  const renamePlaylist = (id: string, name: string) =>
+    update({
+      playlists: settings.playlists.map((l) => (l.id === id ? { ...l, name } : l)),
+    });
+
+  const removePlaylist = (id: string) =>
+    update({ playlists: settings.playlists.filter((l) => l.id !== id) });
+
+  const togglePlaylistItem = (listId: string, profileId: string) =>
+    update({
+      playlists: settings.playlists.map((l) =>
+        l.id === listId
+          ? {
+              ...l,
+              profileIds: l.profileIds.includes(profileId)
+                ? l.profileIds.filter((p) => p !== profileId)
+                : [...l.profileIds, profileId],
+            }
+          : l,
+      ),
+    });
 
   const active = getProfile(settings.profileId);
 
@@ -248,7 +285,91 @@ function Garage() {
           )}
         </section>
 
+        <section className="mt-16 border-t border-border pt-10">
+          <div className="flex flex-wrap items-baseline justify-between gap-4">
+            <h2 className="text-[11px] tracking-[0.34em] text-muted-foreground uppercase">
+              Playlists
+            </h2>
+            <button
+              onClick={createPlaylist}
+              className="text-[11px] tracking-[0.24em] text-muted-foreground uppercase hover:text-foreground"
+            >
+              New playlist
+            </button>
+          </div>
+          <p className="mt-3 text-sm text-muted-foreground">
+            Curated sets you can step through while auditioning or on a demo drive.
+          </p>
+
+          {settings.playlists.length === 0 ? (
+            <p className="mt-6 text-sm text-muted-foreground">
+              No playlists yet. Create one and add the sounds you keep coming back to.
+            </p>
+          ) : (
+            <div className="mt-8 space-y-10">
+              {settings.playlists.map((list) => (
+                <div key={list.id} className="border-t border-border pt-6">
+                  <div className="flex flex-wrap items-center justify-between gap-4">
+                    <input
+                      value={list.name}
+                      maxLength={40}
+                      aria-label="Playlist name"
+                      onChange={(e) => renamePlaylist(list.id, e.target.value)}
+                      className="h-10 flex-1 border-b border-border bg-transparent text-lg font-light outline-none focus:border-foreground"
+                    />
+                    <Action onClick={() => removePlaylist(list.id)} label="Delete" />
+                  </div>
+                  <div className="mt-5 flex flex-wrap gap-3">
+                    {list.profileIds.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">
+                        Empty. Add sounds below.
+                      </p>
+                    ) : (
+                      list.profileIds.map((id) => (
+                        <button
+                          key={id}
+                          onClick={() => togglePlaylistItem(list.id, id)}
+                          aria-label={`Remove ${getProfile(id).name}`}
+                          className="h-10 rounded-full border border-foreground px-5 text-[11px] tracking-[0.16em] uppercase"
+                        >
+                          {getProfile(id).name} ×
+                        </button>
+                      ))
+                    )}
+                  </div>
+                  <label className="mt-6 block text-xs tracking-[0.16em] text-muted-foreground uppercase">
+                    Add a sound
+                    <select
+                      value=""
+                      onChange={(e) => {
+                        if (e.target.value) togglePlaylistItem(list.id, e.target.value);
+                      }}
+                      className="mt-3 block h-11 w-full border-b border-border bg-transparent text-sm tracking-normal text-foreground normal-case outline-none focus:border-foreground"
+                    >
+                      <option value="">Choose a sound</option>
+                      {allProfiles()
+                        .filter((p) => !list.profileIds.includes(p.id))
+                        .map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.name}
+                          </option>
+                        ))}
+                    </select>
+                  </label>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+
+        <SnippetStudio
+          className="mt-16 border-t border-border pt-10"
+          snippets={settings.snippets}
+          onChange={(snippets) => update({ snippets })}
+        />
+
         <div className="mt-16 flex flex-wrap gap-4">
+
           <button
             onClick={() => void navigate({ to: "/studio" })}
             className="h-14 rounded-full border border-border px-10 text-xs tracking-[0.24em] uppercase hover:bg-secondary"
