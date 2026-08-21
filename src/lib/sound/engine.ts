@@ -1,4 +1,5 @@
 import type { DriveState } from "@/lib/drive/model";
+import { DEFAULT_CABIN_EQ, type CabinEq } from "@/lib/drive/types-extra";
 import type {
   RhythmSpec,
   SignalSpec,
@@ -13,7 +14,19 @@ import {
   type LayerKey,
   type LayerMix,
 } from "@/lib/sound/environments";
+import { audioRandom, seedAudioRandom } from "@/lib/sound/rng";
 import type { SoundSnippet } from "@/lib/sound/snippets";
+import { createMasterBus, type MasterBus } from "@/lib/sound/realism/master-bus";
+import { ImprovedSynth } from "@/lib/sound/realism/improved-synth";
+import { loudnessForProfile } from "@/lib/sound/realism/loudness";
+import type { SynthesisMode } from "@/lib/sound/realism/types";
+
+export interface MeterReading {
+  peak: number;
+  rms: number;
+  headroom: number;
+  reduction: number;
+}
 
 interface TextureNode {
   spec: TextureSpec;
@@ -64,8 +77,13 @@ interface SnippetVoice {
  * environment can place and rebalance them live as the drive state changes.
  */
 export class SoundEngine {
-  private ctx: AudioContext | null = null;
+  private ctx: BaseAudioContext | null = null;
   private master: GainNode | null = null;
+  private duck: GainNode | null = null;
+  private cabinIn: GainNode | null = null;
+  private cabinLow: BiquadFilterNode | null = null;
+  private cabinMid: BiquadFilterNode | null = null;
+  private cabinHigh: BiquadFilterNode | null = null;
   private limiter: DynamicsCompressorNode | null = null;
   private analyser: AnalyserNode | null = null;
   private meterBuffer: Float32Array<ArrayBuffer> | null = null;
@@ -93,12 +111,47 @@ export class SoundEngine {
   private volume = 0.7;
   /** per-profile balance gain, 0.4..1.6 */
   private profileGain = 1;
+  /** extra ceiling from intensity band, on top of MAX_GAIN */
+  static readonly MAX_GAIN = 0.85;
+  private intensityCeiling = 0.85;
+  private cabinEq: CabinEq = DEFAULT_CABIN_EQ;
+  private duckAmount = 1;
+  private renderTime: number | null = null;
+  private interruptHandler: (() => void) | null = null;
   private whiteBuffer: AudioBuffer | null = null;
   private pinkBuffer: AudioBuffer | null = null;
   private swapTimer: ReturnType<typeof setTimeout> | null = null;
+  /** Original (legacy) vs improved multi-layer realism path. */
+  private synthesisMode: SynthesisMode = "improved";
+  private improved: ImprovedSynth | null = null;
+  private profileBus: MasterBus | null = null;
   /** hard ceiling applied before the limiter so no profile can spike */
-  static readonly MAX_GAIN = 0.85;
 
+  setSynthesisMode(mode: SynthesisMode) {
+    if (this.synthesisMode === mode) return;
+    this.synthesisMode = mode;
+    if (this.profile) this.setProfile(this.profile, true);
+  }
+
+  getSynthesisMode() {
+    return this.synthesisMode;
+  }
+
+  listImprovedLayers() {
+    return this.improved?.listLayers() ?? [];
+  }
+
+  setImprovedLayerMuted(id: string, muted: boolean) {
+    this.improved?.setLayerMuted(id, muted);
+  }
+
+  setImprovedLayerSolo(id: string | null) {
+    this.improved?.setSolo(id);
+  }
+
+  triggerImprovedLayer(id: string) {
+    this.improved?.triggerLayer(id);
+  }
 
   get running() {
     return this.ctx !== null;
@@ -110,14 +163,90 @@ export class SoundEngine {
     if (this.ctx && this.master) {
       this.master.gain.setTargetAtTime(
         this.safeVolume(this.volume * this.profileGain * 0.8),
-        this.ctx.currentTime,
+        this.now(),
         0.25,
       );
     }
   }
 
   private safeVolume(value: number) {
-    return Math.min(SoundEngine.MAX_GAIN, Math.max(0.0001, value));
+    const balance =
+      this.synthesisMode === "improved" && this.profile
+        ? loudnessForProfile(this.profile.id)
+        : 1;
+    return Math.min(
+      SoundEngine.MAX_GAIN,
+      this.intensityCeiling,
+      Math.max(0.0001, value * balance),
+    );
+  }
+
+  private now() {
+    if (this.renderTime !== null) return this.renderTime;
+    return this.ctx?.currentTime ?? 0;
+  }
+
+  setIntensityCeiling(value: number) {
+    this.intensityCeiling = Math.min(SoundEngine.MAX_GAIN, Math.max(0.2, value));
+  }
+
+  setCabinEq(eq: CabinEq) {
+    this.cabinEq = eq;
+    const t = this.now();
+    this.cabinLow?.gain.setTargetAtTime(eq.low, t, 0.08);
+    this.cabinMid?.gain.setTargetAtTime(eq.mid, t, 0.08);
+    this.cabinHigh?.gain.setTargetAtTime(eq.high, t, 0.08);
+  }
+
+  setDuck(amount: number) {
+    this.duckAmount = Math.max(0.05, Math.min(1, amount));
+    if (this.ctx && this.duck) {
+      this.duck.gain.setTargetAtTime(this.duckAmount, this.now(), 0.08);
+    }
+  }
+
+  setRenderTime(time: number | null) {
+    this.renderTime = time;
+  }
+
+  onInterrupt(handler: () => void) {
+    this.interruptHandler = handler;
+    this.live()?.addEventListener("statechange", this.onStateChange);
+  }
+
+  private live(): AudioContext | null {
+    const ctx = this.ctx;
+    return ctx && "resume" in ctx ? (ctx as AudioContext) : null;
+  }
+
+  private onStateChange = () => {
+    if (this.live()?.state === "interrupted") this.interruptHandler?.();
+  };
+
+  /** Fade master to silence (~80 ms) then suspend, so idle never clicks. */
+  async fadeAndSuspend() {
+    const ctx = this.live();
+    if (!ctx || !this.master) return;
+    const t = this.now();
+    this.master.gain.cancelScheduledValues(t);
+    this.master.gain.setValueAtTime(Math.max(0.0001, this.master.gain.value), t);
+    this.master.gain.linearRampToValueAtTime(0.0001, t + 0.08);
+    await new Promise((r) => setTimeout(r, 90));
+    if (ctx.state === "running") await ctx.suspend();
+  }
+
+  /** Resume after idle with the same soft ramp as startup. */
+  async resumeFromIdle() {
+    const ctx = this.live();
+    if (!ctx || !this.master) return;
+    if (ctx.state !== "running") await ctx.resume();
+    const t = ctx.currentTime;
+    this.master.gain.setValueAtTime(0.0001, t);
+    this.master.gain.setTargetAtTime(
+      this.safeVolume(this.volume * this.profileGain * 0.55),
+      t,
+      0.25,
+    );
   }
 
   async start(
@@ -127,14 +256,19 @@ export class SoundEngine {
       environmentId?: string | undefined;
       mix?: LayerMix | undefined;
       snippets?: SoundSnippet[] | undefined;
+      context?: AudioContext | OfflineAudioContext | undefined;
+      seed?: number | undefined;
     },
   ) {
+    if (typeof options?.seed === "number") seedAudioRandom(options.seed);
     if (this.ctx) {
       this.setProfile(profile);
       return;
     }
-    const ctx = new AudioContext();
-    await ctx.resume();
+    const ctx = options?.context ?? new AudioContext();
+    if ("resume" in ctx && typeof ctx.resume === "function" && ctx.state !== "running") {
+      await ctx.resume();
+    }
     this.ctx = ctx;
 
     this.environment = getEnvironment(options?.environmentId ?? profile.environmentId);
@@ -157,9 +291,36 @@ export class SoundEngine {
     analyser.smoothingTimeConstant = 0.6;
     limiter.connect(analyser);
 
+    const duck = ctx.createGain();
+    duck.gain.value = 1;
+    duck.connect(limiter);
+
     const master = ctx.createGain();
     master.gain.value = 0.0001;
-    master.connect(limiter);
+    master.connect(duck);
+
+    const cabinIn = ctx.createGain();
+    const cabinLow = ctx.createBiquadFilter();
+    cabinLow.type = "lowshelf";
+    cabinLow.frequency.value = 120;
+    cabinLow.gain.value = this.cabinEq.low;
+  const cabinMid = ctx.createBiquadFilter();
+  cabinMid.type = "peaking";
+  // Center mid for cabin/phone presence rather than nasal 1 kHz only.
+  cabinMid.frequency.value = 900;
+  cabinMid.Q.value = 0.85;
+  cabinMid.gain.value = this.cabinEq.mid;
+    const cabinHigh = ctx.createBiquadFilter();
+    cabinHigh.type = "highshelf";
+    cabinHigh.frequency.value = 3500;
+    cabinHigh.gain.value = this.cabinEq.high;
+    cabinIn.connect(cabinLow);
+    cabinLow.connect(cabinMid);
+    cabinMid.connect(cabinHigh);
+    // Soft saturation → EQ → compressor after cabin shelves, before master.
+    const profileBus = createMasterBus(ctx, master);
+    cabinHigh.connect(profileBus.input);
+    this.profileBus = profileBus;
 
     // Shared space: one convolver fed by per-layer sends.
     const reverb = ctx.createConvolver();
@@ -188,7 +349,7 @@ export class SoundEngine {
       input.connect(tone);
       tone.connect(panner);
       panner.connect(out);
-      out.connect(master);
+      out.connect(cabinIn);
       out.connect(send);
       send.connect(reverb);
       return { input, tone, panner, out, send, phase };
@@ -213,6 +374,11 @@ export class SoundEngine {
     this.analyser = analyser;
     this.meterBuffer = new Float32Array(analyser.fftSize);
     this.master = master;
+    this.duck = duck;
+    this.cabinIn = cabinIn;
+    this.cabinLow = cabinLow;
+    this.cabinMid = cabinMid;
+    this.cabinHigh = cabinHigh;
     this.reverb = reverb;
     this.reverbDamp = reverbDamp;
     this.wet = wet;
@@ -244,7 +410,7 @@ export class SoundEngine {
    * length and colour follow the environment, so each preset sits in a
    * believable space without shipping audio files.
    */
-  private buildImpulse(ctx: AudioContext, env: EnvironmentPreset) {
+  private buildImpulse(ctx: BaseAudioContext, env: EnvironmentPreset) {
     const length = Math.max(1, Math.floor(ctx.sampleRate * env.size));
     const buffer = ctx.createBuffer(2, length, ctx.sampleRate);
     const decay = 2.2 + env.damping * 3.5;
@@ -254,7 +420,7 @@ export class SoundEngine {
       for (let i = 0; i < length; i += 1) {
         const t = i / length;
         // low-passed noise gives a warmer, less metallic tail
-        const white = Math.random() * 2 - 1;
+        const white = audioRandom() * 2 - 1;
         last = last + (white - last) * (1 - env.damping * 0.85);
         const spread = 1 + (c === 0 ? -env.spread : env.spread) * 0.08;
         data[i] = last * Math.pow(1 - t, decay) * spread;
@@ -294,8 +460,10 @@ export class SoundEngine {
       if (!chain) return;
       const setting = this.mix[key];
       const balance = this.environment.balance[key];
+      const texture =
+        key === "beds" ? (this.environment.textureScale ?? 1) : 1;
       chain.out.gain.setTargetAtTime(
-        Math.max(0.0001, setting.volume * balance),
+        Math.max(0.0001, setting.volume * balance * texture),
         t,
         0.25,
       );
@@ -314,7 +482,7 @@ export class SoundEngine {
     const motion = Math.min(1, (state.speed * 3.6) / 90);
     const lift: Record<LayerKey, number> = {
       body: 1 + state.throttle * env.motion.bodyByThrottle,
-      beds: 1 + motion * env.motion.bedsBySpeed,
+      beds: (1 + motion * env.motion.bedsBySpeed) * (env.textureScale ?? 1),
       accents: 1 + state.throttle * env.motion.accentsByThrottle,
     };
     (Object.keys(this.layers) as LayerKey[]).forEach((key) => {
@@ -407,19 +575,40 @@ export class SoundEngine {
     if (!ctx || !target) return;
     this.snippets
       .filter((v) => v.snippet.trigger === trigger && at >= v.next)
-      .forEach((voice) => {
-        const cooldown =
-          trigger === "cruise" ? (voice.snippet.everySeconds ?? 25) : voice.buffer.duration + 2.5;
-        voice.next = at + cooldown;
-        const src = ctx.createBufferSource();
-        src.buffer = voice.buffer;
-        src.playbackRate.value = voice.snippet.rate;
-        const gain = ctx.createGain();
-        gain.gain.value = Math.min(1.5, voice.snippet.level) * 0.6;
-        src.connect(gain);
-        gain.connect(target);
-        src.start(at);
-      });
+      .forEach((voice) => this.playSnippetVoice(voice, at, target, trigger));
+  }
+
+  /** Fire a specific Garage snippet from a profile IF/THEN rule. */
+  fireSnippetById(snippetId: string) {
+    const ctx = this.ctx;
+    const target = this.layers.accents?.input ?? this.accents;
+    if (!ctx || !target) return;
+    const voice = this.snippets.find((v) => v.snippet.id === snippetId);
+    if (!voice) return;
+    const at = this.now();
+    if (at < voice.next) return;
+    this.playSnippetVoice(voice, at, target, voice.snippet.trigger);
+  }
+
+  private playSnippetVoice(
+    voice: SnippetVoice,
+    at: number,
+    target: AudioNode,
+    trigger: SoundSnippet["trigger"],
+  ) {
+    const ctx = this.ctx;
+    if (!ctx) return;
+    const cooldown =
+      trigger === "cruise" ? (voice.snippet.everySeconds ?? 25) : voice.buffer.duration + 2.5;
+    voice.next = at + cooldown;
+    const src = ctx.createBufferSource();
+    src.buffer = voice.buffer;
+    src.playbackRate.value = voice.snippet.rate;
+    const gain = ctx.createGain();
+    gain.gain.value = Math.min(1.5, voice.snippet.level) * 0.6;
+    src.connect(gain);
+    gain.connect(target);
+    src.start(at);
   }
 
   /** One-shot audition of a snippet outside a drive (used by the Studio list). */
@@ -475,12 +664,12 @@ export class SoundEngine {
 
   /* --------------------------------------------------------------- buffers */
 
-  private getNoise(ctx: AudioContext, colour: "white" | "pink" = "white") {
+  private getNoise(ctx: BaseAudioContext, colour: "white" | "pink" = "white") {
     if (colour === "white") {
       if (!this.whiteBuffer) {
         const buffer = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate);
         const data = buffer.getChannelData(0);
-        for (let i = 0; i < data.length; i += 1) data[i] = Math.random() * 2 - 1;
+        for (let i = 0; i < data.length; i += 1) data[i] = audioRandom() * 2 - 1;
         this.whiteBuffer = buffer;
       }
       return this.whiteBuffer;
@@ -497,7 +686,7 @@ export class SoundEngine {
         b5 = 0,
         b6 = 0;
       for (let i = 0; i < data.length; i += 1) {
-        const w = Math.random() * 2 - 1;
+        const w = audioRandom() * 2 - 1;
         b0 = 0.99886 * b0 + w * 0.0555179;
         b1 = 0.99332 * b1 + w * 0.0750759;
         b2 = 0.969 * b2 + w * 0.153852;
@@ -554,13 +743,33 @@ export class SoundEngine {
     this.teardownVoices();
     this.profile = profile;
 
+    if (this.synthesisMode === "improved") {
+      const body = this.body;
+      const accents = this.accents;
+      const beds = this.beds;
+      if (body && accents && beds) {
+        this.improved = new ImprovedSynth();
+        const ok = this.improved.build(ctx, profile, {
+          body,
+          accents,
+          beds,
+          profile: this.profileBus?.input ?? body,
+        });
+        if (ok) return;
+        // Fall through to original if no strategy registered.
+        this.improved?.dispose();
+        this.improved = null;
+      }
+    }
+
     profile.voice.harmonics.forEach((ratio, i) => {
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
-      osc.type = i === 0 ? profile.voice.wave : "sawtooth";
+      const core = profile.voice.coreLevel ?? 1;
+      osc.type = i === 0 ? profile.voice.wave : i < 2 ? profile.voice.wave : "sawtooth";
       osc.detune.value = (i % 2 === 0 ? 1 : -1) * profile.voice.detune * (i + 1);
       osc.frequency.value = profile.voice.baseFrequency * ratio;
-      gain.gain.value = 0.34 / (i + 1.4);
+      gain.gain.value = (0.34 / (i + 1.4)) * core;
       osc.connect(gain);
       gain.connect(filter);
       osc.start();
@@ -569,7 +778,7 @@ export class SoundEngine {
 
     if (profile.voice.noise > 0) {
       const src = ctx.createBufferSource();
-      src.buffer = this.getNoise(ctx, "white");
+      src.buffer = this.getNoise(ctx, profile.voice.noiseColor ?? "white");
       src.loop = true;
       const gain = ctx.createGain();
       gain.gain.value = 0;
@@ -608,7 +817,7 @@ export class SoundEngine {
     this.signals = (profile.voice.signals ?? []).map((spec) => ({
       spec,
       // stagger the first event so nothing fires the instant a drive starts
-      next: now + 4 + Math.random() * spec.everySeconds,
+      next: now + 4 + audioRandom() * spec.everySeconds,
     }));
   }
 
@@ -677,7 +886,7 @@ export class SoundEngine {
     if (this.ctx && this.master) {
       this.master.gain.setTargetAtTime(
         this.safeVolume(value * this.profileGain),
-        this.ctx.currentTime,
+        this.now(),
         0.2,
       );
     }
@@ -690,7 +899,7 @@ export class SoundEngine {
    * output ceiling (1 = silent, 0 = at the ceiling) and `reduction` shows how
    * hard the safety limiter is working.
    */
-  getMeter(): { peak: number; rms: number; headroom: number; reduction: number } | null {
+  getMeter(): MeterReading | null {
     const analyser = this.analyser;
     const buf = this.meterBuffer;
     if (!analyser || !buf) return null;
@@ -713,13 +922,42 @@ export class SoundEngine {
     };
   }
 
+  getPerf(): { baseLatencyMs: number; outputLatencyMs: number; currentTime: number } {
+    const ctx = this.live();
+    if (!ctx) return { baseLatencyMs: 0, outputLatencyMs: 0, currentTime: 0 };
+    return {
+      baseLatencyMs: (ctx.baseLatency ?? 0) * 1000,
+      outputLatencyMs: (ctx.outputLatency ?? 0) * 1000,
+      currentTime: ctx.currentTime,
+    };
+  }
+
   /* ------------------------------------------------------------- per-frame */
 
   update(state: DriveState) {
     const ctx = this.ctx;
     const profile = this.profile;
     if (!ctx || !profile || !this.filter) return;
-    const t = ctx.currentTime;
+    const t = this.now();
+
+    if (this.improved) {
+      this.improved.update(state, t);
+      this.updateSpace(state, t);
+      if (state.throttle > 0.72 && this.lastThrottle <= 0.72) this.fireSnippets("throttle", t);
+      if (state.regen > 0.5 && this.lastRegen <= 0.5) this.fireSnippets("regen", t);
+      if (state.speed * 3.6 > 20 && state.throttle < 0.5) this.fireSnippets("cruise", t);
+      this.lastThrottle = state.throttle;
+      this.lastRegen = state.regen;
+      if (this.master) {
+        const duck = 1 - state.regen * 0.28;
+        const target = this.safeVolume(
+          this.volume * this.profileGain * (0.52 + state.load * 0.42) * duck,
+        );
+        this.master.gain.setTargetAtTime(target, t, 0.12);
+      }
+      return;
+    }
+
     const v = profile.voice;
 
     let fundamental: number;
@@ -728,25 +966,31 @@ export class SoundEngine {
     } else {
       fundamental = v.baseFrequency * (1 + state.load * 2.6 + state.throttle * 0.5);
     }
-    fundamental = Math.max(18, Math.min(1600, fundamental));
+    fundamental = Math.max(18, Math.min(2800, fundamental));
 
     this.voices.forEach(({ osc, gain, ratio }, i) => {
       osc.frequency.setTargetAtTime(fundamental * ratio, t, 0.05);
       const brightness = 0.2 + state.load * 0.8;
-      gain.gain.setTargetAtTime((0.3 / (i + 1.4)) * (i === 0 ? 1 : brightness), t, 0.12);
+      const core = v.coreLevel ?? 1;
+      gain.gain.setTargetAtTime((0.3 / (i + 1.4)) * (i === 0 ? 1 : brightness) * core, t, 0.12);
     });
 
     const cutoff = v.filterBase + v.filterRange * Math.pow(state.load, 0.8);
     this.filter.frequency.setTargetAtTime(cutoff, t, 0.08);
-    this.filter.Q.setTargetAtTime(profile.drivetrainMode === "continuous" ? 4 : 1.2, t, 0.3);
+    const q =
+      v.filterQ ??
+      (profile.drivetrainMode === "continuous" ? 1.4 : 1.2);
+    this.filter.Q.setTargetAtTime(q, t, 0.3);
 
     if (this.lfo && v.lfoRate) {
       this.lfo.osc.frequency.setTargetAtTime(v.lfoRate * (0.7 + state.load * 1.2), t, 0.2);
     }
 
     if (this.noise) {
-      const level = v.noise * (0.25 + state.load * 0.9) + state.regen * v.noise * 0.6;
-      this.noise.gain.gain.setTargetAtTime(level * 0.35, t, 0.15);
+      const texture = this.environment.textureScale ?? 1;
+      const level =
+        (v.noise * (0.18 + state.load * 0.55) + state.regen * v.noise * 0.35) * texture;
+      this.noise.gain.gain.setTargetAtTime(level * 0.22, t, 0.15);
     }
 
     this.updateTextures(state, t);
@@ -774,12 +1018,16 @@ export class SoundEngine {
   private updateTextures(state: DriveState, t: number) {
     const kmh = state.speed * 3.6;
     const spread = this.environment.spread;
+    const texture = this.environment.textureScale ?? 1;
     this.textures.forEach(({ spec, gain, filter, src, panner, phase }) => {
       const follow = spec.speedScale ?? 1;
       const motion = Math.min(1, kmh / 90);
-      const amount = spec.level * (1 - follow + follow * (0.12 + motion * 0.95));
+      const amount = spec.level * (1 - follow + follow * (0.12 + motion * 0.95)) * texture;
       // regen adds hiss to water/wind: the sound of coasting
-      const regenLift = spec.kind === "water" || spec.kind === "wind" ? state.regen * 0.2 : 0;
+      const regenLift =
+        texture > 0.01 && (spec.kind === "water" || spec.kind === "wind")
+          ? state.regen * 0.2 * texture
+          : 0;
       gain.gain.setTargetAtTime(Math.max(0.0001, amount + regenLift), t, 0.35);
       filter.frequency.setTargetAtTime(spec.tone * (0.8 + motion * 0.6), t, 0.4);
       // Beds drift wider and faster with speed: motion you can hear moving.
@@ -853,47 +1101,70 @@ export class SoundEngine {
   }
 
   /**
-   * One rotor blade passing overhead: a low thump with the characteristic slap
-   * of air, so the helicopter chops rather than hums.
+   * One main-rotor blade pass: low boom, mid whoosh with a Doppler fall, and a
+   * brief tip hiss. Alternating pan keeps the chop moving around you.
    */
   private fireRotor(at: number, tone: number, level: number, step: number, state: DriveState) {
     const ctx = this.ctx;
     const out = this.bus();
     if (!ctx || !out) return;
 
-    // body thump
+    const pan = ctx.createStereoPanner();
+    pan.pan.setValueAtTime(step % 2 === 0 ? -0.45 : 0.45, at);
+    pan.pan.linearRampToValueAtTime(step % 2 === 0 ? 0.2 : -0.2, at + 0.12);
+    pan.connect(out);
+
+    const boom = Math.max(28, tone * (step % 2 ? 1.05 : 0.95));
     const osc = ctx.createOscillator();
     const og = ctx.createGain();
     osc.type = "sine";
-    osc.frequency.setValueAtTime(tone * (step % 2 ? 1.08 : 1), at);
-    osc.frequency.exponentialRampToValueAtTime(tone * 0.6, at + 0.09);
+    osc.frequency.setValueAtTime(boom, at);
+    osc.frequency.exponentialRampToValueAtTime(Math.max(18, boom * 0.55), at + 0.14);
     og.gain.setValueAtTime(0.0001, at);
-    og.gain.exponentialRampToValueAtTime(Math.max(0.0002, level), at + 0.008);
-    og.gain.exponentialRampToValueAtTime(0.0001, at + 0.12);
+    og.gain.exponentialRampToValueAtTime(Math.max(0.0002, level * 0.95), at + 0.01);
+    og.gain.exponentialRampToValueAtTime(0.0001, at + 0.18);
     osc.connect(og);
-    og.connect(out);
+    og.connect(pan);
     osc.start(at);
-    osc.stop(at + 0.16);
+    osc.stop(at + 0.22);
 
-    // blade slap: a short band of air pushed aside
-    const src = ctx.createBufferSource();
-    src.buffer = this.getNoise(ctx, "white");
-    src.loop = true;
+    // Blade slap: noise whoosh that falls in pitch as the blade passes.
+    const whoosh = ctx.createBufferSource();
+    whoosh.buffer = this.getNoise(ctx, "pink");
+    whoosh.loop = true;
     const bp = ctx.createBiquadFilter();
     bp.type = "bandpass";
-    bp.Q.value = 1.4;
-    bp.frequency.setValueAtTime(tone * 9, at);
-    bp.frequency.exponentialRampToValueAtTime(tone * 4, at + 0.08);
-    const sg = ctx.createGain();
-    const slap = level * (0.4 + state.load * 0.6);
-    sg.gain.setValueAtTime(0.0001, at);
-    sg.gain.exponentialRampToValueAtTime(Math.max(0.0002, slap), at + 0.006);
-    sg.gain.exponentialRampToValueAtTime(0.0001, at + 0.1);
-    src.connect(bp);
-    bp.connect(sg);
-    sg.connect(out);
-    src.start(at);
-    src.stop(at + 0.14);
+    bp.Q.value = 1.1;
+    const whooshHz = 420 + state.load * 780;
+    bp.frequency.setValueAtTime(whooshHz, at);
+    bp.frequency.exponentialRampToValueAtTime(whooshHz * 0.35, at + 0.14);
+    const wg = ctx.createGain();
+    const slap = level * (0.55 + state.load * 0.7);
+    wg.gain.setValueAtTime(0.0001, at);
+    wg.gain.exponentialRampToValueAtTime(Math.max(0.0002, slap), at + 0.012);
+    wg.gain.exponentialRampToValueAtTime(0.0001, at + 0.16);
+    whoosh.connect(bp);
+    bp.connect(wg);
+    wg.connect(pan);
+    whoosh.start(at);
+    whoosh.stop(at + 0.2);
+
+    // Tip vortex hiss
+    const tip = ctx.createBufferSource();
+    tip.buffer = this.getNoise(ctx, "white");
+    tip.loop = true;
+    const hp = ctx.createBiquadFilter();
+    hp.type = "highpass";
+    hp.frequency.setValueAtTime(2800 + state.load * 2200, at);
+    const tg = ctx.createGain();
+    tg.gain.setValueAtTime(0.0001, at);
+    tg.gain.exponentialRampToValueAtTime(Math.max(0.0002, level * 0.22), at + 0.008);
+    tg.gain.exponentialRampToValueAtTime(0.0001, at + 0.09);
+    tip.connect(hp);
+    hp.connect(tg);
+    tg.connect(pan);
+    tip.start(at);
+    tip.stop(at + 0.12);
   }
 
   /** A single-cylinder tractor stroke: putt ... putt ... with a lazy offbeat. */
@@ -1024,12 +1295,13 @@ export class SoundEngine {
     osc.stop(at + 0.14);
   }
 
-  /** Four-beat gallop, the classic da-da-da-dum of a horse at pace. */
+  /** Four-beat transverse gallop with gathered flight after the lead. */
   private fireGallop(at: number, tone: number, level: number, state: DriveState) {
-    const stride = 0.52 - Math.min(0.24, state.load * 0.3);
-    const pattern = [0, 0.16, 0.34, 0.47];
+    const stride = 0.58 - Math.min(0.2, state.load * 0.22);
+    // Relative footfalls: RH, LH, RF, LF then silence until next stride.
+    const pattern = [0, 0.16, 0.3, 0.46];
     pattern.forEach((offset, i) => {
-      this.hoof(at + offset * stride * 2, tone * (i % 2 ? 0.94 : 1.06), level, i === 3);
+      this.hoof(at + offset * stride * 2, tone * (i < 2 ? 0.9 : 1.08), level * 0.9, i === 3);
     });
   }
 
@@ -1184,8 +1456,8 @@ export class SoundEngine {
     const bp = ctx.createBiquadFilter();
     bp.type = kind === "clack" ? "bandpass" : "lowpass";
     bp.frequency.setValueAtTime(tone * (step % 2 ? 0.85 : 1.15), at);
-    bp.Q.value = kind === "clack" ? 9 : 1;
-    const decay = kind === "clack" ? 0.06 : 0.18;
+    bp.Q.value = kind === "clack" ? 9 : 1.2;
+    const decay = kind === "clack" ? 0.06 : 0.22;
     const gain = ctx.createGain();
     gain.gain.setValueAtTime(0.0001, at);
     gain.gain.exponentialRampToValueAtTime(Math.max(0.0002, level), at + 0.006);
@@ -1210,6 +1482,22 @@ export class SoundEngine {
       osc.start(at);
       osc.stop(at + 0.16);
     }
+
+    if (kind === "chug") {
+      // piston thump under the steam puff
+      const osc = ctx.createOscillator();
+      const og = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(tone * 0.45, at);
+      osc.frequency.exponentialRampToValueAtTime(tone * 0.22, at + 0.1);
+      og.gain.setValueAtTime(0.0001, at);
+      og.gain.exponentialRampToValueAtTime(Math.max(0.0002, level * 0.7), at + 0.008);
+      og.gain.exponentialRampToValueAtTime(0.0001, at + 0.14);
+      osc.connect(og);
+      og.connect(out);
+      osc.start(at);
+      osc.stop(at + 0.18);
+    }
   }
 
   /* --------------------------------------------------------------- signals */
@@ -1222,7 +1510,7 @@ export class SoundEngine {
     const at = ctx.currentTime + 0.05;
     this.fireSignal(spec, at, state);
     const pace = spec.speedLinked ? 1 / (0.5 + state.load * 1.4) : 1;
-    const jitter = (Math.random() - 0.5) * 2 * (spec.jitter ?? 0);
+    const jitter = (audioRandom() - 0.5) * 2 * (spec.jitter ?? 0);
     clock.next = ctx.currentTime + Math.max(4, spec.everySeconds * pace + jitter);
   }
 
@@ -1424,6 +1712,8 @@ export class SoundEngine {
   /* -------------------------------------------------------------- teardown */
 
   private teardownVoices() {
+    this.improved?.dispose();
+    this.improved = null;
     this.voices.forEach(({ osc }) => {
       try {
         osc.stop();
@@ -1475,9 +1765,15 @@ export class SoundEngine {
     this.stopSnippetBeds();
     this.snippets = [];
     this.teardownVoices();
-    await ctx.close();
+    this.live()?.removeEventListener("statechange", this.onStateChange);
+    if ("close" in ctx && typeof ctx.close === "function") await ctx.close();
     this.ctx = null;
     this.master = null;
+    this.duck = null;
+    this.cabinIn = null;
+    this.cabinLow = null;
+    this.cabinMid = null;
+    this.cabinHigh = null;
     this.limiter = null;
     this.analyser = null;
     this.meterBuffer = null;
@@ -1490,6 +1786,7 @@ export class SoundEngine {
     this.reverbDamp = null;
     this.wet = null;
     this.profile = null;
+    this.profileBus = null;
   }
 }
 

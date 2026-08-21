@@ -12,11 +12,14 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as CalibrateRouteImport } from './routes/calibrate'
+import { Route as DebugRouteImport } from './routes/debug'
 import { Route as DemoRouteImport } from './routes/demo'
 import { Route as DriveRouteImport } from './routes/drive'
 import { Route as GarageRouteImport } from './routes/garage'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
+import { Route as ReplayRouteImport } from './routes/replay'
 import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as ShareRouteImport } from './routes/share'
 import { Route as SoundsRouteImport } from './routes/sounds'
 import { Route as StudioRouteImport } from './routes/studio'
 
@@ -33,6 +36,11 @@ const AboutRoute = AboutRouteImport.update({
 const CalibrateRoute = CalibrateRouteImport.update({
   id: '/calibrate',
   path: '/calibrate',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DebugRoute = DebugRouteImport.update({
+  id: '/debug',
+  path: '/debug',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DemoRoute = DemoRouteImport.update({
@@ -55,9 +63,19 @@ const OnboardingRoute = OnboardingRouteImport.update({
   path: '/onboarding',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ReplayRoute = ReplayRouteImport.update({
+  id: '/replay',
+  path: '/replay',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ShareRoute = ShareRouteImport.update({
+  id: '/share',
+  path: '/share',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SoundsRoute = SoundsRouteImport.update({
@@ -75,11 +93,14 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/calibrate': typeof CalibrateRoute
+  '/debug': typeof DebugRoute
   '/demo': typeof DemoRoute
   '/drive': typeof DriveRoute
   '/garage': typeof GarageRoute
   '/onboarding': typeof OnboardingRoute
+  '/replay': typeof ReplayRoute
   '/settings': typeof SettingsRoute
+  '/share': typeof ShareRoute
   '/sounds': typeof SoundsRoute
   '/studio': typeof StudioRoute
 }
@@ -87,11 +108,14 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/calibrate': typeof CalibrateRoute
+  '/debug': typeof DebugRoute
   '/demo': typeof DemoRoute
   '/drive': typeof DriveRoute
   '/garage': typeof GarageRoute
   '/onboarding': typeof OnboardingRoute
+  '/replay': typeof ReplayRoute
   '/settings': typeof SettingsRoute
+  '/share': typeof ShareRoute
   '/sounds': typeof SoundsRoute
   '/studio': typeof StudioRoute
 }
@@ -100,11 +124,14 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/calibrate': typeof CalibrateRoute
+  '/debug': typeof DebugRoute
   '/demo': typeof DemoRoute
   '/drive': typeof DriveRoute
   '/garage': typeof GarageRoute
   '/onboarding': typeof OnboardingRoute
+  '/replay': typeof ReplayRoute
   '/settings': typeof SettingsRoute
+  '/share': typeof ShareRoute
   '/sounds': typeof SoundsRoute
   '/studio': typeof StudioRoute
 }
@@ -114,11 +141,14 @@ export interface FileRouteTypes {
     | '/'
     | '/about'
     | '/calibrate'
+    | '/debug'
     | '/demo'
     | '/drive'
     | '/garage'
     | '/onboarding'
+    | '/replay'
     | '/settings'
+    | '/share'
     | '/sounds'
     | '/studio'
   fileRoutesByTo: FileRoutesByTo
@@ -126,11 +156,14 @@ export interface FileRouteTypes {
     | '/'
     | '/about'
     | '/calibrate'
+    | '/debug'
     | '/demo'
     | '/drive'
     | '/garage'
     | '/onboarding'
+    | '/replay'
     | '/settings'
+    | '/share'
     | '/sounds'
     | '/studio'
   id:
@@ -138,11 +171,14 @@ export interface FileRouteTypes {
     | '/'
     | '/about'
     | '/calibrate'
+    | '/debug'
     | '/demo'
     | '/drive'
     | '/garage'
     | '/onboarding'
+    | '/replay'
     | '/settings'
+    | '/share'
     | '/sounds'
     | '/studio'
   fileRoutesById: FileRoutesById
@@ -151,11 +187,14 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AboutRoute: typeof AboutRoute
   CalibrateRoute: typeof CalibrateRoute
+  DebugRoute: typeof DebugRoute
   DemoRoute: typeof DemoRoute
   DriveRoute: typeof DriveRoute
   GarageRoute: typeof GarageRoute
   OnboardingRoute: typeof OnboardingRoute
+  ReplayRoute: typeof ReplayRoute
   SettingsRoute: typeof SettingsRoute
+  ShareRoute: typeof ShareRoute
   SoundsRoute: typeof SoundsRoute
   StudioRoute: typeof StudioRoute
 }
@@ -181,6 +220,13 @@ declare module '@tanstack/react-router' {
       path: '/calibrate'
       fullPath: '/calibrate'
       preLoaderRoute: typeof CalibrateRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/debug': {
+      id: '/debug'
+      path: '/debug'
+      fullPath: '/debug'
+      preLoaderRoute: typeof DebugRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/demo': {
@@ -211,11 +257,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OnboardingRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/replay': {
+      id: '/replay'
+      path: '/replay'
+      fullPath: '/replay'
+      preLoaderRoute: typeof ReplayRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/settings': {
       id: '/settings'
       path: '/settings'
       fullPath: '/settings'
       preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/share': {
+      id: '/share'
+      path: '/share'
+      fullPath: '/share'
+      preLoaderRoute: typeof ShareRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/sounds': {
@@ -239,11 +299,14 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AboutRoute: AboutRoute,
   CalibrateRoute: CalibrateRoute,
+  DebugRoute: DebugRoute,
   DemoRoute: DemoRoute,
   DriveRoute: DriveRoute,
   GarageRoute: GarageRoute,
   OnboardingRoute: OnboardingRoute,
+  ReplayRoute: ReplayRoute,
   SettingsRoute: SettingsRoute,
+  ShareRoute: ShareRoute,
   SoundsRoute: SoundsRoute,
   StudioRoute: StudioRoute,
 }

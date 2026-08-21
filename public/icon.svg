@@ -1,9 +1,9 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="ELCAMOSO">
   <rect width="512" height="512" fill="#000000"/>
   <g fill="none" stroke="#FFFFFF" stroke-linecap="round">
-    <circle cx="176" cy="256" r="86" stroke-width="24"/>
-    <path d="M282 146 C 344 196, 344 316, 282 366" stroke-width="24"/>
-    <path d="M352 122 C 428 184, 428 328, 352 390" stroke-width="22"/>
-    <path d="M422 100 C 512 174, 512 338, 422 412" stroke-width="20"/>
+    <circle cx="168" cy="256" r="88" stroke-width="26"/>
+    <path d="M278 148 C 340 200, 340 312, 278 364" stroke-width="24"/>
+    <path d="M348 122 C 426 186, 426 326, 348 390" stroke-width="22"/>
+    <path d="M418 98 C 512 176, 512 336, 418 414" stroke-width="20"/>
   </g>
 </svg>

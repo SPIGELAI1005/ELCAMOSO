@@ -115,7 +115,7 @@ function Slide({
         step={0.05}
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
-        className="mt-3 h-px w-full appearance-none bg-border accent-foreground"
+        className="mt-3 slider h-11 w-full"
       />
     </div>
   );

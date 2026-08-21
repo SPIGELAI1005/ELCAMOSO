@@ -1,6 +1,16 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ElcamosoMark, ElcamosoWordmark } from "@/components/ElcamosoLogo";
-import { SOUND_PROFILES } from "@/lib/sound/profiles";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import {
+  PROFILE_CATEGORIES,
+  SOUND_PROFILES,
+  intensityBand,
+} from "@/lib/sound/profiles";
 
 export const Route = createFileRoute("/")({
   component: Landing,
@@ -24,22 +34,26 @@ export const Route = createFileRoute("/")({
 });
 
 function Landing() {
+  const catalog = PROFILE_CATEGORIES.filter((category) => category !== "Garage")
+    .map((category) => ({
+      category,
+      items: SOUND_PROFILES.filter((p) => p.category === category),
+    }))
+    .filter((group) => group.items.length > 0);
+
   return (
     <main className="min-h-screen">
-      <section className="flex min-h-screen flex-col justify-between px-6 py-10 sm:px-12">
-        <div className="flex items-center justify-end gap-6 text-xs tracking-[0.18em] uppercase">
-          <Link to="/sounds" className="text-muted-foreground hover:text-foreground">
-            Sounds
-          </Link>
-          <Link to="/settings" className="text-muted-foreground hover:text-foreground">
-            Settings
-          </Link>
-        </div>
-
-        <div className="mx-auto grid w-full max-w-5xl flex-1 items-center gap-16 py-16 lg:grid-cols-2 lg:gap-24">
-          <div className="flex flex-col items-center gap-8 lg:items-start">
-            <ElcamosoMark animate className="h-16 w-auto sm:h-20" />
-            <ElcamosoWordmark className="text-lg sm:text-xl" />
+      <section className="flex min-h-[calc(100svh-4.5rem)] flex-col justify-between px-6 py-10 sm:px-12">
+        <div className="mx-auto grid w-full max-w-5xl flex-1 items-center gap-16 py-16 lg:grid-cols-2 lg:items-stretch lg:gap-24">
+          <div className="relative flex flex-col items-center lg:items-start">
+            {/* Brand stays centered in the column; desktop subtitle sits at the foot. */}
+            <div className="flex flex-col items-center gap-8 lg:absolute lg:inset-x-0 lg:top-1/2 lg:-translate-y-1/2 lg:items-start">
+              <ElcamosoMark animate className="h-[9.36rem] w-auto sm:h-[11.7rem]" />
+              <ElcamosoWordmark className="text-center text-[2.6325rem] sm:text-[2.925rem] lg:text-left" />
+            </div>
+            <p className="mt-auto hidden pt-8 text-[11px] tracking-[0.28em] text-muted-foreground uppercase lg:block">
+              Electric Car Motion Sound
+            </p>
           </div>
 
           <div className="flex flex-col items-center gap-8 text-center lg:items-start lg:text-left">
@@ -54,7 +68,7 @@ function Landing() {
               className="animate-rise max-w-sm text-base text-muted-foreground"
               style={{ animationDelay: "160ms" }}
             >
-              Turn motion into an experience.
+              Electric motion. More e-motion.
             </p>
             <Link
               to="/drive"
@@ -63,7 +77,14 @@ function Landing() {
             >
               Start Drive
             </Link>
-            <p className="text-[11px] tracking-[0.28em] text-muted-foreground uppercase">
+            {/* Mobile: under Start Drive. Desktop: invisible twin keeps the same vertical band. */}
+            <p className="text-[11px] tracking-[0.28em] text-muted-foreground uppercase lg:hidden">
+              Electric Car Motion Sound
+            </p>
+            <p
+              className="hidden text-[11px] tracking-[0.28em] text-muted-foreground uppercase lg:block lg:invisible lg:select-none"
+              aria-hidden="true"
+            >
               Electric Car Motion Sound
             </p>
           </div>
@@ -75,19 +96,53 @@ function Landing() {
       </section>
 
       <section className="mx-auto w-full max-w-5xl px-6 pb-32 sm:px-12">
-        <h2 className="mb-14 text-xs tracking-[0.28em] text-muted-foreground uppercase">
-          Choose your sound
-        </h2>
-        <div className="grid gap-px overflow-hidden border-y border-border sm:grid-cols-3">
-          {SOUND_PROFILES.map((profile) => (
-            <div key={profile.id} className="py-12 sm:px-8 sm:first:pl-0 sm:last:pr-0">
-              <p className="text-2xl font-light">{profile.name}</p>
-              <p className="mt-4 text-sm text-muted-foreground">
-                {profile.traits.join(" · ")}
-              </p>
-            </div>
-          ))}
+        <div className="mb-10 flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <h2 className="text-xs tracking-[0.28em] text-muted-foreground uppercase">
+              Choose your sound
+            </h2>
+            <p className="mt-3 text-sm text-muted-foreground">
+              Browse full library.
+            </p>
+          </div>
+          <Link
+            to="/sounds"
+            className="text-[11px] tracking-[0.24em] text-muted-foreground uppercase hover:text-foreground"
+          >
+            Browse all
+          </Link>
         </div>
+
+        <Accordion type="multiple" className="border-t border-border">
+          {catalog.map(({ category, items }) => (
+            <AccordionItem key={category} value={category} className="border-border">
+              <AccordionTrigger className="py-6 text-[11px] font-normal tracking-[0.34em] text-muted-foreground uppercase hover:no-underline hover:text-foreground">
+                <span className="flex items-baseline gap-4">
+                  <span>{category}</span>
+                  <span className="text-[10px] tracking-[0.2em] tabular-nums opacity-70">
+                    {items.length}
+                  </span>
+                </span>
+              </AccordionTrigger>
+              <AccordionContent className="pb-8">
+                <div className="divide-y divide-border border-y border-border sm:grid sm:grid-cols-3 sm:gap-px sm:divide-y-0 sm:border-0 sm:bg-border">
+                  {items.map((profile) => (
+                    <div
+                      key={profile.id}
+                      className="bg-background py-8 sm:px-8 sm:py-10"
+                    >
+                      <p className="text-xl font-light sm:text-2xl">{profile.name}</p>
+                      <p className="mt-3 text-xs tracking-[0.18em] text-muted-foreground uppercase">
+                        {profile.traits.join(" · ")} · {intensityBand(profile)}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+          ))}
+        </Accordion>
+
         <div className="mt-20 max-w-md">
           <p className="text-lg font-light">Your drive stays yours.</p>
           <p className="mt-3 text-sm text-muted-foreground">

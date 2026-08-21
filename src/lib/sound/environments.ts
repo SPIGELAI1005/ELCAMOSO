@@ -45,6 +45,11 @@ export interface EnvironmentPreset {
   wet: number;
   /** 0..1 stereo width of the moving layers */
   spread: number;
+  /**
+   * 0..1 multiplier for texture beds and voice noise / hiss.
+   * Showroom uses 0 so the core voice is heard without road spray or white noise.
+   */
+  textureScale: number;
   /** static balance applied on top of the profile's own mix */
   balance: Record<LayerKey, number>;
   /**
@@ -67,6 +72,25 @@ export interface EnvironmentPreset {
 
 export const ENVIRONMENTS: EnvironmentPreset[] = [
   {
+    id: "showroom",
+    name: "Showroom",
+    description:
+      "Quiet floor. Dry and intimate: core voice only, no road spray, wind bed or white-noise hiss.",
+    size: 0.85,
+    damping: 0.62,
+    wet: 0.06,
+    spread: 0.18,
+    textureScale: 0,
+    balance: { body: 1.1, beds: 0.02, accents: 0.92 },
+    motion: {
+      wetBySpeed: 0,
+      wetByRegen: 0.02,
+      bedsBySpeed: 0,
+      accentsByThrottle: 0.06,
+      bodyByThrottle: 0.14,
+    },
+  },
+  {
     id: "open",
     name: "Open road",
     description: "No walls. Dry, direct and closest to the raw profile.",
@@ -74,11 +98,12 @@ export const ENVIRONMENTS: EnvironmentPreset[] = [
     damping: 0.35,
     wet: 0.1,
     spread: 0.3,
-    balance: { body: 1, beds: 1, accents: 1 },
+    textureScale: 0.72,
+    balance: { body: 1, beds: 0.85, accents: 1 },
     motion: {
       wetBySpeed: -0.03,
       wetByRegen: 0.04,
-      bedsBySpeed: 0.2,
+      bedsBySpeed: 0.14,
       accentsByThrottle: 0.15,
       bodyByThrottle: 0.1,
     },
@@ -91,11 +116,12 @@ export const ENVIRONMENTS: EnvironmentPreset[] = [
     damping: 0.3,
     wet: 0.26,
     spread: 0.55,
-    balance: { body: 1.05, beds: 0.82, accents: 1.2 },
+    textureScale: 0.78,
+    balance: { body: 1.05, beds: 0.7, accents: 1.2 },
     motion: {
       wetBySpeed: -0.1,
       wetByRegen: 0.1,
-      bedsBySpeed: 0.15,
+      bedsBySpeed: 0.12,
       accentsByThrottle: 0.3,
       bodyByThrottle: 0.14,
     },
@@ -108,11 +134,12 @@ export const ENVIRONMENTS: EnvironmentPreset[] = [
     damping: 0.6,
     wet: 0.2,
     spread: 0.85,
-    balance: { body: 0.92, beds: 1.35, accents: 1.05 },
+    textureScale: 0.9,
+    balance: { body: 0.92, beds: 1.15, accents: 1.05 },
     motion: {
       wetBySpeed: 0.05,
       wetByRegen: 0.06,
-      bedsBySpeed: 0.55,
+      bedsBySpeed: 0.42,
       accentsByThrottle: 0.2,
       bodyByThrottle: 0.08,
     },
@@ -125,11 +152,12 @@ export const ENVIRONMENTS: EnvironmentPreset[] = [
     damping: 0.78,
     wet: 0.3,
     spread: 0.65,
-    balance: { body: 0.9, beds: 1.45, accents: 0.85 },
+    textureScale: 0.95,
+    balance: { body: 0.9, beds: 1.25, accents: 0.85 },
     motion: {
       wetBySpeed: 0.02,
       wetByRegen: 0.12,
-      bedsBySpeed: 0.65,
+      bedsBySpeed: 0.5,
       accentsByThrottle: 0.12,
       bodyByThrottle: 0.06,
     },
@@ -142,11 +170,12 @@ export const ENVIRONMENTS: EnvironmentPreset[] = [
     damping: 0.5,
     wet: 0.38,
     spread: 0.7,
-    balance: { body: 0.95, beds: 0.9, accents: 1.3 },
+    textureScale: 0.8,
+    balance: { body: 0.95, beds: 0.75, accents: 1.3 },
     motion: {
       wetBySpeed: -0.06,
       wetByRegen: 0.14,
-      bedsBySpeed: 0.2,
+      bedsBySpeed: 0.16,
       accentsByThrottle: 0.28,
       bodyByThrottle: 0.1,
     },

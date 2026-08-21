@@ -1,5 +1,4 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { BrandNav } from "@/components/BrandNav";
 
 export const Route = createFileRoute("/about")({
   component: About,
@@ -26,7 +25,6 @@ export const Route = createFileRoute("/about")({
 function About() {
   return (
     <main className="min-h-screen">
-      <BrandNav />
       <div className="mx-auto w-full max-w-2xl px-6 pt-16 pb-28 sm:px-10">
         <h1 className="text-3xl font-light">Your EV. Your sound.</h1>
         <p className="mt-6 text-sm leading-relaxed text-muted-foreground">

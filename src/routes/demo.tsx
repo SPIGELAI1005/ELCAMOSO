@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { BrandNav } from "@/components/BrandNav";
 import { ElcamosoMark } from "@/components/ElcamosoLogo";
+import { DemoCockpit } from "@/components/DemoCockpit";
 import { useSettings } from "@/lib/drive/useSettings";
 import { useReducedMotion } from "@/lib/drive/useReducedMotion";
 import { useDemoDrive } from "@/lib/drive/useDemoDrive";
@@ -8,7 +8,7 @@ import { useHaptics } from "@/lib/drive/useHaptics";
 import { getProfileGain, getTuning } from "@/lib/drive/settings";
 import { getProfile } from "@/lib/sound/profiles";
 import { EnvironmentPicker } from "@/components/EnvironmentPicker";
-import { QuickJump } from "@/components/QuickJump";
+import { DemoSoundPicker } from "@/components/DemoSoundPicker";
 
 export const Route = createFileRoute("/demo")({
   component: DemoDrive,
@@ -54,109 +54,144 @@ function DemoDrive() {
   });
 
   const continuous = profile.drivetrainMode === "continuous";
+  const modeLabel =
+    controls.selector === "D" && !continuous && state.gear > 0
+      ? `D${state.gear}`
+      : controls.selector;
 
   return (
     <main className="min-h-screen">
-      <BrandNav />
       <div className="mx-auto w-full max-w-3xl px-6 pt-16 pb-28 sm:px-10">
         <h1 className="text-3xl font-light">Demo Drive</h1>
-        <p className="mt-3 text-sm text-muted-foreground">
-          Drive {profile.name} by hand. Throttle, acceleration and regeneration are
-          simulated, so you can hear how the profile behaves without any sensors.
+        <p className="mt-3 max-w-xl text-sm text-muted-foreground">
+          Hear {profile.name} with pedals and P R N D. No motion sensors needed.
         </p>
 
-        <QuickJump
-          className="mt-12"
+        <DemoSoundPicker
+          className="mt-10"
           settings={settings}
           onSelect={(id) => update({ profileId: id })}
         />
 
         <EnvironmentPicker
-          className="mt-12 border-t border-border pt-8"
+          className="mt-10 border-t border-border pt-6"
           value={settings.environmentId}
           onChange={(environmentId) => update({ environmentId })}
         />
 
-        <section className="mt-12 border border-border p-6 sm:p-8">
-          <div className="flex flex-wrap items-center justify-between gap-6">
-            <div className="flex items-center gap-5">
+        <section className="mt-10 overflow-hidden rounded-2xl border border-border bg-[#0A0A0A]/40">
+          <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border/70 px-5 py-4 sm:px-6">
+            <div className="flex min-w-0 items-center gap-4">
               <ElcamosoMark
                 intensity={active ? state.load : 0.34}
                 throttle={active ? state.throttle : 0}
                 regen={active ? state.regen : 0}
                 waveResponse={profile.voice.waveResponse}
                 reducedMotion={reducedMotion}
-                className="h-9 w-auto"
+                className="h-8 w-auto shrink-0"
               />
-              <div>
-                <p className="text-lg font-light">{profile.name}</p>
-                <p className="mt-1 text-xs tracking-[0.18em] text-muted-foreground uppercase">
+              <div className="min-w-0">
+                <p className="truncate text-base font-light">{profile.name}</p>
+                <p className="mt-0.5 text-[10px] tracking-[0.2em] text-muted-foreground uppercase">
                   Simulated motion
                 </p>
               </div>
             </div>
-            <div className="flex gap-4">
+            <div className="flex items-center gap-2">
               <button
                 onClick={() => (active ? stop() : void start())}
                 aria-pressed={active}
-                className="h-12 rounded-full border border-border px-8 text-xs tracking-[0.24em] uppercase hover:bg-secondary"
+                className={`h-10 rounded-full px-6 text-[11px] tracking-[0.22em] uppercase transition-colors ${
+                  active
+                    ? "border border-foreground bg-foreground text-background"
+                    : "border border-border hover:bg-secondary"
+                }`}
               >
-                {active ? "Stop demo" : "Start demo"}
+                {active ? "Stop" : "Start"}
               </button>
               <button
                 onClick={reset}
-                className="h-12 rounded-full px-4 text-[11px] tracking-[0.24em] text-muted-foreground uppercase hover:text-foreground"
+                className="h-10 rounded-full px-3 text-[10px] tracking-[0.2em] text-muted-foreground uppercase hover:text-foreground"
               >
                 Reset
               </button>
             </div>
           </div>
 
-          <dl className="mt-10 grid grid-cols-4 gap-4 text-center">
+          <dl className="grid grid-cols-4 gap-2 border-b border-border/70 px-3 py-4 text-center sm:px-6">
             <Readout label="km/h" value={Math.round(state.speed * 3.6)} />
             <Readout
-              label={continuous ? "Intensity" : "RPM"}
+              label={continuous ? "Load" : "RPM"}
               value={continuous ? Math.round(state.load * 100) : Math.round(state.rpm)}
             />
-            <Readout
-              label={continuous ? "Mode" : "Gear"}
-              value={continuous ? "Cont" : state.gear ? `D${state.gear}` : "N"}
-            />
+            <Readout label="Mode" value={modeLabel} accent />
             <Readout label="Regen" value={`${Math.round(state.regen * 100)}`} />
           </dl>
 
-          <div className="mt-12 grid gap-10 sm:grid-cols-3">
-            <Pedal
-              id="demo-throttle"
-              label="Throttle"
-              hint="How much demand you ask for"
-              value={controls.throttle}
-              onChange={(v) => setControls({ throttle: v })}
-            />
-            <Pedal
-              id="demo-accel"
-              label="Acceleration"
-              hint="How hard the demand builds speed"
-              value={controls.accel}
-              onChange={(v) => setControls({ accel: v })}
-            />
-            <Pedal
-              id="demo-regen"
-              label="Regen"
-              hint="Lifting off and slowing down"
-              value={controls.regen}
-              onChange={(v) => setControls({ regen: v })}
+          <div className="px-5 py-6 sm:px-6">
+            <DemoCockpit
+              controls={controls}
+              setControls={setControls}
+              reducedMotion={reducedMotion}
+              live={active}
             />
           </div>
+
+          <details className="group border-t border-border/70">
+            <summary className="cursor-pointer list-none px-5 py-3.5 text-[10px] tracking-[0.24em] text-muted-foreground uppercase transition-colors hover:text-foreground sm:px-6 [&::-webkit-details-marker]:hidden">
+              <span className="inline-flex items-center gap-2">
+                Fine controls
+                <span className="text-foreground/40 transition-transform group-open:rotate-90">
+                  ›
+                </span>
+              </span>
+            </summary>
+            <div className="grid gap-8 px-5 pb-6 sm:grid-cols-3 sm:px-6">
+              <Pedal
+                id="demo-throttle"
+                label="Throttle"
+                hint="Demand"
+                value={controls.throttle}
+                onChange={(v) => {
+                  if (controls.selector === "P" && v > 0.02) {
+                    setControls({ throttle: v, regen: 0, selector: "N" });
+                    return;
+                  }
+                  setControls({
+                    throttle: v,
+                    ...(v > 0.02 ? { regen: 0 } : {}),
+                  });
+                }}
+              />
+              <Pedal
+                id="demo-accel"
+                label="Acceleration"
+                hint="How hard demand builds speed"
+                value={controls.accel}
+                onChange={(v) => setControls({ accel: v })}
+              />
+              <Pedal
+                id="demo-regen"
+                label="Regen"
+                hint="Lifting off and slowing down"
+                value={controls.regen}
+                onChange={(v) =>
+                  setControls({
+                    regen: v,
+                    ...(v > 0.02 ? { throttle: 0 } : {}),
+                  })
+                }
+              />
+            </div>
+          </details>
         </section>
 
-        <section className="mt-12 border-t border-border pt-8">
+        <section className="mt-10 border-t border-border pt-6">
           <div className="flex items-start justify-between gap-8">
             <div>
-              <p className="text-base">Haptic feedback</p>
-              <p className="mt-2 text-sm text-muted-foreground">
-                A subtle vibration follows throttle and regen intensity. Nothing on the
-                speed or RPM display changes.
+              <p className="text-sm">Haptic feedback</p>
+              <p className="mt-1.5 text-xs text-muted-foreground">
+                Subtle vibration follows throttle and regen.
               </p>
             </div>
             <button
@@ -170,14 +205,16 @@ function DemoDrive() {
             >
               <span
                 className={`block h-5 w-5 rounded-full transition-transform ${
-                  settings.haptics ? "translate-x-6 bg-background" : "translate-x-1 bg-muted-foreground"
+                  settings.haptics
+                    ? "translate-x-6 bg-background"
+                    : "translate-x-1 bg-muted-foreground"
                 }`}
               />
             </button>
           </div>
         </section>
 
-        <div className="mt-16 flex flex-wrap gap-8">
+        <div className="mt-12 flex flex-wrap gap-8">
           <Link
             to="/sounds"
             className="text-[11px] tracking-[0.24em] text-muted-foreground uppercase hover:text-foreground"
@@ -196,11 +233,25 @@ function DemoDrive() {
   );
 }
 
-function Readout({ label, value }: { label: string; value: number | string }) {
+function Readout({
+  label,
+  value,
+  accent,
+}: {
+  label: string;
+  value: number | string;
+  accent?: boolean;
+}) {
   return (
     <div>
-      <dd className="text-2xl font-extralight tabular-nums">{value}</dd>
-      <dt className="mt-2 text-[10px] tracking-[0.28em] text-muted-foreground uppercase">
+      <dd
+        className={`text-xl font-extralight tabular-nums sm:text-2xl ${
+          accent ? "text-[#f0b429]" : ""
+        }`}
+      >
+        {value}
+      </dd>
+      <dt className="mt-1 text-[9px] tracking-[0.24em] text-muted-foreground uppercase">
         {label}
       </dt>
     </div>
@@ -238,9 +289,10 @@ function Pedal({
         step={0.01}
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
-        className="mt-4 h-px w-full appearance-none bg-border accent-foreground"
+        aria-label={label}
+        className="mt-3 slider h-10 w-full"
       />
-      <p className="mt-3 text-xs text-muted-foreground">{hint}</p>
+      <p className="mt-2 text-xs text-muted-foreground">{hint}</p>
     </div>
   );
 }

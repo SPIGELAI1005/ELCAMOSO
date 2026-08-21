@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { BrandNav } from "@/components/BrandNav";
 import { ElcamosoMark } from "@/components/ElcamosoLogo";
 import { useSettings } from "@/lib/drive/useSettings";
 import { useReducedMotion } from "@/lib/drive/useReducedMotion";
@@ -10,7 +9,10 @@ import {
   type CustomSound,
   type Playlist,
 } from "@/lib/drive/settings";
+import { describeProfileRule } from "@/lib/drive/profile-rules";
 import { SOUND_PROFILES, allProfiles, getProfile } from "@/lib/sound/profiles";
+import { copyShareLink } from "@/lib/sound/share";
+import { trackEvent } from "@/lib/telemetry/analytics";
 
 export const Route = createFileRoute("/garage")({
   component: Garage,
@@ -40,8 +42,10 @@ function Garage() {
   const reducedMotion = useReducedMotion();
   const [renaming, setRenaming] = useState<string | null>(null);
   const [draftName, setDraftName] = useState("");
+  const [shareNote, setShareNote] = useState<string | null>(null);
 
   const customs = settings.customSounds;
+  const families = groupTakes(customs);
   const favourites = settings.favourites
     .map((id) => getProfile(id))
     .filter((p) => p && settings.favourites.includes(p.id));
@@ -63,6 +67,8 @@ function Garage() {
       id: `custom-${Date.now().toString(36)}`,
       name: `${sound.name} copy`.slice(0, 40),
       createdAt: Date.now(),
+      familyId: sound.familyId ?? sound.id,
+      takeLabel: sound.takeLabel ? `${sound.takeLabel} copy`.slice(0, 24) : "Copy",
     };
     update({ customSounds: [...customs, copy] });
   };
@@ -105,23 +111,41 @@ function Garage() {
 
   const togglePlaylistItem = (listId: string, profileId: string) =>
     update({
-      playlists: settings.playlists.map((l) =>
-        l.id === listId
-          ? {
-              ...l,
-              profileIds: l.profileIds.includes(profileId)
-                ? l.profileIds.filter((p) => p !== profileId)
-                : [...l.profileIds, profileId],
-            }
-          : l,
-      ),
+      playlists: settings.playlists.map((l) => {
+        if (l.id !== listId) return l;
+        const has = l.profileIds.includes(profileId);
+        const profileIds = has
+          ? l.profileIds.filter((p) => p !== profileId)
+          : [...l.profileIds, profileId];
+        const existing =
+          l.segments ?? l.profileIds.map((id) => ({ profileId: id, minutes: 15 }));
+        const segments = has
+          ? existing.filter((s) => s.profileId !== profileId)
+          : [...existing.filter((s) => s.profileId !== profileId), { profileId, minutes: 15 }];
+        if (!segments.length) {
+          const { segments: _drop, ...rest } = l;
+          return { ...rest, profileIds };
+        }
+        return { ...l, profileIds, segments };
+      }),
+    });
+
+  const setSegmentMinutes = (listId: string, profileId: string, minutes: number) =>
+    update({
+      playlists: settings.playlists.map((l) => {
+        if (l.id !== listId) return l;
+        const segments = (l.segments?.length
+          ? l.segments
+          : l.profileIds.map((id) => ({ profileId: id, minutes: 15 }))
+        ).map((s) => (s.profileId === profileId ? { ...s, minutes } : s));
+        return { ...l, segments };
+      }),
     });
 
   const active = getProfile(settings.profileId);
 
   return (
     <main className="min-h-screen">
-      <BrandNav />
       <div className="mx-auto w-full max-w-3xl px-6 pt-16 pb-28 sm:px-10">
         <p className="text-[11px] tracking-[0.34em] text-muted-foreground uppercase">
           Garage
@@ -146,6 +170,12 @@ function Garage() {
             className="h-12 shrink-0 rounded-full bg-primary px-8 text-xs leading-[3rem] tracking-[0.24em] text-primary-foreground uppercase"
           >
             Drive
+          </Link>
+          <Link
+            to="/replay"
+            className="h-12 shrink-0 rounded-full border border-border px-8 text-xs leading-[3rem] tracking-[0.24em] uppercase"
+          >
+            Recordings
           </Link>
         </section>
 
@@ -174,6 +204,7 @@ function Garage() {
               Create new
             </Link>
           </div>
+          {shareNote ? <p className="mt-4 text-sm text-muted-foreground">{shareNote}</p> : null}
 
           {customs.length === 0 ? (
             <p className="mt-6 text-sm text-muted-foreground">
@@ -185,12 +216,14 @@ function Garage() {
             </p>
           ) : (
             <div className="mt-6 divide-y divide-border border-y border-border">
-              {customs.map((sound) => {
+              {families.map((family) => {
+                const sound =
+                  family.takes.find((t) => t.id === settings.profileId) ?? family.takes[0]!;
                 const profile = materializeCustom(sound);
-                const selected = settings.profileId === sound.id;
+                const selected = family.takes.some((t) => t.id === settings.profileId);
                 const starred = settings.favourites.includes(sound.id);
                 return (
-                  <div key={sound.id} className="py-7">
+                  <div key={family.id} className="py-7">
                     <div className="flex items-start gap-5">
                       <ElcamosoMark
                         intensity={selected ? 1 : 0.34}
@@ -224,6 +257,29 @@ function Garage() {
                         <p className="mt-3 text-sm text-muted-foreground">
                           {profile.description}
                         </p>
+                        {sound.rules?.length ? (
+                          <p className="mt-3 text-xs text-muted-foreground">
+                            {sound.rules.map(describeProfileRule).join(" · ")}
+                          </p>
+                        ) : null}
+                        {family.takes.length > 1 ? (
+                          <div className="mt-4 flex flex-wrap gap-2">
+                            {family.takes.map((take) => (
+                              <button
+                                key={take.id}
+                                type="button"
+                                onClick={() => select(take.id)}
+                                className={`h-10 rounded-full border px-4 text-[11px] tracking-[0.16em] uppercase ${
+                                  settings.profileId === take.id
+                                    ? "border-foreground bg-foreground text-background"
+                                    : "border-border text-muted-foreground"
+                                }`}
+                              >
+                                {take.takeLabel || "Main"}
+                              </button>
+                            ))}
+                          </div>
+                        ) : null}
                         <div className="mt-5 flex flex-wrap gap-4 text-[11px] tracking-[0.2em] uppercase">
                           <Action
                             onClick={() => select(sound.id)}
@@ -243,6 +299,17 @@ function Garage() {
                             label="Rename"
                           />
                           <Action onClick={() => duplicate(sound)} label="Duplicate" />
+                          <Action
+                            onClick={() => {
+                              void copyShareLink(sound).then(() => {
+                                trackEvent("share_create", { via: "garage" });
+                                setShareNote(
+                                  `${sound.name}: link copied. Anyone with it can Listen in the browser.`,
+                                );
+                              });
+                            }}
+                            label="Share"
+                          />
                           <Action onClick={() => remove(sound.id)} label="Delete" />
                         </div>
                       </div>
@@ -298,7 +365,8 @@ function Garage() {
             </button>
           </div>
           <p className="mt-3 text-sm text-muted-foreground">
-            Curated sets you can step through while auditioning or on a demo drive.
+            Curated sets you can step through while auditioning or on a demo drive. Add
+            minutes per sound for a timed road-trip crossfade.
           </p>
 
           {settings.playlists.length === 0 ? (
@@ -325,16 +393,38 @@ function Garage() {
                         Empty. Add sounds below.
                       </p>
                     ) : (
-                      list.profileIds.map((id) => (
-                        <button
-                          key={id}
-                          onClick={() => togglePlaylistItem(list.id, id)}
-                          aria-label={`Remove ${getProfile(id).name}`}
-                          className="h-10 rounded-full border border-foreground px-5 text-[11px] tracking-[0.16em] uppercase"
-                        >
-                          {getProfile(id).name} ×
-                        </button>
-                      ))
+                      list.profileIds.map((id) => {
+                        const minutes =
+                          list.segments?.find((s) => s.profileId === id)?.minutes ?? 15;
+                        return (
+                          <div
+                            key={id}
+                            className="flex items-center gap-2 rounded-full border border-foreground px-3 py-1"
+                          >
+                            <button
+                              onClick={() => togglePlaylistItem(list.id, id)}
+                              aria-label={`Remove ${getProfile(id).name}`}
+                              className="text-[11px] tracking-[0.16em] uppercase"
+                            >
+                              {getProfile(id).name} ×
+                            </button>
+                            <label className="flex items-center gap-1 text-[10px] tracking-[0.12em] text-muted-foreground uppercase">
+                              <input
+                                type="number"
+                                min={1}
+                                max={240}
+                                value={minutes}
+                                aria-label={`Minutes for ${getProfile(id).name}`}
+                                onChange={(e) =>
+                                  setSegmentMinutes(list.id, id, Number(e.target.value) || 15)
+                                }
+                                className="h-8 w-12 border-b border-border bg-transparent text-center text-xs text-foreground outline-none"
+                              />
+                              min
+                            </label>
+                          </div>
+                        );
+                      })
                     )}
                   </div>
                   <label className="mt-6 block text-xs tracking-[0.16em] text-muted-foreground uppercase">
@@ -386,6 +476,20 @@ function Garage() {
       </div>
     </main>
   );
+}
+
+function groupTakes(sounds: CustomSound[]) {
+  const map = new Map<string, CustomSound[]>();
+  for (const sound of sounds) {
+    const key = sound.familyId ?? sound.id;
+    const list = map.get(key) ?? [];
+    list.push(sound);
+    map.set(key, list);
+  }
+  return Array.from(map.entries()).map(([id, takes]) => ({
+    id,
+    takes: takes.sort((a, b) => a.createdAt - b.createdAt),
+  }));
 }
 
 function Stat({ label, value }: { label: string; value: number | string }) {

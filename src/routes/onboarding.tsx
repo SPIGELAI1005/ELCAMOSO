@@ -3,7 +3,8 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { ElcamosoMark } from "@/components/ElcamosoLogo";
 import { useSettings } from "@/lib/drive/useSettings";
 import { useReducedMotion } from "@/lib/drive/useReducedMotion";
-import { getProfile } from "@/lib/sound/profiles";
+import { getProfile, SOUND_PROFILES, intensityBand } from "@/lib/sound/profiles";
+import { getSession } from "@/lib/drive/session";
 
 export const Route = createFileRoute("/onboarding")({
   component: Onboarding,
@@ -27,9 +28,9 @@ export const Route = createFileRoute("/onboarding")({
   }),
 });
 
-type Step = 0 | 1 | 2;
+type Step = 0 | 1 | 2 | 3;
 
-const STEP_TITLES = ["How it works", "Driving sensors", "Ready to drive"];
+const STEP_TITLES = ["How it works", "Hear the difference", "Driving sensors", "Ready to drive"];
 
 function Onboarding() {
   const navigate = useNavigate();
@@ -46,7 +47,7 @@ function Onboarding() {
   useEffect(() => {
     if (!loaded || restored) return;
     setRestored(true);
-    const saved = Math.min(2, Math.max(0, settings.onboardingStep)) as Step;
+    const saved = Math.min(3, Math.max(0, settings.onboardingStep)) as Step;
     if (saved > 0) setStep(saved);
   }, [loaded, restored, settings.onboardingStep]);
 
@@ -73,7 +74,7 @@ function Onboarding() {
     navigator.geolocation.getCurrentPosition(
       () => {
         setSensorState("ready");
-        goTo(2);
+        goTo(3);
       },
       () => setSensorState("denied"),
       { enableHighAccuracy: true, timeout: 15000 },
@@ -81,7 +82,7 @@ function Onboarding() {
   };
 
   const finish = () => {
-    update({ onboarded: true, safetyAcknowledged: true, onboardingStep: 2 });
+    update({ onboarded: true, safetyAcknowledged: true, onboardingStep: 3 });
     void navigate({ to: "/drive" });
   };
 
@@ -98,7 +99,7 @@ function Onboarding() {
 
         <div>
           <p className="text-[11px] tracking-[0.34em] text-muted-foreground uppercase">
-            Step {step + 1} of 3
+            Step {step + 1} of 4
           </p>
           <p className="mt-2 text-xs tracking-[0.2em] text-muted-foreground uppercase">
             {STEP_TITLES[step]}
@@ -125,6 +126,8 @@ function Onboarding() {
             </button>
           </div>
         ) : step === 1 ? (
+          <HearDifference />
+        ) : step === 2 ? (
           <div className="flex flex-col gap-6">
             <h1 className="text-3xl font-light">Driving sensors</h1>
             <p className="text-sm leading-relaxed text-muted-foreground">
@@ -171,6 +174,24 @@ function Onboarding() {
           ) : step === 1 ? (
             <>
               <button
+                onClick={() => {
+                  getSession().stop();
+                  goTo(2);
+                }}
+                className="h-14 rounded-full bg-primary text-sm tracking-[0.22em] text-primary-foreground uppercase"
+              >
+                Continue
+              </button>
+              <button
+                onClick={() => goTo(2)}
+                className="min-h-11 text-xs tracking-[0.24em] text-muted-foreground uppercase"
+              >
+                Skip for now
+              </button>
+            </>
+          ) : step === 2 ? (
+            <>
+              <button
                 onClick={() => void enableSensors()}
                 disabled={sensorState === "asking"}
                 className="h-14 rounded-full bg-primary text-sm tracking-[0.22em] text-primary-foreground uppercase disabled:opacity-60"
@@ -178,7 +199,7 @@ function Onboarding() {
                 {sensorState === "asking" ? "Requesting…" : "Enable sensors"}
               </button>
               <button
-                onClick={() => goTo(2)}
+                onClick={() => goTo(3)}
                 className="min-h-11 text-xs tracking-[0.24em] text-muted-foreground uppercase"
               >
                 Skip for now
@@ -195,7 +216,7 @@ function Onboarding() {
         </div>
 
         <div className="flex items-center gap-2" aria-hidden="true">
-          {[0, 1, 2].map((i) => (
+          {[0, 1, 2, 3].map((i) => (
             <span
               key={i}
               className={`h-px w-8 ${i <= step ? "bg-foreground" : "bg-border"}`}
@@ -211,5 +232,40 @@ function Onboarding() {
         </Link>
       </div>
     </main>
+  );
+}
+
+function HearDifference() {
+  const gentle = SOUND_PROFILES.find((p) => intensityBand(p) === "gentle") ?? SOUND_PROFILES[0]!;
+  const intense = SOUND_PROFILES.find((p) => intensityBand(p) === "intense") ?? SOUND_PROFILES[1]!;
+  const play = (id: string) => {
+    getSession().syncConfig({ profileId: id });
+    getSession().setAuditionKmh(70);
+    void getSession().startAudition();
+  };
+  return (
+    <div className="flex flex-col gap-6">
+      <h1 className="text-3xl font-light">Hear the difference</h1>
+      <p className="text-sm leading-relaxed text-muted-foreground">
+        Same simulated speed, two Sound Profiles. Listen to a gentle one, then an intense
+        one, before you pick sensors.
+      </p>
+      <div className="flex flex-col gap-3">
+        <button
+          type="button"
+          onClick={() => play(gentle.id)}
+          className="h-14 rounded-full border border-border text-sm tracking-[0.18em] uppercase"
+        >
+          Gentle: {gentle.name}
+        </button>
+        <button
+          type="button"
+          onClick={() => play(intense.id)}
+          className="h-14 rounded-full border border-border text-sm tracking-[0.18em] uppercase"
+        >
+          Intense: {intense.name}
+        </button>
+      </div>
+    </div>
   );
 }

@@ -7,12 +7,17 @@ import {
   normalizeMix,
   type LayerMix,
 } from "@/lib/sound/environments";
+import { DEFAULT_CABIN_EQ, DEFAULT_SHIFT_FEEL, type CabinEq, type ShiftFeel } from "@/lib/drive/types-extra";
+import type { AutoRule, AutoRulesMode, ProfileRule } from "@/lib/drive/rules";
+import { DRIVE_CONTEXTS, type DriveContext } from "@/lib/drive/context";
+import type { Locale, Units } from "@/lib/i18n";
 import {
   MAX_SNIPPET_BYTES,
   SNIPPET_TRIGGERS,
   type SnippetTrigger,
   type SoundSnippet,
 } from "@/lib/sound/snippets";
+import type { LayerKey } from "@/lib/sound/environments";
 
 /** Per-profile fine-tuning of how motion translates into sound state. */
 export interface ProfileTuning {
@@ -70,6 +75,23 @@ export interface CustomSound {
   environmentId?: string;
   /** per-layer mixer saved with the sound */
   mix?: LayerMix;
+  /** optional cabin EQ stored with a Garage sound */
+  eq?: CabinEq;
+  /** groups takes of the same personality */
+  familyId?: string;
+  /** short label for a take, e.g. Wet / Night */
+  takeLabel?: string;
+  /** IF/THEN rules that only apply while this sound is active */
+  rules?: ProfileRule[];
+}
+
+export interface StudioPreset {
+  id: string;
+  name: string;
+  createdAt: number;
+  tweaks: StudioTweaks;
+  mix: LayerMix;
+  environmentId: string;
 }
 
 
@@ -154,8 +176,36 @@ export interface ElcamosoSettings {
   environmentId: string;
   /** global per-layer mixer applied to built-in profiles */
   layerMix: LayerMix;
+  /** cabin EQ after the layer mix */
+  cabinEq: CabinEq;
+  /** gear-change feel for virtual-transmission profiles */
+  shiftFeel: ShiftFeel;
+  autoRules: AutoRule[];
+  /** @deprecated migrated into autoRulesMode */
+  autoRulesEnabled: boolean;
+  /** off = ignore rules; suggest = quiet pill; auto = switch with Hold override */
+  autoRulesMode: AutoRulesMode;
+  /** 0..250 ms motion lookahead for Bluetooth sync */
+  latencyCompMs: number;
+  /** profile IF/THEN rules for built-in Sound Profiles */
+  profileRules: Record<string, ProfileRule[]>;
+  studioPresets: StudioPreset[];
+  language: Locale;
+  units: Units;
+  updatedAt: number;
+  cloudEnabled: boolean;
+  cloudAccountId: string | null;
+  includeDriveHistory: boolean;
+  /** opt-in, no motion or location */
+  analyticsEnabled: boolean;
   /** show the diagnostics panel in Settings */
   devPanel: boolean;
+}
+
+export interface PlaylistSegment {
+  profileId: string;
+  /** minutes on this Sound Profile before crossfade */
+  minutes: number;
 }
 
 /** A curated set of profiles you can step through while driving. */
@@ -163,6 +213,8 @@ export interface Playlist {
   id: string;
   name: string;
   profileIds: string[];
+  /** optional timed trip segments; when set, Drive crossfades by the clock */
+  segments?: PlaylistSegment[];
   createdAt: number;
 }
 
@@ -190,6 +242,21 @@ export const DEFAULT_SETTINGS: ElcamosoSettings = {
   snippets: [],
   environmentId: DEFAULT_ENVIRONMENT_ID,
   layerMix: normalizeMix(undefined),
+  cabinEq: DEFAULT_CABIN_EQ,
+  shiftFeel: DEFAULT_SHIFT_FEEL,
+  autoRules: [],
+  autoRulesEnabled: false,
+  autoRulesMode: "off",
+  latencyCompMs: 0,
+  profileRules: {},
+  studioPresets: [],
+  language: "en",
+  units: "metric",
+  updatedAt: 0,
+  cloudEnabled: false,
+  cloudAccountId: null,
+  includeDriveHistory: false,
+  analyticsEnabled: false,
   devPanel: false,
 };
 
@@ -253,6 +320,14 @@ function sanitizeCustomSounds(v: unknown): CustomSound[] {
         typeof item["environmentId"] === "string" ? item["environmentId"] : null,
       ).id,
       mix: normalizeMix(item["mix"]),
+      eq: sanitizeCabinEq(item["eq"]),
+      ...(typeof item["familyId"] === "string" && item["familyId"]
+        ? { familyId: item["familyId"].slice(0, 40) }
+        : {}),
+      ...(typeof item["takeLabel"] === "string" && item["takeLabel"]
+        ? { takeLabel: item["takeLabel"].slice(0, 24) }
+        : {}),
+      rules: sanitizeProfileRules(item["rules"]),
     });
     if (out.length >= 60) break;
   }
@@ -277,10 +352,14 @@ function sanitizePlaylists(v: unknown, knownIds: Set<string>): Playlist[] {
           ),
         ).slice(0, 40)
       : [];
+    const segments = sanitizePlaylistSegments(item["segments"], knownIds);
     out.push({
       id,
       name: str(item["name"], "Untitled list").slice(0, 40),
-      profileIds,
+      profileIds: segments.length
+        ? Array.from(new Set([...segments.map((s) => s.profileId), ...profileIds])).slice(0, 40)
+        : profileIds,
+      ...(segments.length ? { segments } : {}),
       createdAt: num(item["createdAt"], Date.now(), 0, Number.MAX_SAFE_INTEGER),
     });
     if (out.length >= 20) break;
@@ -314,6 +393,178 @@ function sanitizeSnippets(v: unknown): SoundSnippet[] {
       everySeconds: num(item["everySeconds"], 25, 5, 300),
     });
     if (out.length >= 12) break;
+  }
+  return out;
+}
+
+function sanitizeCabinEq(v: unknown): CabinEq {
+  const r = isRecord(v) ? v : {};
+  return {
+    low: num(r["low"], 0, -12, 12),
+    mid: num(r["mid"], 0, -12, 12),
+    high: num(r["high"], 0, -12, 12),
+  };
+}
+
+function sanitizeShiftFeel(v: unknown): ShiftFeel {
+  const r = isRecord(v) ? v : {};
+  return {
+    shiftMs: num(r["shiftMs"], DEFAULT_SHIFT_FEEL.shiftMs, 40, 400),
+    torqueDip: num(r["torqueDip"], DEFAULT_SHIFT_FEEL.torqueDip, 0, 0.6),
+    revMatch: num(r["revMatch"], DEFAULT_SHIFT_FEEL.revMatch, 0, 1),
+  };
+}
+
+function sanitizePlaylistSegments(
+  v: unknown,
+  knownIds: Set<string>,
+): { profileId: string; minutes: number }[] {
+  if (!Array.isArray(v)) return [];
+  const out: { profileId: string; minutes: number }[] = [];
+  for (const item of v) {
+    if (!isRecord(item)) continue;
+    const profileId = str(item["profileId"], "");
+    if (!profileId || !knownIds.has(profileId)) continue;
+    out.push({
+      profileId,
+      minutes: num(item["minutes"], 15, 1, 240),
+    });
+    if (out.length >= 24) break;
+  }
+  return out;
+}
+
+function sanitizeProfileRules(v: unknown): ProfileRule[] {
+  if (!Array.isArray(v)) return [];
+  const layers = new Set<string>(["body", "beds", "accents"]);
+  const contexts = new Set(DRIVE_CONTEXTS.map((c) => c.id));
+  const out: ProfileRule[] = [];
+  for (const item of v) {
+    if (!isRecord(item)) continue;
+    const id = str(item["id"], "");
+    if (!id) continue;
+    const metricRaw = str(item["metric"], "speedKmh");
+    const metric =
+      metricRaw === "throttle" || metricRaw === "regen" || metricRaw === "context"
+        ? metricRaw
+        : "speedKmh";
+    const opRaw = str(item["op"], "gt");
+    const op = opRaw === "lt" || opRaw === "eq" ? opRaw : "gt";
+    let value: number | DriveContext =
+      metric === "speedKmh"
+        ? num(item["value"], 110, 0, 300)
+        : metric === "context"
+          ? (contexts.has(String(item["value"]) as DriveContext)
+              ? (String(item["value"]) as DriveContext)
+              : "city")
+          : num(item["value"], 0.6, 0, 1);
+    const actionRaw = isRecord(item["action"]) ? item["action"] : {};
+    const actionKind = str(actionRaw["kind"], "mixDelta");
+    let action: ProfileRule["action"];
+    if (actionKind === "playSnippet") {
+      action = { kind: "playSnippet", snippetId: str(actionRaw["snippetId"], "") };
+      if (!action.snippetId) continue;
+    } else if (actionKind === "setEnvironment") {
+      action = {
+        kind: "setEnvironment",
+        environmentId: getEnvironment(
+          typeof actionRaw["environmentId"] === "string" ? actionRaw["environmentId"] : null,
+        ).id,
+      };
+    } else {
+      const layer = str(actionRaw["layer"], "beds") as LayerKey;
+      if (!layers.has(layer)) continue;
+      action = {
+        kind: "mixDelta",
+        layer,
+        delta: num(actionRaw["delta"], 0.1, -1, 1),
+      };
+    }
+    out.push({
+      id,
+      enabled: bool(item["enabled"], true),
+      metric,
+      op,
+      value,
+      action,
+    });
+    if (out.length >= 16) break;
+  }
+  return out;
+}
+
+function sanitizeProfileRulesMap(v: unknown): Record<string, ProfileRule[]> {
+  if (!isRecord(v)) return {};
+  const out: Record<string, ProfileRule[]> = {};
+  for (const [id, rules] of Object.entries(v)) {
+    const cleaned = sanitizeProfileRules(rules);
+    if (cleaned.length) out[id] = cleaned;
+  }
+  return out;
+}
+
+function sanitizeAutoRules(v: unknown, knownIds: Set<string>): AutoRule[] {
+  if (!Array.isArray(v)) return [];
+  const contexts = new Set(DRIVE_CONTEXTS.map((c) => c.id));
+  const out: AutoRule[] = [];
+  for (const item of v) {
+    if (!isRecord(item)) continue;
+    const id = str(item["id"], "");
+    const profileId = str(item["profileId"], "");
+    if (!id || !knownIds.has(profileId)) continue;
+    const whenRaw = isRecord(item["when"]) ? item["when"] : {};
+    const kind = str(whenRaw["kind"], "speedBand");
+    let when: AutoRule["when"];
+    if (kind === "hour") {
+      when = {
+        kind: "hour",
+        start: num(whenRaw["start"], 0, 0, 23),
+        end: num(whenRaw["end"], 8, 0, 24),
+      };
+    } else if (kind === "driveMinutes") {
+      when = { kind: "driveMinutes", min: num(whenRaw["min"], 20, 1, 600) };
+    } else if (kind === "context") {
+      const context = str(whenRaw["context"], "city") as DriveContext;
+      when = {
+        kind: "context",
+        context: contexts.has(context) ? context : "city",
+      };
+    } else {
+      when = {
+        kind: "speedBand",
+        minKmh: num(whenRaw["minKmh"], 0, 0, 300),
+        maxKmh: num(whenRaw["maxKmh"], 50, 1, 400),
+      };
+    }
+    out.push({ id, enabled: bool(item["enabled"], true), profileId, when });
+    if (out.length >= 12) break;
+  }
+  return out;
+}
+
+function sanitizeAutoRulesMode(v: unknown, legacyEnabled: boolean): AutoRulesMode {
+  if (v === "off" || v === "suggest" || v === "auto") return v;
+  return legacyEnabled ? "auto" : "off";
+}
+
+function sanitizeStudioPresets(v: unknown): StudioPreset[] {
+  if (!Array.isArray(v)) return [];
+  const out: StudioPreset[] = [];
+  for (const item of v) {
+    if (!isRecord(item)) continue;
+    const id = str(item["id"], "");
+    if (!id) continue;
+    out.push({
+      id,
+      name: str(item["name"], "Preset").slice(0, 40),
+      createdAt: num(item["createdAt"], Date.now(), 0, Number.MAX_SAFE_INTEGER),
+      tweaks: sanitizeTweaks(item["tweaks"]),
+      mix: normalizeMix(item["mix"]),
+      environmentId: getEnvironment(
+        typeof item["environmentId"] === "string" ? item["environmentId"] : null,
+      ).id,
+    });
+    if (out.length >= 50) break;
   }
   return out;
 }
@@ -410,7 +661,7 @@ export function sanitizeSettings(input: unknown): {
     demoMotion: bool(p["demoMotion"], false),
     safetyAcknowledged,
     onboarded,
-    onboardingStep: num(p["onboardingStep"], 0, 0, 2),
+    onboardingStep: num(p["onboardingStep"], 0, 0, 3),
     lastDriveAt: typeof p["lastDriveAt"] === "number" ? p["lastDriveAt"] : null,
     driveCount: num(p["driveCount"], 0, 0, 1e9),
     reducedMotion: bool(p["reducedMotion"], false),
@@ -426,8 +677,28 @@ export function sanitizeSettings(input: unknown): {
     snippets,
     environmentId: getEnvironment(rawEnvironment).id,
     layerMix: normalizeMix(p["layerMix"]),
+    cabinEq: sanitizeCabinEq(p["cabinEq"]),
+    shiftFeel: sanitizeShiftFeel(p["shiftFeel"]),
+    autoRules: sanitizeAutoRules(p["autoRules"], knownIds),
+    autoRulesEnabled: bool(p["autoRulesEnabled"], false),
+    autoRulesMode: sanitizeAutoRulesMode(p["autoRulesMode"], bool(p["autoRulesEnabled"], false)),
+    latencyCompMs: num(p["latencyCompMs"], 0, 0, 250),
+    profileRules: sanitizeProfileRulesMap(p["profileRules"]),
+    studioPresets: sanitizeStudioPresets(p["studioPresets"]),
+    language: (["en", "de", "ro"].includes(String(p["language"]))
+      ? p["language"]
+      : "en") as Locale,
+    units: p["units"] === "imperial" ? "imperial" : "metric",
+    updatedAt: num(p["updatedAt"], Date.now(), 0, Number.MAX_SAFE_INTEGER),
+    cloudEnabled: bool(p["cloudEnabled"], false),
+    cloudAccountId: typeof p["cloudAccountId"] === "string" ? p["cloudAccountId"] : null,
+    includeDriveHistory: bool(p["includeDriveHistory"], false),
+    analyticsEnabled: bool(p["analyticsEnabled"], false),
     devPanel: bool(p["devPanel"], false),
   };
+
+  // Keep the legacy boolean in sync for older UI / exports.
+  settings.autoRulesEnabled = settings.autoRulesMode !== "off";
 
 
   // A drive that was already acknowledged implies setup is finished. Repairing
@@ -546,7 +817,11 @@ export function readSettings(): ElcamosoSettings {
 
 export function writeSettings(next: Partial<ElcamosoSettings>) {
   if (typeof window === "undefined") return DEFAULT_SETTINGS;
-  const merged = sanitizeSettings({ ...readSettings(), ...next }).settings;
+  const merged = sanitizeSettings({
+    ...readSettings(),
+    ...next,
+    updatedAt: Date.now(),
+  }).settings;
   try {
     window.localStorage.setItem(KEY, JSON.stringify(merged));
   } catch {
@@ -590,7 +865,7 @@ export function readRawStored(): string | null {
 /* ---------------------------------------------------------------- transfer */
 
 const BACKUP_KIND = "elcamoso.settings.backup";
-const BACKUP_VERSION = 4;
+const BACKUP_VERSION = 6;
 
 export interface SettingsBackup {
   kind: typeof BACKUP_KIND;
@@ -679,6 +954,26 @@ function migratePayload(payload: Record<string, unknown>, version: number) {
     if (p["layerMix"] === undefined) p["layerMix"] = normalizeMix(undefined);
     if (!Array.isArray(p["playlists"])) p["playlists"] = [];
     if (!Array.isArray(p["snippets"])) p["snippets"] = [];
+  }
+
+  if (version < 5) {
+    if (p["cabinEq"] === undefined) p["cabinEq"] = DEFAULT_CABIN_EQ;
+    if (p["shiftFeel"] === undefined) p["shiftFeel"] = DEFAULT_SHIFT_FEEL;
+    if (!Array.isArray(p["autoRules"])) p["autoRules"] = [];
+    if (p["autoRulesEnabled"] === undefined) p["autoRulesEnabled"] = false;
+    if (!Array.isArray(p["studioPresets"])) p["studioPresets"] = [];
+    if (p["language"] === undefined) p["language"] = "en";
+    if (p["units"] === undefined) p["units"] = "metric";
+    notes.push("Added cabin EQ, shift feel, auto rules and language defaults.");
+  }
+
+  if (version < 6) {
+    if (p["autoRulesMode"] === undefined) {
+      p["autoRulesMode"] = p["autoRulesEnabled"] === true ? "auto" : "off";
+    }
+    if (p["latencyCompMs"] === undefined) p["latencyCompMs"] = 0;
+    if (p["profileRules"] === undefined) p["profileRules"] = {};
+    notes.push("Added Motion context rules, Suggest mode and latency match.");
   }
 
   return { payload: p, notes };
@@ -814,6 +1109,18 @@ export function mergeBackup(
     snippets,
     environmentId: incoming.environmentId,
     layerMix: incoming.layerMix,
+    cabinEq: incoming.cabinEq,
+    shiftFeel: incoming.shiftFeel,
+    autoRules: incoming.autoRules.length ? incoming.autoRules : current.autoRules,
+    autoRulesEnabled: incoming.autoRulesMode !== "off",
+    autoRulesMode: incoming.autoRulesMode,
+    latencyCompMs: incoming.latencyCompMs,
+    profileRules: { ...current.profileRules, ...incoming.profileRules },
+    studioPresets: incoming.studioPresets.length
+      ? incoming.studioPresets
+      : current.studioPresets,
+    language: incoming.language,
+    units: incoming.units,
     tuning,
     profileGain,
     driveCount: Math.max(current.driveCount, incoming.driveCount),
@@ -872,4 +1179,64 @@ export async function importSettingsFile(
     snippetsAdded: merged.snippetsAdded,
   };
 }
+
+/** Resets volume, tuning, cabin EQ and rules; keeps Garage, snippets, playlists and favourites. */
+export function restoreRecommended(): ElcamosoSettings {
+  return writeSettings({
+    volume: DEFAULT_SETTINGS.volume,
+    tuning: {},
+    profileGain: {},
+    cabinEq: DEFAULT_CABIN_EQ,
+    shiftFeel: DEFAULT_SHIFT_FEEL,
+    autoRules: [],
+    autoRulesEnabled: false,
+    autoRulesMode: "off",
+    latencyCompMs: 0,
+    layerMix: normalizeMix(undefined),
+    environmentId: DEFAULT_ENVIRONMENT_ID,
+    motionSensitivity: 1,
+    motionNoiseFloor: 0,
+    reducedMotion: false,
+    haptics: false,
+    demoMotion: false,
+  });
+}
+
+/** A sound pack is the same backup family, scoped to the active sound and mix. */
+export function exportSoundPack() {
+  if (typeof window === "undefined") return;
+  const current = readSettings();
+  const custom = current.customSounds.filter((s) => s.id === current.profileId);
+  const pack: SettingsBackup = {
+    kind: BACKUP_KIND,
+    version: BACKUP_VERSION,
+    exportedAt: new Date().toISOString(),
+    app: { name: "ELCAMOSO" },
+    settings: {
+      ...DEFAULT_SETTINGS,
+      profileId: current.profileId,
+      customSounds: custom,
+      environmentId: current.environmentId,
+      layerMix: current.layerMix,
+      snippets: current.snippets,
+      cabinEq: current.cabinEq,
+    },
+  };
+  const blob = new Blob([JSON.stringify(pack, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `elcamoso-pack-${current.profileId}.json`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+export async function importSoundPack(file: File): Promise<ImportReport> {
+  return importSettingsFile(file, "merge");
+}
+
+export type { CabinEq, ShiftFeel };
+
 

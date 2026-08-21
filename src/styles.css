@@ -53,15 +53,88 @@
     border-color: var(--color-border);
   }
 
+  :focus-visible {
+    outline: 2px solid var(--foreground);
+    outline-offset: 3px;
+  }
+
   html {
     -webkit-font-smoothing: antialiased;
     color-scheme: dark;
+    /* Do not set overflow-x here: non-visible overflow on html/body breaks position:sticky. */
   }
 
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
     font-family: var(--font-sans);
+    min-height: 100svh;
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  /* Horizontal overflow guard that does not become a sticky containing block. */
+  #app-root {
+    max-width: 100vw;
+  }
+
+  input[type="range"] {
+    min-height: 44px;
+    width: 100%;
+    cursor: pointer;
+    accent-color: var(--foreground);
+    -webkit-appearance: none;
+    appearance: none;
+    background: transparent;
+  }
+
+  input[type="range"]:focus-visible {
+    outline: none;
+  }
+
+  input[type="range"]:focus-visible::-webkit-slider-thumb {
+    outline: 2px solid var(--foreground);
+    outline-offset: 3px;
+  }
+
+  input[type="range"]:focus-visible::-moz-range-thumb {
+    outline: 2px solid var(--foreground);
+    outline-offset: 3px;
+  }
+
+  input[type="range"]::-webkit-slider-runnable-track {
+    height: 2px;
+    border-radius: 9999px;
+    background: oklch(1 0 0 / 22%);
+  }
+
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    margin-top: -6px;
+    border-radius: 9999px;
+    border: none;
+    background: var(--foreground);
+    box-shadow: 0 0 0 1px oklch(0 0 0 / 40%);
+  }
+
+  input[type="range"]::-moz-range-track {
+    height: 2px;
+    border: none;
+    border-radius: 9999px;
+    background: oklch(1 0 0 / 22%);
+  }
+
+  input[type="range"]::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
+    border: none;
+    border-radius: 9999px;
+    background: var(--foreground);
+    box-shadow: 0 0 0 1px oklch(0 0 0 / 40%);
   }
 }
 
@@ -69,8 +142,21 @@
   font-family: var(--font-display);
   text-transform: uppercase;
   font-weight: 300;
-  letter-spacing: 0.38em;
-  text-indent: 0.38em;
+  letter-spacing: 0;
+  text-indent: 0;
+  line-height: 1;
+}
+
+/** Same tracking between every letter, including C-A and A-M. */
+.wordmark-lockup {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.38em;
+}
+
+/** Native range control: track + thumb styled in base; keep touch height in className. */
+@utility slider {
+  display: block;
 }
 
 @utility hairline {
@@ -124,3 +210,145 @@
     opacity: 0.25;
   }
 }
+
+@keyframes prnd-glow {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 0 transparent);
+  }
+  50% {
+    filter: drop-shadow(0 0 6px oklch(0.78 0.14 75 / 0.55));
+  }
+}
+
+@keyframes pedal-bay-live {
+  0%,
+  100% {
+    opacity: 0.28;
+  }
+  50% {
+    opacity: 0.48;
+  }
+}
+
+@utility animate-prnd-glow {
+  animation: prnd-glow 2.4s ease-in-out infinite;
+}
+
+@utility animate-pedal-bay {
+  animation: pedal-bay-live 3.6s ease-in-out infinite;
+}
+
+/* O ))) menu toggle: fold waves in, resolve to X */
+.menu-mark {
+  overflow: visible;
+}
+
+.menu-mark-source,
+.menu-mark-wave,
+.menu-mark-x {
+  transform-box: fill-box;
+  transform-origin: center;
+  transition:
+    opacity 320ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 420ms cubic-bezier(0.22, 1, 0.36, 1),
+    stroke-dashoffset 420ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.menu-mark-wave-1 {
+  transition-delay: 40ms;
+}
+.menu-mark-wave-2 {
+  transition-delay: 80ms;
+}
+.menu-mark-wave-3 {
+  transition-delay: 120ms;
+}
+
+.menu-mark-x {
+  stroke-dasharray: 30;
+  stroke-dashoffset: 30;
+  opacity: 0;
+}
+
+.menu-mark-x-a {
+  transition-delay: 140ms;
+}
+.menu-mark-x-b {
+  transition-delay: 180ms;
+}
+
+.menu-mark[data-open="false"] .menu-mark-source {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.menu-mark[data-open="false"] .menu-mark-wave {
+  opacity: 1;
+  transform: translateX(0) scale(1);
+}
+
+.menu-mark[data-open="false"] .menu-mark-x {
+  opacity: 0;
+  stroke-dashoffset: 30;
+  transform: rotate(-18deg) scale(0.85);
+}
+
+.menu-mark[data-open="true"] .menu-mark-source {
+  opacity: 0;
+  transform: scale(0.55);
+  transition-delay: 0ms;
+}
+
+.menu-mark[data-open="true"] .menu-mark-wave-1 {
+  opacity: 0;
+  transform: translateX(-6px) scale(0.55);
+  transition-delay: 0ms;
+}
+
+.menu-mark[data-open="true"] .menu-mark-wave-2 {
+  opacity: 0;
+  transform: translateX(-10px) scale(0.45);
+  transition-delay: 45ms;
+}
+
+.menu-mark[data-open="true"] .menu-mark-wave-3 {
+  opacity: 0;
+  transform: translateX(-14px) scale(0.35);
+  transition-delay: 90ms;
+}
+
+.menu-mark[data-open="true"] .menu-mark-x {
+  opacity: 1;
+  stroke-dashoffset: 0;
+  transform: rotate(0deg) scale(1);
+}
+
+.menu-mark[data-open="true"] .menu-mark-x-a {
+  transition-delay: 160ms;
+}
+
+.menu-mark[data-open="true"] .menu-mark-x-b {
+  transition-delay: 210ms;
+}
+
+/* Closing: X exits first, then mark radiates out */
+.menu-mark[data-open="false"] .menu-mark-x-a {
+  transition-delay: 0ms;
+}
+.menu-mark[data-open="false"] .menu-mark-x-b {
+  transition-delay: 40ms;
+}
+.menu-mark[data-open="false"] .menu-mark-source {
+  transition-delay: 120ms;
+}
+.menu-mark[data-open="false"] .menu-mark-wave-1 {
+  transition-delay: 150ms;
+}
+.menu-mark[data-open="false"] .menu-mark-wave-2 {
+  transition-delay: 190ms;
+}
+.menu-mark[data-open="false"] .menu-mark-wave-3 {
+  transition-delay: 230ms;
+}
+

@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { BrandNav } from "@/components/BrandNav";
 import { ElcamosoMark } from "@/components/ElcamosoLogo";
 import { useSettings } from "@/lib/drive/useSettings";
 import { useReducedMotion } from "@/lib/drive/useReducedMotion";
+import { trackEvent } from "@/lib/telemetry/analytics";
 
 export const Route = createFileRoute("/calibrate")({
   component: Calibrate,
@@ -124,7 +124,6 @@ function Calibrate() {
 
   return (
     <main className="min-h-screen">
-      <BrandNav />
       <div className="mx-auto w-full max-w-xl px-6 pt-16 pb-28 sm:px-10">
         <h1 className="text-3xl font-light">Calibrate motion</h1>
         <p className="mt-3 text-sm text-muted-foreground">
@@ -222,7 +221,7 @@ function Calibrate() {
               setPending(Number(e.target.value));
               setSaved(false);
             }}
-            className="mt-6 h-px w-full appearance-none bg-border accent-foreground"
+            className="mt-6 slider h-11 w-full"
           />
           <p className="mt-4 text-sm text-muted-foreground">
             Higher values make the sound react sooner to small changes. Lower values keep
@@ -237,6 +236,7 @@ function Calibrate() {
                   calibratedAt: Date.now(),
                 });
                 setSaved(true);
+                trackEvent("calibrate_complete");
               }}
               className="h-12 rounded-full bg-primary px-8 text-[11px] tracking-[0.24em] text-primary-foreground uppercase"
             >

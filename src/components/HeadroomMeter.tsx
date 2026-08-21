@@ -1,11 +1,5 @@
 import { intensityBand, type SoundProfile } from "@/lib/sound/profiles";
-
-export interface MeterReading {
-  peak: number;
-  rms: number;
-  headroom: number;
-  reduction: number;
-}
+import type { MeterReading } from "@/lib/sound/engine";
 
 /**
  * Loudness headroom readout. Shows how much room is left before the limiter
@@ -18,12 +12,15 @@ export function HeadroomMeter({
   volume,
   profileGain,
   className = "",
+  compact = false,
 }: {
   meter: MeterReading | null;
   profile: SoundProfile;
   volume: number;
   profileGain: number;
   className?: string;
+  /** Bar + percent only (sticky player). Full copy stays in Audition. */
+  compact?: boolean;
 }) {
   const band = intensityBand(profile);
   const level = meter ? Math.min(1, meter.peak / 0.85) : 0;
@@ -38,6 +35,45 @@ export function HeadroomMeter({
         ? "This is one of the fuller sounds. Consider easing the balance before you drive."
         : null;
 
+  const bar = (
+    <div
+      className={`${compact ? "mt-1.5" : "mt-3"} h-1.5 w-full overflow-hidden bg-secondary`}
+      role="meter"
+      aria-label="Loudness headroom"
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-valuenow={headroomPct ?? 100}
+    >
+      <div
+        className={`h-full transition-[width] duration-150 ${
+          limiting || level > 0.92
+            ? "bg-destructive"
+            : level > 0.75
+              ? "bg-muted-foreground"
+              : "bg-foreground"
+        }`}
+        style={{ width: `${Math.max(2, level * 100)}%` }}
+      />
+    </div>
+  );
+
+  if (compact) {
+    return (
+      <div className={className}>
+        <div className="flex items-baseline justify-between gap-3">
+          <p className="text-[10px] tracking-[0.18em] text-muted-foreground uppercase">
+            Headroom
+          </p>
+          <p className="text-[10px] text-muted-foreground tabular-nums">
+            {headroomPct !== null ? `${headroomPct}%` : "idle"}
+            {limiting ? " · lim" : ""}
+          </p>
+        </div>
+        {bar}
+      </div>
+    );
+  }
+
   return (
     <div className={className}>
       <div className="flex items-baseline justify-between">
@@ -49,25 +85,7 @@ export function HeadroomMeter({
         </p>
       </div>
 
-      <div
-        className="mt-3 h-1.5 w-full overflow-hidden bg-secondary"
-        role="meter"
-        aria-label="Loudness headroom"
-        aria-valuemin={0}
-        aria-valuemax={100}
-        aria-valuenow={headroomPct ?? 100}
-      >
-        <div
-          className={`h-full transition-[width] duration-150 ${
-            limiting || level > 0.92
-              ? "bg-destructive"
-              : level > 0.75
-                ? "bg-muted-foreground"
-                : "bg-foreground"
-          }`}
-          style={{ width: `${Math.max(2, level * 100)}%` }}
-        />
-      </div>
+      {bar}
 
       <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-1 text-[11px] text-muted-foreground">
         <span className="tracking-[0.18em] uppercase">

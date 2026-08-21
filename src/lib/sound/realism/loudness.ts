@@ -1,0 +1,57 @@
+/**
+ * Subjective loudness balance per profile (0.4..1.6).
+ * Applied on top of master volume so no profile dominates the library.
+ */
+export const PROFILE_LOUDNESS: Record<string, number> = {
+  "gt-v8": 1.02,
+  "racing-v10": 0.92,
+  "race-car": 0.94,
+  "rally-car": 0.9,
+  "cyber-pulse": 1.05,
+  "space-ship": 1.08,
+  ufo: 0.95,
+  "speed-boat": 0.88,
+  "cruise-ship": 1.1,
+  "turbine-jet": 0.82,
+  "private-jet": 0.95,
+  helicopter: 0.9,
+  "wild-west-carriage": 1.0,
+  "romanian-85-carriage": 1.02,
+  "steam-train": 0.95,
+  "wiesn-tractor": 1.0,
+  "open-wind": 1.12,
+  "storm-glider": 0.95,
+  "santa-sleigh": 1.0,
+  "laughing-machine": 0.92,
+  "farting-car": 0.9,
+  "kazoo-kart": 0.88,
+  "flat-six-sport": 0.96,
+  "american-muscle-v8": 0.98,
+  "turbo-inline-6": 0.99,
+  "electric-hypercar": 0.92,
+  "formula-electric": 0.9,
+  "neon-drive": 0.98,
+  "maglev-train": 1.08,
+  "high-speed-train": 1.0,
+  submarine: 1.08,
+  "jet-ski": 0.92,
+  "motorcycle-superbike": 0.92,
+  "big-twin": 1.0,
+  snowmobile: 0.94,
+  tank: 0.97,
+  "construction-monster": 0.96,
+  "horse-gallop": 1.02,
+  dragon: 1.0,
+  "thunder-beast": 0.98,
+  "retro-arcade": 0.94,
+  "synthwave-drive": 1.0,
+  "deep-bass-pulse": 1.08,
+  "zen-drive": 1.12,
+  "rain-drive": 1.06,
+  "ocean-drive": 1.1,
+  heartbeat: 1.0,
+};
+
+export function loudnessForProfile(id: string) {
+  return PROFILE_LOUDNESS[id] ?? 1;
+}

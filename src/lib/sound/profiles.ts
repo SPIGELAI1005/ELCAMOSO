@@ -1,6 +1,18 @@
 import type { LayerMix } from "@/lib/sound/environments";
+import { EXPANSION_PROFILES } from "@/lib/sound/profiles-expansion";
 
 export type DrivetrainMode = "virtual-transmission" | "continuous";
+
+/** How the improved synth interprets motion (orthogonal to drivetrainMode). */
+export type MotionModel =
+  | "virtual-transmission"
+  | "continuous"
+  | "cadence"
+  | "ambient"
+  | "event-driven"
+  | "physical-machine";
+
+export type SourceMode = "procedural" | "sample" | "hybrid";
 
 export type ProfileCategory =
   | "Classic"
@@ -12,6 +24,8 @@ export type ProfileCategory =
   | "Festive"
   | "Playful"
   | "Heritage"
+  | "Machines"
+  | "Musical"
   | "Garage";
 
 export type LfoTarget = "pitch" | "filter" | "amp";
@@ -42,13 +56,15 @@ export type TextureKind =
 /** Occasional signature one-shots that give a profile personality. */
 export type SignalKind =
   | "horn"
+  | "roar"
   | "laugh"
   | "hohoho"
   | "whistle"
   | "seagull"
   | "whip"
   | "neigh"
-  | "beam";
+  | "beam"
+  | "sonar";
 
 export interface RhythmSpec {
   kind: RhythmKind;
@@ -94,6 +110,12 @@ export interface ProfileVoice {
   noise: number;
   detune: number;
   wave: OscillatorType;
+  /** scales the harmonic core (default 1). Lower for rhythm-led profiles. */
+  coreLevel?: number;
+  /** optional resonance override for the main voice filter */
+  filterQ?: number;
+  /** broadband bed under the core; pink suits jets and wind better than white */
+  noiseColor?: "white" | "pink";
   lfoRate?: number;
   lfoDepth?: number;
   lfoTarget?: LfoTarget;
@@ -111,6 +133,10 @@ export interface SoundProfile {
   traits: [string, string, string];
   description: string;
   drivetrainMode: DrivetrainMode;
+  /** Improved-synth motion interpretation; defaults from drivetrainMode / family. */
+  motionModel?: MotionModel;
+  /** procedural | sample | hybrid — all current built-ins are procedural or hybrid. */
+  sourceMode?: SourceMode;
   /** timbre parameters consumed by the synthesis layer */
   voice: ProfileVoice;
   transmission?: {
@@ -159,7 +185,7 @@ export const SOUND_PROFILES: SoundProfile[] = [
       waveResponse: 0.8,
       filterBase: 220,
       filterRange: 2400,
-      noise: 0.16,
+      noise: 0.12,
       detune: 7,
       wave: "sawtooth",
       textures: [
@@ -205,10 +231,12 @@ export const SOUND_PROFILES: SoundProfile[] = [
       waveResponse: 1,
       filterBase: 300,
       filterRange: 3600,
-      noise: 0.05,
+      noise: 0.08,
+      noiseColor: "pink",
       detune: 11,
       wave: "sawtooth",
-      textures: [{ kind: "sizzle", level: 0.1, tone: 5200, speedScale: 1, surge: 0.3 }],
+      filterQ: 2.2,
+      textures: [{ kind: "sizzle", level: 0.12, tone: 5200, speedScale: 1, surge: 0.3 }],
     },
   },
   {
@@ -247,7 +275,7 @@ export const SOUND_PROFILES: SoundProfile[] = [
       waveResponse: 1,
       filterBase: 340,
       filterRange: 3800,
-      noise: 0.34,
+      noise: 0.19,
       detune: 12,
       wave: "square",
       lfoRate: 0.8,
@@ -276,7 +304,7 @@ export const SOUND_PROFILES: SoundProfile[] = [
       waveResponse: 0.7,
       filterBase: 180,
       filterRange: 2600,
-      noise: 0.14,
+      noise: 0.11,
       detune: 18,
       wave: "triangle",
       lfoRate: 0.14,
@@ -321,20 +349,23 @@ export const SOUND_PROFILES: SoundProfile[] = [
       "Outboard bite with water rushing past the hull and spray thrown up as you come on plane.",
     drivetrainMode: "continuous",
     voice: {
-      baseFrequency: 70,
-      harmonics: [1, 2, 3.02, 4],
+      baseFrequency: 55,
+      harmonics: [1, 2.02, 3.01],
       waveResponse: 1.05,
-      filterBase: 420,
-      filterRange: 4400,
-      noise: 0.3,
-      detune: 9,
+      filterBase: 280,
+      filterRange: 2800,
+      noise: 0.21,
+      noiseColor: "pink",
+      detune: 11,
       wave: "sawtooth",
-      rhythm: { kind: "splash", baseRate: 1.1, rateScale: 4.5, level: 0.22, tone: 900 },
-      rhythmB: { kind: "chug", baseRate: 7, rateScale: 30, level: 0.07, tone: 190 },
+      coreLevel: 0.55,
+      filterQ: 1.1,
+      rhythm: { kind: "splash", baseRate: 1.4, rateScale: 5.5, level: 0.32, tone: 1100 },
+      rhythmB: { kind: "chug", baseRate: 8, rateScale: 34, level: 0.14, tone: 160 },
       textures: [
-        { kind: "water", level: 0.44, tone: 1500, speedScale: 1, surge: 0.55 },
-        { kind: "water", level: 0.22, tone: 320, speedScale: 0.8, surge: 0.3 },
-        { kind: "wind", level: 0.18, tone: 2600, speedScale: 1 },
+        { kind: "water", level: 0.34, tone: 1600, speedScale: 1, surge: 0.65 },
+        { kind: "water", level: 0.2, tone: 280, speedScale: 0.85, surge: 0.35 },
+        { kind: "wind", level: 0.14, tone: 2800, speedScale: 1 },
       ],
       signals: [{ kind: "seagull", everySeconds: 17, jitter: 9, level: 0.07, tone: 1700 }],
     },
@@ -348,23 +379,26 @@ export const SOUND_PROFILES: SoundProfile[] = [
       "A vast low horn, engine-room hum and the endless wash of water down the hull.",
     drivetrainMode: "continuous",
     voice: {
-      baseFrequency: 32,
-      harmonics: [1, 1.5, 2, 2.5],
+      baseFrequency: 28,
+      harmonics: [1, 1.5, 2],
       waveResponse: 0.5,
-      filterBase: 120,
-      filterRange: 900,
+      filterBase: 90,
+      filterRange: 700,
       noise: 0.12,
+      noiseColor: "pink",
       detune: 14,
       wave: "sine",
+      coreLevel: 0.7,
+      filterQ: 0.9,
       lfoRate: 0.09,
-      lfoDepth: 260,
+      lfoDepth: 180,
       lfoTarget: "filter",
       textures: [
-        { kind: "water", level: 0.3, tone: 700, speedScale: 0.85, surge: 0.16 },
-        { kind: "rumble", level: 0.34, tone: 55, speedScale: 0.4, surge: 0.1 },
+        { kind: "water", level: 0.38, tone: 650, speedScale: 0.85, surge: 0.14 },
+        { kind: "rumble", level: 0.4, tone: 48, speedScale: 0.35, surge: 0.08 },
       ],
       signals: [
-        { kind: "horn", everySeconds: 21, jitter: 8, level: 0.16, tone: 82 },
+        { kind: "horn", everySeconds: 21, jitter: 8, level: 0.18, tone: 78 },
         { kind: "seagull", everySeconds: 26, jitter: 12, level: 0.05, tone: 1500 },
       ],
     },
@@ -484,7 +518,7 @@ export const SOUND_PROFILES: SoundProfile[] = [
       waveResponse: 1,
       filterBase: 140,
       filterRange: 900,
-      noise: 0.24,
+      noise: 0.13,
       detune: 24,
       wave: "square",
       lfoRate: 11,
@@ -503,22 +537,25 @@ export const SOUND_PROFILES: SoundProfile[] = [
     description: "Pistons, escaping steam and a far-off whistle as the line opens up ahead.",
     drivetrainMode: "continuous",
     voice: {
-      baseFrequency: 38,
-      harmonics: [1, 2, 3.02],
+      baseFrequency: 36,
+      harmonics: [1, 2.02],
       waveResponse: 0.8,
-      filterBase: 200,
-      filterRange: 1800,
-      noise: 0.18,
+      filterBase: 160,
+      filterRange: 1400,
+      noise: 0.17,
+      noiseColor: "pink",
       detune: 10,
       wave: "triangle",
-      rhythm: { kind: "chug", baseRate: 1.2, rateScale: 7, level: 0.26, tone: 220 },
-      rhythmB: { kind: "clack", baseRate: 0.8, rateScale: 5.5, level: 0.08, tone: 1400 },
+      coreLevel: 0.45,
+      filterQ: 1.0,
+      rhythm: { kind: "chug", baseRate: 1.4, rateScale: 8.5, level: 0.38, tone: 200 },
+      rhythmB: { kind: "clack", baseRate: 0.9, rateScale: 6, level: 0.12, tone: 1200 },
       textures: [
-        { kind: "steam", level: 0.3, tone: 3400, speedScale: 0.8, surge: 0.9 },
-        { kind: "rumble", level: 0.2, tone: 80, speedScale: 0.9 },
+        { kind: "steam", level: 0.4, tone: 3600, speedScale: 0.85, surge: 1.0 },
+        { kind: "rumble", level: 0.26, tone: 70, speedScale: 0.9 },
       ],
       signals: [
-        { kind: "whistle", everySeconds: 18, jitter: 9, level: 0.16, tone: 900, speedLinked: true },
+        { kind: "whistle", everySeconds: 18, jitter: 9, level: 0.18, tone: 880, speedLinked: true },
       ],
     },
   },
@@ -548,22 +585,27 @@ export const SOUND_PROFILES: SoundProfile[] = [
   {
     id: "turbine-jet",
     name: "Turbine Jet",
-    category: "Future",
-    traits: ["Spooling", "Airy", "Immense"],
-    description: "A turbine that spools smoothly with speed and sighs on regeneration.",
+    category: "Aviation",
+    traits: ["Spooling", "Roaring", "Immense"],
+    description:
+      "A turbofan spooling up: pink roar and a rising turbine whistle that sighs when you lift off.",
     drivetrainMode: "continuous",
     voice: {
-      baseFrequency: 120,
-      harmonics: [1, 2.02, 3.5, 5.03],
-      waveResponse: 1.1,
-      filterBase: 500,
-      filterRange: 6200,
-      noise: 0.42,
-      detune: 5,
-      wave: "sawtooth",
+      baseFrequency: 920,
+      harmonics: [1, 1.01],
+      waveResponse: 1.15,
+      filterBase: 900,
+      filterRange: 7800,
+      noise: 0.39,
+      noiseColor: "pink",
+      detune: 3,
+      wave: "sine",
+      coreLevel: 0.22,
+      filterQ: 0.7,
       textures: [
-        { kind: "wind", level: 0.34, tone: 2400, speedScale: 1, surge: 0.25 },
-        { kind: "rumble", level: 0.2, tone: 70, speedScale: 0.8 },
+        { kind: "wind", level: 0.28, tone: 2200, speedScale: 1, surge: 0.2 },
+        { kind: "sizzle", level: 0.12, tone: 7200, speedScale: 1 },
+        { kind: "rumble", level: 0.28, tone: 55, speedScale: 0.75 },
       ],
     },
   },
@@ -573,24 +615,24 @@ export const SOUND_PROFILES: SoundProfile[] = [
     category: "Aviation",
     traits: ["Chopping", "Powerful", "Hovering"],
     description:
-      "Rotor blades beating the air over a turbine whine. The chop quickens the harder you push.",
+      "Main-rotor blade slap with a thin turbine whine underneath. The chop quickens as you push harder.",
     drivetrainMode: "continuous",
     voice: {
-      baseFrequency: 76,
-      harmonics: [1, 2.01, 3.04, 5.02],
-      waveResponse: 0.95,
-      filterBase: 420,
-      filterRange: 3400,
-      noise: 0.3,
-      detune: 8,
-      wave: "sawtooth",
-      lfoRate: 5.4,
-      lfoDepth: 620,
-      lfoTarget: "filter",
-      rhythm: { kind: "rotor", baseRate: 5.5, rateScale: 9, level: 0.3, tone: 58 },
+      baseFrequency: 480,
+      harmonics: [1, 2.01],
+      waveResponse: 0.9,
+      filterBase: 900,
+      filterRange: 2800,
+      noise: 0.14,
+      noiseColor: "pink",
+      detune: 4,
+      wave: "sine",
+      coreLevel: 0.16,
+      filterQ: 0.85,
+      rhythm: { kind: "rotor", baseRate: 4.2, rateScale: 11, level: 0.62, tone: 42 },
       textures: [
-        { kind: "wind", level: 0.3, tone: 1900, speedScale: 0.8, surge: 0.5 },
-        { kind: "rumble", level: 0.26, tone: 75, speedScale: 0.6, surge: 0.35 },
+        { kind: "wind", level: 0.22, tone: 1600, speedScale: 0.75, surge: 0.45 },
+        { kind: "rumble", level: 0.3, tone: 60, speedScale: 0.55, surge: 0.3 },
       ],
     },
   },
@@ -600,26 +642,25 @@ export const SOUND_PROFILES: SoundProfile[] = [
     category: "Aviation",
     traits: ["Refined", "Spooling", "Effortless"],
     description:
-      "Twin turbofans spooling up behind a calm cabin. Smooth thrust with a long, expensive sigh on lift-off.",
+      "Twin turbofans behind a calm cabin: smooth pink roar, a clean whistle on spool-up, long sigh on lift.",
     drivetrainMode: "continuous",
     voice: {
-      baseFrequency: 150,
-      harmonics: [1, 2.03, 3.01, 4.5, 6.02],
+      baseFrequency: 1100,
+      harmonics: [1, 1.005],
       waveResponse: 1.05,
-      filterBase: 620,
-      filterRange: 7200,
-      noise: 0.46,
-      detune: 6,
-      wave: "sawtooth",
-      lfoRate: 0.2,
-      lfoDepth: 420,
-      lfoTarget: "filter",
+      filterBase: 1100,
+      filterRange: 8200,
+      noise: 0.35,
+      noiseColor: "pink",
+      detune: 2,
+      wave: "sine",
+      coreLevel: 0.18,
+      filterQ: 0.65,
       textures: [
-        { kind: "wind", level: 0.38, tone: 3000, speedScale: 1, surge: 0.18 },
-        { kind: "sizzle", level: 0.12, tone: 6400, speedScale: 0.9 },
-        { kind: "rumble", level: 0.18, tone: 65, speedScale: 0.7 },
+        { kind: "wind", level: 0.24, tone: 2600, speedScale: 1, surge: 0.15 },
+        { kind: "sizzle", level: 0.09, tone: 7800, speedScale: 0.95 },
+        { kind: "rumble", level: 0.2, tone: 58, speedScale: 0.65 },
       ],
-      signals: [{ kind: "beam", everySeconds: 26, jitter: 12, level: 0.05, tone: 1100 }],
     },
   },
   {
@@ -628,29 +669,32 @@ export const SOUND_PROFILES: SoundProfile[] = [
     category: "Heritage",
     traits: ["Single-Cylinder", "Stubborn", "Bavarian"],
     description:
-      "An old field tractor putt-putting down the lane: slow strokes, a smoky stack and a cheerful crowd somewhere past the hedge.",
+      "A Lanz-style hot-bulb: one enormous stroke at a time, flywheel inertia and a smoky stack. Peak around 630 RPM, never a diesel car pitched down.",
     drivetrainMode: "virtual-transmission",
     voice: {
-      baseFrequency: 20,
-      harmonics: [1, 2.02, 3.06],
-      waveResponse: 0.6,
-      filterBase: 160,
-      filterRange: 1100,
-      noise: 0.2,
-      detune: 22,
+      baseFrequency: 12,
+      harmonics: [1, 2.02],
+      waveResponse: 0.45,
+      filterBase: 120,
+      filterRange: 700,
+      noise: 0.15,
+      noiseColor: "pink",
+      detune: 18,
       wave: "square",
-      rhythm: { kind: "putt", baseRate: 2.2, rateScale: 7.5, level: 0.3, tone: 120 },
-      rhythmB: { kind: "creak", baseRate: 0.24, rateScale: 0.7, level: 0.1, tone: 140 },
+      coreLevel: 0.35,
+      rhythm: { kind: "putt", baseRate: 1.2, rateScale: 3.5, level: 0.42, tone: 95 },
+      rhythmB: { kind: "creak", baseRate: 0.2, rateScale: 0.5, level: 0.08, tone: 130 },
       textures: [
-        { kind: "rumble", level: 0.28, tone: 85, speedScale: 0.6, surge: 1.1 },
-        { kind: "crowd", level: 0.1, tone: 760, speedScale: 0.25, surge: 0.2 },
-      ],
-      signals: [
-        { kind: "hohoho", everySeconds: 28, jitter: 12, level: 0.09, tone: 140 },
-        { kind: "whistle", everySeconds: 34, jitter: 15, level: 0.05, tone: 1500 },
+        { kind: "rumble", level: 0.28, tone: 65, speedScale: 0.5, surge: 0.8 },
+        { kind: "crowd", level: 0.06, tone: 760, speedScale: 0.2, surge: 0.15 },
       ],
     },
-    transmission: { gearRatios: [18, 12, 8.5, 6.4], idleRpm: 480, redlineRpm: 2400, shiftSmoothing: 0.3 },
+    transmission: {
+      gearRatios: [22, 14, 10, 7.5],
+      idleRpm: 280,
+      redlineRpm: 650,
+      shiftSmoothing: 0.55,
+    },
   },
   {
     id: "open-wind",
@@ -666,16 +710,19 @@ export const SOUND_PROFILES: SoundProfile[] = [
       waveResponse: 0.55,
       filterBase: 220,
       filterRange: 1800,
-      noise: 0.6,
+      noise: 0.33,
+      noiseColor: "pink",
       detune: 15,
       wave: "sine",
+      coreLevel: 0.25,
+      filterQ: 0.8,
       lfoRate: 0.12,
-      lfoDepth: 260,
+      lfoDepth: 200,
       lfoTarget: "filter",
       textures: [
-        { kind: "wind", level: 0.5, tone: 1200, speedScale: 1, surge: 0.22 },
-        { kind: "wind", level: 0.26, tone: 3200, speedScale: 1, surge: 0.45 },
-        { kind: "rumble", level: 0.12, tone: 60, speedScale: 0.5, surge: 0.14 },
+        { kind: "wind", level: 0.32, tone: 1100, speedScale: 1, surge: 0.22 },
+        { kind: "wind", level: 0.16, tone: 3000, speedScale: 1, surge: 0.45 },
+        { kind: "rumble", level: 0.1, tone: 55, speedScale: 0.45, surge: 0.12 },
       ],
     },
   },
@@ -689,24 +736,28 @@ export const SOUND_PROFILES: SoundProfile[] = [
     drivetrainMode: "continuous",
     voice: {
       baseFrequency: 34,
-      harmonics: [1, 1.98, 3.4],
+      harmonics: [1, 1.98],
       waveResponse: 0.7,
-      filterBase: 180,
-      filterRange: 2600,
-      noise: 0.55,
+      filterBase: 160,
+      filterRange: 2400,
+      noise: 0.3,
+      noiseColor: "pink",
       detune: 26,
       wave: "triangle",
+      coreLevel: 0.3,
+      filterQ: 0.9,
       lfoRate: 0.35,
-      lfoDepth: 900,
+      lfoDepth: 700,
       lfoTarget: "filter",
       textures: [
-        { kind: "wind", level: 0.46, tone: 900, speedScale: 0.9, surge: 0.7 },
-        { kind: "wind", level: 0.3, tone: 4200, speedScale: 1, surge: 1.3 },
-        { kind: "rumble", level: 0.3, tone: 50, speedScale: 0.4, surge: 0.09 },
+        { kind: "wind", level: 0.3, tone: 850, speedScale: 0.9, surge: 0.75 },
+        { kind: "wind", level: 0.16, tone: 4000, speedScale: 1, surge: 1.3 },
+        { kind: "rumble", level: 0.34, tone: 45, speedScale: 0.35, surge: 0.09 },
       ],
       signals: [{ kind: "beam", everySeconds: 20, jitter: 10, level: 0.07, tone: 260 }],
     },
   },
+  ...EXPANSION_PROFILES,
 ];
 
 export const PROFILE_CATEGORIES: ProfileCategory[] = [
@@ -715,8 +766,10 @@ export const PROFILE_CATEGORIES: ProfileCategory[] = [
   "Future",
   "Nautical",
   "Aviation",
+  "Machines",
   "Nature",
   "Heritage",
+  "Musical",
   "Festive",
   "Playful",
   "Garage",

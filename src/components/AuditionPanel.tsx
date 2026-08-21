@@ -56,7 +56,7 @@ export function AuditionPanel({ profileId }: { profileId: string }) {
   );
 
   return (
-    <section className="mt-16 border border-border p-6 sm:p-8">
+    <section className="border border-border p-6 sm:p-8">
       <QuickJump
         className="mb-10 border-b border-border pb-8"
         settings={settings}
@@ -106,7 +106,8 @@ export function AuditionPanel({ profileId }: { profileId: string }) {
             step={1}
             value={targetKmh}
             onChange={(e) => setTarget(Number(e.target.value))}
-            className="mt-5 h-px w-full appearance-none bg-border accent-foreground"
+            aria-label="Simulated speed"
+            className="mt-5 slider h-11 w-full"
           />
           <div className="mt-5 flex gap-3">
             {[0, 30, 60, 110, 160].map((v) => (
@@ -151,7 +152,7 @@ export function AuditionPanel({ profileId }: { profileId: string }) {
           step={0.05}
           value={profileGain}
           onChange={(e) => setGain(Number(e.target.value))}
-          className="mt-4 h-px w-full appearance-none bg-border accent-foreground"
+          className="mt-4 slider h-11 w-full"
         />
         <p className="mt-3 text-xs text-muted-foreground">
           Level this profile against the others. Master volume and the safety limiter stay
@@ -257,7 +258,7 @@ function Tuner({
         step={0.05}
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
-        className="mt-4 h-px w-full appearance-none bg-border accent-foreground"
+        className="mt-4 slider h-11 w-full"
       />
       <p className="mt-3 text-xs text-muted-foreground">{hint}</p>
     </div>

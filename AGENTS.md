@@ -1,10 +1,8 @@
-<!-- LOVABLE:BEGIN -->
 > [!IMPORTANT]
-> This project is connected to [Lovable](https://lovable.dev). Avoid rewriting
-> published git history — force pushing, or rebasing/amending/squashing commits
-> that are already pushed — as it rewrites history on Lovable's side and the
-> user will likely lose their project history.
->
-> Commits you push to the connected branch sync back to Lovable and show up in
-> the editor, so keep the branch in a working state.
-<!-- LOVABLE:END -->
+> Keep the connected remote branch in a working state. Avoid rewriting published
+> git history (force push, rebase/amend/squash of already-pushed commits) so
+> project history stays intact for everyone syncing the same branch.
+
+Product spec: `elcamoso-comprehensive-spec.md`. Follow it for identity, audio, routes, UX, and implementation rules. Update it when the product or architecture changes.
+
+Working memory: `docs/MEMORY_BANK_AND_CHANGELOG.md`.

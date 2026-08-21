@@ -89,8 +89,18 @@ export function ElcamosoMark({
 }
 
 
+const WORDMARK_LETTERS = ["E", "L", "C", "A", "M", "O", "S", "O"] as const;
+
 export function ElcamosoWordmark({ className }: { className?: string }) {
-  return <span className={cn("wordmark", className)}>Elcamoso</span>;
+  return (
+    <span className={cn("wordmark wordmark-lockup", className)} aria-label="ELCAMOSO">
+      {WORDMARK_LETTERS.map((letter, index) => (
+        <span key={`${letter}-${index}`} aria-hidden="true">
+          {letter}
+        </span>
+      ))}
+    </span>
+  );
 }
 
 interface LogoProps extends MarkProps {

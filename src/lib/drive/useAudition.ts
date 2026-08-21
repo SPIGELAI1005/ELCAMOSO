@@ -1,7 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import { computeDriveState, IDLE_STATE, type DriveState } from "@/lib/drive/model";
-import { SoundEngine } from "@/lib/sound/engine";
-import { getProfile } from "@/lib/sound/profiles";
+import { useCallback, useEffect, useMemo } from "react";
+import { getSession } from "@/lib/drive/session";
+import { useSessionStore } from "@/lib/store/session-store";
 import type { ProfileTuning } from "@/lib/drive/settings";
 import type { LayerMix } from "@/lib/sound/environments";
 import type { SoundSnippet } from "@/lib/sound/snippets";
@@ -11,20 +10,40 @@ interface Options {
   volume: number;
   tuning?: ProfileTuning | undefined;
   profileGain?: number;
-  /** change this to rebuild the voice while keeping the same profile id */
   refreshKey?: unknown;
-  /** driving environment id */
   environmentId?: string;
-  /** per-layer mixer */
   mix?: LayerMix;
-  /** custom audio snippets mapped to driving states */
   snippets?: SoundSnippet[];
 }
 
-/**
- * Audition mode: a motion simulator that drives the sound engine without any
- * sensors, so a profile can be previewed and tuned before a real drive.
- */
+/** Stable key so fresh object identities from getTuning()/settings don't re-sync. */
+function auditionConfigKey(opts: {
+  profileId: string;
+  volume: number;
+  profileGain: number;
+  refreshKey?: unknown;
+  environmentId?: string;
+  mix?: LayerMix;
+  snippets?: SoundSnippet[];
+  tuning?: ProfileTuning;
+}): string {
+  return JSON.stringify({
+    profileId: opts.profileId,
+    volume: opts.volume,
+    profileGain: opts.profileGain,
+    refreshKey: opts.refreshKey,
+    environmentId: opts.environmentId,
+    tuning: opts.tuning,
+    mix: opts.mix,
+    snippets: opts.snippets?.map((s) => ({
+      id: s.id,
+      trigger: s.trigger,
+      level: s.level,
+      dataLen: s.dataUrl?.length ?? 0,
+    })),
+  });
+}
+
 export function useAudition({
   profileId,
   volume,
@@ -35,120 +54,53 @@ export function useAudition({
   mix,
   snippets,
 }: Options) {
-  const [active, setActive] = useState(false);
-  const [state, setState] = useState<DriveState>(IDLE_STATE);
-  const [targetKmh, setTargetKmh] = useState(60);
-  const [meter, setMeter] = useState<{ peak: number; rms: number; headroom: number; reduction: number } | null>(
-    null,
+  const snap = useSessionStore();
+  const session = getSession();
+  const configKey = useMemo(
+    () =>
+      auditionConfigKey({
+        profileId,
+        volume,
+        profileGain,
+        ...(refreshKey !== undefined ? { refreshKey } : {}),
+        ...(environmentId !== undefined ? { environmentId } : {}),
+        ...(mix !== undefined ? { mix } : {}),
+        ...(snippets !== undefined ? { snippets } : {}),
+        ...(tuning !== undefined ? { tuning } : {}),
+      }),
+    [profileId, volume, profileGain, refreshKey, environmentId, mix, snippets, tuning],
   );
 
-  const engineRef = useRef<SoundEngine | null>(null);
-  const stateRef = useRef<DriveState>(IDLE_STATE);
-  const speedRef = useRef(0);
-  const targetRef = useRef(60);
-  const lastTick = useRef(0);
-  const lastMeter = useRef(0);
-  const rafId = useRef<number | null>(null);
-
-  const profileRef = useRef(getProfile(profileId));
-  profileRef.current = getProfile(profileId);
-  const tuningRef = useRef<ProfileTuning | undefined>(tuning);
-  tuningRef.current = tuning;
-  const spaceRef = useRef({ environmentId, mix, snippets });
-  spaceRef.current = { environmentId, mix, snippets };
-
-  const setTarget = useCallback((kmh: number) => {
-    targetRef.current = kmh;
-    setTargetKmh(kmh);
-  }, []);
-
-  const loop = useCallback(() => {
-    const now = performance.now();
-    const dt = Math.min(0.5, Math.max(0.001, (now - lastTick.current) / 1000));
-    lastTick.current = now;
-
-    const target = targetRef.current / 3.6;
-    const rate = target > speedRef.current ? 2.6 : 3.4;
-    const delta = target - speedRef.current;
-    const step = Math.sign(delta) * Math.min(Math.abs(delta), rate * dt);
-    const previousSpeed = speedRef.current;
-    speedRef.current = Math.max(0, previousSpeed + step);
-    const acceleration = (speedRef.current - previousSpeed) / dt;
-
-    const next = computeDriveState({
-      speed: speedRef.current,
-      acceleration: Number.isFinite(acceleration) ? acceleration : 0,
-      previous: stateRef.current,
-      profile: profileRef.current,
-      dt,
-      tuning: tuningRef.current,
+  useEffect(() => {
+    session.syncConfig({
+      profileId,
+      volume,
+      profileGain,
+      ...(tuning ? { tuning } : {}),
+      ...(environmentId ? { environmentId } : {}),
+      ...(mix ? { mix } : {}),
+      ...(snippets ? { snippets } : {}),
     });
-    stateRef.current = next;
-    engineRef.current?.update(next);
-    setState(next);
-    // Loudness readout is sampled a few times a second: enough for a meter,
-    // cheap enough to sit inside the animation loop.
-    if (now - lastMeter.current > 120) {
-      lastMeter.current = now;
-      setMeter(engineRef.current?.getMeter() ?? null);
-    }
-    rafId.current = requestAnimationFrame(loop);
-  }, []);
+    // Sync only when configKey changes. Object refs (tuning/mix/snippets) churn
+    // every render via getTuning() spreads and must not be listed as deps.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- configKey is the content gate
+  }, [session, configKey]);
 
-  const stop = useCallback(() => {
-    if (rafId.current !== null) cancelAnimationFrame(rafId.current);
-    rafId.current = null;
-    void engineRef.current?.stop();
-    engineRef.current = null;
-    speedRef.current = 0;
-    stateRef.current = IDLE_STATE;
-    setState(IDLE_STATE);
-    setMeter(null);
-    setActive(false);
-  }, []);
+  const setTarget = useCallback((kmh: number) => session.setAuditionKmh(kmh), [session]);
+  const start = useCallback(() => session.startAudition(), [session]);
+  const stop = useCallback(() => session.stop(), [session]);
+  const active =
+    (snap.kind === "audition" || snap.kind === "ab") &&
+    (snap.status === "running" || snap.status === "starting");
 
-  const start = useCallback(async () => {
-    if (engineRef.current) return;
-    const engine = new SoundEngine();
-    await engine.start(profileRef.current, {
-      signature: false,
-      environmentId: spaceRef.current.environmentId,
-      mix: spaceRef.current.mix,
-      snippets: spaceRef.current.snippets,
-    });
-    engine.setProfileGain(profileGain);
-    engine.setVolume(volume);
-    engineRef.current = engine;
-    lastTick.current = performance.now();
-    setActive(true);
-    rafId.current = requestAnimationFrame(loop);
-  }, [loop, profileGain, volume]);
-
-  useEffect(() => {
-    engineRef.current?.setVolume(volume);
-  }, [volume]);
-
-  useEffect(() => {
-    engineRef.current?.setProfileGain(profileGain);
-  }, [profileGain]);
-
-  useEffect(() => {
-    engineRef.current?.setProfile(getProfile(profileId), true);
-  }, [profileId, refreshKey]);
-
-  useEffect(() => {
-    if (environmentId) engineRef.current?.setEnvironment(environmentId);
-  }, [environmentId]);
-
-  useEffect(() => {
-    if (mix) engineRef.current?.setMix(mix);
-  }, [mix]);
-
-  useEffect(() => {
-    if (snippets) void engineRef.current?.setSnippets(snippets);
-  }, [snippets]);
-
-  useEffect(() => () => stop(), [stop]);
-
-  return { active, state, start, stop, targetKmh, setTarget, meter };
+  return {
+    active,
+    state: snap.state,
+    start,
+    stop,
+    targetKmh: snap.auditionKmh,
+    setTarget,
+    meter: snap.meter,
+    perf: snap.perf,
+  };
 }

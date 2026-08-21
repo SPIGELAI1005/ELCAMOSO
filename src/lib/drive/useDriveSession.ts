@@ -1,7 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import { computeDriveState, IDLE_STATE, type DriveState } from "@/lib/drive/model";
-import { SoundEngine } from "@/lib/sound/engine";
-import { getProfile } from "@/lib/sound/profiles";
+import { useCallback } from "react";
+import { getSession } from "@/lib/drive/session";
+import { useSessionStore } from "@/lib/store/session-store";
 import type { ProfileTuning } from "@/lib/drive/settings";
 import type { LayerMix } from "@/lib/sound/environments";
 import type { SoundSnippet } from "@/lib/sound/snippets";
@@ -13,177 +12,28 @@ interface Options {
   volume: number;
   demoMotion: boolean;
   tuning?: ProfileTuning | undefined;
-  /** per-profile balance gain */
   profileGain?: number;
-  /** calibrated device motion sensitivity */
   motionSensitivity?: number;
-  /** calibrated sensor noise floor in m/s^2 */
   motionNoiseFloor?: number;
-  /** driving environment id */
   environmentId?: string;
-  /** per-layer mixer */
   mix?: LayerMix;
-  /** custom audio snippets mapped to driving states */
   snippets?: SoundSnippet[];
 }
 
-export function useDriveSession({
-  profileId,
-  volume,
-  demoMotion,
-  tuning,
-  profileGain = 1,
-  motionSensitivity = 1,
-  motionNoiseFloor = 0,
-  environmentId,
-  mix,
-  snippets,
-}: Options) {
-  const calibrationRef = useRef({ motionSensitivity, motionNoiseFloor });
-  calibrationRef.current = { motionSensitivity, motionNoiseFloor };
-  const tuningRef = useRef<ProfileTuning | undefined>(tuning);
-  tuningRef.current = tuning;
-  const spaceRef = useRef({ environmentId, mix, snippets });
-  spaceRef.current = { environmentId, mix, snippets };
-  const [status, setStatus] = useState<DriveStatus>("idle");
-  const [error, setError] = useState<string | null>(null);
-  const [state, setState] = useState<DriveState>(IDLE_STATE);
+export function useDriveSession({ demoMotion }: Options) {
+  const snap = useSessionStore();
+  const session = getSession();
+  const start = useCallback(() => session.startDrive({ demoMotion }), [session, demoMotion]);
+  const stop = useCallback(() => session.stop(), [session]);
 
-  const engineRef = useRef<SoundEngine | null>(null);
-  const stateRef = useRef<DriveState>(IDLE_STATE);
-  const rawSpeed = useRef(0);
-  const lastSpeed = useRef(0);
-  const lastTick = useRef(0);
-  const watchId = useRef<number | null>(null);
-  const rafId = useRef<number | null>(null);
-  const demoPhase = useRef(0);
+  const status: DriveStatus =
+    snap.kind === "drive" && snap.status === "running"
+      ? "driving"
+      : snap.kind === "drive" && snap.status === "starting"
+        ? "starting"
+        : snap.status === "error"
+          ? "error"
+          : "idle";
 
-  const profileRef = useRef(getProfile(profileId));
-  profileRef.current = getProfile(profileId);
-
-  const stop = useCallback(() => {
-    if (rafId.current !== null) cancelAnimationFrame(rafId.current);
-    rafId.current = null;
-    if (watchId.current !== null && typeof navigator !== "undefined") {
-      navigator.geolocation.clearWatch(watchId.current);
-      watchId.current = null;
-    }
-    engineRef.current?.stop();
-    engineRef.current = null;
-    stateRef.current = IDLE_STATE;
-    setState(IDLE_STATE);
-    setStatus("idle");
-  }, []);
-
-  const loop = useCallback(() => {
-    const now = performance.now();
-    const dt = Math.min(0.5, Math.max(0.001, (now - lastTick.current) / 1000));
-    lastTick.current = now;
-
-    if (demoMotion) {
-      demoPhase.current += dt * 0.16;
-      const p = demoPhase.current;
-      rawSpeed.current = Math.max(0, 16 + Math.sin(p) * 13 + Math.sin(p * 2.7) * 4);
-    }
-
-    const speed = rawSpeed.current;
-    const rawAccel = (speed - lastSpeed.current) / dt;
-    lastSpeed.current = speed;
-    // calibration: ignore sensor noise, then scale to this device
-    const { motionSensitivity: sens, motionNoiseFloor: floor } = calibrationRef.current;
-    const deadzoned = Math.abs(rawAccel) < floor * 0.35 ? 0 : rawAccel;
-    const acceleration = deadzoned * sens;
-
-    const next = computeDriveState({
-      speed,
-      acceleration: Number.isFinite(acceleration) ? acceleration : 0,
-      previous: stateRef.current,
-      profile: profileRef.current,
-      dt,
-      tuning: tuningRef.current,
-    });
-    stateRef.current = next;
-    engineRef.current?.update(next);
-    setState(next);
-    rafId.current = requestAnimationFrame(loop);
-  }, [demoMotion]);
-
-  const start = useCallback(async () => {
-    setError(null);
-    setStatus("starting");
-    try {
-      const engine = new SoundEngine();
-      await engine.start(profileRef.current, {
-      environmentId: spaceRef.current.environmentId,
-      mix: spaceRef.current.mix,
-      snippets: spaceRef.current.snippets,
-    });
-      engine.setProfileGain(profileGain);
-      engine.setVolume(volume);
-      engineRef.current = engine;
-
-      if (!demoMotion) {
-        if (typeof navigator === "undefined" || !navigator.geolocation) {
-          throw new Error("no-geo");
-        }
-        await new Promise<void>((resolve, reject) => {
-          let settled = false;
-          watchId.current = navigator.geolocation.watchPosition(
-            (pos) => {
-              rawSpeed.current = Math.max(0, pos.coords.speed ?? 0);
-              if (!settled) {
-                settled = true;
-                resolve();
-              }
-            },
-            (err) => {
-              if (!settled) {
-                settled = true;
-                reject(err);
-              }
-            },
-            { enableHighAccuracy: true, maximumAge: 1000, timeout: 15000 },
-          );
-        });
-      }
-
-      lastTick.current = performance.now();
-      lastSpeed.current = 0;
-      setStatus("driving");
-      rafId.current = requestAnimationFrame(loop);
-    } catch {
-      engineRef.current?.stop();
-      engineRef.current = null;
-      setStatus("error");
-      setError("Location unavailable");
-    }
-  }, [demoMotion, loop, profileGain, volume]);
-
-  useEffect(() => {
-    if (engineRef.current) engineRef.current.setVolume(volume);
-  }, [volume]);
-
-  useEffect(() => {
-    engineRef.current?.setProfileGain(profileGain);
-  }, [profileGain]);
-
-  useEffect(() => {
-    if (engineRef.current) engineRef.current.setProfile(getProfile(profileId));
-  }, [profileId]);
-
-  useEffect(() => {
-    if (environmentId) engineRef.current?.setEnvironment(environmentId);
-  }, [environmentId]);
-
-  useEffect(() => {
-    if (mix) engineRef.current?.setMix(mix);
-  }, [mix]);
-
-  useEffect(() => {
-    if (snippets) void engineRef.current?.setSnippets(snippets);
-  }, [snippets]);
-
-  useEffect(() => () => stop(), [stop]);
-
-  return { status, error, state, start, stop };
+  return { status, error: snap.error, state: snap.state, start, stop };
 }
