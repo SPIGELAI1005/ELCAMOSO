@@ -1,5 +1,6 @@
 import { computeDriveState, IDLE_STATE, type DriveState } from "@/lib/drive/model";
 import { fuseMotion } from "@/lib/drive/fusion";
+import { resolveGpsSpeed, type GpsPoint } from "@/lib/drive/gps-speed";
 import { cappedGain } from "@/lib/drive/safety";
 import { matchRule, type AutoRule, type AutoRulesMode, type ProfileRule } from "@/lib/drive/rules";
 import { ContextClassifier, predictState, type DriveContext } from "@/lib/drive/context";
@@ -13,6 +14,9 @@ import { DEFAULT_LAYER_MIX, normalizeMix, type LayerMix } from "@/lib/sound/envi
 import type { SoundSnippet } from "@/lib/sound/snippets";
 import { reportAudioError } from "@/lib/telemetry/crashes";
 import { trackEvent } from "@/lib/telemetry/analytics";
+
+/** Brief hide (notification shade) should not kill Drive audio immediately. */
+const DRIVE_HIDE_GRACE_MS = 2800;
 
 export type SessionKind = "idle" | "drive" | "demo" | "audition" | "replay" | "ab";
 export type SessionStatus = "idle" | "starting" | "running" | "error" | "suspended";
@@ -139,8 +143,11 @@ class DriveSession {
   private motionHandler: ((e: DeviceMotionEvent) => void) | null = null;
   private gpsSpeed = 0;
   private gpsAt = 0;
+  private gpsPoint: GpsPoint | null = null;
   private accY: number | null = null;
   private imuAt = 0;
+  private hideTimer: ReturnType<typeof setTimeout> | null = null;
+  private wakeReleaseHandler: (() => void) | null = null;
   private speed = 0;
   private state: DriveState = IDLE_STATE;
   private kind: SessionKind = "idle";
@@ -288,8 +295,13 @@ class DriveSession {
 
   setCockpit(on: boolean) {
     this.cockpit = on;
-    if (on && this.status === "running") void this.requestWake();
-    else void this.releaseWake();
+    // Wake lock follows live Drive, not only Cockpit. Cockpit still opts into
+    // denser UI; wake is requested whenever Drive is running.
+    if (this.kind === "drive" && (this.status === "running" || this.status === "suspended")) {
+      void this.requestWake();
+    } else if (!on) {
+      void this.releaseWake();
+    }
     this.emit();
   }
 
@@ -331,7 +343,7 @@ class DriveSession {
       this.loop();
       this.bindMediaSession();
       this.attachIdle();
-      if (this.cockpit) void this.requestWake();
+      void this.requestWake();
       this.emit();
     } catch {
       this.status = "error";
@@ -736,10 +748,30 @@ class DriveSession {
     if (lat.currentTime > 0) this.lastAudioTime = lat.currentTime;
   }
 
+  private ingestGpsPosition(pos: GeolocationPosition) {
+    const atMs = performance.now();
+    const resolved = resolveGpsSpeed({
+      reportedSpeed: pos.coords.speed,
+      latitude: pos.coords.latitude,
+      longitude: pos.coords.longitude,
+      atMs,
+      previous: this.gpsPoint,
+      accuracyM: pos.coords.accuracy,
+    });
+    this.gpsPoint = resolved.point;
+    // Prefer reported or delta samples. Skip "none" so fusion keeps the last
+    // good fix instead of treating a null-speed browser fix as fresh zero.
+    if (resolved.source !== "none") {
+      this.gpsSpeed = resolved.speed;
+      this.gpsAt = atMs;
+    }
+  }
+
   private async attachSensors() {
     if (typeof navigator === "undefined" || !navigator.geolocation) {
       throw new Error("no-geo");
     }
+    this.gpsPoint = null;
     const DM = window.DeviceMotionEvent as typeof DeviceMotionEvent & {
       requestPermission?: () => Promise<PermissionState>;
     };
@@ -754,8 +786,7 @@ class DriveSession {
       let settled = false;
       this.watchId = navigator.geolocation.watchPosition(
         (pos) => {
-          this.gpsSpeed = Math.max(0, pos.coords.speed ?? 0);
-          this.gpsAt = performance.now();
+          this.ingestGpsPosition(pos);
           if (!settled) {
             settled = true;
             resolve();
@@ -789,26 +820,58 @@ class DriveSession {
       window.removeEventListener("devicemotion", this.motionHandler);
       this.motionHandler = null;
     }
+    this.gpsPoint = null;
+  }
+
+  private clearHideTimer() {
+    if (this.hideTimer !== null) {
+      clearTimeout(this.hideTimer);
+      this.hideTimer = null;
+    }
   }
 
   private attachIdle() {
     document.addEventListener("visibilitychange", this.onVisibility);
     window.addEventListener("pagehide", this.onPageHide);
+    window.addEventListener("pageshow", this.onPageShow);
     this.engine?.onInterrupt(() => this.duck(true));
   }
 
   private detachIdle() {
+    this.clearHideTimer();
     document.removeEventListener("visibilitychange", this.onVisibility);
     window.removeEventListener("pagehide", this.onPageHide);
+    window.removeEventListener("pageshow", this.onPageShow);
   }
 
   private onPageHide = () => {
+    this.clearHideTimer();
     void this.suspend();
   };
 
+  private onPageShow = () => {
+    this.clearHideTimer();
+    void this.resume();
+    if (this.kind === "drive") void this.requestWake();
+  };
+
   private onVisibility = () => {
-    if (document.hidden) void this.suspend();
-    else void this.resume();
+    if (document.hidden) {
+      // Drive: grace so a quick shade / multitask peek does not kill audio.
+      if (this.kind === "drive" && this.status === "running") {
+        this.clearHideTimer();
+        this.hideTimer = setTimeout(() => {
+          this.hideTimer = null;
+          if (document.hidden) void this.suspend();
+        }, DRIVE_HIDE_GRACE_MS);
+        return;
+      }
+      void this.suspend();
+      return;
+    }
+    this.clearHideTimer();
+    void this.resume();
+    if (this.kind === "drive") void this.requestWake();
   };
 
   async suspend() {
@@ -823,6 +886,11 @@ class DriveSession {
     await this.engine.resumeFromIdle();
     this.status = "running";
     this.ducking = false;
+    // Keep the rAF spine alive after long backgrounding.
+    if (this.raf === null && (this.kind === "drive" || this.kind === "demo")) {
+      this.lastTick = performance.now();
+      this.loop();
+    }
     this.emit();
   }
 
@@ -872,14 +940,41 @@ class DriveSession {
   }
 
   private async requestWake() {
+    if (typeof navigator === "undefined" || !navigator.wakeLock) return;
+    if (typeof document !== "undefined" && document.hidden) return;
+    await this.releaseWake();
     try {
-      this.wake = (await navigator.wakeLock?.request("screen")) ?? null;
+      const sentinel = await navigator.wakeLock.request("screen");
+      this.wake = sentinel;
+      this.wakeReleaseHandler = () => {
+        this.wake = null;
+        this.wakeReleaseHandler = null;
+        // Browser releases wake on hide; reclaim when Drive is still live.
+        if (
+          this.kind === "drive" &&
+          (this.status === "running" || this.status === "suspended") &&
+          typeof document !== "undefined" &&
+          !document.hidden
+        ) {
+          void this.requestWake();
+        }
+      };
+      sentinel.addEventListener("release", this.wakeReleaseHandler);
     } catch {
       this.wake = null;
+      this.wakeReleaseHandler = null;
     }
   }
 
   private async releaseWake() {
+    if (this.wake && this.wakeReleaseHandler) {
+      try {
+        this.wake.removeEventListener("release", this.wakeReleaseHandler);
+      } catch {
+        /* */
+      }
+    }
+    this.wakeReleaseHandler = null;
     try {
       await this.wake?.release();
     } catch {

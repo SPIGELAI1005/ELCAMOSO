@@ -432,7 +432,7 @@ Root layout (`__root.tsx`) renders `<Outlet />` and global providers/Toaster. No
 - **Styling:** Tailwind CSS v4 with native CSS `@theme` variables in `src/styles.css`.
 - **State:** localStorage settings (schema v6) plus a Drive session singleton (`src/lib/drive/session.ts`) that owns the single `AudioContext`. UI reads snapshots via `useSyncExternalStore`.
 - **Audio:** Web Audio API. Cabin EQ after layer mix; intensity-band gain ceiling on top of the limiter; idle fade-then-suspend; call ducking on `AudioContext` interrupt. Optional Motion lookahead for Bluetooth.
-- **Motion:** GPS speed fused with DeviceMotion (`src/lib/drive/fusion.ts`). Drive context classifier is on-device (`src/lib/drive/context.ts`). Drive traces live in IndexedDB, not the service worker cache.
+- Motion: GPS speed fused with DeviceMotion (`src/lib/drive/fusion.ts`). When `GeolocationCoordinates.speed` is null, speed is derived from successive lat/lon deltas (`src/lib/drive/gps-speed.ts`). Drive context classifier is on-device (`src/lib/drive/context.ts`). Drive traces live in IndexedDB, not the service worker cache.
 - **i18n:** EN / DE / RO dictionaries in `src/lib/i18n`, plus metric/imperial units.
 - **Auth / Cloud:** Opt-in **ELCAMOSO Cloud** via thin `createServerFn` wrappers in `src/lib/cloud/server-fns.ts`. Keys stay on the server. User-facing name is ELCAMOSO Cloud, never Supabase.
 - **Telemetry:** Opt-in usage insights and on-device crash log. Ingest via `ingestTelemetryFn`. Share codes via `createShareFn` / `loadShareFn` (payload URLs are the durable share path).
@@ -472,7 +472,7 @@ Before considering a feature complete, verify:
 
 Shipped on the current app (session spine first):
 1. Sensor fusion (GPS + DeviceMotion).
-2. Media Session, wake-lock cockpit, idle suspend/resume, call ducking.
+2. Media Session; screen wake lock for live Drive (re-acquired on resume); Drive visibility hide grace (~2.8 s) before idle suspend; call ducking.
 3. IndexedDB drive traces, replay, and 15 s render-to-audio clips.
 4. Auto Sound Profile rules (speed band, hour, drive minutes).
 5. Virtual-transmission gear-shift feel.

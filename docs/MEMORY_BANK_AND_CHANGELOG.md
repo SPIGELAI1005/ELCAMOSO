@@ -72,6 +72,13 @@ Canonical product rules still live in `elcamoso-comprehensive-spec.md`. Update *
 - Favicon / PWA icons: `public/icon.svg` (O ))) mark) → `favicon.png`, `apple-touch-icon.png`, `icon-192.png`, `icon-512.png`
 - User-facing cloud name: **ELCAMOSO Cloud** (not third-party brand names)
 
+### Session / Drive (phone path)
+
+- GPS: prefer `coords.speed`; if null, derive m/s from lat/lon deltas (`src/lib/drive/gps-speed.ts`) then fuse with DeviceMotion (`fusion.ts`).
+- Wake lock: requested for **all** live Drive (not only Cockpit); re-acquired on visibility resume / pageshow / wake `release`.
+- Visibility: Drive uses ~2.8 s hide grace before audio suspend (notification shade); pagehide still suspends immediately.
+- Tesla / in-car browser: **unvalidated**; field checklist `docs/TESLA_BROWSER_SMOKE_TEST.md`. Primary real-world path remains a mounted phone. No OBD/OEM bus.
+
 ### Key files
 
 | Area | Path |
@@ -80,9 +87,13 @@ Canonical product rules still live in `elcamoso-comprehensive-spec.md`. Update *
 | Profiles | `src/lib/sound/profiles.ts`, `profiles-expansion.ts` |
 | Realism | `src/lib/sound/realism/*` |
 | Session | `src/lib/drive/session.ts` |
+| GPS speed | `src/lib/drive/gps-speed.ts` |
+| Motion fusion | `src/lib/drive/fusion.ts` |
 | Audition hook | `src/lib/drive/useAudition.ts` |
 | Landing | `src/routes/index.tsx` |
 | Sounds UI | `src/routes/sounds.tsx` |
+| Legal operator | `src/lib/legal/operator.ts` |
+| Tesla smoke test | `docs/TESLA_BROWSER_SMOKE_TEST.md` |
 | Agent notes | `AGENTS.md` |
 
 ### Open / known follow-ups
@@ -98,10 +109,20 @@ Canonical product rules still live in `elcamoso-comprehensive-spec.md`. Update *
 - Find a sound on `/sounds` (local matcher + optional `findSoundFn`)
 - Card Preview on `/sounds` syncs session `profileId` without always writing settings; AuditionPanel still reflects selected settings profile
 - Title-fidelity pass: Playful (laugh/fart/kazoo) + Neon Drive + Construction Monster
+- Phone Drive harden: GPS `coords.speed` null → lat/lon delta fallback; wake lock for all live Drive; visibility hide grace; Tesla browser smoke checklist in `docs/TESLA_BROWSER_SMOKE_TEST.md`
 
 ---
 
 ## Changelog
+
+### 2026-08-21 (phone Drive harden)
+
+- `resolveGpsSpeed`: prefer reported speed; else haversine delta when accuracy is usable (`gps-speed.ts` + tests).
+- `DriveSession`: ingest GPS via resolver; do not treat null `coords.speed` as fresh zero.
+- Drive always requests screen wake lock; re-requests on visibility/pageshow and wake `release`.
+- Drive `visibilitychange` uses ~2.8 s grace before suspend (notification shade); `pageshow` resumes.
+- Field checklist: `docs/TESLA_BROWSER_SMOKE_TEST.md` (Demo → permissions → parked Drive → passenger Drive → verdict).
+- Spec Motion / roadmap bullets updated for delta speed + wake behavior.
 
 ### 2026-08-21 (Vercel deploy)
 
@@ -114,7 +135,7 @@ Canonical product rules still live in `elcamoso-comprehensive-spec.md`. Update *
 
 - Added `/legal` hub + Impressum, Privacy, Cookies, Terms, Accessibility.
 - Site-wide `SiteFooter` and `CookieConsent` bar in root layout.
-- Operator PLACEHOLDERs in `src/lib/legal/operator.ts` (fill before DE/EU launch).
+- Operator details in `src/lib/legal/operator.ts` (Impressum aligned with ONE4Team-style notice; contact `support@elcamoso.com`).
 
 ### 2026-08-21 (Deep Bass Pulse)
 
