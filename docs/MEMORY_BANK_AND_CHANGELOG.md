@@ -57,7 +57,7 @@ Canonical product rules still live in `elcamoso-comprehensive-spec.md`. Update *
 
 ### Landing page (`/`) conventions
 
-- Hero: mark + wordmark (left/center). On large screens, **Electric Car Motion Sound** sits under the wordmark on the left at the Start Drive vertical band; on small screens it stays under Start Drive. Tagline + Start Drive on the right.
+- Hero: brand column stacks **O )))** mark (centered on the wordmark, +15% vs prior hero size) → **ELCAMOSO** → **Electric Car Motion Sound**. CTA column: tagline + supporting line + **Start Drive** (desktop: button aligns with the wordmark via matching expansion spacer).
 - Below fold: **Choose your sound** grouped by the same `PROFILE_CATEGORIES` as `/sounds` (Garage excluded), with Browse all → `/sounds`.
 
 ### Mini player / headroom
@@ -114,6 +114,11 @@ Canonical product rules still live in `elcamoso-comprehensive-spec.md`. Update *
 ---
 
 ## Changelog
+
+### 2026-08-21 (landing hero alignment)
+
+- Brand column: mark centered above **ELCAMOSO**; **Electric Car Motion Sound** under the wordmark; mark size +15% (`10.76rem` / `13.46rem`).
+- Desktop: **Start Drive** shares the wordmark vertical band.
 
 ### 2026-08-21 (phone Drive harden)
 

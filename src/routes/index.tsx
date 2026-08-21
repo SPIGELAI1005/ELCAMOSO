@@ -44,19 +44,24 @@ function Landing() {
   return (
     <main className="min-h-screen">
       <section className="flex min-h-[calc(100svh-4.5rem)] flex-col justify-between px-6 py-10 sm:px-12">
-        <div className="mx-auto grid w-full max-w-5xl flex-1 items-center gap-16 py-16 lg:grid-cols-2 lg:items-stretch lg:gap-24">
-          <div className="relative flex flex-col items-center lg:items-start">
-            {/* Brand stays centered in the column; desktop subtitle sits at the foot. */}
-            <div className="flex flex-col items-center gap-8 lg:absolute lg:inset-x-0 lg:top-1/2 lg:-translate-y-1/2 lg:items-start">
-              <ElcamosoMark animate className="h-[9.36rem] w-auto sm:h-[11.7rem]" />
-              <ElcamosoWordmark className="text-center text-[2.6325rem] sm:text-[2.925rem] lg:text-left" />
+        <div className="mx-auto grid w-full max-w-5xl flex-1 content-center items-end gap-x-16 gap-y-12 py-16 lg:grid-cols-2 lg:gap-x-24">
+          {/* Brand stack: mark centered on ELCAMOSO; expansion directly under the wordmark */}
+          <div className="order-1 flex flex-col items-center gap-8">
+            <ElcamosoMark
+              animate
+              className="h-[10.76rem] w-auto sm:h-[13.46rem]"
+            />
+            <div className="flex flex-col items-center gap-3">
+              <div className="flex min-h-14 items-center justify-center">
+                <ElcamosoWordmark className="text-center text-[2.6325rem] sm:text-[2.925rem]" />
+              </div>
+              <p className="text-center text-[11px] tracking-[0.28em] text-muted-foreground uppercase">
+                Electric Car Motion Sound
+              </p>
             </div>
-            <p className="mt-auto hidden pt-8 text-[11px] tracking-[0.28em] text-muted-foreground uppercase lg:block">
-              Electric Car Motion Sound
-            </p>
           </div>
 
-          <div className="flex flex-col items-center gap-8 text-center lg:items-start lg:text-left">
+          <div className="order-2 flex flex-col items-center gap-8 text-center lg:items-start lg:text-left">
             <h1 className="animate-rise text-4xl leading-[1.05] font-light tracking-tight sm:text-6xl">
               Your EV.
               <br />
@@ -70,23 +75,24 @@ function Landing() {
             >
               Electric motion. More e-motion.
             </p>
-            <Link
-              to="/drive"
-              className="animate-rise inline-flex h-14 items-center justify-center rounded-full bg-primary px-10 text-sm tracking-[0.22em] text-primary-foreground uppercase transition-opacity hover:opacity-90"
-              style={{ animationDelay: "300ms" }}
-            >
-              Start Drive
-            </Link>
-            {/* Mobile: under Start Drive. Desktop: invisible twin keeps the same vertical band. */}
-            <p className="text-[11px] tracking-[0.28em] text-muted-foreground uppercase lg:hidden">
-              Electric Car Motion Sound
-            </p>
-            <p
-              className="hidden text-[11px] tracking-[0.28em] text-muted-foreground uppercase lg:block lg:invisible lg:select-none"
-              aria-hidden="true"
-            >
-              Electric Car Motion Sound
-            </p>
+            <div className="flex flex-col items-center gap-3 lg:items-start">
+              <div className="flex min-h-14 items-center justify-center lg:justify-start">
+                <Link
+                  to="/drive"
+                  className="animate-rise inline-flex h-14 items-center justify-center rounded-full bg-primary px-10 text-sm tracking-[0.22em] text-primary-foreground uppercase transition-opacity hover:opacity-90"
+                  style={{ animationDelay: "300ms" }}
+                >
+                  Start Drive
+                </Link>
+              </div>
+              {/* Match expansion line so Start Drive lines up with ELCAMOSO */}
+              <p
+                className="invisible hidden text-[11px] tracking-[0.28em] uppercase lg:block"
+                aria-hidden="true"
+              >
+                Electric Car Motion Sound
+              </p>
+            </div>
           </div>
         </div>
 
