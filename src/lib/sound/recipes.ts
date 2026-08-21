@@ -2,6 +2,7 @@ import type { StudioTweaks } from "@/lib/drive/settings";
 import { DEFAULT_TWEAKS } from "@/lib/drive/settings";
 import { DEFAULT_LAYER_MIX, type LayerMix } from "@/lib/sound/environments";
 import { DEFAULT_PROFILE_ID } from "@/lib/sound/profiles";
+import { findSoundsFromPrompt } from "@/lib/sound/find-sound";
 
 export interface SoundRecipe {
   name: string;
@@ -32,8 +33,21 @@ const INTENSE: SoundRecipe = {
 
 export function recipeFromPrompt(prompt: string): SoundRecipe {
   const text = prompt.toLowerCase();
-  if (/(calm|gentle|quiet|soft|relax)/.test(text)) return { ...CALM, name: prompt.slice(0, 40) || CALM.name };
-  if (/(intense|loud|race|grit|wild)/.test(text)) return { ...INTENSE, name: prompt.slice(0, 40) || INTENSE.name };
+  const match = findSoundsFromPrompt(prompt, 1)[0];
+  if (match) {
+    return {
+      name: prompt.slice(0, 40) || match.name,
+      description: match.reason,
+      baseId: match.profileId,
+      tweaks: { ...DEFAULT_TWEAKS },
+      environmentId: /(tunnel|night|neon)/.test(text) ? "tunnel" : "open-road",
+      mix: DEFAULT_LAYER_MIX,
+    };
+  }
+  if (/(calm|gentle|quiet|soft|relax)/.test(text))
+    return { ...CALM, name: prompt.slice(0, 40) || CALM.name };
+  if (/(intense|loud|race|grit|wild)/.test(text))
+    return { ...INTENSE, name: prompt.slice(0, 40) || INTENSE.name };
   return {
     ...CALM,
     name: prompt.slice(0, 40) || "Studio recipe",

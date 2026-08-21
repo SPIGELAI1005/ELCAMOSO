@@ -95,7 +95,7 @@ function Landing() {
         </p>
       </section>
 
-      <section className="mx-auto w-full max-w-5xl px-6 pb-32 sm:px-12">
+      <section className="mx-auto w-full max-w-5xl px-6 pb-16 sm:px-12">
         <div className="mb-10 flex flex-wrap items-end justify-between gap-4">
           <div>
             <h2 className="text-xs tracking-[0.28em] text-muted-foreground uppercase">
@@ -143,12 +143,35 @@ function Landing() {
           ))}
         </Accordion>
 
-        <div className="mt-20 max-w-md">
+        <div className="mt-20 max-w-md border-t border-border pt-10">
           <p className="text-lg font-light">Your drive stays yours.</p>
           <p className="mt-3 text-sm text-muted-foreground">
             Speed and motion data are processed directly on this device. ELCAMOSO does not
             upload your driving route in this MVP.
           </p>
+          <nav
+            aria-label="Legal"
+            className="mt-8 flex flex-wrap gap-x-5 gap-y-2 text-[11px] tracking-[0.18em] text-muted-foreground uppercase"
+          >
+            <Link to="/legal/impressum" className="hover:text-foreground">
+              Impressum
+            </Link>
+            <Link to="/legal/privacy" className="hover:text-foreground">
+              Privacy
+            </Link>
+            <Link to="/legal/cookies" className="hover:text-foreground">
+              Cookies
+            </Link>
+            <Link to="/legal/terms" className="hover:text-foreground">
+              Terms
+            </Link>
+            <Link to="/legal/accessibility" className="hover:text-foreground">
+              Accessibility
+            </Link>
+            <Link to="/about" className="hover:text-foreground">
+              About
+            </Link>
+          </nav>
         </div>
       </section>
     </main>

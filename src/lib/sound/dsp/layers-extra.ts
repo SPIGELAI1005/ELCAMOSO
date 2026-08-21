@@ -3,7 +3,7 @@
  * Mobile-safe: few continuous oscillators, event-based where possible.
  */
 
-import { clamp, softGate, smoothstep } from "@/lib/sound/dsp/math";
+import { clamp, lerp, softGate, smoothstep } from "@/lib/sound/dsp/math";
 import { createLoopingNoise } from "@/lib/sound/dsp/noise";
 import { targetParam } from "@/lib/sound/dsp/smoother";
 import { createDriveShaper } from "@/lib/sound/dsp/waveshaper";
@@ -265,67 +265,122 @@ export function createSynthwaveLayer(
   };
 }
 
+/**
+ * Recognizable deep bass = discrete 808-style booms, not a continuous drone.
+ *
+ * Research (sub-bass / bass-house practice):
+ * - Pure sine sub + mid presence layer (phones hear ~100–160 Hz)
+ * - Short click transient so each hit reads without a subwoofer
+ * - Pitch drop on the hit (classic 808 envelope)
+ * - Clear pulse rate that pumps with motion (sidechain-like gaps between hits)
+ * - Between pulses nearly silent so the boom is the character
+ */
 export function createDeepBassPulseLayer(
   ctx: BaseAudioContext,
   opts: LayerBaseOpts,
 ): LayerHandle {
-  const osc = ctx.createOscillator();
-  osc.type = "sine";
-  osc.frequency.value = 70;
-  const harm = ctx.createOscillator();
-  harm.type = "sine";
-  harm.frequency.value = 140;
-  // Phone / cabin presence: 90–160 Hz so the pulse is audible without a subwoofer.
-  const presence = ctx.createOscillator();
-  presence.type = "triangle";
-  presence.frequency.value = 110;
-  const og = ctx.createGain();
-  const hg = ctx.createGain();
-  const pg = ctx.createGain();
-  og.gain.value = 0.2;
-  hg.gain.value = 0.08;
-  pg.gain.value = 0.0001;
   const bus = ctx.createGain();
-  const presenceLp = ctx.createBiquadFilter();
-  presenceLp.type = "lowpass";
-  presenceLp.frequency.value = 220;
-  osc.connect(og);
-  og.connect(bus);
-  harm.connect(hg);
-  hg.connect(bus);
-  presence.connect(presenceLp);
-  presenceLp.connect(pg);
-  pg.connect(bus);
-  osc.start();
-  harm.start();
-  presence.start();
+  // Tiny residual bed so cabin never goes fully dead between hits.
+  const bed = ctx.createOscillator();
+  bed.type = "sine";
+  bed.frequency.value = 55;
+  const bedG = ctx.createGain();
+  bedG.gain.value = 0.0001;
+  bed.connect(bedG);
+  bedG.connect(bus);
+  bed.start();
+
   const { gain, handle } = chain(ctx, opts, bus);
+  let next = ctx.currentTime + 0.08;
+  let bpm = 72;
   let disposed = false;
+
+  function firePulse(at: number, amp: number, fundamental: number, long: boolean) {
+    const dur = long ? 0.42 : 0.28;
+
+    // Sub sine with 808 pitch drop
+    const sub = ctx.createOscillator();
+    const subLp = ctx.createBiquadFilter();
+    const subG = ctx.createGain();
+    sub.type = "sine";
+    subLp.type = "lowpass";
+    subLp.frequency.value = 140;
+    sub.frequency.setValueAtTime(fundamental * 1.15, at);
+    sub.frequency.exponentialRampToValueAtTime(Math.max(38, fundamental * 0.72), at + dur * 0.85);
+    subG.gain.setValueAtTime(0.0001, at);
+    subG.gain.exponentialRampToValueAtTime(Math.max(0.0002, amp), at + 0.01);
+    subG.gain.exponentialRampToValueAtTime(0.0001, at + dur);
+    sub.connect(subLp);
+    subLp.connect(subG);
+    subG.connect(bus);
+    sub.start(at);
+    sub.stop(at + dur + 0.05);
+
+    // Phone / cabin presence (100–170 Hz) — this is what makes the pulse audible
+    const mid = ctx.createOscillator();
+    const midLp = ctx.createBiquadFilter();
+    const midG = ctx.createGain();
+    mid.type = "triangle";
+    midLp.type = "lowpass";
+    midLp.frequency.value = 260;
+    const midHz = fundamental * 1.85;
+    mid.frequency.setValueAtTime(midHz * 1.08, at);
+    mid.frequency.exponentialRampToValueAtTime(Math.max(70, midHz * 0.75), at + dur * 0.7);
+    midG.gain.setValueAtTime(0.0001, at);
+    midG.gain.exponentialRampToValueAtTime(Math.max(0.0002, amp * 0.7), at + 0.008);
+    midG.gain.exponentialRampToValueAtTime(0.0001, at + dur * 0.75);
+    mid.connect(midLp);
+    midLp.connect(midG);
+    midG.connect(bus);
+    mid.start(at);
+    mid.stop(at + dur + 0.05);
+
+    // Soft click so the attack is unmistakable on small speakers
+    const click = ctx.createOscillator();
+    const clickG = ctx.createGain();
+    click.type = "sine";
+    click.frequency.setValueAtTime(420, at);
+    click.frequency.exponentialRampToValueAtTime(180, at + 0.04);
+    clickG.gain.setValueAtTime(0.0001, at);
+    clickG.gain.exponentialRampToValueAtTime(Math.max(0.0002, amp * 0.22), at + 0.004);
+    clickG.gain.exponentialRampToValueAtTime(0.0001, at + 0.05);
+    click.connect(clickG);
+    clickG.connect(bus);
+    click.start(at);
+    click.stop(at + 0.07);
+  }
+
   return {
     ...handle,
     update(m, t) {
       if (disposed) return;
-      const depth = 0.18 + m.speedSlow * 0.12 + m.accelFast * 0.55;
-      // Keep fundamental in a phone-friendly zone (≈58–95 Hz).
-      targetParam(osc.frequency, clamp(62 + m.accelFast * 28, 58, 95), t, 0.12);
-      targetParam(harm.frequency, clamp(124 + m.accelFast * 40, 110, 180), t, 0.12);
-      targetParam(presence.frequency, clamp(100 + m.accelFast * 45, 90, 160), t, 0.12);
-      targetParam(og.gain, softGate(0.16 + depth * 0.12), t, 0.15);
-      targetParam(hg.gain, softGate(0.06 + depth * 0.1), t, 0.15);
-      targetParam(pg.gain, softGate(0.08 + depth * 0.14 + m.speedSlow * 0.04), t, 0.15);
-      const pulse = 0.7 + 0.3 * Math.sin(t * (1.05 + m.accelFast * 1.6));
-      targetParam(
-        gain.gain,
-        softGate((opts.level ?? 0.35) * depth * pulse * (m.regen > 0.3 ? 0.7 : 1)),
-        t,
-        0.12,
+      const intensity = clamp(
+        m.throttleFast * 0.7 + Math.max(0, m.accelFast) * 0.95 + m.speedSlow * 0.45,
       );
+      // Idle still pulses slowly so the title is obvious parked / at light throttle.
+      const targetBpm = 58 + intensity * 72;
+      bpm += (targetBpm - bpm) * Math.min(1, m.dt / 0.55);
+      const interval = 60 / Math.max(52, bpm);
+      if (next < t) next = t;
+      const horizon = t + 0.22;
+      while (next < horizon) {
+        const amp = (opts.level ?? 0.7) * (0.55 + intensity * 0.85);
+        const fund = 58 + intensity * 18;
+        firePulse(next, amp, fund, intensity > 0.55);
+        // Occasional double-hit under hard accel (pumping EDM feel)
+        if (intensity > 0.7 && audioRandom() > 0.55) {
+          firePulse(next + interval * 0.48, amp * 0.65, fund * 0.94, false);
+        }
+        next += interval;
+      }
+
+      targetParam(bed.frequency, 48 + intensity * 12, t, 0.2);
+      targetParam(bedG.gain, softGate(0.03 + intensity * 0.04), t, 0.25);
+      targetParam(gain.gain, softGate(0.9 + intensity * 0.25), t, 0.15);
     },
     dispose() {
       disposed = true;
-      stopSafe(osc);
-      stopSafe(harm);
-      stopSafe(presence);
+      stopSafe(bed);
     },
   };
 }
@@ -524,19 +579,19 @@ export function createHydraulicLayer(
     ...handle,
     update(m, t) {
       if (disposed) return;
-      const demand = clamp(m.throttleFast * 0.7 + m.accelFast * 0.8);
-      pump += (demand - pump) * (m.dt / 0.45);
+      const demand = clamp(m.throttleFast * 0.75 + m.accelFast * 0.95 + m.speedSlow * 0.15);
+      pump += (demand - pump) * (m.dt / 0.32);
       // Irregular pump period: random-walk rate instead of fixed LFO.
-      wander += (audioRandom() - 0.5) * m.dt * 2.4;
-      wander *= 0.985;
-      const rate = 1.4 + pump * 2.2 + wander * 0.9;
-      phase += m.dt * Math.max(0.6, rate);
-      const mod = 0.78 + 0.22 * Math.sin(phase * Math.PI * 2);
-      targetParam(whine.frequency, 200 + pump * 380 + Math.sin(phase * 0.37) * 18, t, 0.14);
-      targetParam(bp.frequency, 650 + pump * 750, t, 0.16);
-      targetParam(wg.gain, softGate(pump * 0.16 * mod), t, 0.12);
-      targetParam(hg.gain, softGate(pump * 0.08 * (0.7 + 0.3 * mod)), t, 0.14);
-      targetParam(gain.gain, softGate((opts.level ?? 0.3) * (0.25 + pump)), t, 0.15);
+      wander += (audioRandom() - 0.5) * m.dt * 2.8;
+      wander *= 0.98;
+      const rate = 1.6 + pump * 3.2 + wander * 1.1;
+      phase += m.dt * Math.max(0.7, rate);
+      const mod = 0.72 + 0.28 * Math.sin(phase * Math.PI * 2);
+      targetParam(whine.frequency, 220 + pump * 520 + Math.sin(phase * 0.37) * 28, t, 0.1);
+      targetParam(bp.frequency, 580 + pump * 950, t, 0.12);
+      targetParam(wg.gain, softGate(pump * 0.28 * mod), t, 0.1);
+      targetParam(hg.gain, softGate(pump * 0.14 * (0.65 + 0.35 * mod)), t, 0.12);
+      targetParam(gain.gain, softGate((opts.level ?? 0.42) * (0.35 + pump * 1.15)), t, 0.12);
     },
     dispose() {
       disposed = true;
@@ -892,80 +947,131 @@ export function createMaglevLayer(ctx: BaseAudioContext, opts: LayerBaseOpts): L
   };
 }
 
+/**
+ * Night-drive neon: gated bass pulse + bright square energy.
+ * No chord stabs or ringing accents (those read as bells).
+ */
 export function createNeonPulseLayer(
   ctx: BaseAudioContext,
   opts: LayerBaseOpts,
 ): LayerHandle {
   const bus = ctx.createGain();
+
   const bass = ctx.createOscillator();
   bass.type = "sine";
-  bass.frequency.value = 55;
+  bass.frequency.value = 70;
+  const bassDrive = createDriveShaper(ctx, 0.35);
   const bg = ctx.createGain();
+  bg.gain.value = 0.0001;
+  bass.connect(bassDrive);
+  bassDrive.connect(bg);
+  bg.connect(bus);
+
+  // Mid presence so phones hear the pulse without sub
+  const punch = ctx.createOscillator();
+  punch.type = "triangle";
+  punch.frequency.value = 140;
+  const punchG = ctx.createGain();
+  punchG.gain.value = 0.0001;
+  punch.connect(punchG);
+  punchG.connect(bus);
+
   const tone = ctx.createOscillator();
-  tone.type = "triangle";
+  tone.type = "square";
   tone.frequency.value = 220;
-  const tg = ctx.createGain();
   const toneLp = ctx.createBiquadFilter();
   toneLp.type = "lowpass";
-  toneLp.frequency.value = 2400;
-  bg.gain.value = 0.0001;
+  toneLp.frequency.value = 2800;
+  toneLp.Q.value = 1.1;
+  const tonePeak = ctx.createBiquadFilter();
+  tonePeak.type = "peaking";
+  tonePeak.frequency.value = 1800;
+  tonePeak.Q.value = 1.4;
+  tonePeak.gain.value = 5;
+  const tg = ctx.createGain();
   tg.gain.value = 0.0001;
-  bass.connect(bg);
-  bg.connect(bus);
   tone.connect(toneLp);
-  toneLp.connect(tg);
+  toneLp.connect(tonePeak);
+  tonePeak.connect(tg);
   tg.connect(bus);
-  bass.start();
-  tone.start();
+
+  const hi = ctx.createOscillator();
+  hi.type = "sawtooth";
+  hi.frequency.value = 880;
+  const hiLp = ctx.createBiquadFilter();
+  hiLp.type = "lowpass";
+  hiLp.frequency.value = 4200;
+  const hg = ctx.createGain();
+  hg.gain.value = 0.0001;
+  hi.connect(hiLp);
+  hiLp.connect(hg);
+  hg.connect(bus);
+
   const gate = createLoopingNoise(ctx, "pink", 1);
   const gBp = ctx.createBiquadFilter();
   gBp.type = "bandpass";
   gBp.frequency.value = 1600;
-  gBp.Q.value = 1.6;
+  gBp.Q.value = 1.2;
   const gG = ctx.createGain();
+  gG.gain.value = 0.0001;
   gate.connect(gBp);
   gBp.connect(gG);
   gG.connect(bus);
-  gate.start();
+
   const { gain, handle } = chain(ctx, opts, bus);
+  bass.start();
+  punch.start();
+  tone.start();
+  hi.start();
+  gate.start();
+
   let disposed = false;
   let phase = audioRandom() * 20;
   let wander = 0;
+
   return {
     ...handle,
     update(m, t) {
       if (disposed) return;
-      // Random-walk rate so pulses never lock to a metronome.
-      wander += (audioRandom() - 0.5) * m.dt * 1.8;
-      wander *= 0.992;
-      const rate = 1.1 + m.speedSlow * 3.2 + wander * 0.45 + m.accelFast * 0.8;
-      phase += m.dt * Math.max(0.6, rate);
+      const demand = clamp(
+        m.throttleFast * 0.65 + Math.max(0, m.accelFast) * 0.9 + m.speedSlow * 0.5 + 0.18,
+      );
+      wander += (audioRandom() - 0.5) * m.dt * 2.4;
+      wander *= 0.988;
+      const rate = 1.55 + demand * 4.2 + wander * 0.6;
+      phase += m.dt * Math.max(0.85, rate);
       const raw = Math.sin(phase * Math.PI * 2);
-      // Asymmetric gate: short bright peaks, longer soft valleys.
-      const pulse = Math.pow(0.5 + 0.5 * raw, 1.6);
-      targetParam(bass.frequency, 46 + m.speedSlow * 36 - m.regen * 10, t, 0.12);
+      // Sharp neon gate: bright peaks, dark valleys (still audible in valleys).
+      const pulse = Math.pow(0.5 + 0.5 * raw, 2.4);
+      const valley = 0.22 + pulse * 0.78;
+
+      targetParam(bass.frequency, 58 + m.speedSlow * 48 + demand * 22 - m.regen * 12, t, 0.08);
+      targetParam(punch.frequency, 118 + demand * 90 + pulse * 30, t, 0.08);
       targetParam(
         tone.frequency,
-        160 + m.speedSlow * 160 + m.accelFast * 60 - m.regen * 40,
+        190 + demand * 260 + Math.max(0, m.accelFast) * 80 - m.regen * 45,
         t,
-        0.1,
+        0.07,
       );
-      targetParam(toneLp.frequency, 1600 + m.accelFast * 900 - m.regen * 400, t, 0.15);
-      targetParam(bg.gain, softGate(0.09 + pulse * 0.12 + m.speedSlow * 0.04), t, 0.06);
-      targetParam(tg.gain, softGate((0.05 + m.speedSlow * 0.08) * pulse), t, 0.06);
-      targetParam(gG.gain, softGate(m.accelFast * 0.1 * pulse), t, 0.06);
-      gBp.frequency.setTargetAtTime(1200 + m.speedSlow * 800 + pulse * 400, t, 0.12);
-      targetParam(
-        gain.gain,
-        softGate((opts.level ?? 0.4) * (0.3 + m.speedSlow * 0.4 + m.accelFast * 0.15)),
-        t,
-        0.14,
-      );
+      targetParam(hi.frequency, 700 + demand * 1100 + pulse * 220, t, 0.07);
+      targetParam(toneLp.frequency, 1600 + demand * 1800 - m.regen * 500, t, 0.1);
+      targetParam(hiLp.frequency, 2800 + demand * 1600, t, 0.12);
+
+      targetParam(bg.gain, softGate((0.2 + pulse * 0.28) * demand * 1.15), t, 0.04);
+      targetParam(punchG.gain, softGate((0.14 + pulse * 0.22) * demand), t, 0.04);
+      targetParam(tg.gain, softGate((0.16 + demand * 0.18) * valley), t, 0.04);
+      targetParam(hg.gain, softGate(pulse * (0.08 + demand * 0.16)), t, 0.04);
+      targetParam(gG.gain, softGate((0.05 + Math.max(0, m.accelFast) * 0.16) * pulse), t, 0.04);
+      gBp.frequency.setTargetAtTime(1200 + demand * 1200 + pulse * 500, t, 0.1);
+
+      targetParam(gain.gain, softGate((opts.level ?? 0.75) * (0.65 + demand * 0.55)), t, 0.1);
     },
     dispose() {
       disposed = true;
       stopSafe(bass);
+      stopSafe(punch);
       stopSafe(tone);
+      stopSafe(hi);
       stopSafe(gate);
     },
   };

@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useCallback } from "react";
 import { ElcamosoMark } from "@/components/ElcamosoLogo";
 import { DemoCockpit } from "@/components/DemoCockpit";
 import { useSettings } from "@/lib/drive/useSettings";
@@ -9,6 +10,7 @@ import { getProfileGain, getTuning } from "@/lib/drive/settings";
 import { getProfile } from "@/lib/sound/profiles";
 import { EnvironmentPicker } from "@/components/EnvironmentPicker";
 import { DemoSoundPicker } from "@/components/DemoSoundPicker";
+import { DemoGuidedTour } from "@/components/DemoGuidedTour";
 
 export const Route = createFileRoute("/demo")({
   component: DemoDrive,
@@ -59,6 +61,17 @@ function DemoDrive() {
       ? `D${state.gear}`
       : controls.selector;
 
+  const onTourProfile = useCallback(
+    (id: string) => update({ profileId: id }),
+    [update],
+  );
+  const onTourControls = useCallback(
+    (next: { throttle: number; accel: number; regen: number; selector: "D" }) => {
+      setControls(next);
+    },
+    [setControls],
+  );
+
   return (
     <main className="min-h-screen">
       <div className="mx-auto w-full max-w-3xl px-6 pt-16 pb-28 sm:px-10">
@@ -66,6 +79,16 @@ function DemoDrive() {
         <p className="mt-3 max-w-xl text-sm text-muted-foreground">
           Hear {profile.name} with pedals and P R N D. No motion sensors needed.
         </p>
+
+        <DemoGuidedTour
+          active={active}
+          running={active}
+          onStart={() => void start()}
+          onStop={stop}
+          onProfile={onTourProfile}
+          onControls={onTourControls}
+          reducedMotion={reducedMotion}
+        />
 
         <DemoSoundPicker
           className="mt-10"

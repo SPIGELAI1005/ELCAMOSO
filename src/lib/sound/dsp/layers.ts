@@ -1237,6 +1237,200 @@ export function createResonantBodyLayer(
   };
 }
 
+/* --------------------------------------------------------------- laugh */
+
+/**
+ * Contagious laugh cadence for Laughing Machine.
+ * "Ha" syllables with formants + breath; rate and power rise with throttle and accel.
+ */
+export function createLaughCadenceLayer(
+  ctx: BaseAudioContext,
+  opts: LayerBaseOpts & { tone?: number },
+): LayerHandle {
+  const bus = ctx.createGain();
+  const { gain, panner, handle } = attachChain(ctx, opts, bus);
+  let next = ctx.currentTime + 0.12;
+  let disposed = false;
+
+  function fireHa(at: number, pitch: number, amp: number, dur: number) {
+    const osc = ctx.createOscillator();
+    const f1 = ctx.createBiquadFilter();
+    const f2 = ctx.createBiquadFilter();
+    const g = ctx.createGain();
+    osc.type = "sawtooth";
+    osc.frequency.setValueAtTime(pitch * 1.08, at);
+    osc.frequency.exponentialRampToValueAtTime(Math.max(40, pitch * 0.88), at + dur * 0.85);
+    f1.type = "bandpass";
+    f1.frequency.value = 780;
+    f1.Q.value = 5.5;
+    f2.type = "bandpass";
+    f2.frequency.value = 1250;
+    f2.Q.value = 7;
+    g.gain.setValueAtTime(0.0001, at);
+    g.gain.exponentialRampToValueAtTime(Math.max(0.0002, amp), at + 0.018);
+    g.gain.exponentialRampToValueAtTime(0.0001, at + dur * 0.9);
+    osc.connect(f1);
+    f1.connect(f2);
+    f2.connect(g);
+    g.connect(bus);
+    osc.start(at);
+    osc.stop(at + dur + 0.02);
+
+    const br = ctx.createBufferSource();
+    br.buffer = getNoiseBuffer(ctx, "pink");
+    br.loop = true;
+    const hp = ctx.createBiquadFilter();
+    hp.type = "bandpass";
+    hp.frequency.value = 2100;
+    hp.Q.value = 1.2;
+    const bg = ctx.createGain();
+    bg.gain.setValueAtTime(0.0001, at);
+    bg.gain.exponentialRampToValueAtTime(Math.max(0.0002, amp * 0.45), at + 0.012);
+    bg.gain.exponentialRampToValueAtTime(0.0001, at + dur * 0.7);
+    br.connect(hp);
+    hp.connect(bg);
+    bg.connect(bus);
+    br.start(at);
+    br.stop(at + dur + 0.02);
+  }
+
+  function fireBurst(at: number, m: MotionFrame): number {
+    const joy = clamp(m.throttleFast * 0.7 + Math.max(0, m.accelFast) * 0.9 + m.speedSlow * 0.25);
+    const syllables = 3 + Math.round(joy * 5);
+    const spacing = lerp(0.16, 0.09, joy);
+    const baseTone = (opts.tone ?? 200) * (1 + joy * 0.55);
+    const baseAmp = (opts.level ?? 0.55) * (0.45 + joy * 0.9);
+
+    for (let i = 0; i < syllables; i += 1) {
+      const t0 = at + i * spacing;
+      const pitch = baseTone * (1.14 - i * 0.05) * (0.96 + audioRandom() * 0.08);
+      const amp = baseAmp * (i === 0 ? 1.05 : 0.92 - i * 0.06);
+      fireHa(t0, pitch, amp, spacing * 0.92);
+    }
+    return syllables * spacing;
+  }
+
+  return {
+    ...handle,
+    update(m, t) {
+      if (disposed) return;
+      const demand = clamp(m.throttleFast * 0.85 + Math.max(0, m.accelFast) * 1.1 + m.speedSlow * 0.35);
+      // Idle: rare quiet chuckle. Throttle/accel: frequent powerful laughs.
+      const gap = lerp(1.15, 0.22, Math.pow(demand, 0.85));
+      if (next < t) next = t;
+      const horizon = t + 0.28;
+      while (next < horizon) {
+        if (demand > 0.04 || audioRandom() > 0.82) {
+          const dur = fireBurst(next, m);
+          next += dur + gap * (0.75 + audioRandom() * 0.4);
+        } else {
+          next += gap * (0.9 + audioRandom() * 0.3);
+        }
+      }
+      const presence = softGate(0.55 + demand * 0.7, 0.02);
+      targetParam(gain.gain, presence, t, 0.18);
+      targetParam(panner.pan, Math.sin(t * 0.21) * 0.25 * m.stereoWidth, t, 0.35);
+    },
+    dispose() {
+      disposed = true;
+    },
+  };
+}
+
+/**
+ * Comic gas cadence for Farting Car.
+ * Bubbly low blats that densify and deepen with throttle / hard accel.
+ */
+export function createFartCadenceLayer(
+  ctx: BaseAudioContext,
+  opts: LayerBaseOpts & { tone?: number },
+): LayerHandle {
+  const bus = ctx.createGain();
+  const { gain, panner, handle } = attachChain(ctx, opts, bus);
+  let next = ctx.currentTime + 0.15;
+  let disposed = false;
+  let lastThrottle = 0;
+
+  function fireBlat(at: number, tone: number, amp: number, long: boolean) {
+    const dur = long ? 0.28 + audioRandom() * 0.35 : 0.1 + audioRandom() * 0.16;
+    const osc = ctx.createOscillator();
+    const lp = ctx.createBiquadFilter();
+    const g = ctx.createGain();
+    const mod = ctx.createOscillator();
+    const mg = ctx.createGain();
+    osc.type = "sawtooth";
+    const startHz = tone * (1.15 + audioRandom() * 0.35);
+    osc.frequency.setValueAtTime(startHz, at);
+    osc.frequency.exponentialRampToValueAtTime(Math.max(28, tone * 0.4), at + dur);
+    mod.type = "sine";
+    mod.frequency.value = 10 + audioRandom() * 22;
+    mg.gain.value = 35 + audioRandom() * 55;
+    mod.connect(mg);
+    mg.connect(osc.frequency);
+    lp.type = "lowpass";
+    lp.frequency.value = 280 + audioRandom() * 420;
+    g.gain.setValueAtTime(0.0001, at);
+    g.gain.linearRampToValueAtTime(Math.max(0.0002, amp), at + 0.025);
+    g.gain.exponentialRampToValueAtTime(0.0001, at + dur);
+    osc.connect(lp);
+    lp.connect(g);
+    g.connect(bus);
+    osc.start(at);
+    mod.start(at);
+    osc.stop(at + dur + 0.05);
+    mod.stop(at + dur + 0.05);
+
+    // Soft rasp of escaping air
+    const br = ctx.createBufferSource();
+    br.buffer = getNoiseBuffer(ctx, "brown");
+    br.loop = true;
+    const bp = ctx.createBiquadFilter();
+    bp.type = "bandpass";
+    bp.frequency.value = 180 + audioRandom() * 120;
+    bp.Q.value = 1.4;
+    const bg = ctx.createGain();
+    bg.gain.setValueAtTime(0.0001, at);
+    bg.gain.linearRampToValueAtTime(Math.max(0.0002, amp * 0.55), at + 0.02);
+    bg.gain.exponentialRampToValueAtTime(0.0001, at + dur * 0.9);
+    br.connect(bp);
+    bp.connect(bg);
+    bg.connect(bus);
+    br.start(at);
+    br.stop(at + dur + 0.05);
+    return dur;
+  }
+
+  return {
+    ...handle,
+    update(m, t) {
+      if (disposed) return;
+      const lift = lastThrottle > 0.55 && m.throttleFast < 0.25;
+      lastThrottle = m.throttleFast;
+      const demand = clamp(
+        m.throttleFast * 0.9 + Math.max(0, m.accelFast) * 1.15 + m.speedSlow * 0.2,
+      );
+      const gap = lift ? 0.18 : lerp(1.4, 0.28, Math.pow(demand, 0.8));
+      if (next < t) next = t;
+      const horizon = t + 0.28;
+      while (next < horizon) {
+        if (demand > 0.06 || lift || audioRandom() > 0.88) {
+          const tone = (opts.tone ?? 95) * (lift ? 0.7 : 1 - demand * 0.25);
+          const amp = (opts.level ?? 0.55) * (0.4 + demand * 0.95 + (lift ? 0.35 : 0));
+          const dur = fireBlat(next, tone, amp, lift || demand > 0.7);
+          next += dur + gap * (0.7 + audioRandom() * 0.45);
+        } else {
+          next += gap * (0.95 + audioRandom() * 0.25);
+        }
+      }
+      targetParam(gain.gain, softGate(0.5 + demand * 0.75, 0.02), t, 0.16);
+      targetParam(panner.pan, (audioRandom() - 0.5) * 0.35 * m.stereoWidth, t, 0.4);
+    },
+    dispose() {
+      disposed = true;
+    },
+  };
+}
+
 /* --------------------------------------------------------------- one-shot */
 
 export interface OneShotSpec {
@@ -1249,6 +1443,7 @@ export interface OneShotSpec {
     | "thunder"
     | "roar"
     | "fart"
+    | "clunk"
     | "bell"
     | "beam"
     | "sonar"
@@ -1273,7 +1468,12 @@ export function createOneShotEventLayer(
   const { gain, panner, handle } = attachChain(ctx, opts, bus);
   const clocks = opts.events.map((spec) => ({
     spec,
-    next: ctx.currentTime + 5 + audioRandom() * Math.max(1, spec.everySeconds),
+    // Frequent accents start almost immediately; rare ones keep a short settle-in.
+    next:
+      ctx.currentTime +
+      (spec.everySeconds < 3
+        ? 0.2 + audioRandom() * 0.5
+        : 2.5 + audioRandom() * Math.max(1, spec.everySeconds * 0.4)),
   }));
   let disposed = false;
   let lastThrottle = 0;
@@ -1287,7 +1487,7 @@ export function createOneShotEventLayer(
     update(m, t) {
       if (disposed) return;
       const lift = lastThrottle > 0.55 && m.throttleFast < 0.25;
-      const hardAccel = m.throttleFast > 0.75 && m.accelFast > 0.55;
+      const hardAccel = m.throttleFast > 0.55 && m.accelFast > 0.35;
       lastThrottle = m.throttleFast;
 
       if (pendingManual) {
@@ -1463,7 +1663,8 @@ function fireOneShot(
     return;
   }
   if (kind === "fart") {
-    const dur = 0.15 + audioRandom() * 0.45;
+    const joy = clamp(m.throttleFast * 0.7 + Math.max(0, m.accelFast) * 0.9);
+    const dur = 0.12 + audioRandom() * 0.4 + joy * 0.12;
     const osc = ctx.createOscillator();
     const lp = ctx.createBiquadFilter();
     const g = ctx.createGain();
@@ -1471,16 +1672,17 @@ function fireOneShot(
     const mg = ctx.createGain();
     osc.type = "sawtooth";
     osc.frequency.setValueAtTime(tone * (1.2 + audioRandom() * 0.4), at);
-    osc.frequency.exponentialRampToValueAtTime(tone * 0.45, at + dur);
+    osc.frequency.exponentialRampToValueAtTime(tone * 0.4, at + dur);
     mod.type = "sine";
-    mod.frequency.value = 12 + audioRandom() * 18;
-    mg.gain.value = 40 + audioRandom() * 40;
+    mod.frequency.value = 11 + audioRandom() * 20;
+    mg.gain.value = 40 + audioRandom() * 50;
     mod.connect(mg);
     mg.connect(osc.frequency);
     lp.type = "lowpass";
-    lp.frequency.value = 400 + audioRandom() * 500;
+    lp.frequency.value = 320 + audioRandom() * 420;
+    const amp = level * (0.7 + joy * 0.7);
     g.gain.setValueAtTime(0.0001, at);
-    g.gain.linearRampToValueAtTime(level, at + 0.03);
+    g.gain.linearRampToValueAtTime(amp, at + 0.025);
     g.gain.exponentialRampToValueAtTime(0.0001, at + dur);
     osc.connect(lp);
     lp.connect(g);
@@ -1489,6 +1691,37 @@ function fireOneShot(
     mod.start(at);
     osc.stop(at + dur + 0.05);
     mod.stop(at + dur + 0.05);
+    return;
+  }
+  if (kind === "clunk") {
+    const src = ctx.createBufferSource();
+    src.buffer = getNoiseBuffer(ctx, "brown");
+    src.loop = true;
+    const bp = ctx.createBiquadFilter();
+    bp.type = "bandpass";
+    bp.frequency.value = tone * (0.85 + audioRandom() * 0.3);
+    bp.Q.value = 4;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, at);
+    g.gain.exponentialRampToValueAtTime(Math.max(0.0002, level), at + 0.008);
+    g.gain.exponentialRampToValueAtTime(0.0001, at + 0.12);
+    src.connect(bp);
+    bp.connect(g);
+    g.connect(out);
+    src.start(at);
+    src.stop(at + 0.16);
+    const osc = ctx.createOscillator();
+    const og = ctx.createGain();
+    osc.type = "triangle";
+    osc.frequency.setValueAtTime(tone * 0.35, at);
+    osc.frequency.exponentialRampToValueAtTime(tone * 0.22, at + 0.1);
+    og.gain.setValueAtTime(0.0001, at);
+    og.gain.exponentialRampToValueAtTime(Math.max(0.0002, level * 0.7), at + 0.004);
+    og.gain.exponentialRampToValueAtTime(0.0001, at + 0.14);
+    osc.connect(og);
+    og.connect(out);
+    osc.start(at);
+    osc.stop(at + 0.18);
     return;
   }
   if (kind === "bell") {
@@ -1508,28 +1741,62 @@ function fireOneShot(
     return;
   }
   if (kind === "laugh" || kind === "hohoho") {
-    const syllables = kind === "hohoho" ? 3 : 3 + Math.round(m.throttleFast * 3);
-    const spacing = kind === "hohoho" ? 0.34 : 0.14;
+    const joy =
+      kind === "laugh"
+        ? clamp(m.throttleFast * 0.65 + Math.max(0, m.accelFast) * 0.95 + m.speedSlow * 0.3)
+        : 0.35;
+    const syllables =
+      kind === "hohoho" ? 3 : 3 + Math.round(joy * 5);
+    const spacing = kind === "hohoho" ? 0.34 : lerp(0.16, 0.09, joy);
+    const ampScale = kind === "laugh" ? 0.55 + joy * 1.05 : 1;
     for (let i = 0; i < syllables; i += 1) {
       const t0 = at + i * spacing;
       const osc = ctx.createOscillator();
       const f1 = ctx.createBiquadFilter();
+      const f2 = ctx.createBiquadFilter();
       const g = ctx.createGain();
       osc.type = "sawtooth";
-      const pitch = tone * (1.08 - i * 0.04) * (kind === "laugh" ? 1 + m.speedSlow * 0.2 : 1);
-      osc.frequency.setValueAtTime(pitch, t0);
+      const pitch =
+        tone *
+        (1.12 - i * 0.045) *
+        (kind === "laugh" ? 1 + joy * 0.5 : 1);
+      osc.frequency.setValueAtTime(pitch * 1.06, t0);
       osc.frequency.exponentialRampToValueAtTime(pitch * 0.9, t0 + spacing * 0.8);
       f1.type = "bandpass";
-      f1.frequency.value = kind === "hohoho" ? 480 : 730;
-      f1.Q.value = 6;
+      f1.frequency.value = kind === "hohoho" ? 480 : 780;
+      f1.Q.value = 5.5;
+      f2.type = "bandpass";
+      f2.frequency.value = kind === "hohoho" ? 720 : 1250;
+      f2.Q.value = 7;
+      const amp = level * ampScale * (i === 0 ? 1.05 : 0.9 - i * 0.06);
       g.gain.setValueAtTime(0.0001, t0);
-      g.gain.exponentialRampToValueAtTime(level * (0.85 - i * 0.08), t0 + 0.03);
-      g.gain.exponentialRampToValueAtTime(0.0001, t0 + spacing * 0.85);
+      g.gain.exponentialRampToValueAtTime(Math.max(0.0002, amp), t0 + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + spacing * 0.88);
       osc.connect(f1);
-      f1.connect(g);
+      f1.connect(f2);
+      f2.connect(g);
       g.connect(out);
       osc.start(t0);
-      osc.stop(t0 + spacing);
+      osc.stop(t0 + spacing + 0.02);
+
+      if (kind === "laugh") {
+        const br = ctx.createBufferSource();
+        br.buffer = getNoiseBuffer(ctx, "pink");
+        br.loop = true;
+        const hp = ctx.createBiquadFilter();
+        hp.type = "bandpass";
+        hp.frequency.value = 2100;
+        hp.Q.value = 1.2;
+        const bg = ctx.createGain();
+        bg.gain.setValueAtTime(0.0001, t0);
+        bg.gain.exponentialRampToValueAtTime(Math.max(0.0002, amp * 0.4), t0 + 0.012);
+        bg.gain.exponentialRampToValueAtTime(0.0001, t0 + spacing * 0.7);
+        br.connect(hp);
+        hp.connect(bg);
+        bg.connect(out);
+        br.start(t0);
+        br.stop(t0 + spacing + 0.02);
+      }
     }
     return;
   }
@@ -1558,19 +1825,30 @@ function fireOneShot(
     ping(0.55, level * 0.35, tone * 0.94);
     return;
   }
-  // beam / default: soft descending tone
+  // beam / default: sci-fi descending tractor tone (readable on phones)
   const osc = ctx.createOscillator();
   const g = ctx.createGain();
-  osc.type = "sine";
-  osc.frequency.setValueAtTime(tone * 1.2, at);
-  osc.frequency.exponentialRampToValueAtTime(tone * 0.6, at + 1.2);
+  const lp = ctx.createBiquadFilter();
+  const peak = ctx.createBiquadFilter();
+  osc.type = "sawtooth";
+  lp.type = "lowpass";
+  lp.frequency.setValueAtTime(tone * 2.4, at);
+  lp.frequency.exponentialRampToValueAtTime(tone * 0.9, at + 0.9);
+  peak.type = "peaking";
+  peak.frequency.value = Math.min(2800, tone * 1.4);
+  peak.Q.value = 1.5;
+  peak.gain.value = 5;
+  osc.frequency.setValueAtTime(tone * 1.35, at);
+  osc.frequency.exponentialRampToValueAtTime(tone * 0.55, at + 1.0);
   g.gain.setValueAtTime(0.0001, at);
-  g.gain.linearRampToValueAtTime(level, at + 0.2);
-  g.gain.exponentialRampToValueAtTime(0.0001, at + 1.4);
-  osc.connect(g);
+  g.gain.linearRampToValueAtTime(Math.max(0.0002, level * 1.15), at + 0.05);
+  g.gain.exponentialRampToValueAtTime(0.0001, at + 1.15);
+  osc.connect(lp);
+  lp.connect(peak);
+  peak.connect(g);
   g.connect(out);
   osc.start(at);
-  osc.stop(at + 1.5);
+  osc.stop(at + 1.25);
 }
 
 /* --------------------------------------------------------------- intake */
@@ -1786,16 +2064,22 @@ export function createKazooLayer(
     update(m, t) {
       if (disposed) return;
       const motion = Math.max(m.speedSlow, m.rpmNorm);
-      const hz = (opts.baseHz ?? 180) * (0.7 + motion * 1.35 + m.throttleFast * 0.35);
-      targetParam(voice.frequency, clamp(hz, 90, 520), t, 0.06);
-      // syllable articulation under throttle
-      syll += m.dt * (4 + m.throttleFast * 8);
-      const env = 0.55 + 0.45 * Math.abs(Math.sin(syll));
-      const fOpen = m.throttleFast > 0.6 ? 1100 : 780;
-      targetParam(formant.frequency, fOpen + Math.sin(syll * 0.5) * 120, t, 0.05);
-      targetParam(buzzG.gain, 0.1 + m.throttleFast * 0.2, t, 0.08);
-      targetParam(gain.gain, softGate((opts.level ?? 0.4) * env * (0.35 + motion * 0.7)), t, 0.06);
-      targetParam(panner.pan, Math.sin(t * 0.3) * 0.15, t, 0.2);
+      const demand = clamp(m.throttleFast * 0.85 + Math.max(0, m.accelFast) * 0.7 + motion * 0.45);
+      const hz = (opts.baseHz ?? 180) * (0.65 + demand * 1.55 + m.throttleFast * 0.45);
+      targetParam(voice.frequency, clamp(hz, 90, 560), t, 0.05);
+      // Clear "doo-doo" syllables under throttle so it reads as a kazoo, not a whine.
+      syll += m.dt * (5 + m.throttleFast * 12 + Math.max(0, m.accelFast) * 6);
+      const env = 0.4 + 0.6 * Math.abs(Math.sin(syll));
+      const fOpen = 720 + demand * 520;
+      targetParam(formant.frequency, fOpen + Math.sin(syll * 0.55) * 140, t, 0.04);
+      targetParam(buzzG.gain, 0.12 + demand * 0.28, t, 0.07);
+      targetParam(
+        gain.gain,
+        softGate((opts.level ?? 0.55) * env * (0.28 + demand * 0.95)),
+        t,
+        0.05,
+      );
+      targetParam(panner.pan, Math.sin(t * 0.3) * 0.18 * m.stereoWidth, t, 0.2);
     },
     dispose() {
       disposed = true;
@@ -1917,66 +2201,184 @@ function logPitch(t: number, min: number, max: number) {
 
 /* ---------------------------------------------------------------- ufo */
 
+/**
+ * Classic Hollywood / pop-culture UFO = theremin, not a spaceship engine.
+ *
+ * Research (Sound on Sound theremin synth notes; Day the Earth Stood Still /
+ * cartoon saucer idiom):
+ * - Pure high sine (“asymmetrically slewed sine”), not sawtooth pads
+ * - Continuous glissando between pitches (every frequency in between)
+ * - Fast vibrato (~5–7 Hz) for the wavering alien quality
+ * - Soft volume breathing (volume-antenna gesture)
+ * - Optional siren-like rising/falling “woo-woo” phrases under load
+ *
+ * Motion: idle = hovering moan; throttle/speed = higher register + wider
+ * glides + more frequent phrases; pan orbits like a craft overhead.
+ */
 export function createUfoLayer(
   ctx: BaseAudioContext,
   opts: LayerBaseOpts & { baseHz?: number },
 ): LayerHandle {
-  const a = ctx.createOscillator();
-  const b = ctx.createOscillator();
-  a.type = "sine";
-  b.type = "sine";
-  a.frequency.value = opts.baseHz ?? 220;
-  b.frequency.value = (opts.baseHz ?? 220) * 1.01;
-  const ag = ctx.createGain();
-  const bg = ctx.createGain();
-  ag.gain.value = 0.2;
-  bg.gain.value = 0.18;
-  const formant = ctx.createBiquadFilter();
-  formant.type = "bandpass";
-  formant.frequency.value = 900;
-  formant.Q.value = 2.5;
-  const shimmer = createLoopingNoise(ctx, "pink", 1);
-  const shG = ctx.createGain();
-  shG.gain.value = 0.04;
-  const hp = ctx.createBiquadFilter();
-  hp.type = "highpass";
-  hp.frequency.value = 2000;
-  a.connect(ag);
-  b.connect(bg);
-  ag.connect(formant);
-  bg.connect(formant);
-  shimmer.connect(hp);
-  hp.connect(shG);
+  // Theremin “2′” register — high enough to read as classic sci-fi, not a pad.
+  const register = opts.baseHz ?? 740;
   const bus = ctx.createGain();
-  formant.connect(bus);
-  shG.connect(bus);
+
+  // Primary theremin voice (sine only)
+  const voice = ctx.createOscillator();
+  voice.type = "sine";
+  voice.frequency.value = register;
+  const voiceG = ctx.createGain();
+  voiceG.gain.value = 0.0001;
+
+  // Very slight second sine for organic beating (real heterodyning complexity)
+  const twin = ctx.createOscillator();
+  twin.type = "sine";
+  twin.frequency.value = register * 1.003;
+  const twinG = ctx.createGain();
+  twinG.gain.value = 0.0001;
+
+  // Gentle air around the tone — never a noise bed
+  const air = createLoopingNoise(ctx, "pink", 0.85);
+  const airHp = ctx.createBiquadFilter();
+  airHp.type = "highpass";
+  airHp.frequency.value = 1800;
+  const airBp = ctx.createBiquadFilter();
+  airBp.type = "bandpass";
+  airBp.frequency.value = 2800;
+  airBp.Q.value = 0.8;
+  const airG = ctx.createGain();
+  airG.gain.value = 0.0001;
+
+  // Soft presence so phones hear the waver without harshness
+  const peak = ctx.createBiquadFilter();
+  peak.type = "peaking";
+  peak.frequency.value = 1600;
+  peak.Q.value = 1.1;
+  peak.gain.value = 4;
+  const lp = ctx.createBiquadFilter();
+  lp.type = "lowpass";
+  lp.frequency.value = 5200;
+  lp.Q.value = 0.6;
+
+  voice.connect(voiceG);
+  twin.connect(twinG);
+  voiceG.connect(peak);
+  twinG.connect(peak);
+  peak.connect(lp);
+  lp.connect(bus);
+  air.connect(airHp);
+  airHp.connect(airBp);
+  airBp.connect(airG);
+  airG.connect(bus);
+
   const { gain, panner, handle } = attachChain(ctx, opts, bus);
-  a.start();
-  b.start();
-  shimmer.start();
+  voice.start();
+  twin.start();
+  air.start();
+
   let disposed = false;
-  let drift = 0;
-  let portamento = opts.baseHz ?? 220;
+  let phraseUntil = 0;
+  let phraseTarget = register;
+  let phraseFrom = register;
+  let phraseStart = 0;
+  let phraseDur = 1.2;
+  let nextPhrase = ctx.currentTime + 0.4;
+  let orbit = audioRandom() * Math.PI * 2;
+  // Continuous vibrato phase (hand shake on pitch antenna)
+  let vibPhase = audioRandom() * 10;
+  // Volume-antenna breathing
+  let breathPhase = audioRandom() * 6;
+  const glide = { hz: register };
+
+  /** Ease in-out for theremin hand motion (slow → fast → slow). */
+  function glideEase(u: number) {
+    const x = clamp(u);
+    return x < 0.5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 2;
+  }
+
+  function schedulePhrase(t: number, demand: number, speed: number) {
+    const center = register * (0.85 + speed * 0.55 + demand * 0.7);
+    // Classic saucer gestures: rise, fall, or siren “woo-woo” pair.
+    const kind = audioRandom();
+    phraseFrom = glide.hz;
+    phraseStart = t;
+    if (kind < 0.34) {
+      // Rising approach
+      phraseTarget = center * (1.35 + audioRandom() * 0.45);
+      phraseDur = lerp(1.1, 0.55, demand) * (0.85 + audioRandom() * 0.3);
+    } else if (kind < 0.68) {
+      // Falling depart / moan
+      phraseTarget = center * (0.55 + audioRandom() * 0.2);
+      phraseDur = lerp(1.35, 0.7, demand) * (0.9 + audioRandom() * 0.25);
+    } else {
+      // Siren-like up then the next phrase will fall (woo)
+      phraseTarget = center * (1.55 + audioRandom() * 0.35);
+      phraseDur = lerp(0.7, 0.4, demand);
+    }
+    phraseUntil = t + phraseDur;
+    nextPhrase = phraseUntil + lerp(0.55, 0.12, demand) * (0.7 + audioRandom() * 0.5);
+  }
+
   return {
     ...handle,
     update(m, t) {
       if (disposed) return;
-      drift += m.dt * (0.08 + audioRandom() * 0.04);
-      const vib = Math.sin(t * (5 + audioRandom() * 0.3)) * (8 + m.accelFast * 12);
-      const micro = (audioRandom() - 0.5) * 3;
-      const target = (opts.baseHz ?? 220) * (0.85 + m.speedSlow * 0.45 + m.accelFast * 0.35);
-      portamento += (target - portamento) * (m.dt / 0.35);
-      targetParam(a.frequency, portamento + vib + micro, t, 0.04);
-      targetParam(b.frequency, portamento * 1.008 + vib * 0.7 - micro, t, 0.04);
-      targetParam(formant.frequency, 700 + m.speedSlow * 900 + Math.sin(drift) * 120, t, 0.2);
-      targetParam(gain.gain, softGate((opts.level ?? 0.35) * (0.45 + m.speedSlow * 0.3 + 0.2)), t, 0.2);
-      targetParam(panner.pan, Math.sin(drift * 0.7) * 0.55, t, 0.25);
+      const demand = clamp(
+        m.throttleFast * 0.55 + Math.max(0, m.accelFast) * 0.85 + m.speedSlow * 0.45,
+      );
+      // Always some presence so idle hover still reads as UFO.
+      const energy = 0.42 + demand * 0.75;
+
+      // Phrase engine — continuous glissando is the theremin identity.
+      if (t >= nextPhrase && t >= phraseUntil) {
+        schedulePhrase(t, demand, m.speedSlow);
+      }
+      let melodic = glide.hz;
+      if (t < phraseUntil && phraseDur > 0.01) {
+        const u = glideEase((t - phraseStart) / phraseDur);
+        melodic = phraseFrom + (phraseTarget - phraseFrom) * u;
+      } else {
+        // Between phrases: slow hover drift around the motion-mapped center.
+        const hover =
+          register *
+          (0.9 + m.speedSlow * 0.5 + demand * 0.55) *
+          (1 + Math.sin(t * 0.35) * 0.04);
+        melodic = glide.hz + (hover - glide.hz) * Math.min(1, m.dt / 0.45);
+      }
+      glide.hz = melodic;
+
+      // Fast vibrato — hallmark of classic sci-fi theremin (depth grows with load).
+      vibPhase += m.dt * (5.2 + demand * 2.4);
+      const vibHz = (18 + demand * 55) * Math.sin(vibPhase * Math.PI * 2);
+      // Tiny hand jitter
+      const jitter = Math.sin(t * 13.7) * (1.5 + demand * 3);
+
+      const hz = Math.max(180, Math.min(2400, glide.hz + vibHz + jitter));
+      targetParam(voice.frequency, hz, t, 0.02);
+      targetParam(twin.frequency, hz * 1.0028, t, 0.02);
+
+      // Volume antenna: soft breathing; louder on phrase peaks and demand.
+      breathPhase += m.dt * (0.55 + demand * 0.8);
+      const breath = 0.72 + 0.28 * Math.sin(breathPhase * Math.PI * 2);
+      const phraseBoost = t < phraseUntil ? 1.15 : 1;
+      targetParam(voiceG.gain, softGate(0.34 * energy * breath * phraseBoost), t, 0.08);
+      targetParam(twinG.gain, softGate(0.12 * energy * breath), t, 0.08);
+
+      targetParam(lp.frequency, 3800 + demand * 1800, t, 0.2);
+      targetParam(airBp.frequency, 2200 + demand * 1600, t, 0.25);
+      targetParam(airG.gain, softGate(0.025 + demand * 0.035), t, 0.2);
+
+      // Orbiting craft overhead
+      orbit += m.dt * (0.35 + demand * 0.55 + m.speedSlow * 0.4);
+      targetParam(panner.pan, Math.sin(orbit) * 0.72 * m.stereoWidth, t, 0.18);
+
+      targetParam(gain.gain, softGate((opts.level ?? 0.75) * (0.75 + demand * 0.45)), t, 0.12);
     },
     dispose() {
       disposed = true;
-      stopSafe(a);
-      stopSafe(b);
-      stopSafe(shimmer);
+      stopSafe(voice);
+      stopSafe(twin);
+      stopSafe(air);
     },
   };
 }

@@ -14,6 +14,8 @@ import { MiniPlayer } from "@/components/MiniPlayer";
 import { SessionBridge } from "@/components/SessionBridge";
 import { InstallPrompt } from "@/components/InstallPrompt";
 import { TelemetryBridge } from "@/components/TelemetryBridge";
+import { SiteFooter } from "@/components/SiteFooter";
+import { CookieConsent } from "@/components/CookieConsent";
 
 import appCss from "../styles.css?url";
 import { reportRuntimeError } from "../lib/runtime-error-reporting";
@@ -138,16 +140,20 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <div id="app-root">
+      <div id="app-root" className="flex min-h-svh flex-col">
         <SessionBridge />
         <TelemetryBridge />
         <BrandNav />
-        <div className="pt-[calc(3.5rem+env(safe-area-inset-top,0px))] sm:pt-[calc(4rem+env(safe-area-inset-top,0px))]">
+        <div className="flex flex-1 flex-col pt-[calc(3.5rem+env(safe-area-inset-top,0px))] sm:pt-[calc(4rem+env(safe-area-inset-top,0px))]">
           {showMiniPlayer ? <MiniPlayer /> : null}
           <InstallPrompt />
           {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-          <Outlet />
+          <div className="flex-1">
+            <Outlet />
+          </div>
+          <SiteFooter />
         </div>
+        <CookieConsent />
       </div>
     </QueryClientProvider>
   );

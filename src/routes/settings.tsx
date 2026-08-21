@@ -742,12 +742,38 @@ function PrivacyWorkspace({
           Speed and motion data are processed on this device. ELCAMOSO does not upload your
           driving route in this MVP.
         </p>
-        <Link
-          to="/about"
-          className="mt-5 inline-block text-xs tracking-[0.24em] text-muted-foreground uppercase hover:text-foreground"
-        >
-          About ELCAMOSO
-        </Link>
+        <div className="mt-5 flex flex-wrap gap-x-5 gap-y-2">
+          <Link
+            to="/about"
+            className="text-xs tracking-[0.24em] text-muted-foreground uppercase hover:text-foreground"
+          >
+            About
+          </Link>
+          <Link
+            to="/legal/privacy"
+            className="text-xs tracking-[0.24em] text-muted-foreground uppercase hover:text-foreground"
+          >
+            Privacy
+          </Link>
+          <Link
+            to="/legal/impressum"
+            className="text-xs tracking-[0.24em] text-muted-foreground uppercase hover:text-foreground"
+          >
+            Impressum
+          </Link>
+          <Link
+            to="/legal/cookies"
+            className="text-xs tracking-[0.24em] text-muted-foreground uppercase hover:text-foreground"
+          >
+            Cookies
+          </Link>
+          <Link
+            to="/legal/terms"
+            className="text-xs tracking-[0.24em] text-muted-foreground uppercase hover:text-foreground"
+          >
+            Terms
+          </Link>
+        </div>
       </Block>
     </div>
   );

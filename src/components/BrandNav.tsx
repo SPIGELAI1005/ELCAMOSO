@@ -70,7 +70,7 @@ export function BrandNav() {
 
           <SheetContent
             side="right"
-            className="w-[min(100%,20rem)] border-border bg-background px-0 pt-14"
+            className="flex w-[min(100%,20rem)] flex-col border-border bg-background px-0 pt-14"
           >
             <SheetHeader className="space-y-4 border-b border-border px-6 pb-6 text-left">
               <div className="flex items-center gap-3">
@@ -96,6 +96,31 @@ export function BrandNav() {
                 </Link>
               ))}
             </nav>
+            <div className="mt-auto border-t border-border px-6 py-6">
+              <p className="text-[10px] tracking-[0.24em] text-muted-foreground uppercase">
+                Legal
+              </p>
+              <nav
+                aria-label="Legal"
+                className="mt-4 flex flex-col gap-3 text-xs tracking-[0.16em] text-muted-foreground uppercase"
+              >
+                <Link to="/legal/impressum" onClick={() => setOpen(false)} className="hover:text-foreground">
+                  Impressum
+                </Link>
+                <Link to="/legal/privacy" onClick={() => setOpen(false)} className="hover:text-foreground">
+                  Privacy
+                </Link>
+                <Link to="/legal/cookies" onClick={() => setOpen(false)} className="hover:text-foreground">
+                  Cookies
+                </Link>
+                <Link to="/legal/terms" onClick={() => setOpen(false)} className="hover:text-foreground">
+                  Terms
+                </Link>
+                <Link to="/legal" onClick={() => setOpen(false)} className="hover:text-foreground">
+                  All legal
+                </Link>
+              </nav>
+            </div>
           </SheetContent>
         </Sheet>
       </div>

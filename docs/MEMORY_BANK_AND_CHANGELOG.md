@@ -33,7 +33,7 @@ Canonical product rules still live in `elcamoso-comprehensive-spec.md`. Update *
 
 ### Routes
 
-`/`, `/onboarding`, `/drive`, `/demo`, `/sounds`, `/studio`, `/garage`, `/calibrate`, `/settings`, `/debug` (dev-only)
+`/`, `/onboarding`, `/drive`, `/demo`, `/sounds`, `/studio`, `/garage`, `/calibrate`, `/settings`, `/about`, `/legal` (+ impressum, privacy, cookies, terms, accessibility), `/debug` (dev-only)
 
 ### Sound architecture (current)
 
@@ -94,12 +94,58 @@ Canonical product rules still live in `elcamoso-comprehensive-spec.md`. Update *
 - Fifth pass done for Submarine (manual sonar) / Ocean / Deep Bass / Zen / Big Twin + Arcade phone polish
 - **Noise / Showroom pass:** `textureScale` on environments; Showroom = no texture hiss; global voice.noise + wind cuts; Horse Gallop transverse gait rewrite — `docs/SOUND_NOISE_AND_FIDELITY.md`
 - Sticky chrome fix: BrandNav + Sounds/Studio listen bars; Cabin EQ presets (Phone speakers / Cabin / Headphones)
-- Demo Drive: PRND + pedals; `useDemoDrive` syncs profile; `DemoSoundPicker` for full catalog
+- Demo Drive: PRND + pedals; guided tour; `useDemoDrive` syncs profile; `DemoSoundPicker` for full catalog
+- Find a sound on `/sounds` (local matcher + optional `findSoundFn`)
 - Card Preview on `/sounds` syncs session `profileId` without always writing settings; AuditionPanel still reflects selected settings profile
+- Title-fidelity pass: Playful (laugh/fart/kazoo) + Neon Drive + Construction Monster
 
 ---
 
 ## Changelog
+
+### 2026-08-21 (Vercel deploy)
+
+- Root cause of Vercel `404 NOT_FOUND`: Lovable Vite preset defaults Nitro to Cloudflare.
+- Fix: `nitro: { preset: "vercel" }` in `vite.config.ts` → builds `.vercel/output`.
+- Added `vercel.json` with `framework: "tanstack-start"`.
+- “Imported from Lovable” on Vercel is metadata from the Lovable stack/package, not a takeover of the GitHub repo.
+
+### 2026-08-21 (legal pages)
+
+- Added `/legal` hub + Impressum, Privacy, Cookies, Terms, Accessibility.
+- Site-wide `SiteFooter` and `CookieConsent` bar in root layout.
+- Operator PLACEHOLDERs in `src/lib/legal/operator.ts` (fill before DE/EU launch).
+
+### 2026-08-21 (Deep Bass Pulse)
+
+- Was a continuous soft sine (not a pulse). Rebuilt as discrete 808-style hits: sub drop + mid presence + click.
+- BPM ~58–130 with throttle/accel; near-silence between hits so the boom reads; removed masking air bed.
+
+### 2026-08-21 (UFO theremin rebuild)
+
+- Classic UFO = theremin (Day the Earth Stood Still / cartoon saucer idiom), not a low saw engine.
+- Pure high sine (~740 Hz register), 5–7 Hz vibrato, slow-fast-slow glissando phrases, volume breathing, stereo orbit.
+- Removed ion haze / tractor-beam layers that masked the identity.
+
+### 2026-08-21 (UFO + Neon Drive presence)
+
+- Both were near-silent: thin oscillators + double softGate attenuation.
+- UFO: saucer drone, theremin beat, whoop sweeps, louder beams, mid presence peak.
+- Neon: gated bass/punch, bright squares, triad stabs, stronger chirps; idle still pulses.
+- Loudness bumped to ~1.18 for both.
+
+### 2026-08-21 (sprint: title fidelity + Demo tour + Find a sound)
+
+- **Title fidelity:** Laughing Machine (prior), Farting Car cadence, Kazoo syllables, Neon square pulses + chirps, Construction Monster hydraulics/clunks/diesel lump.
+- **Demo Guided Tour:** ~28s auto-throttle showcase (Laugh → Neon → Construction → Fart) on `/demo`.
+- **Find a sound:** plain-language matcher on `/sounds` → Listen; `findSoundFn` optional cloud refine; local aliases + tests.
+- Files: `find-sound.ts`, `FindSoundPanel.tsx`, `DemoGuidedTour.tsx`.
+
+### 2026-08-21 (Laughing Machine)
+
+- Laughs were nearly inaudible: one-shots started after a long settle-in and levels were too low.
+- Added `createLaughCadenceLayer`: formant “ha” + breath, rate/power/pitch rise with throttle and accel.
+- Improved laugh one-shot synthesis; shortened first-fire delay for frequent accents; bumped profile loudness.
 
 ### 2026-08-21 (noise, Showroom, Horse Gallop)
 

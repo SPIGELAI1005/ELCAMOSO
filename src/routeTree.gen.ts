@@ -16,12 +16,19 @@ import { Route as DebugRouteImport } from './routes/debug'
 import { Route as DemoRouteImport } from './routes/demo'
 import { Route as DriveRouteImport } from './routes/drive'
 import { Route as GarageRouteImport } from './routes/garage'
+import { Route as LegalRouteRouteImport } from './routes/legal/route'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as ReplayRouteImport } from './routes/replay'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as ShareRouteImport } from './routes/share'
 import { Route as SoundsRouteImport } from './routes/sounds'
 import { Route as StudioRouteImport } from './routes/studio'
+import { Route as LegalIndexRouteImport } from './routes/legal/index'
+import { Route as LegalAccessibilityRouteImport } from './routes/legal/accessibility'
+import { Route as LegalCookiesRouteImport } from './routes/legal/cookies'
+import { Route as LegalImpressumRouteImport } from './routes/legal/impressum'
+import { Route as LegalPrivacyRouteImport } from './routes/legal/privacy'
+import { Route as LegalTermsRouteImport } from './routes/legal/terms'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -58,6 +65,11 @@ const GarageRoute = GarageRouteImport.update({
   path: '/garage',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LegalRouteRoute = LegalRouteRouteImport.update({
+  id: '/legal',
+  path: '/legal',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const OnboardingRoute = OnboardingRouteImport.update({
   id: '/onboarding',
   path: '/onboarding',
@@ -88,9 +100,40 @@ const StudioRoute = StudioRouteImport.update({
   path: '/studio',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LegalIndexRoute = LegalIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => LegalRouteRoute,
+} as any)
+const LegalAccessibilityRoute = LegalAccessibilityRouteImport.update({
+  id: '/accessibility',
+  path: '/accessibility',
+  getParentRoute: () => LegalRouteRoute,
+} as any)
+const LegalCookiesRoute = LegalCookiesRouteImport.update({
+  id: '/cookies',
+  path: '/cookies',
+  getParentRoute: () => LegalRouteRoute,
+} as any)
+const LegalImpressumRoute = LegalImpressumRouteImport.update({
+  id: '/impressum',
+  path: '/impressum',
+  getParentRoute: () => LegalRouteRoute,
+} as any)
+const LegalPrivacyRoute = LegalPrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
+  getParentRoute: () => LegalRouteRoute,
+} as any)
+const LegalTermsRoute = LegalTermsRouteImport.update({
+  id: '/terms',
+  path: '/terms',
+  getParentRoute: () => LegalRouteRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/legal': typeof LegalRouteRouteWithChildren
   '/about': typeof AboutRoute
   '/calibrate': typeof CalibrateRoute
   '/debug': typeof DebugRoute
@@ -103,6 +146,12 @@ export interface FileRoutesByFullPath {
   '/share': typeof ShareRoute
   '/sounds': typeof SoundsRoute
   '/studio': typeof StudioRoute
+  '/legal/accessibility': typeof LegalAccessibilityRoute
+  '/legal/cookies': typeof LegalCookiesRoute
+  '/legal/impressum': typeof LegalImpressumRoute
+  '/legal/privacy': typeof LegalPrivacyRoute
+  '/legal/terms': typeof LegalTermsRoute
+  '/legal/': typeof LegalIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -118,10 +167,17 @@ export interface FileRoutesByTo {
   '/share': typeof ShareRoute
   '/sounds': typeof SoundsRoute
   '/studio': typeof StudioRoute
+  '/legal/accessibility': typeof LegalAccessibilityRoute
+  '/legal/cookies': typeof LegalCookiesRoute
+  '/legal/impressum': typeof LegalImpressumRoute
+  '/legal/privacy': typeof LegalPrivacyRoute
+  '/legal/terms': typeof LegalTermsRoute
+  '/legal': typeof LegalIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/legal': typeof LegalRouteRouteWithChildren
   '/about': typeof AboutRoute
   '/calibrate': typeof CalibrateRoute
   '/debug': typeof DebugRoute
@@ -134,11 +190,18 @@ export interface FileRoutesById {
   '/share': typeof ShareRoute
   '/sounds': typeof SoundsRoute
   '/studio': typeof StudioRoute
+  '/legal/accessibility': typeof LegalAccessibilityRoute
+  '/legal/cookies': typeof LegalCookiesRoute
+  '/legal/impressum': typeof LegalImpressumRoute
+  '/legal/privacy': typeof LegalPrivacyRoute
+  '/legal/terms': typeof LegalTermsRoute
+  '/legal/': typeof LegalIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/legal'
     | '/about'
     | '/calibrate'
     | '/debug'
@@ -151,6 +214,12 @@ export interface FileRouteTypes {
     | '/share'
     | '/sounds'
     | '/studio'
+    | '/legal/accessibility'
+    | '/legal/cookies'
+    | '/legal/impressum'
+    | '/legal/privacy'
+    | '/legal/terms'
+    | '/legal/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -166,9 +235,16 @@ export interface FileRouteTypes {
     | '/share'
     | '/sounds'
     | '/studio'
+    | '/legal/accessibility'
+    | '/legal/cookies'
+    | '/legal/impressum'
+    | '/legal/privacy'
+    | '/legal/terms'
+    | '/legal'
   id:
     | '__root__'
     | '/'
+    | '/legal'
     | '/about'
     | '/calibrate'
     | '/debug'
@@ -181,10 +257,17 @@ export interface FileRouteTypes {
     | '/share'
     | '/sounds'
     | '/studio'
+    | '/legal/accessibility'
+    | '/legal/cookies'
+    | '/legal/impressum'
+    | '/legal/privacy'
+    | '/legal/terms'
+    | '/legal/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  LegalRouteRoute: typeof LegalRouteRouteWithChildren
   AboutRoute: typeof AboutRoute
   CalibrateRoute: typeof CalibrateRoute
   DebugRoute: typeof DebugRoute
@@ -250,6 +333,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof GarageRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/legal': {
+      id: '/legal'
+      path: '/legal'
+      fullPath: '/legal'
+      preLoaderRoute: typeof LegalRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/onboarding': {
       id: '/onboarding'
       path: '/onboarding'
@@ -292,11 +382,76 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StudioRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/legal/': {
+      id: '/legal/'
+      path: '/'
+      fullPath: '/legal/'
+      preLoaderRoute: typeof LegalIndexRouteImport
+      parentRoute: typeof LegalRouteRoute
+    }
+    '/legal/accessibility': {
+      id: '/legal/accessibility'
+      path: '/accessibility'
+      fullPath: '/legal/accessibility'
+      preLoaderRoute: typeof LegalAccessibilityRouteImport
+      parentRoute: typeof LegalRouteRoute
+    }
+    '/legal/cookies': {
+      id: '/legal/cookies'
+      path: '/cookies'
+      fullPath: '/legal/cookies'
+      preLoaderRoute: typeof LegalCookiesRouteImport
+      parentRoute: typeof LegalRouteRoute
+    }
+    '/legal/impressum': {
+      id: '/legal/impressum'
+      path: '/impressum'
+      fullPath: '/legal/impressum'
+      preLoaderRoute: typeof LegalImpressumRouteImport
+      parentRoute: typeof LegalRouteRoute
+    }
+    '/legal/privacy': {
+      id: '/legal/privacy'
+      path: '/privacy'
+      fullPath: '/legal/privacy'
+      preLoaderRoute: typeof LegalPrivacyRouteImport
+      parentRoute: typeof LegalRouteRoute
+    }
+    '/legal/terms': {
+      id: '/legal/terms'
+      path: '/terms'
+      fullPath: '/legal/terms'
+      preLoaderRoute: typeof LegalTermsRouteImport
+      parentRoute: typeof LegalRouteRoute
+    }
   }
 }
 
+interface LegalRouteRouteChildren {
+  LegalAccessibilityRoute: typeof LegalAccessibilityRoute
+  LegalCookiesRoute: typeof LegalCookiesRoute
+  LegalImpressumRoute: typeof LegalImpressumRoute
+  LegalPrivacyRoute: typeof LegalPrivacyRoute
+  LegalTermsRoute: typeof LegalTermsRoute
+  LegalIndexRoute: typeof LegalIndexRoute
+}
+
+const LegalRouteRouteChildren: LegalRouteRouteChildren = {
+  LegalAccessibilityRoute: LegalAccessibilityRoute,
+  LegalCookiesRoute: LegalCookiesRoute,
+  LegalImpressumRoute: LegalImpressumRoute,
+  LegalPrivacyRoute: LegalPrivacyRoute,
+  LegalTermsRoute: LegalTermsRoute,
+  LegalIndexRoute: LegalIndexRoute,
+}
+
+const LegalRouteRouteWithChildren = LegalRouteRoute._addFileChildren(
+  LegalRouteRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  LegalRouteRoute: LegalRouteRouteWithChildren,
   AboutRoute: AboutRoute,
   CalibrateRoute: CalibrateRoute,
   DebugRoute: DebugRoute,

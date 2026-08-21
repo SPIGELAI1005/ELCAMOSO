@@ -10,6 +10,8 @@ import {
   createImpactLayer,
   createIntakeRoarLayer,
   createKazooLayer,
+  createLaughCadenceLayer,
+  createFartCadenceLayer,
   createMechanicalLayer,
   createOneShotEventLayer,
   createResonantBodyLayer,
@@ -307,14 +309,12 @@ const baseStrategies: ProfileStrategy[] = [
     id: "ufo",
     build(ctx, buses) {
       return [
-        createUfoLayer(ctx, { id: "hover", destination: buses.body, baseHz: 190, level: 0.4 }),
-        createFilteredNoiseLayer(ctx, {
-          id: "shimmer",
-          destination: buses.beds,
-          color: "pink",
-          filterType: "highpass",
-          tone: 5000,
-          level: 0.06,
+        // Theremin is the whole character — keep beds/accents from masking it.
+        createUfoLayer(ctx, {
+          id: "theremin",
+          destination: buses.body,
+          baseHz: 760,
+          level: 0.88,
         }),
       ];
     },
@@ -770,49 +770,24 @@ const baseStrategies: ProfileStrategy[] = [
     id: "laughing-machine",
     build(ctx, buses) {
       return [
-        // Event pool / sequencing — not an RPM engine
-        createOneShotEventLayer(ctx, {
-          id: "chuckles",
+        createLaughCadenceLayer(ctx, {
+          id: "laugh-cadence",
           destination: buses.accents,
-          level: 1,
-          events: [
-            {
-              kind: "laugh",
-              everySeconds: 2.4,
-              jitter: 1.2,
-              level: 0.14,
-              tone: 200,
-              speedLinked: true,
-            },
-          ],
+          tone: 210,
+          level: 0.72,
         }),
         createOneShotEventLayer(ctx, {
-          id: "giggles",
+          id: "belly-laugh",
           destination: buses.accents,
           level: 1,
           events: [
             {
               kind: "laugh",
-              everySeconds: 1.1,
-              jitter: 0.5,
-              level: 0.22,
-              tone: 170,
+              everySeconds: 1.8,
+              jitter: 0.7,
+              level: 0.5,
+              tone: 155,
               speedLinked: true,
-            },
-          ],
-        }),
-        createOneShotEventLayer(ctx, {
-          id: "big-laughs",
-          destination: buses.accents,
-          level: 1,
-          events: [
-            {
-              kind: "laugh",
-              everySeconds: 3.5,
-              jitter: 1.5,
-              level: 0.28,
-              tone: 140,
-              onlyOnHardAccel: true,
             },
           ],
         }),
@@ -821,8 +796,17 @@ const baseStrategies: ProfileStrategy[] = [
           destination: buses.beds,
           color: "pink",
           filterType: "bandpass",
-          tone: 800,
-          level: 0.08,
+          tone: 900,
+          q: 1.2,
+          level: 0.06,
+          throttleWeight: 0.9,
+          speedWeight: 0.25,
+        }),
+        createResonantBodyLayer(ctx, {
+          id: "cabin-giggle",
+          destination: buses.body,
+          freqs: [95, 190],
+          level: 0.12,
         }),
       ];
     },
@@ -831,36 +815,11 @@ const baseStrategies: ProfileStrategy[] = [
     id: "farting-car",
     build(ctx, buses) {
       return [
-        // Comic gas event classes with cooldown/probability — no looping oscillator
-        createOneShotEventLayer(ctx, {
-          id: "tiny-puffs",
+        createFartCadenceLayer(ctx, {
+          id: "gas-cadence",
           destination: buses.accents,
-          level: 1,
-          events: [
-            {
-              kind: "fart",
-              everySeconds: 2.2,
-              jitter: 1.4,
-              level: 0.16,
-              tone: 120,
-              speedLinked: true,
-            },
-          ],
-        }),
-        createOneShotEventLayer(ctx, {
-          id: "bubbly",
-          destination: buses.accents,
-          level: 1,
-          events: [
-            {
-              kind: "fart",
-              everySeconds: 1.6,
-              jitter: 1.0,
-              level: 0.26,
-              tone: 85,
-              onlyOnHardAccel: true,
-            },
-          ],
+          tone: 95,
+          level: 0.68,
         }),
         createOneShotEventLayer(ctx, {
           id: "lift-bubbles",
@@ -869,13 +828,23 @@ const baseStrategies: ProfileStrategy[] = [
           events: [
             {
               kind: "fart",
-              everySeconds: 4.5,
-              jitter: 2,
-              level: 0.2,
-              tone: 65,
+              everySeconds: 2.2,
+              jitter: 1.0,
+              level: 0.42,
+              tone: 60,
               onlyOnLift: true,
             },
           ],
+        }),
+        createFilteredNoiseLayer(ctx, {
+          id: "exhaust-hiss",
+          destination: buses.beds,
+          color: "brown",
+          filterType: "lowpass",
+          tone: 220,
+          level: 0.06,
+          throttleWeight: 1.2,
+          speedWeight: 0.2,
         }),
       ];
     },
@@ -887,17 +856,19 @@ const baseStrategies: ProfileStrategy[] = [
         createKazooLayer(ctx, {
           id: "kazoo",
           destination: buses.body,
-          baseHz: 160,
-          level: 0.5,
+          baseHz: 175,
+          level: 0.72,
         }),
-        // Subtle kart mechanics only — kazoo remains dominant
         createFilteredNoiseLayer(ctx, {
           id: "wheel-buzz",
           destination: buses.beds,
           color: "pink",
           filterType: "bandpass",
-          tone: 600,
+          tone: 650,
+          q: 1.4,
           level: 0.05,
+          throttleWeight: 0.8,
+          speedWeight: 0.4,
         }),
       ];
     },

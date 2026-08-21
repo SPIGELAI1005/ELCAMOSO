@@ -13,7 +13,12 @@ Statuses are engineering judgments from architecture + short offline renders —
 | Turbo Inline-6 | solid | Lagging spool + lift dump | Blowoff was rare | Longer lag + wastegate + blowoff |
 | Electric Hypercar | solid | Motor + inverter mesh on accel | Mesh was subtle | `meshBoost` + throttle inverter |
 | Formula Electric | solid | Technical whine + reduction | Was harsh above 4 kHz | Softened shimmer + 2.6 kHz filter ceiling |
-| Neon Drive | needs listen | Pulse density with speed | Was metronomic; may still feel synthetic | A/B vs Showroom; gate density |
+| Neon Drive | improved | Gated bass + square stabs + triad blips + chirps; louder | Was near-silent | Demo throttle sweep |
+| UFO | improved | Research-based theremin: high sine, 5–7 Hz vibrato, continuous glissando phrases, orbit pan | Was saw drone + beams | Listen idle hover then throttle |
+| Construction Monster | improved | Hydraulics + metal clunk + diesel lump | Was machinery bed | Solo hydraulics in Showroom |
+| Laughing Machine | improved | Formant laugh cadence vs accel | Was inaudible / delayed | Tour step 1 |
+| Farting Car | improved | Gas cadence + lift bubbles | Rare quiet one-shots | Tour step 4 |
+| Kazoo Kart | improved | Clear syllables under throttle | Mild buzz | Demo picker |
 | Maglev Train | solid | Guideway hum at low speed | Low speed was thin | Idle hum + stronger structure |
 | High-Speed Train | solid | Denser mid-speed joints | Joints were sparse | Cobble joints + densityScale |
 | Submarine | solid | Hull + manual/auto sonar | Ping was rare beam | `sonar` kind + Studio/Debug trigger |
@@ -22,13 +27,12 @@ Statuses are engineering judgments from architecture + short offline renders —
 | Big Twin | strong | Asymmetrical cadence + mid body | Phone sub loss | Mid body 95–240 Hz + filter ceiling |
 | Snowmobile | solid | Soft snow thumps + belt | Snow felt like gravel | `softThump` packed-snow hits |
 | Tank | solid | Tracks + mid hull knock | Diesel was thin | Knock pulse + midKnock tracks |
-| Construction Monster | needs listen | Hydraulics as cue | Can still read as machinery bed | Solo accents in Showroom |
 | Horse Gallop | improved | Speed-mapped walk/trot/canter/gallop + flight | Procedural only; no sample neigh | Listen at rising speed; breath on throttle |
 | Dragon | needs listen | Organic breath + rare roar | Mythic, not literal animal | Darker breath vs Thunder |
 | Thunder Beast | solid | Dark pressure + thunder | Overlapped Dragon | Darker breath, brown bed, no wing |
 | Retro Arcade | solid | 8-bit with phone-safe LP | HF square edge | Softer square, more triangle, mid cabinet |
 | Synthwave Drive | solid | Long filter evolution | Arp was dense | Slower arp + lagged LP envelope |
-| Deep Bass Pulse | strong | 58–160 Hz presence for cabin | Easy to bury on phones | Presence oscillator + mid air bed |
+| Deep Bass Pulse | improved | Discrete 808 booms + phone presence click; BPM tracks demand | Was continuous soft drone | Idle boom then hard throttle |
 | Zen Drive | solid | Calm wind + rare chimes | Chimes were frequent | ~55s interval, quieter bells |
 | Rain Drive | improved | Mid-speed spray + wash | Was too hissy | Lower noise + rain layer; Showroom = dry voice |
 | Ocean Drive | improved | Slow swell, foam with speed | Swell tracked speed too much | Quieter beds; Showroom A/B |
@@ -47,8 +51,8 @@ Statuses are engineering judgments from architecture + short offline renders —
 
 1. Settings → Environment → **Showroom**, then A/B Horse Gallop vs Wild West Carriage  
 2. Cabin EQ → **Phone speakers** for jets and Rain Drive  
-3. Neon Drive and Construction Monster title fidelity  
-4. Dragon vs Thunder Beast differentiation on headphones  
+3. Dragon vs Thunder Beast differentiation on headphones  
+4. Demo **Guided tour** for Playful / Neon / Construction title check  
 
 ### Chrome / sticky UI
 

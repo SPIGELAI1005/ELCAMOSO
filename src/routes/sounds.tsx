@@ -24,6 +24,7 @@ import { exportSoundPack, importSoundPack } from "@/lib/drive/settings";
 import { needsIntenseConfirm } from "@/lib/drive/safety";
 import { getProfileGain } from "@/lib/drive/settings";
 import { t } from "@/lib/i18n";
+import { FindSoundPanel } from "@/components/FindSoundPanel";
 import { chromeStickyTopClass, isLiveSessionStatus } from "@/lib/ui/chrome";
 
 export const Route = createFileRoute("/sounds")({
@@ -123,6 +124,8 @@ function Sounds() {
         <p className="mt-3 max-w-xl text-sm text-muted-foreground">
           Open a family, pick a Sound Profile, then Listen. Everything uses the same Motion.
         </p>
+
+        <FindSoundPanel className="mt-10" onSelect={select} />
 
         {/* Sticky listen strip: stays under BrandNav (+ MiniPlayer when live). */}
         <section

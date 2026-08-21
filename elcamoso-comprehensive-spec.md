@@ -368,14 +368,23 @@ Primary navigation is minimal. Main routes:
 | `/` | Landing / hero with [Start Drive] |
 | `/onboarding` | 3-step first-time setup |
 | `/drive` | Active driving interface |
-| `/demo` | Simulated drive with sliders |
-| `/sounds` | Browse, audition, select profiles |
+| `/demo` | Pedals + P R N D, guided character tour, no sensors |
+| `/sounds` | Browse, Find a sound → Listen, audition, select profiles |
 | `/studio` | Sound shaping, mixer, environments, snippets, AI prompt-to-sound, audio monitor, share link |
 | `/garage` | Collection, favorites, playlists, snippets, share |
 | `/share` | Audition a shared Studio personality from a link |
 | `/calibrate` | Motion sensitivity calibration with live test |
 | `/settings` | Master volume, per-profile gain, haptics, reduced motion, usage insights, reset onboarding, export/import |
+| `/about` | Product about |
+| `/legal` | Legal hub |
+| `/legal/impressum` | German Impressum (TMG) |
+| `/legal/privacy` | Privacy / Datenschutzerklärung (GDPR + US) |
+| `/legal/cookies` | Cookie notice + consent reset |
+| `/legal/terms` | Terms of use |
+| `/legal/accessibility` | Accessibility statement |
 | `/debug` (dev-only) | Diagnostics panel |
+
+Site footer (`SiteFooter`) and cookie consent bar (`CookieConsent`) render from the root layout. Operator details live in `src/lib/legal/operator.ts` (replace PLACEHOLDERs before public DE/EU launch).
 
 Root layout (`__root.tsx`) renders `<Outlet />` and global providers/Toaster. No `_app/index.tsx` or `_authenticated/index.tsx` should duplicate `/`.
 

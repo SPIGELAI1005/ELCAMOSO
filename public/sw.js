@@ -1,4 +1,4 @@
-const CACHE = "elcamoso-shell-v3";
+const CACHE = "elcamoso-shell-v6";
 const SHELL = [
   "/manifest.webmanifest",
   "/icon.svg",
@@ -6,6 +6,23 @@ const SHELL = [
   "/icon-512.png",
   "/apple-touch-icon.png",
 ];
+
+function isDevModuleRequest(url) {
+  const p = url.pathname;
+  return (
+    p.startsWith("/@") ||
+    p.startsWith("/src/") ||
+    p.startsWith("/node_modules/") ||
+    p.includes("/.vite/") ||
+    p.endsWith(".tsx") ||
+    p.endsWith(".ts") ||
+    p.endsWith(".jsx") ||
+    p.endsWith(".mjs") ||
+    url.searchParams.has("v") ||
+    url.searchParams.has("t") ||
+    url.searchParams.has("import")
+  );
+}
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -30,6 +47,8 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;
   if (url.pathname.includes("elcamoso-traces") || url.protocol === "indexeddb:") return;
+  // Never intercept Vite/HMR or app modules (duplicate React / broken hooks).
+  if (isDevModuleRequest(url)) return;
 
   // Always prefer network for HTML / app navigations so deploys and HMR are visible.
   const isDocument =
@@ -51,7 +70,15 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Static assets: cache-first, then network.
+  // Production static shell assets only: cache-first, then network.
+  const isShellAsset =
+    SHELL.includes(url.pathname) ||
+    url.pathname.startsWith("/assets/") ||
+    url.pathname === "/favicon.png" ||
+    url.pathname === "/sw.js";
+
+  if (!isShellAsset) return;
+
   event.respondWith(
     caches.match(req).then((cached) => {
       if (cached) return cached;

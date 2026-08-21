@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { coachCopy, readCloud, upsertCloud, type CloudDocument } from "@/lib/cloud/store";
 import { ingestTelemetry, loadShare, saveShare, type TelemetryBatch } from "@/lib/telemetry/store";
 import { recipeFromPrompt, type SoundRecipe } from "@/lib/sound/recipes";
+import { findSoundsFromPrompt, type SoundMatch } from "@/lib/sound/find-sound";
 import type { TraceAggregates } from "@/lib/drive/traces";
 import type { CustomSound } from "@/lib/drive/settings";
 
@@ -12,6 +13,62 @@ export const syncGarageFn = createServerFn({ method: "POST" })
 export const loadGarageFn = createServerFn({ method: "POST" })
   .inputValidator((data: { accountId: string }) => data)
   .handler(({ data }) => readCloud(data.accountId));
+
+export const findSoundFn = createServerFn({ method: "POST" })
+  .inputValidator((data: { prompt: string }) => data)
+  .handler(async ({ data }): Promise<{ matches: SoundMatch[] }> => {
+    const local = findSoundsFromPrompt(data.prompt, 5);
+    const key = process.env["OPENAI_API_KEY"];
+    if (!key || local.length === 0) return { matches: local.slice(0, 3) };
+    try {
+      const catalog = local
+        .map((m) => `${m.profileId}|${m.name}|${m.category}`)
+        .join("\n");
+      const res = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          authorization: `Bearer ${key}`,
+        },
+        body: JSON.stringify({
+          model: "gpt-4o-mini",
+          temperature: 0.2,
+          messages: [
+            {
+              role: "system",
+              content:
+                "Pick up to 3 Sound Profiles from the catalog for the user's mood. Reply JSON array of {profileId, reason}. Never ask for location or motion. Use only listed profileId values.",
+            },
+            {
+              role: "user",
+              content: `Prompt: ${data.prompt}\nCatalog:\n${catalog}`,
+            },
+          ],
+        }),
+      });
+      const json = (await res.json()) as { choices?: { message?: { content?: string } }[] };
+      const text = json.choices?.[0]?.message?.content ?? "";
+      const parsed = JSON.parse(text.replace(/```json|```/g, "")) as {
+        profileId: string;
+        reason?: string;
+      }[];
+      if (!Array.isArray(parsed) || !parsed.length) return { matches: local.slice(0, 3) };
+      const byId = new Map(local.map((m) => [m.profileId, m]));
+      const ranked: SoundMatch[] = [];
+      for (const row of parsed) {
+        const hit = byId.get(row.profileId);
+        if (!hit) continue;
+        ranked.push({
+          ...hit,
+          reason: row.reason?.trim() || hit.reason,
+          score: hit.score + 20,
+        });
+      }
+      return { matches: ranked.length ? ranked.slice(0, 3) : local.slice(0, 3) };
+    } catch {
+      return { matches: local.slice(0, 3) };
+    }
+  });
 
 export const promptToSoundFn = createServerFn({ method: "POST" })
   .inputValidator((data: { prompt: string }) => data)

@@ -1392,56 +1392,60 @@ export class SoundEngine {
     const ctx = this.ctx;
     const out = this.bus();
     if (!ctx || !out) return;
-    const syllables = 3 + Math.round(state.load * 4);
-    const spacing = 0.155 - state.load * 0.03;
+    const joy = Math.min(
+      1,
+      state.throttle * 0.65 + Math.max(0, state.acceleration / 3.5) * 0.9 + state.load * 0.35,
+    );
+    const syllables = 3 + Math.round(joy * 5);
+    const spacing = 0.16 - joy * 0.07;
 
     for (let i = 0; i < syllables; i += 1) {
       const t0 = at + i * spacing;
-      const pitch = tone * (1.12 - i * 0.045) * (1 + state.load * 0.35);
+      const pitch = tone * (1.14 - i * 0.05) * (1 + joy * 0.5);
       const osc = ctx.createOscillator();
       const f1 = ctx.createBiquadFilter();
       const f2 = ctx.createBiquadFilter();
       const gain = ctx.createGain();
 
       osc.type = "sawtooth";
-      osc.frequency.setValueAtTime(pitch * 1.06, t0);
-      osc.frequency.exponentialRampToValueAtTime(pitch * 0.92, t0 + spacing * 0.8);
+      osc.frequency.setValueAtTime(pitch * 1.08, t0);
+      osc.frequency.exponentialRampToValueAtTime(pitch * 0.9, t0 + spacing * 0.8);
 
       f1.type = "bandpass";
-      f1.frequency.value = 730; // "ah" formant
-      f1.Q.value = 7;
+      f1.frequency.value = 780;
+      f1.Q.value = 5.5;
       f2.type = "bandpass";
-      f2.frequency.value = 1180;
-      f2.Q.value = 9;
+      f2.frequency.value = 1250;
+      f2.Q.value = 7;
 
-      const amp = level * (i === 0 ? 1 : 0.86 - i * 0.07);
+      const amp = level * (0.55 + joy * 1.05) * (i === 0 ? 1.05 : 0.9 - i * 0.06);
       gain.gain.setValueAtTime(0.0001, t0);
-      gain.gain.exponentialRampToValueAtTime(Math.max(0.0002, amp), t0 + 0.022);
-      gain.gain.exponentialRampToValueAtTime(0.0001, t0 + spacing * 0.85);
+      gain.gain.exponentialRampToValueAtTime(Math.max(0.0002, amp), t0 + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t0 + spacing * 0.88);
 
       osc.connect(f1);
       f1.connect(f2);
       f2.connect(gain);
       gain.connect(out);
       osc.start(t0);
-      osc.stop(t0 + spacing);
+      osc.stop(t0 + spacing + 0.02);
 
-      // breath on each syllable
       const br = ctx.createBufferSource();
       br.buffer = this.getNoise(ctx, "pink");
       br.loop = true;
       const hp = ctx.createBiquadFilter();
-      hp.type = "highpass";
-      hp.frequency.value = 1600;
+      hp.type = "bandpass";
+      hp.frequency.value = 2100;
+      hp.Q.value = 1.2;
       const bg = ctx.createGain();
       bg.gain.setValueAtTime(0.0001, t0);
-      bg.gain.exponentialRampToValueAtTime(Math.max(0.0002, amp * 0.3), t0 + 0.02);
+      bg.gain.exponentialRampToValueAtTime(Math.max(0.0002, amp * 0.4), t0 + 0.012);
       bg.gain.exponentialRampToValueAtTime(0.0001, t0 + spacing * 0.7);
       br.connect(hp);
       hp.connect(bg);
       bg.connect(out);
       br.start(t0);
-      br.stop(t0 + spacing);
+      br.stop(t0 + spacing + 0.02);
     }
   }
 

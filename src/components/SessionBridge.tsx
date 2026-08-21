@@ -44,6 +44,21 @@ export function SessionBridge() {
 
   useEffect(() => {
     if (typeof navigator === "undefined" || !("serviceWorker" in navigator)) return;
+    // Never register the shell SW in Vite/dev: cache-first module responses mix
+    // React copies after dep re-optimize and cause Invalid hook call / useContext null.
+    if (import.meta.env.DEV) {
+      void navigator.serviceWorker.getRegistrations().then((regs) => {
+        for (const reg of regs) void reg.unregister();
+      });
+      if ("caches" in window) {
+        void caches.keys().then((keys) => {
+          for (const key of keys) {
+            if (key.startsWith("elcamoso-")) void caches.delete(key);
+          }
+        });
+      }
+      return;
+    }
     void navigator.serviceWorker.register("/sw.js");
   }, []);
 
