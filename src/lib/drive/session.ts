@@ -199,6 +199,14 @@ class DriveSession {
     return this.cached;
   }
 
+  private safeMeter(): MeterReading | null {
+    try {
+      return this.engine?.getMeter() ?? null;
+    } catch {
+      return null;
+    }
+  }
+
   private read(): SessionSnapshot {
     const profile = getProfile(this.config.profileId);
     return {
@@ -208,7 +216,7 @@ class DriveSession {
       state: this.state,
       profileId: this.config.profileId,
       profileName: profile.name,
-      meter: this.engine?.getMeter() ?? null,
+      meter: this.safeMeter(),
       demo: this.demo,
       auditionKmh: this.auditionKmh,
       ducking: this.ducking,
@@ -255,7 +263,11 @@ class DriveSession {
     this.engine?.setProfileGain(1);
     this.engine?.setIntensityCeiling(cappedGain(1, 1, profile));
     if (next.profileId && next.profileId !== prevId) {
-      this.engine?.setProfile(profile);
+      try {
+        this.engine?.setProfile(profile);
+      } catch (error) {
+        reportAudioError(error);
+      }
       this.ruleLatched.clear();
       this.suggestedProfileId = null;
     }
@@ -288,7 +300,11 @@ class DriveSession {
   private applyProfile(profileId: string) {
     if (profileId === this.config.profileId) return;
     this.config.profileId = profileId;
-    this.engine?.setProfile(getProfile(profileId));
+    try {
+      this.engine?.setProfile(getProfile(profileId));
+    } catch (error) {
+      reportAudioError(error);
+    }
     this.ruleLatched.clear();
     this.bindMediaSession();
   }
@@ -379,6 +395,26 @@ class DriveSession {
     } catch {
       this.emit();
     }
+  }
+
+  /**
+   * Listen / Preview from Sounds: switch in place when audio is already live.
+   * Recreating the AudioContext mid-play (especially in-car browsers) is a
+   * common crash path; keep the running engine and only crossfade profiles.
+   */
+  async listenProfile(profileId: string, kmh = 60) {
+    this.syncConfig({ profileId });
+    this.setAuditionKmh(kmh);
+    if (
+      this.engine &&
+      (this.status === "running" ||
+        this.status === "starting" ||
+        this.status === "suspended")
+    ) {
+      this.emit();
+      return;
+    }
+    await this.startAudition();
   }
 
   async startReplay(trace: DriveTrace) {
@@ -483,7 +519,7 @@ class DriveSession {
   }
 
   private async begin(kind: SessionKind, opts: { signature: boolean }) {
-    this.stopSoft();
+    await this.stopSoft();
     this.error = null;
     this.status = "starting";
     this.kind = kind;
@@ -513,14 +549,19 @@ class DriveSession {
     }
   }
 
-  private stopSoft() {
+  /** Tear down audio; await close so the next begin() does not stack contexts. */
+  private async stopSoft() {
     if (this.raf !== null) cancelAnimationFrame(this.raf);
     this.raf = null;
     this.detachSensors();
-    void this.engine?.stop();
-    void this.engineB?.stop();
+    const eng = this.engine;
+    const engB = this.engineB;
     this.engine = null;
     this.engineB = null;
+    const stops: Promise<void>[] = [];
+    if (eng) stops.push(eng.stop().catch(() => undefined));
+    if (engB) stops.push(engB.stop().catch(() => undefined));
+    if (stops.length) await Promise.all(stops);
   }
 
   private loop = () => {
@@ -906,21 +947,28 @@ class DriveSession {
   }
 
   private bindMediaSession() {
-    if (typeof navigator === "undefined" || !navigator.mediaSession) return;
-    const profile = getProfile(this.config.profileId);
-    navigator.mediaSession.metadata = new MediaMetadata({
-      title: profile.name,
-      artist: "ELCAMOSO",
-      album: "Sound in motion",
-    });
-    navigator.mediaSession.playbackState = this.status === "running" ? "playing" : "paused";
-    navigator.mediaSession.setActionHandler("play", () => {
-      if (this.status === "idle") void this.startDrive();
-      else void this.resume();
-    });
-    navigator.mediaSession.setActionHandler("pause", () => this.stop());
-    navigator.mediaSession.setActionHandler("nexttrack", () => this.stepPlaylist(1));
-    navigator.mediaSession.setActionHandler("previoustrack", () => this.stepPlaylist(-1));
+    try {
+      if (typeof navigator === "undefined" || !navigator.mediaSession) return;
+      const profile = getProfile(this.config.profileId);
+      if (typeof MediaMetadata !== "undefined") {
+        navigator.mediaSession.metadata = new MediaMetadata({
+          title: profile.name,
+          artist: "ELCAMOSO",
+          album: "Sound in motion",
+        });
+      }
+      navigator.mediaSession.playbackState =
+        this.status === "running" ? "playing" : "paused";
+      navigator.mediaSession.setActionHandler("play", () => {
+        if (this.status === "idle") void this.startDrive();
+        else void this.resume();
+      });
+      navigator.mediaSession.setActionHandler("pause", () => this.stop());
+      navigator.mediaSession.setActionHandler("nexttrack", () => this.stepPlaylist(1));
+      navigator.mediaSession.setActionHandler("previoustrack", () => this.stepPlaylist(-1));
+    } catch {
+      /* In-car browsers often stub Media Session incompletely. */
+    }
   }
 
   private stepPlaylist(dir: number) {

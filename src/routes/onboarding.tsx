@@ -239,9 +239,7 @@ function HearDifference() {
   const gentle = SOUND_PROFILES.find((p) => intensityBand(p) === "gentle") ?? SOUND_PROFILES[0]!;
   const intense = SOUND_PROFILES.find((p) => intensityBand(p) === "intense") ?? SOUND_PROFILES[1]!;
   const play = (id: string) => {
-    getSession().syncConfig({ profileId: id });
-    getSession().setAuditionKmh(70);
-    void getSession().startAudition();
+    void getSession().listenProfile(id, 70);
   };
   return (
     <div className="flex flex-col gap-6">

@@ -20,6 +20,7 @@ import { createMasterBus, type MasterBus } from "@/lib/sound/realism/master-bus"
 import { ImprovedSynth } from "@/lib/sound/realism/improved-synth";
 import { loudnessForProfile } from "@/lib/sound/realism/loudness";
 import type { SynthesisMode } from "@/lib/sound/realism/types";
+import { reportAudioError } from "@/lib/telemetry/crashes";
 
 export interface MeterReading {
   peak: number;
@@ -121,6 +122,8 @@ export class SoundEngine {
   private whiteBuffer: AudioBuffer | null = null;
   private pinkBuffer: AudioBuffer | null = null;
   private swapTimer: ReturnType<typeof setTimeout> | null = null;
+  /** True while a crossfade rebuild is in flight; skip per-frame updates. */
+  private swapping = false;
   /** Original (legacy) vs improved multi-layer realism path. */
   private synthesisMode: SynthesisMode = "improved";
   private improved: ImprovedSynth | null = null;
@@ -715,22 +718,50 @@ export class SoundEngine {
       return;
     }
     if (!force && this.profile?.id === profile.id && this.voices.length) return;
-    if (!this.voices.length || !body) {
-      this.buildProfile(profile);
+    if (force || !this.voices.length || !body) {
+      if (this.swapTimer) clearTimeout(this.swapTimer);
+      this.swapTimer = null;
+      this.swapping = false;
+      this.applyProfileBuild(profile);
       return;
     }
     if (this.swapTimer) clearTimeout(this.swapTimer);
+    this.swapping = true;
     const fade = 0.18;
-    body.gain.cancelScheduledValues(ctx.currentTime);
-    body.gain.setValueAtTime(body.gain.value, ctx.currentTime);
-    body.gain.linearRampToValueAtTime(0.0001, ctx.currentTime + fade);
+    try {
+      body.gain.cancelScheduledValues(ctx.currentTime);
+      body.gain.setValueAtTime(body.gain.value, ctx.currentTime);
+      body.gain.linearRampToValueAtTime(0.0001, ctx.currentTime + fade);
+    } catch {
+      /* closed / interrupted context */
+    }
     this.swapTimer = setTimeout(() => {
+      this.swapTimer = null;
       const c = this.ctx;
-      if (!c || !this.body) return;
-      this.buildProfile(profile);
-      this.body.gain.setValueAtTime(0.0001, c.currentTime);
-      this.body.gain.linearRampToValueAtTime(1, c.currentTime + 0.35);
+      if (!c || !this.body) {
+        this.swapping = false;
+        return;
+      }
+      this.applyProfileBuild(profile);
+      try {
+        this.body.gain.setValueAtTime(0.0001, c.currentTime);
+        this.body.gain.linearRampToValueAtTime(1, c.currentTime + 0.35);
+      } catch {
+        /* closed / interrupted context */
+      }
+      this.swapping = false;
     }, fade * 1000 + 30);
+  }
+
+  private applyProfileBuild(profile: SoundProfile) {
+    try {
+      this.buildProfile(profile);
+    } catch (error) {
+      reportAudioError(error);
+      this.teardownVoices();
+      this.profile = profile;
+      this.improved = null;
+    }
   }
 
   private buildProfile(profile: SoundProfile) {
@@ -903,7 +934,11 @@ export class SoundEngine {
     const analyser = this.analyser;
     const buf = this.meterBuffer;
     if (!analyser || !buf) return null;
-    analyser.getFloatTimeDomainData(buf);
+    try {
+      analyser.getFloatTimeDomainData(buf);
+    } catch {
+      return null;
+    }
     let peak = 0;
     let sum = 0;
     for (let i = 0; i < buf.length; i += 1) {
@@ -937,7 +972,7 @@ export class SoundEngine {
   update(state: DriveState) {
     const ctx = this.ctx;
     const profile = this.profile;
-    if (!ctx || !profile || !this.filter) return;
+    if (!ctx || !profile || !this.filter || this.swapping) return;
     const t = this.now();
 
     if (this.improved) {
@@ -1764,6 +1799,7 @@ export class SoundEngine {
     if (!ctx) return;
     if (this.swapTimer) clearTimeout(this.swapTimer);
     this.swapTimer = null;
+    this.swapping = false;
     if (this.master) this.master.gain.setTargetAtTime(0.0001, ctx.currentTime, 0.2);
     await new Promise((r) => setTimeout(r, 380));
     this.stopSnippetBeds();

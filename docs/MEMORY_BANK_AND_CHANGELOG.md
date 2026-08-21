@@ -107,13 +107,28 @@ Canonical product rules still live in `elcamoso-comprehensive-spec.md`. Update *
 - Sticky chrome fix: BrandNav + Sounds/Studio listen bars; Cabin EQ presets (Phone speakers / Cabin / Headphones)
 - Demo Drive: PRND + pedals; guided tour; `useDemoDrive` syncs profile; `DemoSoundPicker` for full catalog
 - Find a sound on `/sounds` (local matcher + optional `findSoundFn`)
-- Card Preview on `/sounds` syncs session `profileId` without always writing settings; AuditionPanel still reflects selected settings profile
+- Card Preview / Listen on `/sounds` updates settings and calls `listenProfile` (in-place switch when already playing)
 - Title-fidelity pass: Playful (laugh/fart/kazoo) + Neon Drive + Construction Monster
 - Phone Drive harden: GPS `coords.speed` null → lat/lon delta fallback; wake lock for all live Drive; visibility hide grace; Tesla browser smoke checklist in `docs/TESLA_BROWSER_SMOKE_TEST.md`
+- Playwright e2e: `e2e/` + `playwright.config.ts`; scripts `npm run test:e2e` / `test:e2e:ui` (chromium + mobile-chrome)
+- Mid-play Sound Profile switch: `listenProfile` reuses the live engine (no AudioContext rebuild); awaited `stopSoft`; safer Media Session / meter / `setProfile`
 
 ---
 
 ## Changelog
+
+### 2026-08-21 (Tesla mid-play sound switch crash)
+
+- Field report: `/sounds` showed “This page didn’t load” when switching Sound Profiles while audio was already playing (reproduced 3× in Tesla browser).
+- Root cause: Preview / Listen called `startAudition` → `begin` → non-awaited `stopSoft`, stacking a new `AudioContext` on a still-closing one; profile rebuild also raced the rAF tick.
+- Fix: `DriveSession.listenProfile` switches in place when a session is live; `stopSoft` awaits engine close before `begin`; `SoundEngine.setProfile` guards swap + catches build failures; Media Session / meter hardened for incomplete in-car stubs.
+- Regression: `engine-profile-switch.test.ts`; Tesla checklist rows for mid-play switch.
+
+### 2026-08-21 (Playwright e2e)
+
+- Added `@playwright/test` with `playwright.config.ts` (reuses local Vite on `localhost:5173`, Chromium + Pixel 7).
+- Specs: landing, route smoke (16 paths), legal, demo, sounds/settings/drive, cookies, desktop + mobile nav.
+- Helpers seed ready settings + cookie consent; soft-assert Demo/Drive when headless Web Audio is blocked.
 
 ### 2026-08-21 (landing hero alignment)
 

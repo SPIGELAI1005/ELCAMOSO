@@ -430,7 +430,7 @@ Root layout (`__root.tsx`) renders `<Outlet />` and global providers/Toaster. No
 - **Framework:** TanStack Start v1 (React 19, Vite 7).
 - **Routing:** `@tanstack/react-router`. No `react-router-dom`.
 - **Styling:** Tailwind CSS v4 with native CSS `@theme` variables in `src/styles.css`.
-- **State:** localStorage settings (schema v6) plus a Drive session singleton (`src/lib/drive/session.ts`) that owns the single `AudioContext`. UI reads snapshots via `useSyncExternalStore`.
+- **State:** localStorage settings (schema v6) plus a Drive session singleton (`src/lib/drive/session.ts`) that owns the single `AudioContext`. UI reads snapshots via `useSyncExternalStore`. Switching Sound Profile while Listen / Demo / Drive is already live crossfades on the existing engine (`listenProfile`); do not stack a second `AudioContext`.
 - **Audio:** Web Audio API. Cabin EQ after layer mix; intensity-band gain ceiling on top of the limiter; idle fade-then-suspend; call ducking on `AudioContext` interrupt. Optional Motion lookahead for Bluetooth.
 - Motion: GPS speed fused with DeviceMotion (`src/lib/drive/fusion.ts`). When `GeolocationCoordinates.speed` is null, speed is derived from successive lat/lon deltas (`src/lib/drive/gps-speed.ts`). Drive context classifier is on-device (`src/lib/drive/context.ts`). Drive traces live in IndexedDB, not the service worker cache.
 - **i18n:** EN / DE / RO dictionaries in `src/lib/i18n`, plus metric/imperial units.

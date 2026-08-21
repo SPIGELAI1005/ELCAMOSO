@@ -87,7 +87,7 @@ export function useAudition({
   }, [session, configKey]);
 
   const setTarget = useCallback((kmh: number) => session.setAuditionKmh(kmh), [session]);
-  const start = useCallback(() => session.startAudition(), [session]);
+  const start = useCallback(() => session.listenProfile(profileId), [session, profileId]);
   const stop = useCallback(() => session.stop(), [session]);
   const active =
     (snap.kind === "audition" || snap.kind === "ab") &&

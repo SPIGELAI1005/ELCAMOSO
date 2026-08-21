@@ -51,9 +51,7 @@ export function FindSoundPanel({ className = "", onSelect }: Props) {
   const listen = (match: SoundMatch) => {
     update({ profileId: match.profileId });
     onSelect?.(match.profileId);
-    getSession().syncConfig({ profileId: match.profileId });
-    getSession().setAuditionKmh(70);
-    void getSession().startAudition();
+    void getSession().listenProfile(match.profileId, 70);
   };
 
   return (

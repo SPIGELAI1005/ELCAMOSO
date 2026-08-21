@@ -103,9 +103,8 @@ function Sounds() {
   };
 
   const preview = (profile: SoundProfile) => {
-    getSession().syncConfig({ profileId: profile.id });
-    getSession().setAuditionKmh(60);
-    void getSession().startAudition();
+    update({ profileId: profile.id });
+    void getSession().listenProfile(profile.id, 60);
   };
 
   const toggleFavourite = (id: string) => {

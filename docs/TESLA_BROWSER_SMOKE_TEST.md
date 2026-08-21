@@ -26,7 +26,8 @@ Field checklist for opening ELCAMOSO in a Tesla (or similar) in-car browser whil
 | No blank white / “This page didn’t load” | ☐ | |
 | Nav opens; `/sounds` and `/demo` load | ☐ | |
 | Service worker does not break reload (hard refresh still works) | ☐ | |
-| Audio starts only after a clear tap (autoplay policy) | ☐ | |
+| Switch Sound Profile while Listen / Demo / Drive is already playing (no “This page didn’t load”) | ☐ | |
+| Preview another sound without restarting the whole audio engine | ☐ | |
 
 ---
 

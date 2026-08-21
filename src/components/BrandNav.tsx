@@ -8,7 +8,6 @@ import {
   SheetDescription,
   SheetHeader,
   SheetTitle,
-  SheetTrigger,
 } from "@/components/ui/sheet";
 import { useSettings } from "@/lib/drive/useSettings";
 import { t } from "@/lib/i18n";
@@ -58,18 +57,22 @@ export function BrandNav() {
         </nav>
 
         <Sheet open={open} onOpenChange={setOpen}>
-          <SheetTrigger asChild>
-            <button
-              type="button"
-              className="inline-flex h-11 w-11 items-center justify-center rounded-full text-foreground transition-colors hover:bg-secondary md:hidden"
-              aria-label={open ? t(settings.language, "nav.close") : t(settings.language, "nav.menu")}
-            >
-              <WaveMenuIcon open={open} />
-            </button>
-          </SheetTrigger>
+          <button
+            type="button"
+            data-testid="nav-menu"
+            onClick={() => setOpen(true)}
+            className="inline-flex h-11 w-11 items-center justify-center rounded-full text-foreground transition-colors hover:bg-secondary md:hidden"
+            aria-label={open ? t(settings.language, "nav.close") : t(settings.language, "nav.menu")}
+            aria-expanded={open}
+            aria-controls="nav-sheet"
+          >
+            <WaveMenuIcon open={open} />
+          </button>
 
           <SheetContent
             side="right"
+            id="nav-sheet"
+            data-testid="nav-sheet"
             className="flex w-[min(100%,20rem)] flex-col border-border bg-background px-0 pt-14"
           >
             <SheetHeader className="space-y-4 border-b border-border px-6 pb-6 text-left">
