@@ -1,15 +1,21 @@
-import { createFileRoute, redirect } from "@tanstack/react-router";
+import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { SOUND_PROFILES, getProfile } from "@/lib/sound/profiles";
 import { SoundEngine } from "@/lib/sound/engine";
 import type { SynthesisMode } from "@/lib/sound/realism/types";
-import {
-  DEBUG_SCENARIOS,
-  getDebugScenario,
-} from "@/lib/sound/realism/debug-scenarios";
+import { DEBUG_SCENARIOS, getDebugScenario } from "@/lib/sound/realism/debug-scenarios";
 import { familyForProfile } from "@/lib/sound/realism/families";
 import type { DriveState } from "@/lib/drive/model";
 import { IDLE_STATE } from "@/lib/drive/model";
+import {
+  driveStateFromPowertrain,
+  PowertrainSimulator,
+  powertrainProfileForSound,
+  supportsDynamicDrive,
+  vehicleMotionFromDrive,
+} from "@/lib/powertrain";
+import { DynamicDriveLayerPanel } from "@/components/DynamicDriveLayerPanel";
+import type { DynamicLayerDebugInfo } from "@/lib/sound/dynamic-drive/types";
 
 export const Route = createFileRoute("/debug")({
   beforeLoad: () => {
@@ -27,13 +33,17 @@ function DebugHarness() {
   const [profileId, setProfileId] = useState(SOUND_PROFILES[0]!.id);
   const [scenarioId, setScenarioId] = useState("0-30-gentle");
   const [mode, setMode] = useState<SynthesisMode>("improved");
+  const [dynamicDrive, setDynamicDrive] = useState(false);
   const [playing, setPlaying] = useState(false);
   const [layers, setLayers] = useState<{ id: string; muted: boolean; triggerable?: boolean }[]>([]);
+  const [dynamicLayers, setDynamicLayers] = useState<DynamicLayerDebugInfo[]>([]);
   const [solo, setSolo] = useState<string | null>(null);
   const [state, setState] = useState<DriveState>(IDLE_STATE);
   const [meter, setMeter] = useState({ peak: 0, rms: 0, headroom: 1 });
 
   const engineRef = useRef<SoundEngine | null>(null);
+  const powertrainRef = useRef<PowertrainSimulator | null>(null);
+  const prevDriveRef = useRef<DriveState>(IDLE_STATE);
   const rafRef = useRef<number | null>(null);
   const queueRef = useRef<DriveState[]>([]);
   const indexRef = useRef(0);
@@ -44,7 +54,10 @@ function DebugHarness() {
     setPlaying(false);
     void engineRef.current?.stop();
     engineRef.current = null;
+    powertrainRef.current = null;
+    prevDriveRef.current = IDLE_STATE;
     setLayers([]);
+    setDynamicLayers([]);
   }, []);
 
   useEffect(() => () => stop(), [stop]);
@@ -61,7 +74,16 @@ function DebugHarness() {
     const profile = getProfile(profileId);
     await engine.start(profile, { signature: false, seed: 42 });
     engine.setVolume(0.55);
+    engine.setDynamicDriveEnabled(dynamicDrive && supportsDynamicDrive(profile));
     engineRef.current = engine;
+    if (dynamicDrive && supportsDynamicDrive(profile)) {
+      powertrainRef.current = new PowertrainSimulator({
+        profile: powertrainProfileForSound(profile),
+      });
+    } else {
+      powertrainRef.current = null;
+    }
+    prevDriveRef.current = IDLE_STATE;
     const scenario = getDebugScenario(scenarioId);
     queueRef.current = scenario.build(profileId);
     indexRef.current = 0;
@@ -73,9 +95,28 @@ function DebugHarness() {
       const queue = queueRef.current;
       if (!eng || !queue.length) return;
       const i = Math.min(indexRef.current, queue.length - 1);
-      const frame = queue[i]!;
+      const raw = queue[i]!;
+      let frame = raw;
+      const sim = powertrainRef.current;
+      if (sim) {
+        const motion = vehicleMotionFromDrive({
+          speedMps: raw.speed,
+          accelerationMps2: raw.acceleration,
+          timestamp: performance.now(),
+          throttle: raw.throttle,
+          regen: raw.regen,
+          source: "simulator",
+        });
+        const pt = sim.tick(motion, 1 / 60, {
+          directThrottle: raw.throttle,
+          braking: raw.regen,
+        });
+        frame = driveStateFromPowertrain(pt, motion, prevDriveRef.current, undefined, 1 / 60);
+        prevDriveRef.current = frame;
+      }
       eng.update(frame);
       setState(frame);
+      setDynamicLayers(eng.getDynamicDriveDebug());
       const m = eng.getMeter();
       if (m) setMeter({ peak: m.peak, rms: m.rms, headroom: m.headroom });
       indexRef.current += 1;
@@ -86,7 +127,7 @@ function DebugHarness() {
       rafRef.current = requestAnimationFrame(tick);
     };
     rafRef.current = requestAnimationFrame(tick);
-  }, [mode, profileId, scenarioId, refreshLayers, stop]);
+  }, [dynamicDrive, mode, profileId, scenarioId, refreshLayers, stop]);
 
   const profile = getProfile(profileId);
   const vehicleScenarios = DEBUG_SCENARIOS.filter((s) => s.family === "vehicle");
@@ -95,14 +136,24 @@ function DebugHarness() {
   return (
     <main className="min-h-screen bg-background text-foreground">
       <div className="mx-auto w-full max-w-3xl px-6 pt-16 pb-28 sm:px-10">
-        <p className="text-[11px] tracking-[0.28em] text-muted-foreground uppercase">
-          Dev only
-        </p>
+        <p className="text-[11px] tracking-[0.28em] text-muted-foreground uppercase">Dev only</p>
         <h1 className="mt-3 text-3xl font-light">Sound debug</h1>
         <p className="mt-3 text-sm text-muted-foreground">
-          Repeatable motion scenarios, Original / Improved A/B, and layer solo for
-          tuning ELCAMOSO profiles.
+          Repeatable motion scenarios, Original / Improved A/B, and layer solo for tuning ELCAMOSO
+          profiles.
         </p>
+        <Link
+          to="/debug/powertrain"
+          className="mt-4 inline-block text-[11px] tracking-[0.2em] text-muted-foreground uppercase hover:text-foreground"
+        >
+          Dynamic Drive powertrain simulator →
+        </Link>
+        <Link
+          to="/debug/billing"
+          className="mt-2 inline-block text-[11px] tracking-[0.2em] text-muted-foreground uppercase hover:text-foreground"
+        >
+          Billing admin diagnostics →
+        </Link>
 
         <section className="mt-10 space-y-6 border border-border p-6">
           <label className="block text-sm">
@@ -136,6 +187,33 @@ function DebugHarness() {
                   {m === "improved" ? "Improved" : "Original"}
                 </button>
               ))}
+            </div>
+          </div>
+
+          <div>
+            <p className="text-sm text-muted-foreground">Dynamic Drive audio</p>
+            <div className="mt-2 flex gap-3">
+              <button
+                type="button"
+                aria-pressed={!dynamicDrive}
+                onClick={() => setDynamicDrive(false)}
+                className={`h-10 rounded-full border px-5 text-[11px] tracking-[0.2em] uppercase ${
+                  !dynamicDrive ? "border-foreground bg-secondary" : "border-border"
+                }`}
+              >
+                Legacy
+              </button>
+              <button
+                type="button"
+                aria-pressed={dynamicDrive}
+                onClick={() => setDynamicDrive(true)}
+                disabled={!supportsDynamicDrive(profile)}
+                className={`h-10 rounded-full border px-5 text-[11px] tracking-[0.2em] uppercase disabled:opacity-40 ${
+                  dynamicDrive ? "border-foreground bg-secondary" : "border-border"
+                }`}
+              >
+                Dynamic Drive
+              </button>
             </div>
           </div>
 
@@ -196,13 +274,25 @@ function DebugHarness() {
           <MeterRow label="RPM" value={state.rpm.toFixed(0)} />
           <MeterRow label="Gear" value={String(state.gear)} />
           <MeterRow label="Shifting" value={state.isShifting ? "yes" : "no"} />
+          <MeterRow label="Rev match" value={state.powertrain?.revMatchActive ? "yes" : "no"} />
+          <MeterRow label="Overrun" value={state.powertrain?.overrun ? "yes" : "no"} />
           <MeterRow label="Jerk" value={state.jerk.toFixed(2)} />
           <MeterRow label="Peak" value={meter.peak.toFixed(3)} />
           <MeterRow label="RMS" value={meter.rms.toFixed(3)} />
           <MeterRow label="Headroom" value={meter.headroom.toFixed(2)} />
         </section>
 
-        {mode === "improved" && layers.length > 0 ? (
+        {dynamicDrive && dynamicLayers.length > 0 ? (
+          <section className="mt-8 border border-border p-6">
+            <h2 className="text-base">Dynamic Drive layers</h2>
+            <p className="mt-2 text-xs text-muted-foreground">
+              Crossfade gains and fundamental Hz per band — not a single playbackRate mapping.
+            </p>
+            <DynamicDriveLayerPanel layers={dynamicLayers} className="mt-4" />
+          </section>
+        ) : null}
+
+        {mode === "improved" && layers.length > 0 && !dynamicDrive ? (
           <section className="mt-8 border border-border p-6">
             <div className="flex items-center justify-between gap-4">
               <h2 className="text-base">Layers</h2>

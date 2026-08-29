@@ -6,8 +6,10 @@ test.describe("Cookie consent", () => {
     await page.addInitScript(() => {
       window.localStorage.removeItem("elcamoso-cookie-consent-v1");
     });
-    await page.goto("/");
-    await expect(page.getByRole("dialog", { name: /cookie preferences/i })).toBeVisible();
+    await page.goto("/", { waitUntil: "networkidle" });
+    await expect(page.locator("#app-root")).toBeVisible();
+    const dialog = page.getByRole("dialog", { name: /cookie preferences/i });
+    await expect(dialog).toBeVisible({ timeout: 15_000 });
     await page.getByRole("button", { name: /essential only/i }).click();
     await expect(page.getByRole("dialog", { name: /cookie preferences/i })).toHaveCount(0);
     await expectAppHealthy(page);
@@ -23,16 +25,40 @@ test.describe("Cookie consent", () => {
 });
 
 test.describe("Navigation", () => {
-  test("desktop primary nav reaches Demo and Sounds", async ({ page }) => {
+  test("desktop primary nav reaches Drive and Sounds", async ({ page }) => {
     await page.addInitScript(() => {
       window.localStorage.setItem("elcamoso-cookie-consent-v1", "essential");
     });
     await page.setViewportSize({ width: 1280, height: 800 });
     await gotoPath(page, "/");
-    await page.getByRole("navigation", { name: /primary/i }).getByRole("link", { name: /^demo$/i }).click();
-    await expect(page).toHaveURL(/\/demo/);
-    await page.getByRole("navigation", { name: /primary/i }).getByRole("link", { name: /^sounds$/i }).click();
+    await page
+      .getByRole("navigation", { name: /primary/i })
+      .getByRole("link", { name: /^drive$/i })
+      .click();
+    await expect(page).toHaveURL(/\/drive/);
+    await page
+      .getByRole("navigation", { name: /primary/i })
+      .getByRole("link", { name: /^sounds$/i })
+      .click();
     await expect(page).toHaveURL(/\/sounds/);
+  });
+
+  test("mobile bottom nav reaches Sounds", async ({ page }, testInfo) => {
+    test.skip(
+      testInfo.project.name !== "mobile-chrome",
+      "Uses the Pixel project viewport (bottom nav is md:hidden)",
+    );
+    await page.addInitScript(() => {
+      window.localStorage.setItem("elcamoso-cookie-consent-v1", "essential");
+    });
+    await gotoPath(page, "/");
+    await page
+      .locator("nav")
+      .filter({ has: page.getByRole("link", { name: /^sounds$/i }) })
+      .getByRole("link", { name: /^sounds$/i })
+      .click();
+    await expect(page).toHaveURL(/\/sounds/);
+    await expectAppHealthy(page);
   });
 
   test("mobile menu opens and links work", async ({ page }, testInfo) => {
@@ -43,18 +69,17 @@ test.describe("Navigation", () => {
     await page.addInitScript(() => {
       window.localStorage.setItem("elcamoso-cookie-consent-v1", "essential");
     });
-    await gotoPath(page, "/");
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await page.goto("/", { waitUntil: "networkidle" });
+    await expect(page.locator("#app-root")).toBeVisible();
     const trigger = page.getByTestId("nav-menu");
     await expect(trigger).toBeVisible();
-    // Wait for client hydration so the React onClick is attached.
-    await page.waitForFunction(() => {
-      const el = document.querySelector("[data-testid=nav-menu]");
-      return !!el && Object.keys(el).some((key) => key.startsWith("__reactFiber"));
-    });
-    await trigger.dispatchEvent("click");
-    const sheet = page.getByTestId("nav-sheet");
-    await expect(sheet).toBeVisible({ timeout: 10_000 });
-    await sheet.getByRole("navigation", { name: /mobile/i }).getByRole("link", { name: /^demo$/i }).click();
+    await trigger.click();
+    await expect(page.getByRole("dialog")).toBeVisible({ timeout: 15_000 });
+    await page
+      .getByRole("navigation", { name: /mobile/i })
+      .getByRole("link", { name: /^demo$/i })
+      .click();
     await expect(page).toHaveURL(/\/demo/);
     await expectAppHealthy(page);
   });

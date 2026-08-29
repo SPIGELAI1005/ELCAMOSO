@@ -4,10 +4,7 @@ import { matchRule, type AutoRule, type ProfileRule } from "@/lib/drive/rules";
 import { evaluateProfileRules } from "@/lib/drive/profile-rules";
 import { DEFAULT_LAYER_MIX } from "@/lib/sound/environments";
 import { IDLE_STATE } from "@/lib/drive/model";
-import {
-  REGRESSION_SCENARIOS,
-  fingerprintScenario,
-} from "@/lib/sound/regression/scenarios";
+import { REGRESSION_SCENARIOS, fingerprintScenario } from "@/lib/sound/regression/scenarios";
 import { compareFingerprints } from "@/lib/sound/regression/fingerprint";
 import references from "@/lib/sound/regression/references.json";
 

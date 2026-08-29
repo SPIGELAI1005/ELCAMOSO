@@ -2,10 +2,7 @@ import { audioRandom } from "@/lib/sound/rng";
 
 export type NoiseColor = "white" | "pink" | "brown";
 
-const cache = new WeakMap<
-  BaseAudioContext,
-  Partial<Record<NoiseColor, AudioBuffer>>
->();
+const cache = new WeakMap<BaseAudioContext, Partial<Record<NoiseColor, AudioBuffer>>>();
 
 function whiteNoise(ctx: BaseAudioContext, seconds = 2): AudioBuffer {
   const buffer = ctx.createBuffer(1, Math.floor(ctx.sampleRate * seconds), ctx.sampleRate);
@@ -58,20 +55,12 @@ export function getNoiseBuffer(ctx: BaseAudioContext, color: NoiseColor = "pink"
   }
   if (!map[color]) {
     map[color] =
-      color === "white"
-        ? whiteNoise(ctx)
-        : color === "brown"
-          ? brownNoise(ctx)
-          : pinkNoise(ctx);
+      color === "white" ? whiteNoise(ctx) : color === "brown" ? brownNoise(ctx) : pinkNoise(ctx);
   }
   return map[color]!;
 }
 
-export function createLoopingNoise(
-  ctx: BaseAudioContext,
-  color: NoiseColor = "pink",
-  rate = 1,
-) {
+export function createLoopingNoise(ctx: BaseAudioContext, color: NoiseColor = "pink", rate = 1) {
   const src = ctx.createBufferSource();
   src.buffer = getNoiseBuffer(ctx, color);
   src.loop = true;

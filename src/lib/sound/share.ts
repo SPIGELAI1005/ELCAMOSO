@@ -1,8 +1,4 @@
-import {
-  DEFAULT_TWEAKS,
-  type CustomSound,
-  type StudioTweaks,
-} from "@/lib/drive/settings";
+import { DEFAULT_TWEAKS, type CustomSound, type StudioTweaks } from "@/lib/drive/settings";
 import { DEFAULT_LAYER_MIX, normalizeMix, type LayerMix } from "@/lib/sound/environments";
 import { SOUND_PROFILES } from "@/lib/sound/profiles";
 

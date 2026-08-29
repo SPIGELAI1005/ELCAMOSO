@@ -1,4 +1,5 @@
 import type { SoundProfile } from "@/lib/sound/profiles";
+import type { VirtualPowertrainState } from "@/lib/powertrain/types";
 import { DEFAULT_TUNING, type ProfileTuning } from "@/lib/drive/settings";
 import { DEFAULT_SHIFT_FEEL, type ShiftFeel } from "@/lib/drive/types-extra";
 
@@ -23,6 +24,8 @@ export interface DriveState {
   jerk: number;
   /** true while a virtual gear change is in progress */
   isShifting: boolean;
+  /** Dynamic Drive powertrain overlay — present when Dynamic Drive mode is active */
+  powertrain?: VirtualPowertrainState;
   /** 0..1 speed vs ~160 km/h */
   speedNormalized: number;
   /** 0..1 |acceleration| vs ~4.5 m/s² */

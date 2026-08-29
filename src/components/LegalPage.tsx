@@ -13,13 +13,9 @@ export function LegalPage({ title, subtitle, children }: LegalPageProps) {
   return (
     <main className="min-h-screen">
       <div className="mx-auto w-full max-w-2xl px-6 pt-12 pb-28 sm:px-10 sm:pt-16">
-        <p className="text-[11px] tracking-[0.34em] text-muted-foreground uppercase">
-          Legal
-        </p>
+        <p className="text-[11px] tracking-[0.34em] text-muted-foreground uppercase">Legal</p>
         <h1 className="mt-4 text-3xl font-light">{title}</h1>
-        {subtitle ? (
-          <p className="mt-3 text-sm text-muted-foreground">{subtitle}</p>
-        ) : null}
+        {subtitle ? <p className="mt-3 text-sm text-muted-foreground">{subtitle}</p> : null}
         <p className="mt-2 text-xs text-muted-foreground">
           Last updated: {LEGAL_OPERATOR.lastUpdated}
         </p>
@@ -48,13 +44,7 @@ export function LegalPage({ title, subtitle, children }: LegalPageProps) {
   );
 }
 
-export function LegalSection({
-  title,
-  children,
-}: {
-  title: string;
-  children: ReactNode;
-}) {
+export function LegalSection({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section>
       <h2 className="text-base font-light text-foreground">{title}</h2>

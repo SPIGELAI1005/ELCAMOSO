@@ -11,19 +11,25 @@ import {
  * Choice is stored in localStorage (no third-party cookie required).
  */
 export function CookieConsent() {
-  const [choice, setChoice] = useState<CookieConsentChoice | null | "loading">(
-    "loading",
-  );
+  const [mounted, setMounted] = useState(false);
+  const [choice, setChoice] = useState<CookieConsentChoice | null>(null);
 
   useEffect(() => {
-    setChoice(readCookieConsent());
+    const sync = () => setChoice(readCookieConsent());
+    sync();
+    setMounted(true);
+    window.addEventListener("elcamoso:cookie-consent", sync);
+    window.addEventListener("storage", sync);
+    return () => {
+      window.removeEventListener("elcamoso:cookie-consent", sync);
+      window.removeEventListener("storage", sync);
+    };
   }, []);
 
-  if (choice === "loading" || choice !== null) return null;
+  if (!mounted || choice !== null) return null;
 
   const accept = (next: CookieConsentChoice) => {
     writeCookieConsent(next);
-    setChoice(next);
   };
 
   return (
@@ -34,18 +40,21 @@ export function CookieConsent() {
     >
       <div className="mx-auto flex w-full max-w-3xl flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div className="min-w-0 max-w-xl">
-          <p className="text-[11px] tracking-[0.28em] text-muted-foreground uppercase">
-            Cookies
-          </p>
+          <p className="text-[11px] tracking-[0.28em] text-muted-foreground uppercase">Cookies</p>
           <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-            We use essential storage so ELCAMOSO can save your settings on this
-            device. Optional Usage insights stay off until you enable them in
-            Settings. See our{" "}
-            <Link to="/legal/cookies" className="text-foreground underline-offset-2 hover:underline">
+            We use essential storage so ELCAMOSO can save your settings on this device. Optional
+            Usage insights stay off until you enable them in Settings. See our{" "}
+            <Link
+              to="/legal/cookies"
+              className="text-foreground underline-offset-2 hover:underline"
+            >
               Cookie notice
             </Link>{" "}
             and{" "}
-            <Link to="/legal/privacy" className="text-foreground underline-offset-2 hover:underline">
+            <Link
+              to="/legal/privacy"
+              className="text-foreground underline-offset-2 hover:underline"
+            >
               Privacy policy
             </Link>
             .

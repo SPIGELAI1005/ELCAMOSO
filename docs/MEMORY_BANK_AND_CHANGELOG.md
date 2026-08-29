@@ -3,7 +3,7 @@
 Living document for product context, recent architecture decisions, and a dated changelog.
 Canonical product rules still live in `elcamoso-comprehensive-spec.md`. Update **both** when direction or architecture changes.
 
-**Last updated:** 2026-08-21
+**Last updated:** 2026-08-30
 
 ---
 
@@ -11,16 +11,16 @@ Canonical product rules still live in `elcamoso-comprehensive-spec.md`. Update *
 
 ### Product identity (do not drift)
 
-| Item | Value |
-|------|--------|
-| Consumer name | **ELCAMOSO** (do not spell out the acronym in UI; About/docs only) |
-| Expansion | ELectric CAr MOtion SOund |
-| Tagline | Your EV. Your Sound. More Emotion. |
-| Landing supporting line | Electric motion. More e-motion. |
-| Mark | **O )))** only (no cars, lightning, exhaust, speakers, racing flags, OEM brands) |
-| Wordmark | `E L C Λ M O S O` (Outfit, wide tracking) |
-| UI language | Sound Profile, Drive Mode, Motion (never oscillator / LFO / VST in UI) |
-| Privacy | Motion data on-device unless user explicitly opts into cloud |
+| Item                    | Value                                                                            |
+| ----------------------- | -------------------------------------------------------------------------------- |
+| Consumer name           | **ELCAMOSO** (do not spell out the acronym in UI; About/docs only)               |
+| Expansion               | ELectric CAr MOtion SOund                                                        |
+| Tagline                 | Your EV. Your Sound. More Emotion.                                               |
+| Landing supporting line | Feel the e-motion in your electrical motion.                                     |
+| Mark                    | **O )))** only (no cars, lightning, exhaust, speakers, racing flags, OEM brands) |
+| Wordmark                | `E L C A M O S O` (Outfit, wide tracking; Latin A for cross-browser consistency) |
+| UI language             | Sound Profile, Drive Mode, Motion (never oscillator / LFO / VST in UI)           |
+| Privacy                 | Motion data on-device unless user explicitly opts into cloud                     |
 
 ### Stack
 
@@ -33,7 +33,7 @@ Canonical product rules still live in `elcamoso-comprehensive-spec.md`. Update *
 
 ### Routes
 
-`/`, `/onboarding`, `/drive`, `/demo`, `/sounds`, `/studio`, `/garage`, `/calibrate`, `/settings`, `/about`, `/legal` (+ impressum, privacy, cookies, terms, accessibility), `/debug` (dev-only)
+`/`, `/onboarding`, `/drive`, `/demo`, `/sounds`, `/studio`, `/garage`, `/calibrate`, `/settings`, `/about`, `/pricing`, `/legal` (+ impressum, privacy, cookies, terms, accessibility), `/debug` (dev-only)
 
 ### Sound architecture (current)
 
@@ -57,8 +57,20 @@ Canonical product rules still live in `elcamoso-comprehensive-spec.md`. Update *
 
 ### Landing page (`/`) conventions
 
-- Hero: brand column stacks **O )))** mark (centered on the wordmark, +15% vs prior hero size) → **ELCAMOSO** → **Electric Car Motion Sound**. CTA column: tagline + supporting line + **Start Drive** (desktop: button aligns with the wordmark via matching expansion spacer).
-- Below fold: **Choose your sound** grouped by the same `PROFILE_CATEGORIES` as `/sounds` (Garage excluded), with Browse all → `/sounds`.
+- Hero: brand column stacks **O )))** mark (centered on the wordmark) → **ELCAMOSO** → **Electric Car Motion Sound** → **Read About** (row-aligned with expansion; **About** in red `#e53935`). Mark + **MOSO** letters share phased hero animation (`useHeroWavePhase`: intro → hold → idle `wave-radiate` matching header mark).
+- CTA column: tagline + supporting line + **Start Drive** + **Hear it**; no duplicate bottom tagline block.
+- Below fold: curated sound previews + **Plans** (`LandingPlansSection`: monthly/yearly toggle, early-adopter strikethrough pricing, red billing notice when checkout disabled) + privacy blurb (no duplicate legal links — footer only).
+- `/about`: founder story, **Motion becomes sound.** visual, field-capture clips in `public/about/` (user-controlled `<video>`, no autoplay).
+
+### Header nav (`BrandNav`)
+
+- Desktop + mobile sheet: **Pricing** → `/pricing`; **Drive** and **About** use accent red (`#e53935`).
+- i18n keys: `nav.pricing`, `nav.about`, `nav.drive`, etc.
+
+### Pricing (`/pricing`)
+
+- Monthly / yearly toggle; **14% early adopter** discount (list prices struck through in red; charged amounts in `plan-display.ts`).
+- Billing-disabled copy in red; primary secondary CTA **Open Drive** → `/drive` with footer spacing preserved.
 
 ### Mini player / headroom
 
@@ -74,27 +86,34 @@ Canonical product rules still live in `elcamoso-comprehensive-spec.md`. Update *
 
 ### Session / Drive (phone path)
 
-- GPS: prefer `coords.speed`; if null, derive m/s from lat/lon deltas (`src/lib/drive/gps-speed.ts`) then fuse with DeviceMotion (`fusion.ts`).
+- GPS: prefer `coords.speed`; if null, derive m/s from lat/lon deltas (`src/lib/drive/gps-speed.ts`) then fuse via `src/lib/motion/sensor-fusion.ts`.
+- Phone relay: `/connect/{sessionId}` → WebSocket `motion` messages → `DriveSession.ingestPhoneRelayMotion()`.
+- Dynamic Drive: `PowertrainSimulator` + `DynamicDriveSynth` when `settings.dynamicDrive` and profile support it. See `docs/DYNAMIC_DRIVE_ARCHITECTURE.md`.
 - Wake lock: requested for **all** live Drive (not only Cockpit); re-acquired on visibility resume / pageshow / wake `release`.
 - Visibility: Drive uses ~2.8 s hide grace before audio suspend (notification shade); pagehide still suspends immediately.
-- Tesla / in-car browser: **unvalidated**; field checklist `docs/TESLA_BROWSER_SMOKE_TEST.md`. Primary real-world path remains a mounted phone. No OBD/OEM bus.
+- Tesla / in-car browser: field checklist `docs/TESLA_BROWSER_SMOKE_TEST.md`. Cockpit mode: `/drive?cockpit=1` with shared session panel.
 
 ### Key files
 
-| Area | Path |
-|------|------|
-| Spec | `elcamoso-comprehensive-spec.md` |
-| Profiles | `src/lib/sound/profiles.ts`, `profiles-expansion.ts` |
-| Realism | `src/lib/sound/realism/*` |
-| Session | `src/lib/drive/session.ts` |
-| GPS speed | `src/lib/drive/gps-speed.ts` |
-| Motion fusion | `src/lib/drive/fusion.ts` |
-| Audition hook | `src/lib/drive/useAudition.ts` |
-| Landing | `src/routes/index.tsx` |
-| Sounds UI | `src/routes/sounds.tsx` |
-| Legal operator | `src/lib/legal/operator.ts` |
-| Tesla smoke test | `docs/TESLA_BROWSER_SMOKE_TEST.md` |
-| Agent notes | `AGENTS.md` |
+| Area                         | Path                                                 |
+| ---------------------------- | ---------------------------------------------------- |
+| Spec                         | `elcamoso-comprehensive-spec.md`                     |
+| Profiles                     | `src/lib/sound/profiles.ts`, `profiles-expansion.ts` |
+| Realism                      | `src/lib/sound/realism/*`                            |
+| Session                      | `src/lib/drive/session.ts`                           |
+| GPS speed                    | `src/lib/drive/gps-speed.ts`                         |
+| Sensor fusion                | `src/lib/motion/sensor-fusion.ts`                    |
+| Dynamic Drive architecture   | `docs/DYNAMIC_DRIVE_ARCHITECTURE.md`                 |
+| Sound character + engagement | `docs/SOUND_CHARACTER_SPEC.md`                       |
+| Audio sample requirements    | `docs/audio-asset-requirements.md`                   |
+| Audition hook                | `src/lib/drive/useAudition.ts`                       |
+| Landing                      | `src/routes/index.tsx`, `src/components/LandingHero.tsx`, `LandingPlansSection.tsx` |
+| Pricing                      | `src/routes/pricing.tsx`, `src/lib/billing/plan-display.ts`                          |
+| About                        | `src/routes/about.tsx`, `public/about/field-capture-*.mp4`                           |
+| Sounds UI                    | `src/routes/sounds.tsx`                              |
+| Legal operator               | `src/lib/legal/operator.ts`                          |
+| Tesla smoke test             | `docs/TESLA_BROWSER_SMOKE_TEST.md`                   |
+| Agent notes                  | `AGENTS.md`                                          |
 
 ### Open / known follow-ups
 
@@ -112,10 +131,80 @@ Canonical product rules still live in `elcamoso-comprehensive-spec.md`. Update *
 - Phone Drive harden: GPS `coords.speed` null → lat/lon delta fallback; wake lock for all live Drive; visibility hide grace; Tesla browser smoke checklist in `docs/TESLA_BROWSER_SMOKE_TEST.md`
 - Playwright e2e: `e2e/` + `playwright.config.ts`; scripts `npm run test:e2e` / `test:e2e:ui` (chromium + mobile-chrome)
 - Mid-play Sound Profile switch: `listenProfile` reuses the live engine (no AudioContext rebuild); awaited `stopSoft`; safer Media Session / meter / `setProfile`
+- **Premium UX refactor (P0–P3):** `MotionEnergy` + Drive instrument / safety mode; mobile bottom nav; Home storytelling + hold-to-accel; Sounds mood IA; Studio Basic/Advanced; Garage/Settings/Onboarding simplified
 
 ---
 
 ## Changelog
+
+### 2026-08-30 (Landing, About, pricing UX)
+
+- **Hero:** Supporting line → *Feel the e-motion in your electrical motion.*; phased mark/MOSO animation aligned with header idle pulse; **Read About** link row-aligned with **Electric Car Motion Sound** (**About** in red).
+- **Home:** Removed duplicate bottom tagline + **Start Drive** block; removed redundant legal links under privacy section; **Plans** section with monthly/yearly toggle, early-adopter strikethrough (Free ~~€1.14~~ → €0; Drive+ 14% off), red “Special offer for early adopters” + red billing-disabled notice.
+- **About (`/about`):** Founder story (EV + petrol rental contrast, field recording); **Motion becomes sound.** section moved from home; two field clips (`public/about/field-capture-1.mp4`, `field-capture-2.mp4`).
+- **Pricing (`/pricing`):** Same plan toggle/discount math; red billing notice; **Open Drive** CTA with consistent footer offset.
+- **Nav:** **Pricing** in header; **Drive** + **About** accent red.
+- **Demo fix:** `EntitlementEnforcer` no longer resets preview profile on Demo/Sounds; `SessionBridge` + `DemoSoundPicker` sync regression in `e2e/demo.spec.ts`.
+
+### 2026-08-23 (Sound character + engagement spec)
+
+- Added `docs/SOUND_CHARACTER_SPEC.md` — driving-scenario matrix, per-profile character specs, 30-min engagement ratings, variation architecture.
+- Added `docs/audio-asset-requirements.md` — recorded asset gaps (no samples shipped); procedural fallbacks documented; filename conventions per personality.
+
+### 2026-08-29 (Monetization audit — read-only)
+
+- Added `docs/monetization-audit.md`: FREE vs DRIVE+ model, current-state audit (no Stripe/accounts/entitlements today), recommended ACCOUNT → Billing → Entitlements → Gates → Drive architecture, phased plan, security rules. **No production code changes.**
+
+### 2026-08-29 (Sound character engagement review)
+
+- Rewrote `docs/SOUND_CHARACTER_SPEC.md`: 15-scenario matrix, all 47 profiles, 8 personalities, 30-min engagement tiers.
+- Updated `docs/audio-asset-requirements.md`: bike/twin/tractor personalities implemented; procedural fallbacks documented.
+- Confirmed: no WAV assets shipped; variation from deterministic powertrain + contextual transients + synthetic load (continuous).
+
+### 2026-08-29 (Dynamic Drive product polish)
+
+- Tesla pairing: "Link your phone" / "Start link"; probe + latency UI dev-only.
+- Cockpit instrument: profile + gear + rev only; no "Motion matched" / "Good" chrome.
+- Phone after link: one quiet line or attention message — no GPS/Motion/Calibration grid.
+- Phone remote: product labels (Motion character, Shift feel) — no "Dynamic Drive" jargon.
+- Settings Drive debug hint softened for progressive disclosure.
+
+### 2026-08-29 (Dynamic Drive final architecture cleanup)
+
+- Canonical onboarding guide rewritten: `docs/DYNAMIC_DRIVE_ARCHITECTURE.md` (Phone → Session → Sensors → Fusion → Powertrain → Audio → Tesla cockpit).
+- Unified `MotionFallbackTier` — single definition in `src/lib/motion/types.ts`.
+- Extracted demo physics: `src/lib/drive/demo-physics.ts` (+ tests); `DemoControls` moved there; session re-exports.
+- Technical debt audit documented in architecture guide (WebSockets, timers, audio dispose, React boundaries).
+- Updated: `sensor-fusion.md`, `motion-pipeline.md`, `motion-resilience.md`, `dynamic-drive-audit.md` header.
+
+### 2026-08-23 (Sound engagement P0/P1/P2)
+
+- **P0:** Added drivetrain personalities `motorcycle-inline-4`, `v-twin-cruiser`, `single-cylinder-ag`; mapped **Motorcycle Superbike**, **Big Twin**, **Wiesn Tractor**; per-personality transient variant pools in `transient-scheduler.ts` (`resolveVariantPools`).
+- **P1 (procedural):** Expanded american-v8 overrun (3 variants), turbo-i6 flutter/wastegate (3 each) — sample filenames in `docs/audio-asset-requirements.md`; no WAV files added.
+- **P2:** `computeSyntheticLoad()` + `MotionFrame.syntheticLoad` in improved motion path so continuous profiles differ at cruise vs WOT at the same speed.
+- Docs: `SOUND_CHARACTER_SPEC.md`, `drivetrain-personalities.md`; tests: personalities (8), transient pools, `motion.test.ts`.
+
+### 2026-08-23 (Dynamic Drive product polish)
+
+- Drive instrument: gear-first; rev only in cockpit; status only when link needs attention; removed "Dynamic Drive" / "Drive Signal" chrome.
+- Phone link collapses to "Linked to your car" after pairing; sensor grid hidden when healthy.
+- Tesla pairing panel collapses to "Phone linked"; latency/pipeline metrics behind Drive debug mode.
+- Settings Advanced: "Motion-matched sound" replaces synth jargon; phone remote uses product language.
+
+### 2026-08-23 (Dynamic Drive architecture cleanup)
+
+- Shipped architecture guide: `docs/DYNAMIC_DRIVE_ARCHITECTURE.md` (Phone → Session → Sensors → Fusion → Powertrain → Audio → Tesla cockpit).
+- Removed deprecated `src/lib/drive/fusion.ts`; fusion lives in `src/lib/motion/sensor-fusion.ts`.
+- Trimmed `useDriveSession` to lifecycle only; settings sync stays in `SessionBridge`.
+- Relay client validates inbound messages with `parseRelayMessage`; `DynamicDriveSynth.dispose()` disconnects audio nodes.
+- Removed unused session fields (`gpsSpeed`, `accY`, `imuAt`); updated spec, audit header, smoke test, and memory bank.
+
+### 2026-08-22 (premium product UX refactor)
+
+- **P0:** `motion-energy.ts` on session snapshot; Drive instrument UI (profile-aware secondary readout, product status, safety mode &gt;5 km/h); mark `direction`; hide nav/MiniPlayer in safety mode; mobile bottom nav (Drive/Sounds/Studio/Garage); Demo demoted to menu.
+- **P1:** Home hero hierarchy (no acronym); Feel the motion (real demo session); curated four; how-it-works + privacy + final CTA; Sounds moods/sections/detail sheet; Advanced accordion for A/B/packs/audition.
+- **P2:** Studio “Make it yours” Basic sliders + Advanced; Garage Favorites/Recent/My Sounds; Settings Sound/Driving/Sensors/Privacy/About; onboarding 3 screens.
+- **P3:** Branded empty/error copy; e2e + Tesla checklist updates; docs.
 
 ### 2026-08-21 (Tesla mid-play sound switch crash)
 
@@ -230,6 +319,84 @@ Canonical product rules still live in `elcamoso-comprehensive-spec.md`. Update *
 
 - MiniPlayer headroom no longer hidden on narrow viewports; compact meter always shown during live preview/drive.
 - `HeadroomMeter` supports `compact` mode for the sticky player.
+
+### 2026-08-29 — Production billing readiness
+
+- `MONETIZATION_ENABLED` feature flag — FREE ELCAMOSO unchanged when off.
+- Checklist: `docs/billing/production-readiness.md`.
+- Legal: Drive+ terms, privacy payment note.
+
+### 2026-08-29 — Billing security audit
+
+- Fixes: checkout origin allowlist, Stripe Price validation on webhook sync, subscription ownership checks, session token hashing, webhook claim races, trial heartbeat entitlement re-check, removed public trial-complete fn, redacted Tesla token resolve metadata.
+- Docs: `docs/billing/security.md`.
+
+### 2026-08-29 — Monetization UX review
+
+- Humanized plan UI: Free / Drive+, sentence-case status, "Manage plan" not "Manage subscription".
+- Removed in-drive trial upsell nudges; preview timer only while driving.
+- Unified purchase copy: no Stripe/dev leaks, no shouty unlock states, tagline on `/pricing`.
+- Consumer feature names in plan lists; softened upgrade prompts and trial-complete flow.
+
+### 2026-08-29 — Tesla in-car purchase E2E
+
+- Integration tests: `src/lib/tesla-upgrade/purchase-flow.integration.test.ts` (happy path + 6 failure states).
+- Docs: `docs/billing/tesla-purchase-e2e.md` (full scenario + failure matrix).
+- Playwright shell: `e2e/tesla-purchase.spec.ts`.
+- Tesla smoke checklist §8 in `docs/TESLA_BROWSER_SMOKE_TEST.md`.
+
+### 2026-08-29 — Dynamic Drive trial test suite
+
+- Lifecycle tests: `src/lib/dynamic-drive-trial/lifecycle.test.ts` (16 scenarios).
+- Paid subscribers auto-convert trial without consuming balance (`maybeConvertPaidSubscriber`).
+- Time exhaustion revokes trial entitlements even when sessions remain.
+- Docs: `docs/dynamic-drive-trial-test-suite.md`.
+
+### 2026-08-29 — Stripe test suite
+
+- Lifecycle tests: `src/lib/billing/stripe/lifecycle.test.ts` (14 scenarios, local entitlement asserts).
+- Shared fixtures: `src/lib/billing/stripe/test-fixtures.ts`.
+- Optional live Test Clock integration: `lifecycle.integration.test.ts` when `STRIPE_LIFECYCLE_TEST_CLOCK=1`.
+- Docs: `docs/billing/stripe-test-suite.md`.
+
+### 2026-08-29 — Billing admin diagnostics
+
+- Dev-only `/debug/billing` + CLI (`npm run billing:diagnostics`) for internal user lookup.
+- Guarded by `ELCAMOSO_BILLING_ADMIN_SECRET` — read-only snapshot + explicit Stripe re-sync only.
+- Docs: `docs/billing/admin-diagnostics.md`.
+
+### 2026-08-29 — Billing failure resilience
+
+- Local-first entitlements: premium gates read `subscription-store` only — no live Stripe on every check.
+- Webhooks provision memory entitlements async; Postgres upsert is best-effort (`persistAndProvisionSubscription`).
+- Transient Stripe errors → `BillingServiceUnavailableError`; FREE Drive never blocked.
+- Reconciliation: `getBillingHealthFn`, `reconcileBillingFn` (explicit Stripe pull only).
+- Tests: `src/lib/billing/resilience/failure-resilience.test.ts`.
+- Docs: `docs/billing/failure-resilience.md`.
+
+### 2026-08-29 — Stripe Checkout tax readiness
+
+- Configurable Checkout tax params (`STRIPE_CHECKOUT_*` env) — all off by default; no VAT rates in code.
+- Docs: `docs/billing/tax-readiness.md` (business/tax owner must confirm DE/EU VAT before production).
+
+### 2026-08-29 — Monetization funnel analytics
+
+- Extended existing telemetry (`trackEvent` / `ingestTelemetryFn`) with 15 funnel events — no new vendor.
+- Meta: `source`, `plan`, `interval`, `context`, `milestone`. No GPS, routes, or motion payloads.
+- Docs: `docs/monetization-funnel-analytics.md`.
+
+### 2026-08-29 — Dynamic Drive session licensing
+
+- One account / one active Dynamic Drive session (phone + Tesla relay share one tab `driveSessionId` lease).
+- Conflict UX: "Dynamic Drive is active on another device." — existing drive is never killed.
+- Stale sessions expire after 45 s without heartbeat; basic Drive (non-Dynamic) is never blocked.
+- Module: `src/lib/dynamic-drive-session/`; bridges: `DynamicDriveSessionBridge`, `DynamicDriveSessionConflictNotice`.
+
+### 2026-08-29 — Premium sound asset protection
+
+- Audit: no WAV/MP3 in repo; `public/` is PWA-only; all 47 profiles are procedural Web Audio; gating is entitlement on profile IDs.
+- Added `docs/premium-sound-asset-protection.md` (limitations, Tesla prefetch guidance, no-DRM policy).
+- Foundation: `src/lib/sound-assets/` (catalog, HMAC signing, manifest + delivery API routes). Catalog empty until samples ship.
 
 #### Landing
 

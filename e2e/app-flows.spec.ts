@@ -13,10 +13,12 @@ test.describe("Sounds", () => {
     await expect(page.getByText(/Classic|Motorsport|Future|Playful/i).first()).toBeVisible();
   });
 
-  test("category accordion reveals profiles", async ({ page }) => {
-    const trigger = page.getByRole("button", { name: /classic|motorsport|future/i }).first();
-    await trigger.click();
-    await expect(page.getByText(/GT V8|Cyber|Neon|Racing/i).first()).toBeVisible();
+  test("featured catalog lists selectable profiles", async ({ page }) => {
+    await expect(page.getByRole("heading", { name: /^featured$/i })).toBeVisible();
+    const profile = page.getByRole("button", { name: /GT V8/i }).first();
+    await expect(profile).toBeVisible();
+    await profile.click();
+    await expect(page.getByRole("button", { name: /^listen$/i })).toBeVisible();
   });
 });
 
@@ -29,7 +31,12 @@ test.describe("Settings", () => {
   test("settings page renders core sections", async ({ page }) => {
     await expectAppHealthy(page);
     await expect(page.locator("main").getByRole("heading", { name: /settings/i })).toBeVisible();
-    await expect(page.locator("main").getByText(/volume|motion|language|demo/i).first()).toBeVisible();
+    await expect(
+      page
+        .locator("main")
+        .getByText(/volume|motion|language|demo/i)
+        .first(),
+    ).toBeVisible();
   });
 });
 

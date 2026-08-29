@@ -66,12 +66,7 @@ export function ProfileRulesEditor({
                       const metric = e.target.value as ProfileRuleMetric;
                       patch(rule.id, {
                         metric,
-                        value:
-                          metric === "context"
-                            ? "cruise"
-                            : metric === "speedKmh"
-                              ? 110
-                              : 0.6,
+                        value: metric === "context" ? "cruise" : metric === "speedKmh" ? 110 : 0.6,
                         op: metric === "context" ? "eq" : "gt",
                       });
                     }}
@@ -105,9 +100,7 @@ export function ProfileRulesEditor({
                     Context
                     <select
                       value={String(rule.value)}
-                      onChange={(e) =>
-                        patch(rule.id, { value: e.target.value as DriveContext })
-                      }
+                      onChange={(e) => patch(rule.id, { value: e.target.value as DriveContext })}
                       className="mt-2 h-11 w-full border-b border-border bg-transparent text-sm text-foreground outline-none"
                     >
                       {DRIVE_CONTEXTS.map((c) => (

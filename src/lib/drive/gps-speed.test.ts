@@ -1,17 +1,9 @@
 import { describe, expect, it } from "vitest";
-import {
-  haversineMeters,
-  resolveGpsSpeed,
-  speedFromDelta,
-  type GpsPoint,
-} from "./gps-speed";
+import { haversineMeters, resolveGpsSpeed, speedFromDelta, type GpsPoint } from "./gps-speed";
 
 describe("haversineMeters", () => {
   it("is ~0 for identical points", () => {
-    expect(haversineMeters({ lat: 48.1, lon: 11.5 }, { lat: 48.1, lon: 11.5 })).toBeCloseTo(
-      0,
-      5,
-    );
+    expect(haversineMeters({ lat: 48.1, lon: 11.5 }, { lat: 48.1, lon: 11.5 })).toBeCloseTo(0, 5);
   });
 
   it("measures a short eastward hop in Munich-ish coords", () => {

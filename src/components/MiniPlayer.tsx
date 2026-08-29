@@ -1,7 +1,7 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { HeadroomMeter } from "@/components/HeadroomMeter";
 import { getSession } from "@/lib/drive/session";
-import { useSessionStore } from "@/lib/store/session-store";
+import { useSessionSelector } from "@/lib/store/session-store";
 import { useSettings } from "@/lib/drive/useSettings";
 import { getProfile } from "@/lib/sound/profiles";
 import { getProfileGain } from "@/lib/drive/settings";
@@ -10,13 +10,33 @@ import { isLiveSessionStatus, miniPlayerTopClass } from "@/lib/ui/chrome";
 
 export function MiniPlayer() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const snap = useSessionStore();
+  const ui = useSessionSelector((snap) => ({
+    safetyMode: snap.safetyMode,
+    status: snap.status,
+    profileId: snap.profileId,
+    profileName: snap.profileName,
+    hasMeter: snap.meter !== null,
+    meterPeak: snap.meter ? Math.round(snap.meter.peak * 16) : 0,
+    meterRms: snap.meter ? Math.round(snap.meter.rms * 16) : 0,
+    meterHeadroom: snap.meter ? Math.round(snap.meter.headroom * 16) : 0,
+    meterReduction: snap.meter ? Math.round(snap.meter.reduction * 16) : 0,
+  }));
   const { settings } = useSettings();
   if (pathname === "/") return null;
-  const live = isLiveSessionStatus(snap.status);
+  const onDrive = pathname === "/drive" || pathname.startsWith("/drive/");
+  if (ui.safetyMode && onDrive) return null;
+  const live = isLiveSessionStatus(ui.status);
   if (!live) return null;
-  const profile = getProfile(snap.profileId);
-  const gain = getProfileGain(settings, snap.profileId);
+  const profile = getProfile(ui.profileId);
+  const gain = getProfileGain(settings, ui.profileId);
+  const meter = ui.hasMeter
+    ? {
+        peak: ui.meterPeak / 16,
+        rms: ui.meterRms / 16,
+        headroom: ui.meterHeadroom / 16,
+        reduction: ui.meterReduction / 16,
+      }
+    : null;
 
   return (
     <>
@@ -27,7 +47,7 @@ export function MiniPlayer() {
       >
         <div className="flex items-center gap-3 px-4 py-3 sm:gap-4 sm:px-8">
           <Link to="/drive" className="min-w-0 shrink">
-            <p className="truncate text-sm font-light">{snap.profileName}</p>
+            <p className="truncate text-sm font-light">{ui.profileName}</p>
             <p className="text-[10px] tracking-[0.2em] text-muted-foreground uppercase">
               {t(settings.language, "player.playing")}
             </p>
@@ -35,7 +55,7 @@ export function MiniPlayer() {
           <div className="min-w-0 flex-1">
             <HeadroomMeter
               compact
-              meter={snap.meter}
+              meter={meter}
               profile={profile}
               volume={settings.volume}
               profileGain={gain}

@@ -10,12 +10,20 @@ import {
 } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
 import { BrandNav } from "@/components/BrandNav";
+import { PrimaryBottomNav } from "@/components/PrimaryBottomNav";
 import { MiniPlayer } from "@/components/MiniPlayer";
 import { SessionBridge } from "@/components/SessionBridge";
+import { VehicleTelemetryBridge } from "@/components/VehicleTelemetryBridge";
 import { InstallPrompt } from "@/components/InstallPrompt";
 import { TelemetryBridge } from "@/components/TelemetryBridge";
 import { SiteFooter } from "@/components/SiteFooter";
 import { CookieConsent } from "@/components/CookieConsent";
+import { DynamicDriveSessionBridge } from "@/components/DynamicDriveSessionBridge";
+import { DynamicDriveTrialBridge } from "@/components/DynamicDriveTrialBridge";
+import { EntitlementEnforcer } from "@/components/EntitlementEnforcer";
+import { AccountProvider } from "@/lib/account/AccountProvider";
+import { EntitlementsProvider } from "@/lib/entitlements/EntitlementsProvider";
+import { useSessionSelector } from "@/lib/store/session-store";
 
 import appCss from "../styles.css?url";
 import { reportRuntimeError } from "../lib/runtime-error-reporting";
@@ -140,21 +148,47 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <div id="app-root" className="flex min-h-svh flex-col">
-        <SessionBridge />
-        <TelemetryBridge />
-        <BrandNav />
-        <div className="flex flex-1 flex-col pt-[calc(3.5rem+env(safe-area-inset-top,0px))] sm:pt-[calc(4rem+env(safe-area-inset-top,0px))]">
-          {showMiniPlayer ? <MiniPlayer /> : null}
-          <InstallPrompt />
-          {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-          <div className="flex-1">
-            <Outlet />
+      <AccountProvider>
+        <EntitlementsProvider>
+          <div id="app-root" className="flex min-h-svh flex-col">
+            <SessionBridge />
+            <EntitlementEnforcer />
+            <DynamicDriveSessionBridge />
+            <DynamicDriveTrialBridge />
+            <VehicleTelemetryBridge />
+            <TelemetryBridge />
+            <BrandNav />
+            <AppChrome showMiniPlayer={showMiniPlayer} />
+            <CookieConsent />
           </div>
-          <SiteFooter />
-        </div>
-        <CookieConsent />
-      </div>
+        </EntitlementsProvider>
+      </AccountProvider>
     </QueryClientProvider>
+  );
+}
+
+function AppChrome({ showMiniPlayer }: { showMiniPlayer: boolean }) {
+  const { safetyMode } = useSessionSelector((snap) => ({ safetyMode: snap.safetyMode }));
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const onDrive = pathname === "/drive" || pathname.startsWith("/drive/");
+  const hideTop = safetyMode && onDrive;
+  const padTop = hideTop
+    ? "pt-[env(safe-area-inset-top,0px)]"
+    : "pt-[calc(3.5rem+env(safe-area-inset-top,0px))] sm:pt-[calc(4rem+env(safe-area-inset-top,0px))]";
+  const padBottom =
+    safetyMode && onDrive
+      ? "pb-[env(safe-area-inset-bottom,0px)]"
+      : "pb-[calc(3.5rem+env(safe-area-inset-bottom,0px))] md:pb-0";
+
+  return (
+    <div className={`flex flex-1 flex-col ${padTop} ${padBottom}`}>
+      {showMiniPlayer ? <MiniPlayer /> : null}
+      <InstallPrompt />
+      <div className="flex-1">
+        <Outlet />
+      </div>
+      <SiteFooter />
+      <PrimaryBottomNav />
+    </div>
   );
 }

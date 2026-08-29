@@ -6,6 +6,7 @@
 // You can pass additional config via defineConfig({ vite: { ... }, nitro: { ... } }) if needed.
 // npm package id remains @lovable.dev/vite-tanstack-config (Lovable-origin preset).
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
+import { driveRelayWsPlugin } from "./src/lib/drive-relay/vite-ws-plugin";
 
 export default defineConfig({
   // Default Nitro target in this preset is Cloudflare. Pin Vercel so deploy serves routes
@@ -18,6 +19,7 @@ export default defineConfig({
     server: { entry: "server" },
   },
   vite: {
+    plugins: [driveRelayWsPlugin()],
     resolve: {
       dedupe: ["react", "react-dom", "react/jsx-runtime", "react/jsx-dev-runtime"],
     },

@@ -1,10 +1,7 @@
 import { expect, type Page } from "@playwright/test";
 
 /** Seed ready-to-drive settings (demo motion on: no real GPS required). */
-export async function seedReadySettings(
-  page: Page,
-  overrides: Record<string, unknown> = {},
-) {
+export async function seedReadySettings(page: Page, overrides: Record<string, unknown> = {}) {
   await page.addInitScript((extra) => {
     const base = {
       profileId: "gt-v8",

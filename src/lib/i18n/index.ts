@@ -9,10 +9,12 @@ const STRINGS: Record<Locale, Record<string, string>> = {
     "nav.studio": "Studio",
     "nav.garage": "Garage",
     "nav.demo": "Demo",
+    "nav.pricing": "Pricing",
     "nav.settings": "Settings",
+    "nav.about": "About",
     "nav.menu": "Open menu",
     "nav.close": "Close menu",
-    "nav.menuHint": "Your EV. Your Sound. More Emotion.",
+    "nav.menuHint": "Your EV. Your Sound.",
     "player.stop": "Stop",
     "player.playing": "Playing",
     "drive.start": "Start Drive",
@@ -32,10 +34,12 @@ const STRINGS: Record<Locale, Record<string, string>> = {
     "nav.studio": "Studio",
     "nav.garage": "Garage",
     "nav.demo": "Demo",
+    "nav.pricing": "Preise",
     "nav.settings": "Einstellungen",
+    "nav.about": "Uber",
     "nav.menu": "Menue oeffnen",
     "nav.close": "Menue schliessen",
-    "nav.menuHint": "Dein EV. Dein Sound. Mehr Emotion.",
+    "nav.menuHint": "Dein EV. Dein Sound.",
     "player.stop": "Stopp",
     "player.playing": "Aktiv",
     "drive.start": "Fahrt starten",
@@ -55,10 +59,12 @@ const STRINGS: Record<Locale, Record<string, string>> = {
     "nav.studio": "Studio",
     "nav.garage": "Garaj",
     "nav.demo": "Demo",
+    "nav.pricing": "Preturi",
     "nav.settings": "Setari",
+    "nav.about": "Despre",
     "nav.menu": "Deschide meniul",
     "nav.close": "Inchide meniul",
-    "nav.menuHint": "EV-ul tau. Sunetul tau. Mai multa emotie.",
+    "nav.menuHint": "EV-ul tau. Sunetul tau.",
     "player.stop": "Stop",
     "player.playing": "Redare",
     "drive.start": "Porneste",
@@ -77,7 +83,11 @@ export function t(locale: Locale, key: string): string {
   return STRINGS[locale]?.[key] ?? STRINGS.en[key] ?? key;
 }
 
-export function formatSpeed(mps: number, units: Units, locale: Locale): { value: number; unit: string } {
+export function formatSpeed(
+  mps: number,
+  units: Units,
+  locale: Locale,
+): { value: number; unit: string } {
   if (units === "imperial") {
     return { value: Math.round(mps * 2.236936), unit: locale === "de" ? "mph" : "mph" };
   }

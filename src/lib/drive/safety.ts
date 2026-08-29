@@ -16,6 +16,10 @@ export function cappedGain(volume: number, profileGain: number, profile: SoundPr
   return Math.min(intensityCeiling(profile), raw);
 }
 
-export function needsIntenseConfirm(profile: SoundProfile, volume: number, profileGain: number): boolean {
+export function needsIntenseConfirm(
+  profile: SoundProfile,
+  volume: number,
+  profileGain: number,
+): boolean {
   return intensityBand(profile) === "intense" && volume * profileGain > 0.55;
 }

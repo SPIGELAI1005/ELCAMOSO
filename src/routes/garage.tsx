@@ -4,11 +4,7 @@ import { ElcamosoMark } from "@/components/ElcamosoLogo";
 import { useSettings } from "@/lib/drive/useSettings";
 import { useReducedMotion } from "@/lib/drive/useReducedMotion";
 import { SnippetStudio } from "@/components/SnippetStudio";
-import {
-  materializeCustom,
-  type CustomSound,
-  type Playlist,
-} from "@/lib/drive/settings";
+import { materializeCustom, type CustomSound, type Playlist } from "@/lib/drive/settings";
 import { describeProfileRule } from "@/lib/drive/profile-rules";
 import { SOUND_PROFILES, allProfiles, getProfile } from "@/lib/sound/profiles";
 import { copyShareLink } from "@/lib/sound/share";
@@ -49,6 +45,7 @@ function Garage() {
   const favourites = settings.favourites
     .map((id) => getProfile(id))
     .filter((p) => p && settings.favourites.includes(p.id));
+  const recentlyUsed = deriveRecentlyUsed(settings);
 
   const select = (id: string) => update({ profileId: id });
 
@@ -85,9 +82,7 @@ function Garage() {
   const toggleFavourite = (id: string) => {
     const has = settings.favourites.includes(id);
     update({
-      favourites: has
-        ? settings.favourites.filter((f) => f !== id)
-        : [...settings.favourites, id],
+      favourites: has ? settings.favourites.filter((f) => f !== id) : [...settings.favourites, id],
     });
   };
 
@@ -117,8 +112,7 @@ function Garage() {
         const profileIds = has
           ? l.profileIds.filter((p) => p !== profileId)
           : [...l.profileIds, profileId];
-        const existing =
-          l.segments ?? l.profileIds.map((id) => ({ profileId: id, minutes: 15 }));
+        const existing = l.segments ?? l.profileIds.map((id) => ({ profileId: id, minutes: 15 }));
         const segments = has
           ? existing.filter((s) => s.profileId !== profileId)
           : [...existing.filter((s) => s.profileId !== profileId), { profileId, minutes: 15 }];
@@ -134,9 +128,10 @@ function Garage() {
     update({
       playlists: settings.playlists.map((l) => {
         if (l.id !== listId) return l;
-        const segments = (l.segments?.length
-          ? l.segments
-          : l.profileIds.map((id) => ({ profileId: id, minutes: 15 }))
+        const segments = (
+          l.segments?.length
+            ? l.segments
+            : l.profileIds.map((id) => ({ profileId: id, minutes: 15 }))
         ).map((s) => (s.profileId === profileId ? { ...s, minutes } : s));
         return { ...l, segments };
       }),
@@ -147,10 +142,8 @@ function Garage() {
   return (
     <main className="min-h-screen">
       <div className="mx-auto w-full max-w-3xl px-6 pt-16 pb-28 sm:px-10">
-        <p className="text-[11px] tracking-[0.34em] text-muted-foreground uppercase">
-          Garage
-        </p>
-        <h1 className="mt-4 text-3xl font-light">Your sounds</h1>
+        <p className="text-[11px] tracking-[0.34em] text-muted-foreground uppercase">Garage</p>
+        <h1 className="mt-4 text-3xl font-light">My Garage</h1>
 
         <section className="mt-12 flex flex-wrap items-center gap-8 border-y border-border py-8">
           <ElcamosoMark
@@ -160,9 +153,7 @@ function Garage() {
             className="h-10 w-auto"
           />
           <div className="flex-1">
-            <p className="text-xs tracking-[0.24em] text-muted-foreground uppercase">
-              In the car
-            </p>
+            <p className="text-xs tracking-[0.24em] text-muted-foreground uppercase">In the car</p>
             <p className="mt-2 text-2xl font-light">{active.name}</p>
           </div>
           <Link
@@ -181,7 +172,7 @@ function Garage() {
 
         <dl className="mt-10 grid grid-cols-3 gap-6 text-center">
           <Stat label="Drives" value={settings.driveCount} />
-          <Stat label="Studio sounds" value={customs.length} />
+          <Stat label="My Sounds" value={customs.length} />
           <Stat
             label="Last drive"
             value={
@@ -193,9 +184,65 @@ function Garage() {
         </dl>
 
         <section className="mt-16">
+          <h2 className="text-[11px] tracking-[0.34em] text-muted-foreground uppercase">
+            Favorites
+          </h2>
+          {favourites.length === 0 ? (
+            <p className="mt-6 text-sm text-muted-foreground">
+              Star a sound in{" "}
+              <Link to="/sounds" className="text-foreground underline underline-offset-4">
+                Sounds
+              </Link>{" "}
+              to keep it one tap away.
+            </p>
+          ) : (
+            <div className="mt-6 flex flex-wrap gap-3">
+              {favourites.map((p) => (
+                <button
+                  key={p.id}
+                  onClick={() => select(p.id)}
+                  className={`h-11 rounded-full border px-6 text-[11px] tracking-[0.16em] uppercase ${
+                    settings.profileId === p.id
+                      ? "border-foreground bg-foreground text-background"
+                      : "border-border text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {p.name}
+                </button>
+              ))}
+            </div>
+          )}
+        </section>
+
+        <section className="mt-16">
+          <h2 className="text-[11px] tracking-[0.34em] text-muted-foreground uppercase">
+            Recently Used
+          </h2>
+          {recentlyUsed.length === 0 ? (
+            <p className="mt-6 text-sm text-muted-foreground">No recent sounds yet.</p>
+          ) : (
+            <div className="mt-6 flex flex-wrap gap-3">
+              {recentlyUsed.map((p) => (
+                <button
+                  key={p.id}
+                  onClick={() => select(p.id)}
+                  className={`h-11 rounded-full border px-6 text-[11px] tracking-[0.16em] uppercase ${
+                    settings.profileId === p.id
+                      ? "border-foreground bg-foreground text-background"
+                      : "border-border text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {p.name}
+                </button>
+              ))}
+            </div>
+          )}
+        </section>
+
+        <section className="mt-16">
           <div className="flex flex-wrap items-baseline justify-between gap-4">
             <h2 className="text-[11px] tracking-[0.34em] text-muted-foreground uppercase">
-              Studio sounds
+              My Sounds
             </h2>
             <Link
               to="/studio"
@@ -254,9 +301,7 @@ function Garage() {
                         <p className="mt-2 text-xs tracking-[0.18em] text-muted-foreground uppercase">
                           From {getProfile(sound.baseId).name}
                         </p>
-                        <p className="mt-3 text-sm text-muted-foreground">
-                          {profile.description}
-                        </p>
+                        <p className="mt-3 text-sm text-muted-foreground">{profile.description}</p>
                         {sound.rules?.length ? (
                           <p className="mt-3 text-xs text-muted-foreground">
                             {sound.rules.map(describeProfileRule).join(" · ")}
@@ -321,37 +366,6 @@ function Garage() {
           )}
         </section>
 
-        <section className="mt-16">
-          <h2 className="text-[11px] tracking-[0.34em] text-muted-foreground uppercase">
-            Starred
-          </h2>
-          {favourites.length === 0 ? (
-            <p className="mt-6 text-sm text-muted-foreground">
-              Star a sound in{" "}
-              <Link to="/sounds" className="text-foreground underline underline-offset-4">
-                Sounds
-              </Link>{" "}
-              to keep it one tap away.
-            </p>
-          ) : (
-            <div className="mt-6 flex flex-wrap gap-3">
-              {favourites.map((p) => (
-                <button
-                  key={p.id}
-                  onClick={() => select(p.id)}
-                  className={`h-11 rounded-full border px-6 text-[11px] tracking-[0.16em] uppercase ${
-                    settings.profileId === p.id
-                      ? "border-foreground bg-foreground text-background"
-                      : "border-border text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  {p.name}
-                </button>
-              ))}
-            </div>
-          )}
-        </section>
-
         <section className="mt-16 border-t border-border pt-10">
           <div className="flex flex-wrap items-baseline justify-between gap-4">
             <h2 className="text-[11px] tracking-[0.34em] text-muted-foreground uppercase">
@@ -365,8 +379,8 @@ function Garage() {
             </button>
           </div>
           <p className="mt-3 text-sm text-muted-foreground">
-            Curated sets you can step through while auditioning or on a demo drive. Add
-            minutes per sound for a timed road-trip crossfade.
+            Curated sets you can step through while auditioning or on a demo drive. Add minutes per
+            sound for a timed road-trip crossfade.
           </p>
 
           {settings.playlists.length === 0 ? (
@@ -389,9 +403,7 @@ function Garage() {
                   </div>
                   <div className="mt-5 flex flex-wrap gap-3">
                     {list.profileIds.length === 0 ? (
-                      <p className="text-sm text-muted-foreground">
-                        Empty. Add sounds below.
-                      </p>
+                      <p className="text-sm text-muted-foreground">Empty. Add sounds below.</p>
                     ) : (
                       list.profileIds.map((id) => {
                         const minutes =
@@ -459,7 +471,6 @@ function Garage() {
         />
 
         <div className="mt-16 flex flex-wrap gap-4">
-
           <button
             onClick={() => void navigate({ to: "/studio" })}
             className="h-14 rounded-full border border-border px-10 text-xs tracking-[0.24em] uppercase hover:bg-secondary"
@@ -490,6 +501,41 @@ function groupTakes(sounds: CustomSound[]) {
     id,
     takes: takes.sort((a, b) => a.createdAt - b.createdAt),
   }));
+}
+
+/** Last drive profile, then Studio customs by recency, then favourites. */
+function deriveRecentlyUsed(settings: ReturnType<typeof useSettings>["settings"]) {
+  if (!settings.lastDriveAt && !settings.customSounds.length && !settings.favourites.length) {
+    return [];
+  }
+
+  const seen = new Set<string>();
+  const out: ReturnType<typeof getProfile>[] = [];
+
+  const push = (id: string) => {
+    if (!id || seen.has(id)) return;
+    const profile = getProfile(id);
+    if (!profile) return;
+    seen.add(id);
+    out.push(profile);
+  };
+
+  if (settings.lastDriveAt) push(settings.profileId);
+
+  const customsByRecency = [...settings.customSounds].sort((a, b) => b.createdAt - a.createdAt);
+  for (const sound of customsByRecency) {
+    push(sound.id);
+    if (out.length >= 8) break;
+  }
+
+  if (out.length < 8) {
+    for (const id of settings.favourites) {
+      push(id);
+      if (out.length >= 8) break;
+    }
+  }
+
+  return out;
 }
 
 function Stat({ label, value }: { label: string; value: number | string }) {

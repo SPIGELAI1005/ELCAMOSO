@@ -54,10 +54,7 @@ export function DiagnosticsPanel({
         <Row label="Drives" value={String(settings.driveCount)} />
         <Row label="Active profile" value={settings.profileId} />
         <Row label="Studio sounds" value={String(settings.customSounds.length)} />
-        <Row
-          label="Motion sensitivity"
-          value={`${settings.motionSensitivity.toFixed(2)}x`}
-        />
+        <Row label="Motion sensitivity" value={`${settings.motionSensitivity.toFixed(2)}x`} />
       </dl>
 
       {loadReport.issues.length ? (

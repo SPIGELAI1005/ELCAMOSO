@@ -26,7 +26,10 @@ function isDevModuleRequest(url) {
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches.open(CACHE).then((cache) => cache.addAll(SHELL)).then(() => self.skipWaiting()),
+    caches
+      .open(CACHE)
+      .then((cache) => cache.addAll(SHELL))
+      .then(() => self.skipWaiting()),
   );
 });
 
@@ -52,8 +55,7 @@ self.addEventListener("fetch", (event) => {
 
   // Always prefer network for HTML / app navigations so deploys and HMR are visible.
   const isDocument =
-    req.mode === "navigate" ||
-    (req.headers.get("accept") ?? "").includes("text/html");
+    req.mode === "navigate" || (req.headers.get("accept") ?? "").includes("text/html");
 
   if (isDocument) {
     event.respondWith(

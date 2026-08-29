@@ -1,53 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-
-export interface TourStep {
-  profileId: string;
-  title: string;
-  cue: string;
-  /** Seconds from tour start */
-  at: number;
-  /** Seconds duration */
-  duration: number;
-  /** Peak throttle in this step (0..1) */
-  peakThrottle: number;
-}
-
-export const DEFAULT_DEMO_TOUR: TourStep[] = [
-  {
-    profileId: "laughing-machine",
-    title: "Laughing Machine",
-    cue: "Throttle up - the cabin cracks up.",
-    at: 0,
-    duration: 7,
-    peakThrottle: 0.92,
-  },
-  {
-    profileId: "neon-drive",
-    title: "Neon Drive",
-    cue: "Night pulses that tighten as you push.",
-    at: 7,
-    duration: 7,
-    peakThrottle: 0.85,
-  },
-  {
-    profileId: "construction-monster",
-    title: "Construction Monster",
-    cue: "Hydraulics and diesel strain under load.",
-    at: 14,
-    duration: 7,
-    peakThrottle: 0.88,
-  },
-  {
-    profileId: "farting-car",
-    title: "Farting Car",
-    cue: "Exactly what it sounds like. Social risk accepted.",
-    at: 21,
-    duration: 7,
-    peakThrottle: 0.9,
-  },
-];
-
-export const DEMO_TOUR_TOTAL_S = 28;
+import { DEFAULT_DEMO_TOUR, DEMO_TOUR_TOTAL_S } from "@/components/demo-guided-tour-data";
 
 interface Props {
   active: boolean;
@@ -110,8 +62,7 @@ export function DemoGuidedTour({
         return;
       }
       const current =
-        DEFAULT_DEMO_TOUR.find((s) => t >= s.at && t < s.at + s.duration) ??
-        DEFAULT_DEMO_TOUR[0]!;
+        DEFAULT_DEMO_TOUR.find((s) => t >= s.at && t < s.at + s.duration) ?? DEFAULT_DEMO_TOUR[0]!;
       if (lastProfile.current !== current.profileId) {
         lastProfile.current = current.profileId;
         onProfile(current.profileId);
@@ -150,8 +101,8 @@ export function DemoGuidedTour({
 
   return (
     <section className="mt-10 border border-border p-5 sm:p-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div className="min-w-0">
+      <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-4">
+        <div className="min-w-0 flex-1">
           <h2 className="text-[11px] tracking-[0.28em] text-muted-foreground uppercase">
             Guided tour
           </h2>
@@ -159,7 +110,7 @@ export function DemoGuidedTour({
             About 28 seconds. Four Sound Profiles, auto throttle, so each character is obvious.
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex shrink-0 flex-wrap gap-2">
           {!playing ? (
             <button
               type="button"
@@ -188,7 +139,9 @@ export function DemoGuidedTour({
               {Math.min(DEMO_TOUR_TOTAL_S, Math.floor(elapsed))}s / {DEMO_TOUR_TOTAL_S}s
             </p>
           </div>
-          <p className="mt-2 text-sm text-muted-foreground">{done ? "Tour complete. Try the pedals, or pick another sound." : step.cue}</p>
+          <p className="mt-2 text-sm text-muted-foreground">
+            {done ? "Tour complete. Try the pedals, or pick another sound." : step.cue}
+          </p>
           <div
             className="mt-4 h-px overflow-hidden bg-border"
             role="progressbar"

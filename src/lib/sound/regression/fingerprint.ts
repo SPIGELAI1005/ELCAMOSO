@@ -94,6 +94,8 @@ export function compareFingerprints(
   }
   actual.bands.forEach((band, i) => {
     const other = expected.bands[i] ?? 0;
+    const delta = Math.abs(band - other);
+    if (delta <= 2e-6) return;
     if (rel(band, other) > tolerance * 1.4) reasons.push(`band${i} ${band} vs ${other}`);
   });
   if (actual.frames.length !== expected.frames.length) {

@@ -85,8 +85,7 @@ export const DEBUG_SCENARIOS: DebugScenario[] = [
     id: "80-cruise",
     label: "80 constant cruise",
     family: "vehicle",
-    build: (id, dur = 6) =>
-      simulate(id, dur, () => ({ speed: mps(80), acceleration: 0.05 })),
+    build: (id, dur = 6) => simulate(id, dur, () => ({ speed: mps(80), acceleration: 0.05 })),
   },
   {
     id: "100-0-lift",
@@ -125,22 +124,19 @@ export const DEBUG_SCENARIOS: DebugScenario[] = [
     id: "slow-crawl",
     label: "Slow crawl",
     family: "motion",
-    build: (id, dur = 5) =>
-      simulate(id, dur, () => ({ speed: mps(6), acceleration: 0.2 })),
+    build: (id, dur = 5) => simulate(id, dur, () => ({ speed: mps(6), acceleration: 0.2 })),
   },
   {
     id: "medium-move",
     label: "Medium movement",
     family: "motion",
-    build: (id, dur = 5) =>
-      simulate(id, dur, () => ({ speed: mps(28), acceleration: 0.4 })),
+    build: (id, dur = 5) => simulate(id, dur, () => ({ speed: mps(28), acceleration: 0.4 })),
   },
   {
     id: "fast-move",
     label: "Fast movement",
     family: "motion",
-    build: (id, dur = 5) =>
-      simulate(id, dur, () => ({ speed: mps(70), acceleration: 0.3 })),
+    build: (id, dur = 5) => simulate(id, dur, () => ({ speed: mps(70), acceleration: 0.3 })),
   },
   {
     id: "hard-accel",
@@ -156,8 +152,7 @@ export const DEBUG_SCENARIOS: DebugScenario[] = [
     id: "steady",
     label: "Steady movement",
     family: "motion",
-    build: (id, dur = 5) =>
-      simulate(id, dur, () => ({ speed: mps(45), acceleration: 0 })),
+    build: (id, dur = 5) => simulate(id, dur, () => ({ speed: mps(45), acceleration: 0 })),
   },
   {
     id: "lift-off",

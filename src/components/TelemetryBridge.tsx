@@ -9,7 +9,7 @@ import {
   type AnalyticsEvent,
 } from "@/lib/telemetry/analytics";
 import { installCrashReporting, readCrashes } from "@/lib/telemetry/crashes";
-import { ingestTelemetryFn } from "@/lib/cloud/server-fns";
+import { ingestTelemetryFn } from "@/lib/cloud/telemetry-server-fn";
 
 export function TelemetryBridge() {
   const { settings } = useSettings();

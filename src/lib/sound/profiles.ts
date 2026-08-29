@@ -1,5 +1,11 @@
 import type { LayerMix } from "@/lib/sound/environments";
 import { EXPANSION_PROFILES } from "@/lib/sound/profiles-expansion";
+import {
+  applyResolvedAccessToProfiles,
+  type SoundProfileAccess,
+} from "@/lib/sound/profile-access";
+
+export type { SoundProfileAccess } from "@/lib/sound/profile-access";
 
 export type DrivetrainMode = "virtual-transmission" | "continuous";
 
@@ -32,26 +38,10 @@ export type LfoTarget = "pitch" | "filter" | "amp";
 
 /** Rhythmic events that keep time with your speed. */
 export type RhythmKind =
-  | "clack"
-  | "bell"
-  | "blat"
-  | "chug"
-  | "gallop"
-  | "splash"
-  | "creak"
-  | "laugh"
-  | "rotor"
-  | "putt";
+  "clack" | "bell" | "blat" | "chug" | "gallop" | "splash" | "creak" | "laugh" | "rotor" | "putt";
 
 /** Continuous atmospheric beds layered under the main voice. */
-export type TextureKind =
-  | "water"
-  | "wind"
-  | "gravel"
-  | "steam"
-  | "crowd"
-  | "rumble"
-  | "sizzle";
+export type TextureKind = "water" | "wind" | "gravel" | "steam" | "crowd" | "rumble" | "sizzle";
 
 /** Occasional signature one-shots that give a profile personality. */
 export type SignalKind =
@@ -139,6 +129,11 @@ export interface SoundProfile {
   sourceMode?: SourceMode;
   /** timbre parameters consumed by the synthesis layer */
   voice: ProfileVoice;
+  /**
+   * Built-in drivetrain personality id (see drivetrain-personalities.ts).
+   * Drives Dynamic Drive simulation, audio transients, and legacy transmission sync.
+   */
+  drivetrainPersonalityId?: string;
   transmission?: {
     gearRatios: number[];
     idleRpm: number;
@@ -154,8 +149,9 @@ export interface SoundProfile {
   environmentId?: string;
   /** per-layer mixer saved with a Studio sound */
   mix?: LayerMix;
+  /** Commercial access tier; resolved from config when omitted on built-ins. */
+  access?: SoundProfileAccess;
 }
-
 
 const GT_BOX = {
   gearRatios: [13.2, 8.1, 5.6, 4.1, 3.2, 2.6],
@@ -171,7 +167,7 @@ const RACE_BOX = {
   shiftSmoothing: 0.09,
 };
 
-export const SOUND_PROFILES: SoundProfile[] = [
+const BUILT_IN_SOUND_PROFILES: SoundProfile[] = [
   {
     id: "gt-v8",
     name: "GT V8",
@@ -179,6 +175,7 @@ export const SOUND_PROFILES: SoundProfile[] = [
     traits: ["Deep", "Mechanical", "Powerful"],
     description: "A wide, low-slung character with weight behind every movement.",
     drivetrainMode: "virtual-transmission",
+    drivetrainPersonalityId: "gt-v8",
     voice: {
       baseFrequency: 26,
       harmonics: [1, 2, 3, 4.02, 6],
@@ -202,6 +199,7 @@ export const SOUND_PROFILES: SoundProfile[] = [
     traits: ["Sharp", "High-Rev", "Responsive"],
     description: "Tight, urgent and metallic. Climbs fast and reacts the instant you ask.",
     drivetrainMode: "virtual-transmission",
+    drivetrainPersonalityId: "flat-six-sport",
     voice: {
       baseFrequency: 34,
       harmonics: [1, 2, 3.01, 5, 7.03, 9],
@@ -246,6 +244,7 @@ export const SOUND_PROFILES: SoundProfile[] = [
     traits: ["Track", "Aggressive", "Precise"],
     description: "Circuit-bred and edgy, with a hard shift and a bright top end.",
     drivetrainMode: "virtual-transmission",
+    drivetrainPersonalityId: "flat-six-sport",
     voice: {
       baseFrequency: 40,
       harmonics: [1, 2, 3, 4, 5.02, 8],
@@ -269,6 +268,7 @@ export const SOUND_PROFILES: SoundProfile[] = [
     traits: ["Gravel", "Turbo", "Raw"],
     description: "Loose-surface energy: turbo whistle, stone spray and a gritty texture.",
     drivetrainMode: "virtual-transmission",
+    drivetrainPersonalityId: "turbo-inline-6",
     voice: {
       baseFrequency: 30,
       harmonics: [1, 2, 3.04, 4.5],
@@ -377,8 +377,7 @@ export const SOUND_PROFILES: SoundProfile[] = [
     name: "Cruise Ship",
     category: "Nautical",
     traits: ["Enormous", "Slow", "Serene"],
-    description:
-      "A vast low horn, engine-room hum and the endless wash of water down the hull.",
+    description: "A vast low horn, engine-room hum and the endless wash of water down the hull.",
     drivetrainMode: "continuous",
     voice: {
       baseFrequency: 28,
@@ -675,6 +674,7 @@ export const SOUND_PROFILES: SoundProfile[] = [
     description:
       "A Lanz-style hot-bulb: one enormous stroke at a time, flywheel inertia and a smoky stack. Peak around 630 RPM, never a diesel car pitched down.",
     drivetrainMode: "virtual-transmission",
+    drivetrainPersonalityId: "single-cylinder-ag",
     voice: {
       baseFrequency: 12,
       harmonics: [1, 2.02],
@@ -764,6 +764,9 @@ export const SOUND_PROFILES: SoundProfile[] = [
   ...EXPANSION_PROFILES,
 ];
 
+export const SOUND_PROFILES: SoundProfile[] =
+  applyResolvedAccessToProfiles(BUILT_IN_SOUND_PROFILES);
+
 export const PROFILE_CATEGORIES: ProfileCategory[] = [
   "Classic",
   "Motorsport",
@@ -816,8 +819,7 @@ export function estimateIntensity(profile: SoundProfile): number {
   const rhythms = (v.rhythm?.level ?? 0) + (v.rhythmB?.level ?? 0);
   const signals = (v.signals ?? []).reduce((sum, s) => sum + s.level, 0);
   const brightness = Math.min(1, v.filterRange / 7000);
-  const raw =
-    v.noise * 0.5 + textures * 0.55 + rhythms * 0.7 + signals * 0.4 + brightness * 0.45;
+  const raw = v.noise * 0.5 + textures * 0.55 + rhythms * 0.7 + signals * 0.4 + brightness * 0.45;
   return Math.max(0, Math.min(1, raw / 1.9));
 }
 

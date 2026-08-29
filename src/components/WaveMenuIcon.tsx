@@ -5,13 +5,7 @@ import { cn } from "@/lib/utils";
  * Closed → open: waves fold inward, then a clean X resolves.
  * Open → closed: X dissolves, mark radiates back out.
  */
-export function WaveMenuIcon({
-  open = false,
-  className,
-}: {
-  open?: boolean;
-  className?: string;
-}) {
+export function WaveMenuIcon({ open = false, className }: { open?: boolean; className?: string }) {
   return (
     <svg
       viewBox="0 0 48 40"

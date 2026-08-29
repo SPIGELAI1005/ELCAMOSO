@@ -46,6 +46,7 @@ export const EXPANSION_PROFILES: SoundProfile[] = [
     drivetrainMode: "virtual-transmission",
     motionModel: "virtual-transmission",
     sourceMode: "procedural",
+    drivetrainPersonalityId: "flat-six-sport",
     voice: {
       baseFrequency: 38,
       harmonics: [1, 2, 3.02, 4.5, 6.1],
@@ -67,10 +68,12 @@ export const EXPANSION_PROFILES: SoundProfile[] = [
     name: "American Muscle V8",
     category: "Classic",
     traits: ["Lumpy", "Raw", "Thunderous"],
-    description: "Uneven idle, heavy exhaust and slower inertia. A rawer V8 personality than GT V8.",
+    description:
+      "Uneven idle, heavy exhaust and slower inertia. A rawer V8 personality than GT V8.",
     drivetrainMode: "virtual-transmission",
     motionModel: "virtual-transmission",
     sourceMode: "procedural",
+    drivetrainPersonalityId: "american-v8",
     voice: {
       baseFrequency: 24,
       harmonics: [1, 2, 2.98, 4],
@@ -93,6 +96,7 @@ export const EXPANSION_PROFILES: SoundProfile[] = [
     drivetrainMode: "virtual-transmission",
     motionModel: "virtual-transmission",
     sourceMode: "procedural",
+    drivetrainPersonalityId: "turbo-inline-6",
     voice: {
       baseFrequency: 32,
       harmonics: [1, 2, 3, 4.02, 6],
@@ -103,19 +107,30 @@ export const EXPANSION_PROFILES: SoundProfile[] = [
       detune: 4,
       wave: "sawtooth",
       textures: [{ kind: "sizzle", level: 0.1, tone: 3600, speedScale: 1 }],
-      signals: [{ kind: "whistle", everySeconds: 10, jitter: 4, level: 0.08, tone: 2800, speedLinked: true }],
+      signals: [
+        {
+          kind: "whistle",
+          everySeconds: 10,
+          jitter: 4,
+          level: 0.08,
+          tone: 2800,
+          speedLinked: true,
+        },
+      ],
     },
     transmission: TURBO6_BOX,
   },
   {
     id: "electric-hypercar",
-    name: "Electric Hypercar",
+    name: "Synthetic Hyper EV",
     category: "Future",
     traits: ["Instant", "Intense", "Synthetic"],
-    description: "Believable high-performance EV: motor harmonics, inverter texture and regen snap.",
-    drivetrainMode: "continuous",
-    motionModel: "continuous",
+    description:
+      "Multi-speed synthetic hyper EV: instant torque, fast shifts and high-RPM motor whine.",
+    drivetrainMode: "virtual-transmission",
+    motionModel: "virtual-transmission",
     sourceMode: "procedural",
+    drivetrainPersonalityId: "synthetic-ev",
     voice: {
       baseFrequency: 90,
       harmonics: [1, 2, 3.01, 5],
@@ -131,6 +146,12 @@ export const EXPANSION_PROFILES: SoundProfile[] = [
         { kind: "sizzle", level: 0.14, tone: 4800, speedScale: 1 },
         { kind: "wind", level: 0.22, tone: 2000, speedScale: 1 },
       ],
+    },
+    transmission: {
+      gearRatios: [16, 10.5, 7.2, 5.1, 3.8, 3.0],
+      idleRpm: 0,
+      redlineRpm: 12000,
+      shiftSmoothing: 0.08,
     },
   },
   {
@@ -298,6 +319,7 @@ export const EXPANSION_PROFILES: SoundProfile[] = [
     description: "Exposed high-rev four-cylinder character with instant throttle and fast shifts.",
     drivetrainMode: "virtual-transmission",
     motionModel: "virtual-transmission",
+    drivetrainPersonalityId: "motorcycle-inline-4",
     sourceMode: "procedural",
     voice: {
       baseFrequency: 48,
@@ -320,9 +342,11 @@ export const EXPANSION_PROFILES: SoundProfile[] = [
     name: "Big Twin",
     category: "Classic",
     traits: ["Loping", "Heavy", "Rhythmic"],
-    description: "Large V-twin cadence with heavy flywheel feel and pronounced idle pulse separation.",
+    description:
+      "Large V-twin cadence with heavy flywheel feel and pronounced idle pulse separation.",
     drivetrainMode: "virtual-transmission",
     motionModel: "virtual-transmission",
+    drivetrainPersonalityId: "v-twin-cruiser",
     sourceMode: "procedural",
     voice: {
       baseFrequency: 28,

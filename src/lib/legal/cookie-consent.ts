@@ -17,6 +17,7 @@ export function writeCookieConsent(choice: CookieConsentChoice) {
   if (typeof window === "undefined") return;
   try {
     window.localStorage.setItem(STORAGE_KEY, choice);
+    window.dispatchEvent(new Event("elcamoso:cookie-consent"));
   } catch {
     /* ignore */
   }

@@ -29,10 +29,7 @@ function LegalIndex() {
         <ul className="space-y-3">
           {LEGAL_LINKS.map((link) => (
             <li key={link.to}>
-              <Link
-                to={link.to}
-                className="text-foreground underline-offset-2 hover:underline"
-              >
+              <Link to={link.to} className="text-foreground underline-offset-2 hover:underline">
                 {link.label}
               </Link>
             </li>

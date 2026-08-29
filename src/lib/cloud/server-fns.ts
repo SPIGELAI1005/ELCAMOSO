@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { coachCopy, readCloud, upsertCloud, type CloudDocument } from "@/lib/cloud/store";
-import { ingestTelemetry, loadShare, saveShare, type TelemetryBatch } from "@/lib/telemetry/store";
+import { loadShare, saveShare, type TelemetryBatch } from "@/lib/telemetry/store";
 import { recipeFromPrompt, type SoundRecipe } from "@/lib/sound/recipes";
 import { findSoundsFromPrompt, type SoundMatch } from "@/lib/sound/find-sound";
 import type { TraceAggregates } from "@/lib/drive/traces";
@@ -21,9 +21,7 @@ export const findSoundFn = createServerFn({ method: "POST" })
     const key = process.env["OPENAI_API_KEY"];
     if (!key || local.length === 0) return { matches: local.slice(0, 3) };
     try {
-      const catalog = local
-        .map((m) => `${m.profileId}|${m.name}|${m.category}`)
-        .join("\n");
+      const catalog = local.map((m) => `${m.profileId}|${m.name}|${m.category}`).join("\n");
       const res = await fetch("https://api.openai.com/v1/chat/completions", {
         method: "POST",
         headers: {
@@ -140,9 +138,7 @@ export const driveCoachFn = createServerFn({ method: "POST" })
     }
   });
 
-export const ingestTelemetryFn = createServerFn({ method: "POST" })
-  .inputValidator((data: TelemetryBatch) => data)
-  .handler(({ data }) => ingestTelemetry(data));
+export { ingestTelemetryFn } from "@/lib/cloud/telemetry-server-fn";
 
 export const createShareFn = createServerFn({ method: "POST" })
   .inputValidator((data: { sound: CustomSound }) => data)

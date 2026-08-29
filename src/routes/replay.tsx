@@ -65,20 +65,20 @@ function Replay() {
       <div className="mx-auto w-full max-w-2xl px-6 pt-16 pb-28 sm:px-10">
         <h1 className="text-3xl font-light">Drive recordings</h1>
         <p className="mt-3 text-sm text-muted-foreground">
-          Last drives stay on this device. Replay any of them through the Sound Profile you
-          have selected now.
+          Last drives stay on this device. Replay any of them through the Sound Profile you have
+          selected now.
         </p>
 
         {!traces.length ? (
-          <p className="mt-12 text-sm text-muted-foreground">No recordings yet. Finish a drive first.</p>
+          <p className="mt-12 text-sm text-muted-foreground">
+            No recordings yet. Finish a drive first.
+          </p>
         ) : (
           <ul className="mt-12 divide-y divide-border border-y border-border">
             {traces.map((trace) => (
               <li key={trace.id} className="flex flex-wrap items-center gap-4 py-6">
                 <div className="min-w-0 flex-1">
-                  <p className="text-lg font-light">
-                    {new Date(trace.startedAt).toLocaleString()}
-                  </p>
+                  <p className="text-lg font-light">{new Date(trace.startedAt).toLocaleString()}</p>
                   <p className="mt-1 text-xs text-muted-foreground">
                     {Math.round(trace.durationMs / 1000)}s · peak{" "}
                     {Math.round(trace.aggregates.maxSpeedMps * 3.6)} km/h

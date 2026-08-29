@@ -28,8 +28,8 @@ function Terms() {
       subtitle="Conditions for using the ELCAMOSO website and progressive web app (US / EU consumers)."
     >
       <LegalNote>
-        These terms are a practical baseline for a consumer web app. Have counsel adapt
-        governing law, liability caps, and consumer-rights wording for your entity and markets.
+        These terms are a practical baseline for a consumer web app. Have counsel adapt governing
+        law, liability caps, and consumer-rights wording for your entity and markets.
       </LegalNote>
 
       <LegalSection title="1. Agreement">
@@ -44,30 +44,28 @@ function Terms() {
 
       <LegalSection title="2. The Service">
         <p>
-          ELCAMOSO provides motion-responsive sound experiences for electric vehicles via a
-          browser / PWA. Features may include Demo Drive, Audition, Studio, Garage, and
-          optional Cloud or AI helpers. We may change, suspend, or discontinue features with
-          reasonable notice where practicable.
+          ELCAMOSO provides motion-responsive sound experiences for electric vehicles via a browser
+          / PWA. Features may include Demo Drive, Audition, Studio, Garage, and optional Cloud or AI
+          helpers. We may change, suspend, or discontinue features with reasonable notice where
+          practicable.
         </p>
       </LegalSection>
 
       <LegalSection title="3. Not a vehicle or safety system">
         <p>
           The Service is entertainment and personalisation software. It does not control the
-          vehicle, does not replace OEM systems, and is not a certified safety, ADAS, or
-          navigation product. Always drive attentively, keep hands on the wheel as required by
-          law, and comply with traffic rules in your jurisdiction. Do not interact with the
-          phone UI while driving; use Demo / Audition when parked, or a securely mounted
-          device with audio routed safely.
+          vehicle, does not replace OEM systems, and is not a certified safety, ADAS, or navigation
+          product. Always drive attentively, keep hands on the wheel as required by law, and comply
+          with traffic rules in your jurisdiction. Do not interact with the phone UI while driving;
+          use Demo / Audition when parked, or a securely mounted device with audio routed safely.
         </p>
       </LegalSection>
 
       <LegalSection title="4. Eligibility and accounts">
         <p>
-          You must be old enough to form a binding contract in your place of residence and at
-          least 16 in the EU/EEA/UK (or older if local law requires). Optional Cloud features
-          use a local account identifier; you are responsible for activity under that
-          identifier.
+          You must be old enough to form a binding contract in your place of residence and at least
+          16 in the EU/EEA/UK (or older if local law requires). Optional Cloud features use a local
+          account identifier; you are responsible for activity under that identifier.
         </p>
       </LegalSection>
 
@@ -82,41 +80,70 @@ function Terms() {
 
       <LegalSection title="6. Intellectual property">
         <p>
-          The ELCAMOSO name, mark (O )))), wordmark, UI, and procedural sound designs are
-          protected by intellectual property laws. You retain rights to content you lawfully
-          create (for example custom Garage takes), and grant us a limited licence to host and
-          process that content as needed to provide features you use (including optional
-          share links).
+          The ELCAMOSO name, mark (O )))), wordmark, UI, and procedural sound designs are protected
+          by intellectual property laws. You retain rights to content you lawfully create (for
+          example custom Garage takes), and grant us a limited licence to host and process that
+          content as needed to provide features you use (including optional share links).
         </p>
       </LegalSection>
 
-      <LegalSection title="7. Third-party services">
+      <LegalSection title="7. Drive+ subscriptions (when offered)">
         <p>
-          Optional AI, hosting, or Cloud backends may be provided by processors. Their outages
-          or limits may affect features. Links to third-party sites are not endorsements.
+          Optional Drive+ is a paid subscription for extended motion sound features. Prices shown in
+          the app are in EUR unless stated otherwise. Subscriptions renew automatically until
+          canceled through your account plan settings or the payment provider customer portal.
+        </p>
+        <p>
+          Dynamic Drive preview, when offered, is free for eligible accounts: typically 30 minutes
+          total, up to three drives, within 14 days, with no card required. Preview terms appear
+          before activation.
+        </p>
+        <p>
+          EU/EEA consumers may have a 14-day withdrawal right for distance contracts where applicable
+          law grants it. If you expressly request immediate access to digital content during that
+          period, you may lose the withdrawal right once delivery begins — as explained at checkout
+          where required.
+        </p>
+        <p>
+          Cancel anytime before renewal to avoid the next billing period. We do not prorate partial
+          periods unless required by law. Refund requests: contact{" "}
+          <a
+            className="text-foreground underline-offset-2 hover:underline"
+            href={`mailto:${o.email}`}
+          >
+            {o.email}
+          </a>
+          . Payment processing is handled by our payment provider; we do not store full card numbers.
         </p>
       </LegalSection>
 
-      <LegalSection title="8. Disclaimer of warranties">
+      <LegalSection title="8. Third-party services">
+        <p>
+          Optional AI, hosting, or Cloud backends may be provided by processors. Their outages or
+          limits may affect features. Links to third-party sites are not endorsements.
+        </p>
+      </LegalSection>
+
+      <LegalSection title="9. Disclaimer of warranties">
         <p>
           TO THE MAXIMUM EXTENT PERMITTED BY LAW, THE SERVICE IS PROVIDED “AS IS” AND “AS
-          AVAILABLE”, WITHOUT WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE,
-          OR NON-INFRINGEMENT. SOUND OUTPUT MAY VARY BY DEVICE, BROWSER, AND SPEAKERS.
+          AVAILABLE”, WITHOUT WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, OR
+          NON-INFRINGEMENT. SOUND OUTPUT MAY VARY BY DEVICE, BROWSER, AND SPEAKERS.
         </p>
         <p>
-          Nothing in these Terms excludes mandatory consumer warranties that cannot be waived
-          under German, EU, or applicable US state law.
+          Nothing in these Terms excludes mandatory consumer warranties that cannot be waived under
+          German, EU, or applicable US state law.
         </p>
       </LegalSection>
 
-      <LegalSection title="9. Limitation of liability">
+      <LegalSection title="10. Limitation of liability">
         <p>
           TO THE MAXIMUM EXTENT PERMITTED BY LAW, WE ARE NOT LIABLE FOR INDIRECT, INCIDENTAL,
-          SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES, OR FOR LOSS OF PROFITS, DATA, OR
-          GOODWILL, ARISING FROM YOUR USE OF THE SERVICE - INCLUDING ANY DISTRACTION WHILE
-          DRIVING. OUR AGGREGATE LIABILITY FOR CLAIMS RELATING TO THE SERVICE IS LIMITED TO
-          THE GREATER OF (A) AMOUNTS YOU PAID US FOR THE SERVICE IN THE 12 MONTHS BEFORE THE
-          CLAIM, OR (B) EUR 50 / USD 50.
+          SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES, OR FOR LOSS OF PROFITS, DATA, OR GOODWILL,
+          ARISING FROM YOUR USE OF THE SERVICE - INCLUDING ANY DISTRACTION WHILE DRIVING. OUR
+          AGGREGATE LIABILITY FOR CLAIMS RELATING TO THE SERVICE IS LIMITED TO THE GREATER OF (A)
+          AMOUNTS YOU PAID US FOR THE SERVICE IN THE 12 MONTHS BEFORE THE CLAIM, OR (B) EUR 50 / USD
+          50.
         </p>
         <p>
           Liability for intent, gross negligence, injury to life, body or health, and other
@@ -124,22 +151,28 @@ function Terms() {
         </p>
       </LegalSection>
 
-      <LegalSection title="10. Governing law">
+      <LegalSection title="11. Governing law">
         <p>
           These Terms are governed by the laws of {o.country}, excluding conflict-of-law rules,
-          unless mandatory consumer protection law of your habitual residence applies and
-          cannot be derogated from by agreement (especially for EU consumers).
+          unless mandatory consumer protection law of your habitual residence applies and cannot be
+          derogated from by agreement (especially for EU consumers).
         </p>
       </LegalSection>
 
-      <LegalSection title="11. Contact">
+      <LegalSection title="12. Contact">
         <p>
           Questions:{" "}
-          <a className="text-foreground underline-offset-2 hover:underline" href={`mailto:${o.email}`}>
+          <a
+            className="text-foreground underline-offset-2 hover:underline"
+            href={`mailto:${o.email}`}
+          >
             {o.email}
           </a>
           . See also the{" "}
-          <Link to="/legal/impressum" className="text-foreground underline-offset-2 hover:underline">
+          <Link
+            to="/legal/impressum"
+            className="text-foreground underline-offset-2 hover:underline"
+          >
             Impressum
           </Link>
           .

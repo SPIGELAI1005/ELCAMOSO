@@ -13,9 +13,10 @@
 **Brand Positioning:** A premium digital automotive product that gives electric vehicles a configurable sound personality. It is not a fake-engine website, a racing soundboard, or a generic EV utility. The emotional core is the perceived synchronization between movement and sound. Position around the phrase: **"Sound in motion."**
 
 **Visual Identity:**
+
 - Approved mark: **O )))** — the "O" represents the source/vehicle; three curved lines represent sound propagating outward. The shape communicates motion and sound.
 - **Forbidden motifs:** lightning bolts, cars, wheels, exhaust pipes, speakers, racing flags.
-- **Wordmark style:** `E L C Λ M O S O`. Uppercase, thin-to-medium weight, wide tracking, geometric, futuristic but understated. Prefer a sophisticated geometric sans-serif (Outfit is the current font choice).
+- **Wordmark style:** `E L C A M O S O`. Uppercase, thin-to-medium weight, wide tracking, geometric, futuristic but understated. Prefer a sophisticated geometric sans-serif (Outfit is the current font choice). Use Latin **A** (not Greek Λ) for reliable rendering across browsers.
 - **App icon:** O ))) derivation, black background, white symbol, recognizable at 16px–512px.
 - **Color system:** Monochrome. Primary background near-black (#000000 / #0A0A0A). Foreground white/off-white (#F5F5F7). Accent is extremely restrained.
 - **Design philosophy:** Apple product page meets premium automotive HMI. Calm, expensive, precise, spacious, tactile. Avoid dashboard clutter and gaming-style gauges.
@@ -27,6 +28,7 @@
 Electric vehicles are silent. ELCAMOSO restores the emotional, tactile feedback of motion by generating a configurable soundscape that responds to real-time driving dynamics: speed, throttle, acceleration, regen, and (where available) RPM/gear. The sound is not just an overlay; it is a real-time reflection of the driver's input and the vehicle's state.
 
 The product prioritizes:
+
 1. **Synchronization:** Sound must feel tightly coupled to motion.
 2. **Personalization:** Every driver can craft a unique sound personality.
 3. **Safety:** Audio levels are controlled, predictable, and never startling.
@@ -38,6 +40,7 @@ The product prioritizes:
 ## 3. Primary User Flows
 
 ### 3.1 First-Time Launch
+
 1. Splash/loader with radiating O ))) animation (600–1200ms).
 2. Onboarding flow:
    - Step 1: Welcome + motion/audio permission request.
@@ -46,22 +49,26 @@ The product prioritizes:
 3. Redirect to `/drive` or `/demo` depending on permissions.
 
 ### 3.2 Returning Launch
+
 1. Loader restores settings.
 2. If onboarding complete, go directly to last-used primary screen (Drive, Sounds, Studio, etc.).
 3. If settings corrupted, run validation/recovery and show a fallback banner.
 
 ### 3.3 Start Drive
+
 1. User taps [Start Drive] from hero or onboarding.
 2. Plays a subtle original startup tone (0.5–1.5s): rising sine harmonics, not a starter motor.
 3. Fades the selected sound profile into idle.
 4. Transitions to the Drive screen.
 
 ### 3.4 Audition / Demo
+
 - Users can preview profiles without leaving the app or needing real vehicle motion.
 - Demo mode provides manual sliders for throttle, acceleration, and regen.
 - Audition mode uses a motion simulator.
 
 ### 3.5 Studio / Garage
+
 - **Studio:** Shape sounds, adjust layers, mix, apply environments, record snippets.
 - **Garage:** Manage the collection, organize favorites, playlists, and global snippets.
 
@@ -70,6 +77,7 @@ The product prioritizes:
 ## 4. Feature Catalogue
 
 ### 4.1 Audio Engine
+
 - Built on the Web Audio API.
 - Synthesizes sound profiles in real time from oscillators, noise generators, and sampled snippets.
 - **Hybrid realism path (default):** multi-layer procedural strategies in `src/lib/sound/realism/` composed from reusable DSP primitives (`src/lib/sound/dsp/`). Each profile maps speed, throttle, accel, regen, RPM, gear, jerk and shifts through nonlinear curves with separate FAST/SLOW smoothers.
@@ -94,22 +102,24 @@ The product prioritizes:
 - **Debug harness:** `/debug` (dev-only) with repeatable motion scenarios, Original/Improved A/B, and layer mute/solo.
 
 ### 4.2 Sound Profiles
+
 A "Sound Profile" is a complete sound personality selectable by the user. Profiles include categories such as:
 
-| Category | Examples |
-|----------|----------|
-| Combustion-inspired | GT V8, Racing V10 |
-| Futuristic EV | Cyber Pulse |
-| Cinematic | Space Ship, UFO |
-| Nautical | Speed Boat, Cruise Ship, Submarine |
-| Motorsport | Race Car, Rally Car, Drift Car |
-| Playful | Farting Car, Laughing Machine |
-| Historical / Rural | Wild West Carriage, Romanian '85 Horse Carriage |
-| Aircraft | Helicopter, Private Jet |
-| Industrial | Oide Wiesen Tractor |
-| Nature | Wind, Rain Road |
+| Category            | Examples                                        |
+| ------------------- | ----------------------------------------------- |
+| Combustion-inspired | GT V8, Racing V10                               |
+| Futuristic EV       | Cyber Pulse                                     |
+| Cinematic           | Space Ship, UFO                                 |
+| Nautical            | Speed Boat, Cruise Ship, Submarine              |
+| Motorsport          | Race Car, Rally Car, Drift Car                  |
+| Playful             | Farting Car, Laughing Machine                   |
+| Historical / Rural  | Wild West Carriage, Romanian '85 Horse Carriage |
+| Aircraft            | Helicopter, Private Jet                         |
+| Industrial          | Oide Wiesen Tractor                             |
+| Nature              | Wind, Rain Road                                 |
 
 Each profile has:
+
 - A base drivetrain mode.
 - Layer definitions (engine, texture, atmosphere).
 - Per-profile gain, throttle response, acceleration response, regen response.
@@ -117,6 +127,7 @@ Each profile has:
 - Curated presets plus user-created custom profiles.
 
 ### 4.3 Drive Telemetry
+
 - **Speed (km/h):** Primary display.
 - **RPM:** Simulated or derived.
 - **Gear:** For virtual-transmission profiles.
@@ -127,6 +138,7 @@ Each profile has:
   - Manual sliders in demo mode.
 
 ### 4.4 O ))) Animation
+
 - Living indicator of sound intensity.
 - States:
   - Idle: minimal ripple.
@@ -137,28 +149,33 @@ Each profile has:
 - Respects `prefers-reduced-motion`.
 
 ### 4.5 Calibration
+
 - Measures accelerometer noise floor and sensitivity.
 - Live test view before saving.
 - Tunes how strongly acceleration/regen affect the audio state.
 
 ### 4.6 Demo Drive
+
 - Available when sensors are unavailable or the user is not in a vehicle.
 - Simulated throttle, acceleration, and regen sliders.
 - Lets users preview the full sound behavior safely.
 
 ### 4.7 Haptics
+
 - Optional vibration feedback synchronized with throttle and regen intensity.
 - Uses the Vibration API.
 - Does not change the primary display.
 - Respects reduced-motion and device capabilities.
 
 ### 4.8 Volume & Headroom
+
 - Master volume control.
 - Per-profile gain.
 - Real-time loudness headroom meter with warning when switching to an intense profile.
 - Limiter prevents clipping.
 
 ### 4.9 Studio
+
 - Sound shaping environment:
   - Per-layer mixer: volume, EQ, wet/dry.
   - Environment presets: city street, countryside gravel, rain road, old town.
@@ -174,6 +191,7 @@ Each profile has:
 - **Takes:** save multiple labelled variations of one personality (`familyId` + `takeLabel`) without duplicating the whole Garage row.
 
 ### 4.10 Garage
+
 - Collection management:
   - Favorites.
   - Curated playlists with optional timed segments (minutes per Sound Profile) for road-trip crossfades.
@@ -184,6 +202,7 @@ Each profile has:
 - Share a saved Studio personality from each Garage card (same `/share` payload as Studio).
 
 ### 4.11 Favorites & Playlists
+
 - Mark profiles as favorites.
 - Create playlists of profiles.
 - Timed playlist mode: Drive advances segments by the trip clock with the normal 180 ms crossfade. Hold / next-prev still win.
@@ -191,6 +210,7 @@ Each profile has:
 - Favorites used by AI curation.
 
 ### 4.11b Smart switching and Motion context
+
 - On-device classifier maps DriveState windows to city / cruise / spirited / regen (no GPS trail).
 - Settings mode: Off, Suggest (quiet pill on Drive), or Auto.
 - **Hold** on Drive freezes auto and timed playlist advances until cleared or the drive ends.
@@ -198,12 +218,14 @@ Each profile has:
 - **Match sound to motion:** optional 0–250 ms Motion lookahead for Bluetooth latency (Settings).
 
 ### 4.12 Export / Import / Migration
+
 - Export all saved profiles, settings, snippets, and playlists as JSON.
 - Import merges cleanly with current setup using versioned backup data (schema v6).
 - Backward compatibility handling for older export formats.
 - Validation and recovery for corrupted stored settings.
 
 ### 4.13 Onboarding
+
 - 3-step flow with clear progress indicator (Step 1/2/3).
 - Requests motion/audio permissions.
 - Explains how sound follows drive.
@@ -213,6 +235,7 @@ Each profile has:
 - Safe fallback to Drive screen if settings fail to load.
 
 ### 4.14 Accessibility
+
 - Reduced-motion setting for O ))) animation and onboarding.
 - Haptic feedback optional.
 - Large, high-contrast monochrome UI.
@@ -220,6 +243,7 @@ Each profile has:
 - Preferred terminology: Sound Profile, Drive Mode, Motion.
 
 ### 4.15 Privacy & Safety
+
 - Motion/speed data processed locally.
 - Minimal navigation (Drive, Sounds, Settings).
 - Safety banner before entering Drive.
@@ -229,11 +253,13 @@ Each profile has:
 - Unhandled errors and audio-start failures are stored on-device (last 12). Optional host preview crash hooks may still fire when running inside an embedded editor.
 
 ### 4.16 Dev/Debug
+
 - Hidden diagnostics panel (dev-only) accessible via a secret gesture or route.
 - Shows current audio state, sensor values, settings version, and profile metadata.
 - Does not appear in production or is disabled by a flag.
 
 ### 4.17 Audio regression
+
 - Vitest harness in `src/lib/sound/regression/` fingerprints a Node-safe core-voice render for key drive states (idle, cruise, throttle, regen) and Studio edits (pitch, grit, darker).
 - Seeded RNG (`src/lib/sound/rng.ts`) keeps renders repeatable.
 - `npm test` compares against `references.json`. Refresh golden samples with `npm run test:update-audio`.
@@ -243,11 +269,13 @@ Each profile has:
 ## 5. Audio Architecture
 
 ### 5.1 Signal Chain
+
 ```
 [Sound Source] → [Layer Mixer] → [EQ] → [Reverb] → [Spatial Panning] → [Dynamics Limiter] → [Master Gain] → [Destination]
 ```
 
 ### 5.2 Key Nodes
+
 - **OscillatorBank:** Base engine tones.
 - **NoiseEngine:** Pink/white/brown noise textures for water, wind, gravel, etc.
 - **RhythmScheduler:** Periodic events (hooves, tractor putt-putt, helicopter rotor chops).
@@ -257,7 +285,9 @@ Each profile has:
 - **Compressor/Limiter:** Soft-knee dynamics control.
 
 ### 5.3 Layer Types
+
 Each profile contains a set of layers. Examples:
+
 - `engine` — fundamental tone.
 - `transmission` — gear whine/whistle.
 - `water` — water spray/hull sound.
@@ -268,7 +298,9 @@ Each profile contains a set of layers. Examples:
 - `snippets` — user-recorded or uploaded samples.
 
 ### 5.4 Environments
+
 Environments apply a reverb preset, rebalance layer volumes from driving state, and scale texture/hiss via `textureScale` (0 = mute beds and voice noise):
+
 - **Showroom:** dry, quiet floor; `textureScale: 0` so the core voice is heard without road spray or white-noise beds.
 - **Open road:** dry, direct; reduced beds relative to legacy.
 - **City street:** short reverb, accents forward, less wind hiss.
@@ -279,12 +311,14 @@ Environments apply a reverb preset, rebalance layer volumes from driving state, 
 Noise / fidelity notes: `docs/SOUND_NOISE_AND_FIDELITY.md`.
 
 ### 5.5 Snippets
+
 - User-recorded via MediaRecorder or uploaded from device.
 - Mapped to driving states: idle, low throttle, moderate throttle, strong throttle, regen, high speed, etc.
 - Edge-triggered to avoid machine-gunning.
 - Max size: 700KB.
 
 ### 5.6 AI Sound Design
+
 - User enters a natural language description.
 - AI generates a profile recipe: layer list, EQ, drivetrain mode, environment, reverb params.
 - Recipe is previewed in Audition before saving.
@@ -295,15 +329,16 @@ Noise / fidelity notes: `docs/SOUND_NOISE_AND_FIDELITY.md`.
 ## 6. Data Model
 
 ### 6.1 Settings Schema (v4+)
+
 Stored in `localStorage`. Key entities:
 
 ```ts
 interface ElcamosoSettings {
-  version: number;                    // migration version
+  version: number; // migration version
   onboardingComplete: boolean;
   lastRoute?: string;
-  profileId: string;                  // selected profile
-  volume: number;                     // 0.0–1.0
+  profileId: string; // selected profile
+  volume: number; // 0.0–1.0
   masterGain: number;
   reducedMotion: boolean;
   hapticsEnabled: boolean;
@@ -312,7 +347,7 @@ interface ElcamosoSettings {
     regenSensitivity: number;
     noiseFloor: number;
   };
-  favorites: string[];                // profile IDs
+  favorites: string[]; // profile IDs
   playlists: Playlist[];
   environments: EnvironmentState;
   mixerOverrides: Record<string, LayerMixerState>;
@@ -323,12 +358,13 @@ interface ElcamosoSettings {
 ```
 
 ### 6.2 Sound Profile Schema
+
 ```ts
 interface SoundProfile {
   id: string;
   name: string;
   category: string;
-  drivetrainMode: 'virtual-transmission' | 'continuous';
+  drivetrainMode: "virtual-transmission" | "continuous";
   basePitch: number;
   layers: SoundLayer[];
   tuning: {
@@ -337,22 +373,23 @@ interface SoundProfile {
     regenMultiplier: number;
     gainOffset: number;
   };
-  intensity: 'gentle' | 'moderate' | 'intense';
+  intensity: "gentle" | "moderate" | "intense";
   environmentDefault?: string;
 }
 
 interface SoundLayer {
-  type: 'oscillator' | 'noise' | 'rhythm' | 'snippet';
+  type: "oscillator" | "noise" | "rhythm" | "snippet";
   name: string;
   volume: number;
   eq: { low: number; mid: number; high: number };
-  wet: number;           // reverb amount
-  pan: number;           // -1 to 1
+  wet: number; // reverb amount
+  pan: number; // -1 to 1
   params: Record<string, number>; // type-specific params
 }
 ```
 
 ### 6.3 Migration Rules
+
 - Read `version` on load.
 - If version missing or lower than current, run `sanitizeSettings` to repair and merge defaults.
 - Imports from older versions are merged rather than overwritten.
@@ -363,26 +400,29 @@ interface SoundLayer {
 
 Primary navigation is minimal. Main routes:
 
-| Route | Purpose |
-|-------|---------|
-| `/` | Landing / hero with [Start Drive] |
-| `/onboarding` | 3-step first-time setup |
-| `/drive` | Active driving interface |
-| `/demo` | Pedals + P R N D, guided character tour, no sensors |
-| `/sounds` | Browse, Find a sound → Listen, audition, select profiles |
-| `/studio` | Sound shaping, mixer, environments, snippets, AI prompt-to-sound, audio monitor, share link |
-| `/garage` | Collection, favorites, playlists, snippets, share |
-| `/share` | Audition a shared Studio personality from a link |
-| `/calibrate` | Motion sensitivity calibration with live test |
-| `/settings` | Master volume, per-profile gain, haptics, reduced motion, usage insights, reset onboarding, export/import |
-| `/about` | Product about |
-| `/legal` | Legal hub |
-| `/legal/impressum` | German Impressum (TMG) |
-| `/legal/privacy` | Privacy / Datenschutzerklärung (GDPR + US) |
-| `/legal/cookies` | Cookie notice + consent reset |
-| `/legal/terms` | Terms of use |
-| `/legal/accessibility` | Accessibility statement |
-| `/debug` (dev-only) | Diagnostics panel |
+| Route                  | Purpose                                                                                                   |
+| ---------------------- | --------------------------------------------------------------------------------------------------------- |
+| `/`                    | Landing / hero with [Start Drive]                                                                         |
+| `/onboarding`          | 3-step first-time setup                                                                                   |
+| `/drive`               | Active driving interface                                                                                  |
+| `/demo`                | Pedals + P R N D, guided character tour, no sensors                                                       |
+| `/sounds`              | Browse, Find a sound → Listen, audition, select profiles                                                  |
+| `/studio`              | Sound shaping, mixer, environments, snippets, AI prompt-to-sound, audio monitor, share link               |
+| `/garage`              | Collection, favorites, playlists, snippets, share                                                         |
+| `/share`               | Audition a shared Studio personality from a link                                                          |
+| `/calibrate`           | Motion sensitivity calibration with live test                                                             |
+| `/settings`            | Master volume, per-profile gain, haptics, reduced motion, usage insights, reset onboarding, export/import |
+| `/pricing`             | FREE vs Drive+ plans, emotional positioning, Stripe Checkout entry                                        |
+| `/upgrade/$token`      | Phone-side Tesla Drive+ checkout (QR destination); auth + Stripe, no card entry in car browser              |
+| `/connect/$sessionId`  | Phone pairing relay for in-car display motion                                                               |
+| `/about`               | Product about                                                                                             |
+| `/legal`               | Legal hub                                                                                                 |
+| `/legal/impressum`     | German Impressum (TMG)                                                                                    |
+| `/legal/privacy`       | Privacy / Datenschutzerklärung (GDPR + US)                                                                |
+| `/legal/cookies`       | Cookie notice + consent reset                                                                             |
+| `/legal/terms`         | Terms of use                                                                                              |
+| `/legal/accessibility` | Accessibility statement                                                                                   |
+| `/debug` (dev-only)    | Diagnostics panel                                                                                         |
 
 Site footer (`SiteFooter`) and cookie consent bar (`CookieConsent`) render from the root layout. Operator details live in `src/lib/legal/operator.ts` (replace PLACEHOLDERs before public DE/EU launch).
 
@@ -393,17 +433,20 @@ Root layout (`__root.tsx`) renders `<Outlet />` and global providers/Toaster. No
 ## 8. UI/UX Conventions
 
 ### 8.1 Language
+
 - Use "Sound Profile", "Drive Mode", "Motion".
 - Avoid: oscillator, gain routing, LFO, patch, VST, amplitude.
 - Replace em-dash (—) with hyphens or colons throughout the app.
 - Tone: calm, premium, confident, minimal.
 
 ### 8.2 Typography
+
 - Headings: Outfit (geometric sans), wide tracking.
 - Body: Outfit or system sans.
-- Wordmark: `E L C Λ M O S O` spaced with wide tracking.
+- Wordmark: `E L C A M O S O` spaced with wide tracking.
 
 ### 8.3 Color
+
 - Background: #000000 / #0A0A0A.
 - Surface: #121212, #1A1A1A.
 - Foreground: #F5F5F7.
@@ -412,11 +455,13 @@ Root layout (`__root.tsx`) renders `<Outlet />` and global providers/Toaster. No
 - Error: soft red only when necessary.
 
 ### 8.4 Motion
+
 - Loader: O ))) radiates outward on load.
 - Drive indicator: subtle, never frantic.
 - Respect `prefers-reduced-motion` and the user's reduced-motion setting.
 
 ### 8.5 Mobile-First
+
 - Portrait orientation priority.
 - Large touch targets.
 - Bottom sheets for selectors and mixers.
@@ -430,9 +475,10 @@ Root layout (`__root.tsx`) renders `<Outlet />` and global providers/Toaster. No
 - **Framework:** TanStack Start v1 (React 19, Vite 7).
 - **Routing:** `@tanstack/react-router`. No `react-router-dom`.
 - **Styling:** Tailwind CSS v4 with native CSS `@theme` variables in `src/styles.css`.
-- **State:** localStorage settings (schema v6) plus a Drive session singleton (`src/lib/drive/session.ts`) that owns the single `AudioContext`. UI reads snapshots via `useSyncExternalStore`. Switching Sound Profile while Listen / Demo / Drive is already live crossfades on the existing engine (`listenProfile`); do not stack a second `AudioContext`.
+- **State:** localStorage settings (schema v6) plus a Drive session singleton (`src/lib/drive/session.ts`) that owns the single `AudioContext`. UI reads snapshots via `useSyncExternalStore`. Switching Sound Profile while Listen / Demo / Drive is already live crossfades on the existing engine (`listenProfile`); do not stack a second `AudioContext`. Snapshot includes `motion` (`MotionEnergy` UI layer), `productStatus`, and `safetyMode` (above ~5 km/h on Drive/Demo).
 - **Audio:** Web Audio API. Cabin EQ after layer mix; intensity-band gain ceiling on top of the limiter; idle fade-then-suspend; call ducking on `AudioContext` interrupt. Optional Motion lookahead for Bluetooth.
-- Motion: GPS speed fused with DeviceMotion (`src/lib/drive/fusion.ts`). When `GeolocationCoordinates.speed` is null, speed is derived from successive lat/lon deltas (`src/lib/drive/gps-speed.ts`). Drive context classifier is on-device (`src/lib/drive/context.ts`). Drive traces live in IndexedDB, not the service worker cache.
+- **Chrome:** Mobile bottom nav Drive / Sounds / Studio / Garage; Demo and Settings via menu. Hide BrandNav, bottom nav, and MiniPlayer during Drive safety mode.
+- Motion: multi-source fusion in `src/lib/motion/sensor-fusion.ts` (GPS, DeviceMotion, phone relay, vehicle telemetry). Delta GPS speed when `GeolocationCoordinates.speed` is null (`src/lib/drive/gps-speed.ts`). Drive context classifier is on-device (`src/lib/drive/context.ts`). Dynamic Drive adds `PowertrainSimulator` + `DynamicDriveSynth` when `settings.dynamicDrive` is on. Demo motion: `src/lib/drive/demo-physics.ts`. Architecture guide: `docs/DYNAMIC_DRIVE_ARCHITECTURE.md`. Drive traces live in IndexedDB, not the service worker cache.
 - **i18n:** EN / DE / RO dictionaries in `src/lib/i18n`, plus metric/imperial units.
 - **Auth / Cloud:** Opt-in **ELCAMOSO Cloud** via thin `createServerFn` wrappers in `src/lib/cloud/server-fns.ts`. Keys stay on the server. User-facing name is ELCAMOSO Cloud, never Supabase.
 - **Telemetry:** Opt-in usage insights and on-device crash log. Ingest via `ingestTelemetryFn`. Share codes via `createShareFn` / `loadShareFn` (payload URLs are the durable share path).
@@ -457,6 +503,7 @@ Root layout (`__root.tsx`) renders `<Outlet />` and global providers/Toaster. No
 ## 11. Quality Checklist for New Features
 
 Before considering a feature complete, verify:
+
 - [ ] It works in portrait mobile viewport.
 - [ ] It respects reduced-motion settings.
 - [ ] It does not introduce sudden audio spikes (use crossfade/limiter).
@@ -471,18 +518,22 @@ Before considering a feature complete, verify:
 ## 12. Open Opportunities / Roadmap
 
 Shipped on the current app (session spine first):
-1. Sensor fusion (GPS + DeviceMotion).
-2. Media Session; screen wake lock for live Drive (re-acquired on resume); Drive visibility hide grace (~2.8 s) before idle suspend; call ducking.
-3. IndexedDB drive traces, replay, and 15 s render-to-audio clips.
-4. Auto Sound Profile rules (speed band, hour, drive minutes).
-5. Virtual-transmission gear-shift feel.
-6. Persistent mini-player, Sounds search/cards/A/B/packs, Studio undo and presets.
-7. EN/DE/RO, units, settings search, restore recommended, a11y focus and 44 px sliders.
-8. Opt-in ELCAMOSO Cloud sync, prompt-to-sound recipes, and aggregate-only drive coach (confirm before switching while driving).
-9. Audio regression harness, Studio latency/load monitor, opt-in usage insights, and one-tap Studio share links.
-10. Motion context classifier, Suggest / Auto / Hold switching, per-profile trigger rules, timed playlists, Studio A/B, takes, and Bluetooth Motion lookahead.
+
+1. Multi-source sensor fusion (GPS + DeviceMotion + phone relay + optional Tesla Fleet Telemetry). Architecture: `docs/DYNAMIC_DRIVE_ARCHITECTURE.md`, Tesla onboarding: `docs/dynamic-drive/tesla-telemetry.md`.
+2. Shared Drive sessions (Tesla display ↔ phone relay WebSocket).
+3. Virtual powertrain (`PowertrainSimulator`) and Dynamic Drive synth when enabled.
+4. Media Session; screen wake lock for live Drive (re-acquired on resume); Drive visibility hide grace (~2.8 s) before idle suspend; call ducking.
+5. IndexedDB drive traces, replay, and 15 s render-to-audio clips.
+6. Auto Sound Profile rules (speed band, hour, drive minutes).
+7. Virtual-transmission gear-shift feel (legacy path) plus Dynamic Drive shift transients (scheduler: probability, cooldown, variant pools, aspiration gates — see `docs/dynamic-drive-transients.md`).
+8. Persistent mini-player, Sounds search/cards/A/B/packs, Studio undo and presets.
+9. EN/DE/RO, units, settings search, restore recommended, a11y focus and 44 px sliders.
+10. Opt-in ELCAMOSO Cloud sync, prompt-to-sound recipes, and aggregate-only drive coach (confirm before switching while driving).
+11. Audio regression harness, Studio latency/load monitor, opt-in usage insights, and one-tap Studio share links.
+12. Motion context classifier, Suggest / Auto / Hold switching, per-profile trigger rules, timed playlists, Studio A/B, takes, and Bluetooth Motion lookahead.
 
 Further polish (Phase 2+):
+
 - Richer drive summaries, 30–60 s mastering WAV, hearing balance, /motion visualizer, passenger loudness lock.
 - Push-to-talk voice, structured coach apply, day/night palettes, curated packs, opt-in familiar-route dim.
 - Richer conflict resolution than last-write-wins for cloud fields.
@@ -496,6 +547,7 @@ Parked (not PWA-native yet): Group Drive / WebRTC, wearables, live sound map, OB
 ## 13. AI Code Assistant Context
 
 When editing this codebase, remember:
+
 - **The app is a real-time audio synthesis app for EVs.** Every change must consider latency, audio graph lifecycle, and mobile performance.
 - **Monochrome premium UI.** Do not add bright colors, gradients, or dashboard clutter unless explicitly requested.
 - **Mobile-first.** Test in a narrow viewport.
@@ -506,4 +558,4 @@ When editing this codebase, remember:
 
 ---
 
-*Last updated: 2026-08-20 (Motion context, trigger rules, timed playlists, Studio A/B, takes, latency match)*
+_Last updated: 2026-08-20 (Motion context, trigger rules, timed playlists, Studio A/B, takes, latency match)_

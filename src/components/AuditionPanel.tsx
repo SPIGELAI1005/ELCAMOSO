@@ -94,9 +94,7 @@ export function AuditionPanel({ profileId }: { profileId: string }) {
             <label htmlFor="audition-speed" className="text-sm">
               Simulated speed
             </label>
-            <span className="text-sm text-muted-foreground tabular-nums">
-              {targetKmh} km/h
-            </span>
+            <span className="text-sm text-muted-foreground tabular-nums">{targetKmh} km/h</span>
           </div>
           <input
             id="audition-speed"
@@ -155,8 +153,8 @@ export function AuditionPanel({ profileId }: { profileId: string }) {
           className="mt-4 slider h-11 w-full"
         />
         <p className="mt-3 text-xs text-muted-foreground">
-          Level this profile against the others. Master volume and the safety limiter stay
-          in control, so dynamics are preserved.
+          Level this profile against the others. Master volume and the safety limiter stay in
+          control, so dynamics are preserved.
         </p>
       </div>
 
@@ -246,9 +244,7 @@ function Tuner({
         <label htmlFor={id} className="text-sm">
           {label}
         </label>
-        <span className="text-xs text-muted-foreground tabular-nums">
-          {value.toFixed(2)}×
-        </span>
+        <span className="text-xs text-muted-foreground tabular-nums">{value.toFixed(2)}×</span>
       </div>
       <input
         id={id}

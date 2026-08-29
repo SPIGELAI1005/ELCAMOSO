@@ -1,5 +1,6 @@
 import { DEFAULT_PROFILE_ID, getProfile, SOUND_PROFILES } from "@/lib/sound/profiles";
 import type { SoundProfile } from "@/lib/sound/profiles";
+import { applyResolvedAccess } from "@/lib/sound/profile-access";
 import {
   DEFAULT_ENVIRONMENT_ID,
   ENVIRONMENTS,
@@ -7,7 +8,12 @@ import {
   normalizeMix,
   type LayerMix,
 } from "@/lib/sound/environments";
-import { DEFAULT_CABIN_EQ, DEFAULT_SHIFT_FEEL, type CabinEq, type ShiftFeel } from "@/lib/drive/types-extra";
+import {
+  DEFAULT_CABIN_EQ,
+  DEFAULT_SHIFT_FEEL,
+  type CabinEq,
+  type ShiftFeel,
+} from "@/lib/drive/types-extra";
 import type { AutoRule, AutoRulesMode, ProfileRule } from "@/lib/drive/rules";
 import { DRIVE_CONTEXTS, type DriveContext } from "@/lib/drive/context";
 import type { Locale, Units } from "@/lib/i18n";
@@ -94,7 +100,6 @@ export interface StudioPreset {
   environmentId: string;
 }
 
-
 /** Turns a Studio recipe into a playable profile. */
 export function materializeCustom(sound: CustomSound): SoundProfile {
   const base = getProfile(sound.baseId);
@@ -108,9 +113,7 @@ export function materializeCustom(sound: CustomSound): SoundProfile {
     id: sound.id,
     name: sound.name,
     category: "Garage",
-    description: sound.note?.trim()
-      ? sound.note.trim()
-      : `A Studio sound built from ${base.name}.`,
+    description: sound.note?.trim() ? sound.note.trim() : `A Studio sound built from ${base.name}.`,
     custom: true,
     baseId: base.id,
     createdAt: sound.createdAt,
@@ -135,7 +138,7 @@ export function materializeCustom(sound: CustomSound): SoundProfile {
   const rhythmB = scaleRhythm(v.rhythmB);
   if (rhythm) profile.voice.rhythm = rhythm;
   if (rhythmB) profile.voice.rhythmB = rhythmB;
-  return profile;
+  return applyResolvedAccess(profile);
 }
 
 /* ---------------------------------------------------------------- settings */
@@ -195,11 +198,31 @@ export interface ElcamosoSettings {
   updatedAt: number;
   cloudEnabled: boolean;
   cloudAccountId: string | null;
+  /** Server-issued account UUID for Dynamic Drive trial and billing. */
+  accountUserId: string | null;
+  /** Http-equivalent session token validated server-side for account actions. */
+  accountSessionToken: string | null;
+  accountEmail: string | null;
+  /** User explicitly activated the Dynamic Drive preview trial. */
+  dynamicDriveTrialActivated: boolean;
+  /** Trial converted to paid plan — trial bridge stops accounting. */
+  dynamicDriveTrialConverted: boolean;
   includeDriveHistory: boolean;
   /** opt-in, no motion or location */
   analyticsEnabled: boolean;
   /** show the diagnostics panel in Settings */
   devPanel: boolean;
+  /** Live Drive overlay: motion, fusion, powertrain, audio and network diagnostics */
+  debugDriveDiagnostics: boolean;
+  /** Use Dynamic Drive powertrain + layered audio (Legacy Mode when off) */
+  dynamicDrive: boolean;
+  /** Opt-in Tesla Fleet Telemetry adapter (server bridge required; default off). */
+  teslaFleetTelemetry: boolean;
+  /** Anonymous id for server-side Tesla token bucket (not a secret). */
+  teslaLinkId: string | null;
+  /** Selected vehicle VIN for display / future telemetry (not a secret). */
+  teslaVehicleVin: string | null;
+  teslaLinkedAt: number | null;
 }
 
 export interface PlaylistSegment {
@@ -255,11 +278,21 @@ export const DEFAULT_SETTINGS: ElcamosoSettings = {
   updatedAt: 0,
   cloudEnabled: false,
   cloudAccountId: null,
+  accountUserId: null,
+  accountSessionToken: null,
+  accountEmail: null,
+  dynamicDriveTrialActivated: false,
+  dynamicDriveTrialConverted: false,
   includeDriveHistory: false,
   analyticsEnabled: false,
   devPanel: false,
+  debugDriveDiagnostics: false,
+  dynamicDrive: false,
+  teslaFleetTelemetry: false,
+  teslaLinkId: null,
+  teslaVehicleVin: null,
+  teslaLinkedAt: null,
 };
-
 
 export function getTuning(settings: ElcamosoSettings, profileId: string): ProfileTuning {
   return { ...DEFAULT_TUNING, ...(settings.tuning?.[profileId] ?? {}) };
@@ -282,8 +315,7 @@ const num = (v: unknown, fallback: number, min: number, max: number) =>
 
 const bool = (v: unknown, fallback: boolean) => (typeof v === "boolean" ? v : fallback);
 
-const str = (v: unknown, fallback: string) =>
-  typeof v === "string" && v.trim() ? v : fallback;
+const str = (v: unknown, fallback: string) => (typeof v === "string" && v.trim() ? v : fallback);
 
 function sanitizeTweaks(v: unknown): StudioTweaks {
   const r = isRecord(v) ? v : {};
@@ -346,9 +378,7 @@ function sanitizePlaylists(v: unknown, knownIds: Set<string>): Playlist[] {
     const profileIds = Array.isArray(item["profileIds"])
       ? Array.from(
           new Set(
-            item["profileIds"].filter(
-              (p): p is string => typeof p === "string" && knownIds.has(p),
-            ),
+            item["profileIds"].filter((p): p is string => typeof p === "string" && knownIds.has(p)),
           ),
         ).slice(0, 40)
       : [];
@@ -450,13 +480,13 @@ function sanitizeProfileRules(v: unknown): ProfileRule[] {
         : "speedKmh";
     const opRaw = str(item["op"], "gt");
     const op = opRaw === "lt" || opRaw === "eq" ? opRaw : "gt";
-    let value: number | DriveContext =
+    const value: number | DriveContext =
       metric === "speedKmh"
         ? num(item["value"], 110, 0, 300)
         : metric === "context"
-          ? (contexts.has(String(item["value"]) as DriveContext)
-              ? (String(item["value"]) as DriveContext)
-              : "city")
+          ? contexts.has(String(item["value"]) as DriveContext)
+            ? (String(item["value"]) as DriveContext)
+            : "city"
           : num(item["value"], 0.6, 0, 1);
     const actionRaw = isRecord(item["action"]) ? item["action"] : {};
     const actionKind = str(actionRaw["kind"], "mixDelta");
@@ -569,7 +599,6 @@ function sanitizeStudioPresets(v: unknown): StudioPreset[] {
   return out;
 }
 
-
 export interface SettingsIssue {
   field: string;
   detail: string;
@@ -633,10 +662,7 @@ export function sanitizeSettings(input: unknown): {
     ? p["favourites"].filter((f): f is string => typeof f === "string").slice(0, 60)
     : [];
 
-  const knownIds = new Set([
-    ...SOUND_PROFILES.map((s) => s.id),
-    ...customSounds.map((s) => s.id),
-  ]);
+  const knownIds = new Set([...SOUND_PROFILES.map((s) => s.id), ...customSounds.map((s) => s.id)]);
   const rawProfileId = p["profileId"];
   const profileId = check(
     "profileId",
@@ -661,7 +687,7 @@ export function sanitizeSettings(input: unknown): {
     demoMotion: bool(p["demoMotion"], false),
     safetyAcknowledged,
     onboarded,
-    onboardingStep: num(p["onboardingStep"], 0, 0, 3),
+    onboardingStep: num(p["onboardingStep"], 0, 0, 2),
     lastDriveAt: typeof p["lastDriveAt"] === "number" ? p["lastDriveAt"] : null,
     driveCount: num(p["driveCount"], 0, 0, 1e9),
     reducedMotion: bool(p["reducedMotion"], false),
@@ -685,21 +711,36 @@ export function sanitizeSettings(input: unknown): {
     latencyCompMs: num(p["latencyCompMs"], 0, 0, 250),
     profileRules: sanitizeProfileRulesMap(p["profileRules"]),
     studioPresets: sanitizeStudioPresets(p["studioPresets"]),
-    language: (["en", "de", "ro"].includes(String(p["language"]))
-      ? p["language"]
-      : "en") as Locale,
+    language: (["en", "de", "ro"].includes(String(p["language"])) ? p["language"] : "en") as Locale,
     units: p["units"] === "imperial" ? "imperial" : "metric",
     updatedAt: num(p["updatedAt"], Date.now(), 0, Number.MAX_SAFE_INTEGER),
     cloudEnabled: bool(p["cloudEnabled"], false),
     cloudAccountId: typeof p["cloudAccountId"] === "string" ? p["cloudAccountId"] : null,
+    accountUserId: typeof p["accountUserId"] === "string" ? p["accountUserId"] : null,
+    accountSessionToken:
+      typeof p["accountSessionToken"] === "string" ? p["accountSessionToken"] : null,
+    accountEmail: typeof p["accountEmail"] === "string" ? p["accountEmail"] : null,
+    dynamicDriveTrialActivated: p["dynamicDriveTrialActivated"] === true,
+    dynamicDriveTrialConverted: p["dynamicDriveTrialConverted"] === true,
     includeDriveHistory: bool(p["includeDriveHistory"], false),
     analyticsEnabled: bool(p["analyticsEnabled"], false),
     devPanel: bool(p["devPanel"], false),
+    debugDriveDiagnostics: bool(p["debugDriveDiagnostics"], false),
+    dynamicDrive: bool(p["dynamicDrive"], false),
+    teslaFleetTelemetry: bool(p["teslaFleetTelemetry"], false),
+    teslaLinkId:
+      typeof p["teslaLinkId"] === "string" && p["teslaLinkId"].trim()
+        ? p["teslaLinkId"].trim().slice(0, 64)
+        : null,
+    teslaVehicleVin:
+      typeof p["teslaVehicleVin"] === "string" && p["teslaVehicleVin"].trim()
+        ? p["teslaVehicleVin"].trim().slice(0, 32)
+        : null,
+    teslaLinkedAt: typeof p["teslaLinkedAt"] === "number" ? p["teslaLinkedAt"] : null,
   };
 
   // Keep the legacy boolean in sync for older UI / exports.
   settings.autoRulesEnabled = settings.autoRulesMode !== "off";
-
 
   // A drive that was already acknowledged implies setup is finished. Repairing
   // this here is what keeps inconsistent flags from bouncing you to onboarding.
@@ -865,7 +906,7 @@ export function readRawStored(): string | null {
 /* ---------------------------------------------------------------- transfer */
 
 const BACKUP_KIND = "elcamoso.settings.backup";
-const BACKUP_VERSION = 6;
+const BACKUP_VERSION = 7;
 
 export interface SettingsBackup {
   kind: typeof BACKUP_KIND;
@@ -943,6 +984,11 @@ function migratePayload(payload: Record<string, unknown>, version: number) {
     }
     if (p["driveCount"] === undefined) p["driveCount"] = 0;
     if (p["devPanel"] === undefined) p["devPanel"] = false;
+    if (p["dynamicDrive"] === undefined) p["dynamicDrive"] = false;
+    if (p["teslaFleetTelemetry"] === undefined) p["teslaFleetTelemetry"] = false;
+    if (p["teslaLinkId"] === undefined) p["teslaLinkId"] = null;
+    if (p["teslaVehicleVin"] === undefined) p["teslaVehicleVin"] = null;
+    if (p["teslaLinkedAt"] === undefined) p["teslaLinkedAt"] = null;
   }
 
   if (version < 4) {
@@ -976,6 +1022,10 @@ function migratePayload(payload: Record<string, unknown>, version: number) {
     notes.push("Added Motion context rules, Suggest mode and latency match.");
   }
 
+  if (version < 7) {
+    if (p["debugDriveDiagnostics"] === undefined) p["debugDriveDiagnostics"] = false;
+  }
+
   return { payload: p, notes };
 }
 
@@ -998,12 +1048,10 @@ export interface ImportReport {
   repairs: SettingsIssue[];
 }
 
-
 interface ParsedBackup {
   settings: ElcamosoSettings;
   report: Pick<ImportReport, "version" | "migrations" | "repairs">;
 }
-
 
 /** Validates, migrates and normalises a backup file into usable settings. */
 export function parseBackup(raw: string): ParsedBackup {
@@ -1116,9 +1164,7 @@ export function mergeBackup(
     autoRulesMode: incoming.autoRulesMode,
     latencyCompMs: incoming.latencyCompMs,
     profileRules: { ...current.profileRules, ...incoming.profileRules },
-    studioPresets: incoming.studioPresets.length
-      ? incoming.studioPresets
-      : current.studioPresets,
+    studioPresets: incoming.studioPresets.length ? incoming.studioPresets : current.studioPresets,
     language: incoming.language,
     units: incoming.units,
     tuning,
@@ -1143,7 +1189,6 @@ export function mergeBackup(
     snippetsAdded: snippets.length - current.snippets.length,
   };
 }
-
 
 export async function importSettingsFile(
   file: File,
@@ -1238,5 +1283,3 @@ export async function importSoundPack(file: File): Promise<ImportReport> {
 }
 
 export type { CabinEq, ShiftFeel };
-
-

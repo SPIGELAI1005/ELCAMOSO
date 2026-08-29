@@ -10,10 +10,7 @@ export function makeSoftClipCurve(amount = 0.4, samples = 2048): Float32Array {
   return curve;
 }
 
-export function createDriveShaper(
-  ctx: BaseAudioContext,
-  amount = 0.35,
-): WaveShaperNode {
+export function createDriveShaper(ctx: BaseAudioContext, amount = 0.35): WaveShaperNode {
   const shaper = ctx.createWaveShaper();
   shaper.curve = makeSoftClipCurve(amount) as Float32Array<ArrayBuffer>;
   shaper.oversample = "2x";

@@ -68,13 +68,12 @@ function Calibrate() {
     samples.current = [];
     setProgress(0);
 
-    const DM = (
+    const DM =
       typeof window !== "undefined"
         ? (window.DeviceMotionEvent as typeof DeviceMotionEvent & {
             requestPermission?: () => Promise<PermissionState>;
           })
-        : undefined
-    );
+        : undefined;
     if (!DM) {
       setPhase("unsupported");
       return;
@@ -127,8 +126,8 @@ function Calibrate() {
       <div className="mx-auto w-full max-w-xl px-6 pt-16 pb-28 sm:px-10">
         <h1 className="text-3xl font-light">Calibrate motion</h1>
         <p className="mt-3 text-sm text-muted-foreground">
-          A few seconds of stillness lets ELCAMOSO learn how your device reads movement,
-          so O ))) and your sound react correctly.
+          A few seconds of stillness lets ELCAMOSO learn how your device reads movement, so O )))
+          and your sound react correctly.
         </p>
 
         <div className="mt-14 flex flex-col items-center gap-10 border-y border-border py-16">
@@ -142,8 +141,8 @@ function Calibrate() {
           {phase === "intro" ? (
             <>
               <p className="max-w-sm text-center text-sm text-muted-foreground">
-                Place the phone where it will sit while you drive, keep the car still, then
-                start. It takes about six seconds.
+                Place the phone where it will sit while you drive, keep the car still, then start.
+                It takes about six seconds.
               </p>
               <button
                 onClick={() => void startMeasuring()}
@@ -181,19 +180,18 @@ function Calibrate() {
                 </Link>
               ) : (
                 <p className="max-w-sm text-center text-sm text-muted-foreground">
-                  Move your device and watch the live test below. Save it once the reaction
-                  feels right.
+                  Move your device and watch the live test below. Save it once the reaction feels
+                  right.
                 </p>
               )}
             </>
           ) : (
             <p className="max-w-sm text-center text-sm text-muted-foreground">
-              This device does not expose motion readings. You can still set sensitivity by
-              hand below and preview the result in Demo Drive.
+              This device does not expose motion readings. You can still set sensitivity by hand
+              below and preview the result in Demo Drive.
             </p>
           )}
         </div>
-
 
         <LiveTest
           sensitivity={pendingSensitivity}
@@ -224,8 +222,8 @@ function Calibrate() {
             className="mt-6 slider h-11 w-full"
           />
           <p className="mt-4 text-sm text-muted-foreground">
-            Higher values make the sound react sooner to small changes. Lower values keep
-            it calm on devices with noisy sensors.
+            Higher values make the sound react sooner to small changes. Lower values keep it calm on
+            devices with noisy sensors.
           </p>
           <div className="mt-8 flex flex-wrap items-center gap-6">
             <button

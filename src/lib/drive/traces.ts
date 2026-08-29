@@ -37,7 +37,14 @@ function openDb(): Promise<IDBDatabase> {
 }
 
 export function emptyAggregates(): TraceAggregates {
-  return { sampleCount: 0, meanSpeedMps: 0, maxSpeedMps: 0, throttleShare: 0, regenShare: 0, durationMs: 0 };
+  return {
+    sampleCount: 0,
+    meanSpeedMps: 0,
+    maxSpeedMps: 0,
+    throttleShare: 0,
+    regenShare: 0,
+    durationMs: 0,
+  };
 }
 
 export function summarise(samples: DriveState[], durationMs: number): TraceAggregates {

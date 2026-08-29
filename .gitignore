@@ -34,8 +34,15 @@ dist-ssr
 
 .vercel/
 
+# Local dev database (PGlite)
+.data/
+
 # Playwright
 /test-results/
 /playwright-report/
 /blob-report/
 /playwright/.cache/
+
+# Local scratch assets (not for commit)
+.tmp-*.png
+Videos About/

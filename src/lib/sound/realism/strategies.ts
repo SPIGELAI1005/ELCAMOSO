@@ -197,7 +197,12 @@ const baseStrategies: ProfileStrategy[] = [
           level: 0.2,
         }),
         createIntakeRoarLayer(ctx, { id: "intake", destination: buses.beds, level: 0.26 }),
-        createTurboLayer(ctx, { id: "turbo", destination: buses.accents, baseHz: 2100, level: 0.22 }),
+        createTurboLayer(ctx, {
+          id: "turbo",
+          destination: buses.accents,
+          baseHz: 2100,
+          level: 0.22,
+        }),
         createImpactLayer(ctx, {
           id: "gravel",
           destination: buses.beds,

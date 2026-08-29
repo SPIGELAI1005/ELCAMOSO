@@ -5,10 +5,13 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from "react";
 import type { DemoControls, DemoSelector } from "@/lib/drive/session";
+import { StartDriveBeacon } from "@/components/StartDriveBeacon";
 
 interface DemoCockpitProps {
   controls: DemoControls;
   setControls: (next: Partial<DemoControls>) => void;
+  /** Starts demo audio when gas is pressed if not already running. */
+  onGasEngage?: (amount: number) => void;
   reducedMotion?: boolean;
   /** When true, footwell ambient animation runs. */
   live?: boolean;
@@ -28,6 +31,7 @@ const PRND: { id: DemoSelector; hint: string }[] = [
 export function DemoCockpit({
   controls,
   setControls,
+  onGasEngage,
   reducedMotion = false,
   live = false,
 }: DemoCockpitProps) {
@@ -105,6 +109,10 @@ export function DemoCockpit({
             travelVar="--gas-travel-max"
             onEngage={(v) => {
               if (parkLocked) return;
+              if (onGasEngage) {
+                onGasEngage(v);
+                return;
+              }
               setControls({ throttle: v, regen: 0 });
             }}
             onRelease={() => setControls({ throttle: 0 })}
@@ -128,15 +136,7 @@ export function DemoCockpit({
   );
 }
 
-function PedalCaption({
-  label,
-  value,
-  muted,
-}: {
-  label: string;
-  value: number;
-  muted?: boolean;
-}) {
+function PedalCaption({ label, value, muted }: { label: string; value: number; muted?: boolean }) {
   return (
     <p
       className={`text-center text-[9px] tracking-[0.22em] uppercase ${
@@ -144,9 +144,7 @@ function PedalCaption({
       }`}
     >
       {label}
-      <span className="ml-1.5 tabular-nums text-foreground/65">
-        {Math.round(value * 100)}
-      </span>
+      <span className="ml-1.5 tabular-nums text-foreground/65">{Math.round(value * 100)}</span>
     </p>
   );
 }
@@ -168,10 +166,8 @@ function PrndSelector({
       <div
         className="mx-auto grid h-11 grid-cols-4 gap-0.5 rounded-full border border-border/80 p-1"
         style={{
-          background:
-            "linear-gradient(180deg, #2a2a2a 0%, #1a1a1a 55%, #141414 100%)",
-          boxShadow:
-            "inset 0 1px 0 rgba(255,255,255,0.08), 0 8px 20px rgba(0,0,0,0.35)",
+          background: "linear-gradient(180deg, #2a2a2a 0%, #1a1a1a 55%, #141414 100%)",
+          boxShadow: "inset 0 1px 0 rgba(255,255,255,0.08), 0 8px 20px rgba(0,0,0,0.35)",
         }}
         role="radiogroup"
         aria-label="Park Reverse Neutral Drive"
@@ -271,6 +267,37 @@ function PedalPad({
     onRelease();
   };
 
+  const motionStyle: CSSProperties = {
+    transform: `translateY(calc(${amount} * var(${travelVar}, 0px)))`,
+    transition: reducedMotion ? undefined : "transform 80ms linear",
+  };
+
+  const pedalButton = (
+    <button
+      type="button"
+      disabled={disabled}
+      aria-label={`${label} pedal`}
+      aria-disabled={disabled || undefined}
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-valuenow={Math.round(value * 100)}
+      aria-valuetext={disabled ? "Locked in Park" : `${Math.round(value * 100)} percent`}
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={end}
+      onPointerCancel={end}
+      onLostPointerCapture={() => {
+        if (!activeRef.current) return;
+        activeRef.current = false;
+        onRelease();
+      }}
+      className="absolute inset-0 z-10 touch-none select-none outline-none focus-visible:ring-2 focus-visible:ring-foreground/35 disabled:cursor-not-allowed"
+    >
+      <BlackPedalFace kind={kind} pressed={pressed} />
+      <span className="sr-only">{label}</span>
+    </button>
+  );
+
   return (
     <div
       className={`relative z-[1] flex h-full items-center justify-center ${
@@ -298,35 +325,15 @@ function PedalPad({
             boxShadow: "inset 1px 0 0 rgba(255,255,255,0.08), 0 2px 6px rgba(0,0,0,0.5)",
           }}
         />
-        <button
-          type="button"
-          disabled={disabled}
-          aria-label={`${label} pedal`}
-          aria-disabled={disabled || undefined}
-          aria-valuemin={0}
-          aria-valuemax={100}
-          aria-valuenow={Math.round(value * 100)}
-          aria-valuetext={
-            disabled ? "Locked in Park" : `${Math.round(value * 100)} percent`
-          }
-          onPointerDown={onPointerDown}
-          onPointerMove={onPointerMove}
-          onPointerUp={end}
-          onPointerCancel={end}
-          onLostPointerCapture={() => {
-            if (!activeRef.current) return;
-            activeRef.current = false;
-            onRelease();
-          }}
-          className="absolute inset-0 z-[1] touch-none select-none outline-none focus-visible:ring-2 focus-visible:ring-foreground/35 disabled:cursor-not-allowed"
-          style={{
-            transform: `translateY(calc(${amount} * var(${travelVar}, 0px)))`,
-            transition: reducedMotion ? undefined : "transform 80ms linear",
-          }}
-        >
-          <BlackPedalFace kind={kind} pressed={pressed} />
-          <span className="sr-only">{label}</span>
-        </button>
+        <div className="absolute inset-0 z-[1]" style={motionStyle}>
+          {kind === "gas" && !disabled ? (
+            <StartDriveBeacon variant="pedal" className="size-full">
+              {pedalButton}
+            </StartDriveBeacon>
+          ) : (
+            pedalButton
+          )}
+        </div>
       </div>
     </div>
   );
@@ -361,8 +368,7 @@ function BlackPedalFace({ kind, pressed }: { kind: "brake" | "gas"; pressed: boo
       <span
         className="absolute inset-x-0 top-0 h-1/3 rounded-[inherit] opacity-40"
         style={{
-          background:
-            "linear-gradient(180deg, rgba(255,255,255,0.07), transparent)",
+          background: "linear-gradient(180deg, rgba(255,255,255,0.07), transparent)",
         }}
       />
       {/* Rubber grip ribs */}

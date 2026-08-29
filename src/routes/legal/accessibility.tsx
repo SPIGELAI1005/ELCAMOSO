@@ -27,8 +27,8 @@ function Accessibility() {
     >
       <LegalSection title="Commitment">
         <p>
-          We aim for ELCAMOSO to be perceivable, operable, understandable and robust, aligned
-          with WCAG 2.2 Level AA where practicable for a real-time audio web app.
+          We aim for ELCAMOSO to be perceivable, operable, understandable and robust, aligned with
+          WCAG 2.2 Level AA where practicable for a real-time audio web app.
         </p>
       </LegalSection>
 
@@ -60,8 +60,7 @@ function Accessibility() {
           >
             {LEGAL_OPERATOR.email}
           </a>{" "}
-          with the page URL, browser, and a short description. We will try to respond and
-          improve.
+          with the page URL, browser, and a short description. We will try to respond and improve.
         </p>
         <p>
           Related:{" "}

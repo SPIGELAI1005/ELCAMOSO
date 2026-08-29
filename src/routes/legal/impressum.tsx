@@ -53,8 +53,8 @@ function Impressum() {
 
       <LegalSection title="Consumer dispute resolution">
         <p>
-          We are neither willing nor obliged to participate in dispute resolution
-          proceedings before a consumer arbitration board.
+          We are neither willing nor obliged to participate in dispute resolution proceedings before
+          a consumer arbitration board.
         </p>
       </LegalSection>
     </LegalPage>

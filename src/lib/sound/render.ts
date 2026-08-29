@@ -45,7 +45,7 @@ function rampStates(duration: number, profileId: string): DriveState[] {
   let speed = 0;
   for (let i = 0; i < frames; i += 1) {
     const t = i / frames;
-    const target = (8 + t * 28);
+    const target = 8 + t * 28;
     speed += (target - speed) * 0.08;
     previous = computeDriveState({
       speed,

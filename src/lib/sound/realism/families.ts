@@ -24,7 +24,7 @@ const FAMILY_BY_ID: Record<string, ProfileFamily> = {
   "motorcycle-superbike": "physical",
   "big-twin": "physical",
   "jet-ski": "physical",
-  "snowmobile": "physical",
+  snowmobile: "physical",
   tank: "physical",
   "construction-monster": "physical",
   "maglev-train": "physical",

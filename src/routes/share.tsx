@@ -20,7 +20,8 @@ export const Route = createFileRoute("/share")({
       { title: "Shared sound - ELCAMOSO" },
       {
         name: "description",
-        content: "Audition a Studio sound personality someone shared with you. Nothing is saved until you keep it.",
+        content:
+          "Audition a Studio sound personality someone shared with you. Nothing is saved until you keep it.",
       },
       { property: "og:title", content: "Shared sound - ELCAMOSO" },
       {
@@ -96,7 +97,9 @@ function ShareSound() {
   return (
     <main className="min-h-screen">
       <div className="mx-auto w-full max-w-lg px-6 pt-16 pb-28 text-center sm:px-10">
-        <p className="text-[11px] tracking-[0.34em] text-muted-foreground uppercase">Shared sound</p>
+        <p className="text-[11px] tracking-[0.34em] text-muted-foreground uppercase">
+          Shared sound
+        </p>
         {loading ? (
           <>
             <h1 className="mt-4 text-3xl font-light">Opening shared sound</h1>

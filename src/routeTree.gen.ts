@@ -18,17 +18,30 @@ import { Route as DriveRouteImport } from './routes/drive'
 import { Route as GarageRouteImport } from './routes/garage'
 import { Route as LegalRouteRouteImport } from './routes/legal/route'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
+import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as ReplayRouteImport } from './routes/replay'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as ShareRouteImport } from './routes/share'
 import { Route as SoundsRouteImport } from './routes/sounds'
 import { Route as StudioRouteImport } from './routes/studio'
+import { Route as ConnectSessionIdRouteImport } from './routes/connect.$sessionId'
+import { Route as DebugBillingRouteImport } from './routes/debug.billing'
+import { Route as DebugDiagnosticsRouteImport } from './routes/debug.diagnostics'
+import { Route as DebugPowertrainRouteImport } from './routes/debug.powertrain'
 import { Route as LegalIndexRouteImport } from './routes/legal/index'
 import { Route as LegalAccessibilityRouteImport } from './routes/legal/accessibility'
 import { Route as LegalCookiesRouteImport } from './routes/legal/cookies'
 import { Route as LegalImpressumRouteImport } from './routes/legal/impressum'
 import { Route as LegalPrivacyRouteImport } from './routes/legal/privacy'
 import { Route as LegalTermsRouteImport } from './routes/legal/terms'
+import { Route as UpgradeTokenRouteImport } from './routes/upgrade.$token'
+import { Route as ApiBillingCheckoutRouteImport } from './routes/api/billing/checkout'
+import { Route as ApiBillingPortalRouteImport } from './routes/api/billing/portal'
+import { Route as ApiSoundAssetsDeliveryRouteImport } from './routes/api/sound-assets/delivery'
+import { Route as ApiSoundAssetsManifestRouteImport } from './routes/api/sound-assets/manifest'
+import { Route as ApiStripeWebhookRouteImport } from './routes/api/stripe/webhook'
+import { Route as AuthAccountCallbackRouteImport } from './routes/auth/account/callback'
+import { Route as AuthTeslaCallbackRouteImport } from './routes/auth/tesla/callback'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -75,6 +88,11 @@ const OnboardingRoute = OnboardingRouteImport.update({
   path: '/onboarding',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PricingRoute = PricingRouteImport.update({
+  id: '/pricing',
+  path: '/pricing',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ReplayRoute = ReplayRouteImport.update({
   id: '/replay',
   path: '/replay',
@@ -99,6 +117,26 @@ const StudioRoute = StudioRouteImport.update({
   id: '/studio',
   path: '/studio',
   getParentRoute: () => rootRouteImport,
+} as any)
+const ConnectSessionIdRoute = ConnectSessionIdRouteImport.update({
+  id: '/connect/$sessionId',
+  path: '/connect/$sessionId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DebugBillingRoute = DebugBillingRouteImport.update({
+  id: '/billing',
+  path: '/billing',
+  getParentRoute: () => DebugRoute,
+} as any)
+const DebugDiagnosticsRoute = DebugDiagnosticsRouteImport.update({
+  id: '/diagnostics',
+  path: '/diagnostics',
+  getParentRoute: () => DebugRoute,
+} as any)
+const DebugPowertrainRoute = DebugPowertrainRouteImport.update({
+  id: '/powertrain',
+  path: '/powertrain',
+  getParentRoute: () => DebugRoute,
 } as any)
 const LegalIndexRoute = LegalIndexRouteImport.update({
   id: '/',
@@ -130,49 +168,115 @@ const LegalTermsRoute = LegalTermsRouteImport.update({
   path: '/terms',
   getParentRoute: () => LegalRouteRoute,
 } as any)
+const UpgradeTokenRoute = UpgradeTokenRouteImport.update({
+  id: '/upgrade/$token',
+  path: '/upgrade/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiBillingCheckoutRoute = ApiBillingCheckoutRouteImport.update({
+  id: '/api/billing/checkout',
+  path: '/api/billing/checkout',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiBillingPortalRoute = ApiBillingPortalRouteImport.update({
+  id: '/api/billing/portal',
+  path: '/api/billing/portal',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiSoundAssetsDeliveryRoute = ApiSoundAssetsDeliveryRouteImport.update({
+  id: '/api/sound-assets/delivery',
+  path: '/api/sound-assets/delivery',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiSoundAssetsManifestRoute = ApiSoundAssetsManifestRouteImport.update({
+  id: '/api/sound-assets/manifest',
+  path: '/api/sound-assets/manifest',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiStripeWebhookRoute = ApiStripeWebhookRouteImport.update({
+  id: '/api/stripe/webhook',
+  path: '/api/stripe/webhook',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthAccountCallbackRoute = AuthAccountCallbackRouteImport.update({
+  id: '/auth/account/callback',
+  path: '/auth/account/callback',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthTeslaCallbackRoute = AuthTeslaCallbackRouteImport.update({
+  id: '/auth/tesla/callback',
+  path: '/auth/tesla/callback',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/legal': typeof LegalRouteRouteWithChildren
   '/about': typeof AboutRoute
   '/calibrate': typeof CalibrateRoute
-  '/debug': typeof DebugRoute
+  '/debug': typeof DebugRouteWithChildren
   '/demo': typeof DemoRoute
   '/drive': typeof DriveRoute
   '/garage': typeof GarageRoute
   '/onboarding': typeof OnboardingRoute
+  '/pricing': typeof PricingRoute
   '/replay': typeof ReplayRoute
   '/settings': typeof SettingsRoute
   '/share': typeof ShareRoute
   '/sounds': typeof SoundsRoute
   '/studio': typeof StudioRoute
+  '/connect/$sessionId': typeof ConnectSessionIdRoute
+  '/debug/billing': typeof DebugBillingRoute
+  '/debug/diagnostics': typeof DebugDiagnosticsRoute
+  '/debug/powertrain': typeof DebugPowertrainRoute
   '/legal/accessibility': typeof LegalAccessibilityRoute
   '/legal/cookies': typeof LegalCookiesRoute
   '/legal/impressum': typeof LegalImpressumRoute
   '/legal/privacy': typeof LegalPrivacyRoute
   '/legal/terms': typeof LegalTermsRoute
+  '/upgrade/$token': typeof UpgradeTokenRoute
   '/legal/': typeof LegalIndexRoute
+  '/api/billing/checkout': typeof ApiBillingCheckoutRoute
+  '/api/billing/portal': typeof ApiBillingPortalRoute
+  '/api/sound-assets/delivery': typeof ApiSoundAssetsDeliveryRoute
+  '/api/sound-assets/manifest': typeof ApiSoundAssetsManifestRoute
+  '/api/stripe/webhook': typeof ApiStripeWebhookRoute
+  '/auth/account/callback': typeof AuthAccountCallbackRoute
+  '/auth/tesla/callback': typeof AuthTeslaCallbackRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/calibrate': typeof CalibrateRoute
-  '/debug': typeof DebugRoute
+  '/debug': typeof DebugRouteWithChildren
   '/demo': typeof DemoRoute
   '/drive': typeof DriveRoute
   '/garage': typeof GarageRoute
   '/onboarding': typeof OnboardingRoute
+  '/pricing': typeof PricingRoute
   '/replay': typeof ReplayRoute
   '/settings': typeof SettingsRoute
   '/share': typeof ShareRoute
   '/sounds': typeof SoundsRoute
   '/studio': typeof StudioRoute
+  '/connect/$sessionId': typeof ConnectSessionIdRoute
+  '/debug/billing': typeof DebugBillingRoute
+  '/debug/diagnostics': typeof DebugDiagnosticsRoute
+  '/debug/powertrain': typeof DebugPowertrainRoute
   '/legal/accessibility': typeof LegalAccessibilityRoute
   '/legal/cookies': typeof LegalCookiesRoute
   '/legal/impressum': typeof LegalImpressumRoute
   '/legal/privacy': typeof LegalPrivacyRoute
   '/legal/terms': typeof LegalTermsRoute
+  '/upgrade/$token': typeof UpgradeTokenRoute
   '/legal': typeof LegalIndexRoute
+  '/api/billing/checkout': typeof ApiBillingCheckoutRoute
+  '/api/billing/portal': typeof ApiBillingPortalRoute
+  '/api/sound-assets/delivery': typeof ApiSoundAssetsDeliveryRoute
+  '/api/sound-assets/manifest': typeof ApiSoundAssetsManifestRoute
+  '/api/stripe/webhook': typeof ApiStripeWebhookRoute
+  '/auth/account/callback': typeof AuthAccountCallbackRoute
+  '/auth/tesla/callback': typeof AuthTeslaCallbackRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -180,22 +284,35 @@ export interface FileRoutesById {
   '/legal': typeof LegalRouteRouteWithChildren
   '/about': typeof AboutRoute
   '/calibrate': typeof CalibrateRoute
-  '/debug': typeof DebugRoute
+  '/debug': typeof DebugRouteWithChildren
   '/demo': typeof DemoRoute
   '/drive': typeof DriveRoute
   '/garage': typeof GarageRoute
   '/onboarding': typeof OnboardingRoute
+  '/pricing': typeof PricingRoute
   '/replay': typeof ReplayRoute
   '/settings': typeof SettingsRoute
   '/share': typeof ShareRoute
   '/sounds': typeof SoundsRoute
   '/studio': typeof StudioRoute
+  '/connect/$sessionId': typeof ConnectSessionIdRoute
+  '/debug/billing': typeof DebugBillingRoute
+  '/debug/diagnostics': typeof DebugDiagnosticsRoute
+  '/debug/powertrain': typeof DebugPowertrainRoute
   '/legal/accessibility': typeof LegalAccessibilityRoute
   '/legal/cookies': typeof LegalCookiesRoute
   '/legal/impressum': typeof LegalImpressumRoute
   '/legal/privacy': typeof LegalPrivacyRoute
   '/legal/terms': typeof LegalTermsRoute
+  '/upgrade/$token': typeof UpgradeTokenRoute
   '/legal/': typeof LegalIndexRoute
+  '/api/billing/checkout': typeof ApiBillingCheckoutRoute
+  '/api/billing/portal': typeof ApiBillingPortalRoute
+  '/api/sound-assets/delivery': typeof ApiSoundAssetsDeliveryRoute
+  '/api/sound-assets/manifest': typeof ApiSoundAssetsManifestRoute
+  '/api/stripe/webhook': typeof ApiStripeWebhookRoute
+  '/auth/account/callback': typeof AuthAccountCallbackRoute
+  '/auth/tesla/callback': typeof AuthTeslaCallbackRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -209,17 +326,30 @@ export interface FileRouteTypes {
     | '/drive'
     | '/garage'
     | '/onboarding'
+    | '/pricing'
     | '/replay'
     | '/settings'
     | '/share'
     | '/sounds'
     | '/studio'
+    | '/connect/$sessionId'
+    | '/debug/billing'
+    | '/debug/diagnostics'
+    | '/debug/powertrain'
     | '/legal/accessibility'
     | '/legal/cookies'
     | '/legal/impressum'
     | '/legal/privacy'
     | '/legal/terms'
+    | '/upgrade/$token'
     | '/legal/'
+    | '/api/billing/checkout'
+    | '/api/billing/portal'
+    | '/api/sound-assets/delivery'
+    | '/api/sound-assets/manifest'
+    | '/api/stripe/webhook'
+    | '/auth/account/callback'
+    | '/auth/tesla/callback'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -230,17 +360,30 @@ export interface FileRouteTypes {
     | '/drive'
     | '/garage'
     | '/onboarding'
+    | '/pricing'
     | '/replay'
     | '/settings'
     | '/share'
     | '/sounds'
     | '/studio'
+    | '/connect/$sessionId'
+    | '/debug/billing'
+    | '/debug/diagnostics'
+    | '/debug/powertrain'
     | '/legal/accessibility'
     | '/legal/cookies'
     | '/legal/impressum'
     | '/legal/privacy'
     | '/legal/terms'
+    | '/upgrade/$token'
     | '/legal'
+    | '/api/billing/checkout'
+    | '/api/billing/portal'
+    | '/api/sound-assets/delivery'
+    | '/api/sound-assets/manifest'
+    | '/api/stripe/webhook'
+    | '/auth/account/callback'
+    | '/auth/tesla/callback'
   id:
     | '__root__'
     | '/'
@@ -252,17 +395,30 @@ export interface FileRouteTypes {
     | '/drive'
     | '/garage'
     | '/onboarding'
+    | '/pricing'
     | '/replay'
     | '/settings'
     | '/share'
     | '/sounds'
     | '/studio'
+    | '/connect/$sessionId'
+    | '/debug/billing'
+    | '/debug/diagnostics'
+    | '/debug/powertrain'
     | '/legal/accessibility'
     | '/legal/cookies'
     | '/legal/impressum'
     | '/legal/privacy'
     | '/legal/terms'
+    | '/upgrade/$token'
     | '/legal/'
+    | '/api/billing/checkout'
+    | '/api/billing/portal'
+    | '/api/sound-assets/delivery'
+    | '/api/sound-assets/manifest'
+    | '/api/stripe/webhook'
+    | '/auth/account/callback'
+    | '/auth/tesla/callback'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -270,16 +426,26 @@ export interface RootRouteChildren {
   LegalRouteRoute: typeof LegalRouteRouteWithChildren
   AboutRoute: typeof AboutRoute
   CalibrateRoute: typeof CalibrateRoute
-  DebugRoute: typeof DebugRoute
+  DebugRoute: typeof DebugRouteWithChildren
   DemoRoute: typeof DemoRoute
   DriveRoute: typeof DriveRoute
   GarageRoute: typeof GarageRoute
   OnboardingRoute: typeof OnboardingRoute
+  PricingRoute: typeof PricingRoute
   ReplayRoute: typeof ReplayRoute
   SettingsRoute: typeof SettingsRoute
   ShareRoute: typeof ShareRoute
   SoundsRoute: typeof SoundsRoute
   StudioRoute: typeof StudioRoute
+  ConnectSessionIdRoute: typeof ConnectSessionIdRoute
+  UpgradeTokenRoute: typeof UpgradeTokenRoute
+  ApiBillingCheckoutRoute: typeof ApiBillingCheckoutRoute
+  ApiBillingPortalRoute: typeof ApiBillingPortalRoute
+  ApiSoundAssetsDeliveryRoute: typeof ApiSoundAssetsDeliveryRoute
+  ApiSoundAssetsManifestRoute: typeof ApiSoundAssetsManifestRoute
+  ApiStripeWebhookRoute: typeof ApiStripeWebhookRoute
+  AuthAccountCallbackRoute: typeof AuthAccountCallbackRoute
+  AuthTeslaCallbackRoute: typeof AuthTeslaCallbackRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -347,6 +513,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OnboardingRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/pricing': {
+      id: '/pricing'
+      path: '/pricing'
+      fullPath: '/pricing'
+      preLoaderRoute: typeof PricingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/replay': {
       id: '/replay'
       path: '/replay'
@@ -381,6 +554,34 @@ declare module '@tanstack/react-router' {
       fullPath: '/studio'
       preLoaderRoute: typeof StudioRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/connect/$sessionId': {
+      id: '/connect/$sessionId'
+      path: '/connect/$sessionId'
+      fullPath: '/connect/$sessionId'
+      preLoaderRoute: typeof ConnectSessionIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/debug/billing': {
+      id: '/debug/billing'
+      path: '/billing'
+      fullPath: '/debug/billing'
+      preLoaderRoute: typeof DebugBillingRouteImport
+      parentRoute: typeof DebugRoute
+    }
+    '/debug/diagnostics': {
+      id: '/debug/diagnostics'
+      path: '/diagnostics'
+      fullPath: '/debug/diagnostics'
+      preLoaderRoute: typeof DebugDiagnosticsRouteImport
+      parentRoute: typeof DebugRoute
+    }
+    '/debug/powertrain': {
+      id: '/debug/powertrain'
+      path: '/powertrain'
+      fullPath: '/debug/powertrain'
+      preLoaderRoute: typeof DebugPowertrainRouteImport
+      parentRoute: typeof DebugRoute
     }
     '/legal/': {
       id: '/legal/'
@@ -424,6 +625,62 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LegalTermsRouteImport
       parentRoute: typeof LegalRouteRoute
     }
+    '/upgrade/$token': {
+      id: '/upgrade/$token'
+      path: '/upgrade/$token'
+      fullPath: '/upgrade/$token'
+      preLoaderRoute: typeof UpgradeTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/billing/checkout': {
+      id: '/api/billing/checkout'
+      path: '/api/billing/checkout'
+      fullPath: '/api/billing/checkout'
+      preLoaderRoute: typeof ApiBillingCheckoutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/billing/portal': {
+      id: '/api/billing/portal'
+      path: '/api/billing/portal'
+      fullPath: '/api/billing/portal'
+      preLoaderRoute: typeof ApiBillingPortalRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/sound-assets/delivery': {
+      id: '/api/sound-assets/delivery'
+      path: '/api/sound-assets/delivery'
+      fullPath: '/api/sound-assets/delivery'
+      preLoaderRoute: typeof ApiSoundAssetsDeliveryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/sound-assets/manifest': {
+      id: '/api/sound-assets/manifest'
+      path: '/api/sound-assets/manifest'
+      fullPath: '/api/sound-assets/manifest'
+      preLoaderRoute: typeof ApiSoundAssetsManifestRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/stripe/webhook': {
+      id: '/api/stripe/webhook'
+      path: '/api/stripe/webhook'
+      fullPath: '/api/stripe/webhook'
+      preLoaderRoute: typeof ApiStripeWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth/account/callback': {
+      id: '/auth/account/callback'
+      path: '/auth/account/callback'
+      fullPath: '/auth/account/callback'
+      preLoaderRoute: typeof AuthAccountCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth/tesla/callback': {
+      id: '/auth/tesla/callback'
+      path: '/auth/tesla/callback'
+      fullPath: '/auth/tesla/callback'
+      preLoaderRoute: typeof AuthTeslaCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -449,21 +706,45 @@ const LegalRouteRouteWithChildren = LegalRouteRoute._addFileChildren(
   LegalRouteRouteChildren,
 )
 
+interface DebugRouteChildren {
+  DebugBillingRoute: typeof DebugBillingRoute
+  DebugDiagnosticsRoute: typeof DebugDiagnosticsRoute
+  DebugPowertrainRoute: typeof DebugPowertrainRoute
+}
+
+const DebugRouteChildren: DebugRouteChildren = {
+  DebugBillingRoute: DebugBillingRoute,
+  DebugDiagnosticsRoute: DebugDiagnosticsRoute,
+  DebugPowertrainRoute: DebugPowertrainRoute,
+}
+
+const DebugRouteWithChildren = DebugRoute._addFileChildren(DebugRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   LegalRouteRoute: LegalRouteRouteWithChildren,
   AboutRoute: AboutRoute,
   CalibrateRoute: CalibrateRoute,
-  DebugRoute: DebugRoute,
+  DebugRoute: DebugRouteWithChildren,
   DemoRoute: DemoRoute,
   DriveRoute: DriveRoute,
   GarageRoute: GarageRoute,
   OnboardingRoute: OnboardingRoute,
+  PricingRoute: PricingRoute,
   ReplayRoute: ReplayRoute,
   SettingsRoute: SettingsRoute,
   ShareRoute: ShareRoute,
   SoundsRoute: SoundsRoute,
   StudioRoute: StudioRoute,
+  ConnectSessionIdRoute: ConnectSessionIdRoute,
+  UpgradeTokenRoute: UpgradeTokenRoute,
+  ApiBillingCheckoutRoute: ApiBillingCheckoutRoute,
+  ApiBillingPortalRoute: ApiBillingPortalRoute,
+  ApiSoundAssetsDeliveryRoute: ApiSoundAssetsDeliveryRoute,
+  ApiSoundAssetsManifestRoute: ApiSoundAssetsManifestRoute,
+  ApiStripeWebhookRoute: ApiStripeWebhookRoute,
+  AuthAccountCallbackRoute: AuthAccountCallbackRoute,
+  AuthTeslaCallbackRoute: AuthTeslaCallbackRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

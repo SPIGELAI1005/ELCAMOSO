@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1788007309622,
+      "tag": "0000_init_account_billing",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1788007639964,
+      "tag": "0001_dynamic_drive_trial",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1788008000000,
+      "tag": "0002_stripe_webhook_events",
+      "breakpoints": true
+    }
+  ]
+}

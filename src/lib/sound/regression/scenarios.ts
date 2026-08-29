@@ -6,7 +6,11 @@ import {
   type StudioTweaks,
 } from "@/lib/drive/settings";
 import { getProfile } from "@/lib/sound/profiles";
-import { fingerprintPcm, renderCorePcm, type AudioFingerprint } from "@/lib/sound/regression/fingerprint";
+import {
+  fingerprintPcm,
+  renderCorePcm,
+  type AudioFingerprint,
+} from "@/lib/sound/regression/fingerprint";
 
 export interface RegressionScenario {
   id: string;
@@ -94,6 +98,10 @@ export function scenarioProfile(scenario: RegressionScenario) {
 
 export function fingerprintScenario(scenario: RegressionScenario): AudioFingerprint {
   const profile = scenarioProfile(scenario);
-  const pcm = renderCorePcm(profile, scenario.state, { seed: 1, duration: 0.45, sampleRate: 22050 });
+  const pcm = renderCorePcm(profile, scenario.state, {
+    seed: 1,
+    duration: 0.45,
+    sampleRate: 22050,
+  });
   return fingerprintPcm(pcm, 22050);
 }

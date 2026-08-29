@@ -20,11 +20,7 @@ export class ImprovedSynth {
   private muted = new Set<string>();
   private profile: SoundProfile | null = null;
 
-  build(
-    ctx: BaseAudioContext,
-    profile: SoundProfile,
-    buses: StrategyBuses,
-  ): boolean {
+  build(ctx: BaseAudioContext, profile: SoundProfile, buses: StrategyBuses): boolean {
     this.dispose();
     this.profile = profile;
     this.tracker = createMotionTracker();

@@ -1,19 +1,114 @@
+import {
+  applyDemoDriveOverrides,
+  tickDemoSpeed,
+  DEMO_DEFAULTS,
+  type DemoControls,
+  type DemoSelector,
+} from "@/lib/drive/demo-physics";
+import { withPersonalityTransmission } from "@/lib/drive/drivetrain-resolve";
 import { computeDriveState, IDLE_STATE, type DriveState } from "@/lib/drive/model";
-import { fuseMotion } from "@/lib/drive/fusion";
+import {
+  browserGpsMotionSample,
+  browserImuMotionSample,
+  createSensorFusion,
+  markPhoneRelayLost,
+  markPhoneRelayRestored,
+  phoneRelayMotionSample,
+  pushMotionSample,
+  resetSensorFusion,
+  tickSensorFusion,
+  type SensorFusionState,
+} from "@/lib/motion/sensor-fusion";
+import {
+  cancelPhoneRelayGrace,
+  createRelayGraceState,
+  schedulePhoneRelayGrace,
+} from "@/lib/motion/motion-relay-resilience";
+import {
+  createVehicleTelemetryProvider,
+  getTeslaFleetTelemetryProvider,
+  mapTeslaFleetSignalsToMotionSample,
+  type TeslaFleetTelemetryRecord,
+  type VehicleTelemetryProvider,
+} from "@/lib/motion/vehicle-telemetry";
+import type { RelayMotionMessage } from "@/lib/motion/relay-sample";
+import type { RelayTelemetryMessage } from "@/lib/motion/relay-telemetry";
+import type { MotionSample, VehicleMotionState } from "@/lib/motion/types";
+import { collectDriveDiagnostics } from "@/lib/diagnostics/collect";
+import { buildDiagnosticsSessionExport } from "@/lib/diagnostics/export";
+import { DiagnosticsSessionRecorder } from "@/lib/diagnostics/recorder";
+import type {
+  DriveDiagnosticsFrame,
+  DiagnosticsSessionExport,
+  DiagnosticsSessionMeta,
+} from "@/lib/diagnostics/types";
+import { MotionPipelineTracker, type MotionPipelineMetrics } from "@/lib/motion/pipeline-metrics";
 import { resolveGpsSpeed, type GpsPoint } from "@/lib/drive/gps-speed";
+import {
+  deriveMotionState,
+  IDLE_MOTION,
+  isDrivingSafetySpeed,
+  type MotionState,
+} from "@/lib/drive/motion-energy";
 import { cappedGain } from "@/lib/drive/safety";
 import { matchRule, type AutoRule, type AutoRulesMode, type ProfileRule } from "@/lib/drive/rules";
 import { ContextClassifier, predictState, type DriveContext } from "@/lib/drive/context";
 import { evaluateProfileRules } from "@/lib/drive/profile-rules";
-import { DEFAULT_CABIN_EQ, DEFAULT_SHIFT_FEEL, type CabinEq, type ShiftFeel } from "@/lib/drive/types-extra";
-import { TraceRecorder, saveTrace, type DriveTrace, type TraceAggregates } from "@/lib/drive/traces";
+import {
+  DEFAULT_CABIN_EQ,
+  DEFAULT_SHIFT_FEEL,
+  type CabinEq,
+  type ShiftFeel,
+} from "@/lib/drive/types-extra";
+import {
+  TraceRecorder,
+  saveTrace,
+  type DriveTrace,
+  type TraceAggregates,
+} from "@/lib/drive/traces";
 import { SoundEngine, type MeterReading } from "@/lib/sound/engine";
 import { getProfile } from "@/lib/sound/profiles";
+import { driveStateFromPowertrain } from "@/lib/powertrain/adapters/drive-state";
+import {
+  powertrainProfileForSound,
+  supportsDynamicDrive,
+} from "@/lib/powertrain/adapters/profile-map";
+import { vehicleMotionFromDrive } from "@/lib/powertrain/adapters/vehicle-motion";
+import { PowertrainSimulator } from "@/lib/powertrain/simulator";
 import type { ProfileTuning, Playlist } from "@/lib/drive/settings";
 import { DEFAULT_LAYER_MIX, normalizeMix, type LayerMix } from "@/lib/sound/environments";
 import type { SoundSnippet } from "@/lib/sound/snippets";
 import { reportAudioError } from "@/lib/telemetry/crashes";
 import { trackEvent } from "@/lib/telemetry/analytics";
+
+/** Consumer-facing Drive status (technical detail stays on /debug). */
+export type DriveProductStatus =
+  | "idle"
+  | "sound-active"
+  | "vehicle-connected"
+  | "gps-only"
+  | "weak-signal"
+  | "sound-paused"
+  | "simulation";
+
+export function driveProductLabel(status: DriveProductStatus): string {
+  switch (status) {
+    case "sound-active":
+      return "Sound Active";
+    case "vehicle-connected":
+      return "Vehicle Connected";
+    case "gps-only":
+      return "GPS Only";
+    case "weak-signal":
+      return "Weak Signal";
+    case "sound-paused":
+      return "Sound Paused";
+    case "simulation":
+      return "Simulation";
+    default:
+      return "";
+  }
+}
 
 /** Brief hide (notification shade) should not kill Drive audio immediately. */
 const DRIVE_HIDE_GRACE_MS = 2800;
@@ -21,22 +116,8 @@ const DRIVE_HIDE_GRACE_MS = 2800;
 export type SessionKind = "idle" | "drive" | "demo" | "audition" | "replay" | "ab";
 export type SessionStatus = "idle" | "starting" | "running" | "error" | "suspended";
 
-export type DemoSelector = "P" | "R" | "N" | "D";
-
-export interface DemoControls {
-  throttle: number;
-  accel: number;
-  regen: number;
-  /** Park / Reverse / Neutral / Drive for demo listening. */
-  selector: DemoSelector;
-}
-
-export const DEMO_DEFAULTS: DemoControls = {
-  throttle: 0.3,
-  accel: 0.5,
-  regen: 0,
-  selector: "D",
-};
+export type { DemoControls, DemoSelector } from "@/lib/drive/demo-physics";
+export { DEMO_DEFAULTS } from "@/lib/drive/demo-physics";
 
 export interface AudioPerf {
   baseLatencyMs: number;
@@ -61,6 +142,9 @@ export interface SessionSnapshot {
   status: SessionStatus;
   error: string | null;
   state: DriveState;
+  motion: MotionState;
+  productStatus: DriveProductStatus;
+  safetyMode: boolean;
   profileId: string;
   profileName: string;
   meter: MeterReading | null;
@@ -76,6 +160,7 @@ export interface SessionSnapshot {
   rulesHeld: boolean;
   suggestedProfileId: string | null;
   playlistTripMs: number;
+  pipeline: MotionPipelineMetrics;
 }
 
 type Listener = () => void;
@@ -99,6 +184,10 @@ export interface SessionConfig {
   profileRules: Record<string, ProfileRule[]>;
   /** rules attached to the active custom sound */
   activeProfileRules: ProfileRule[];
+  /** Dynamic Drive powertrain + layered audio (Legacy transmission when false) */
+  dynamicDrive: boolean;
+  /** Tesla Fleet Telemetry adapter (optional server bridge). */
+  teslaFleetTelemetry: boolean;
 }
 
 const UI_MS = 80;
@@ -122,6 +211,8 @@ function configFingerprint(c: SessionConfig): string {
     latencyCompMs: c.latencyCompMs,
     profileRules: c.profileRules,
     activeProfileRules: c.activeProfileRules,
+    dynamicDrive: c.dynamicDrive,
+    teslaFleetTelemetry: c.teslaFleetTelemetry,
     snippets: c.snippets?.map((s) => ({
       id: s.id,
       name: s.name,
@@ -141,18 +232,17 @@ class DriveSession {
   private lastUi = 0;
   private watchId: number | null = null;
   private motionHandler: ((e: DeviceMotionEvent) => void) | null = null;
-  private gpsSpeed = 0;
   private gpsAt = 0;
   private gpsPoint: GpsPoint | null = null;
-  private accY: number | null = null;
-  private imuAt = 0;
   private hideTimer: ReturnType<typeof setTimeout> | null = null;
   private wakeReleaseHandler: (() => void) | null = null;
   private speed = 0;
   private state: DriveState = IDLE_STATE;
+  private motion: MotionState = IDLE_MOTION;
   private kind: SessionKind = "idle";
   private status: SessionStatus = "idle";
   private error: string | null = null;
+  private hasImu = false;
   private demo: DemoControls = { ...DEMO_DEFAULTS };
   private auditionKmh = 60;
   private ducking = false;
@@ -191,8 +281,59 @@ class DriveSession {
     latencyCompMs: 0,
     profileRules: {},
     activeProfileRules: [],
+    dynamicDrive: false,
+    teslaFleetTelemetry: false,
   };
+  private vehicleTelemetryProvider: VehicleTelemetryProvider | null = null;
+  private vehicleTelemetryUnsub: (() => void) | null = null;
+  private powertrainSim: PowertrainSimulator | null = null;
+  private powertrainSoundProfileId: string | null = null;
+  private sensorFusion: SensorFusionState = createSensorFusion();
+  private lastVehicleMotion = vehicleMotionFromDrive({
+    speedMps: 0,
+    accelerationMps2: 0,
+    timestamp: 0,
+  });
+  private lastFusionIngestAt = 0;
+  private relayGrace = createRelayGraceState();
+  private pipeline = new MotionPipelineTracker();
+  private diagnosticsRecorder = new DiagnosticsSessionRecorder();
+  private debugDriveDiagnostics = false;
+  private diagnosticsRecordAt = 0;
+  private lastUiFingerprint = "";
+  private lastCoreUiFingerprint = "";
+  private uiAuxSkipTicks = 0;
   private cached: SessionSnapshot | null = null;
+  /** AudioContext created/resumed during pointerdown; handed to the next begin(). */
+  private gestureAudioContext: AudioContext | null = null;
+
+  /** Dynamic Drive powertrain sim — also used for Demo (simulated gears at realistic speeds). */
+  private powertrainSimActive(profile: ReturnType<typeof getProfile>): boolean {
+    return supportsDynamicDrive(profile) && (this.config.dynamicDrive || this.kind === "demo");
+  }
+
+  /**
+   * Call synchronously from a user-activation handler (pointerdown / click)
+   * before any await. Browsers block AudioContext.resume() once the gesture
+   * stack unwinds — Home “Hold to accelerate” must prime audio here.
+   */
+  primeAudioFromUserGesture(): void {
+    if (typeof window === "undefined") return;
+    try {
+      const AudioCtx =
+        window.AudioContext ??
+        (window as typeof window & { webkitAudioContext?: typeof AudioContext })
+          .webkitAudioContext;
+      if (!AudioCtx) return;
+      if (!this.gestureAudioContext || this.gestureAudioContext.state === "closed") {
+        this.gestureAudioContext = new AudioCtx();
+      }
+      const ctx = this.gestureAudioContext;
+      if (ctx.state === "suspended") void ctx.resume();
+    } catch {
+      this.gestureAudioContext = null;
+    }
+  }
 
   snapshot(): SessionSnapshot {
     if (!this.cached) this.cached = this.read();
@@ -209,11 +350,16 @@ class DriveSession {
 
   private read(): SessionSnapshot {
     const profile = getProfile(this.config.profileId);
+    const productStatus = this.resolveProductStatus();
+    const safetyMode = this.readSafetyMode();
     return {
       kind: this.kind,
       status: this.status,
       error: this.error,
       state: this.state,
+      motion: this.motion,
+      productStatus,
+      safetyMode,
       profileId: this.config.profileId,
       profileName: profile.name,
       meter: this.safeMeter(),
@@ -232,7 +378,38 @@ class DriveSession {
         this.kind === "drive" && this.playlistTripStartedAt
           ? Date.now() - this.playlistTripStartedAt
           : 0,
+      pipeline: this.pipeline.snapshot(Date.now(), this.lastVehicleMotion.fallbackTier),
     };
+  }
+
+  private resolveProductStatus(): DriveProductStatus {
+    if (this.status === "idle" || this.kind === "idle") return "idle";
+    if (this.status === "suspended" || this.ducking) return "sound-paused";
+    if (
+      this.kind === "demo" ||
+      this.kind === "audition" ||
+      this.kind === "ab" ||
+      this.kind === "replay"
+    ) {
+      return "simulation";
+    }
+    if (this.status === "error") return "weak-signal";
+    if (this.kind === "drive" && this.status === "running") {
+      if (this.lastVehicleMotion.sourceHealth.vehicleTelemetry) {
+        return "vehicle-connected";
+      }
+      if (!this.hasImu && this.gpsAt > 0) return "gps-only";
+      const stale = this.gpsAt > 0 && performance.now() - this.gpsAt > 4000;
+      if (stale || (this.gpsAt === 0 && this.status === "running")) return "weak-signal";
+      return "sound-active";
+    }
+    if (this.status === "starting") return "sound-active";
+    return "idle";
+  }
+
+  private noteMotion(state: DriveState, dt: number) {
+    this.state = state;
+    this.motion = deriveMotionState(state, this.motion.motionEnergy, dt);
   }
 
   subscribe(fn: Listener) {
@@ -240,13 +417,99 @@ class DriveSession {
     return () => this.listeners.delete(fn);
   }
 
+  /** Quantized drive/powertrain fields — no analyser or pipeline reads. */
+  private computeCoreUiFingerprint(): string {
+    const s = this.state;
+    const pt = s.powertrain;
+    const parts: (string | number)[] = [
+      this.kind,
+      this.status,
+      this.error ?? "",
+      pt?.gear ?? s.gear,
+      (pt?.shifting ?? s.isShifting) ? 1 : 0,
+      Math.round((pt?.rpm ?? s.rpm) / 20),
+      Math.round((s.speed * 3.6) / 2),
+      Math.round(this.motion.motionEnergy * 16),
+      Math.round(s.throttle * 8),
+      Math.round(s.regen * 8),
+      this.resolveProductStatus(),
+      this.readSafetyMode() ? 1 : 0,
+      this.rulesHeld ? 1 : 0,
+      this.suggestedProfileId ?? "",
+      this.ducking ? 1 : 0,
+      this.cockpit ? 1 : 0,
+      this.config.profileId,
+    ];
+    return parts.join("|");
+  }
+
+  /** Meter + pipeline fields (more expensive; throttled when core is stable). */
+  private computeAuxUiFingerprint(): string {
+    const parts: (string | number)[] = [];
+    if (this.cockpit) {
+      const pipe = this.pipeline.snapshot(Date.now(), this.lastVehicleMotion.fallbackTier);
+      parts.push(
+        pipe.networkHealth,
+        pipe.seq ?? -1,
+        Math.round(pipe.phoneSendHz),
+        Math.round(pipe.fusionHz),
+        pipe.fallbackTier ?? "",
+      );
+    }
+    const meter = this.safeMeter();
+    if (meter) {
+      parts.push(Math.round(meter.peak * 16), Math.round(meter.rms * 16));
+    }
+    return parts.join("|");
+  }
+
+  /** Fingerprint of UI-visible fields; skips React emit when unchanged between UI ticks. */
+  private computeUiFingerprint(): string {
+    return `${this.computeCoreUiFingerprint()}|${this.computeAuxUiFingerprint()}`;
+  }
+
+  private readSafetyMode(): boolean {
+    return (
+      (this.status === "running" || this.status === "suspended") &&
+      (this.kind === "drive" || this.kind === "demo") &&
+      isDrivingSafetySpeed(this.state.speed)
+    );
+  }
+
   private emit() {
+    this.lastUiFingerprint = this.computeUiFingerprint();
+    this.cached = this.read();
+    this.listeners.forEach((fn) => fn());
+  }
+
+  /** Throttled loop emit: high-frequency simulation does not force React updates. */
+  private tryEmitUi() {
+    const core = this.computeCoreUiFingerprint();
+    const coreChanged = core !== this.lastCoreUiFingerprint;
+
+    if (!coreChanged) {
+      if (!this.cockpit) return;
+      this.uiAuxSkipTicks += 1;
+      // Pipeline/meter refresh ~320 ms when RPM/speed buckets are stable.
+      if (this.uiAuxSkipTicks % 4 !== 0) return;
+    } else {
+      this.uiAuxSkipTicks = 0;
+    }
+
+    const fp = `${core}|${this.computeAuxUiFingerprint()}`;
+    if (fp === this.lastUiFingerprint) {
+      this.lastCoreUiFingerprint = core;
+      return;
+    }
+    this.lastCoreUiFingerprint = core;
+    this.lastUiFingerprint = fp;
     this.cached = this.read();
     this.listeners.forEach((fn) => fn());
   }
 
   syncConfig(next: Partial<SessionConfig>) {
     const prevId = this.config.profileId;
+    const prevEnv = this.config.environmentId;
     const merged: SessionConfig = { ...this.config, ...next };
     if (next.mix) merged.mix = normalizeMix(next.mix);
 
@@ -256,13 +519,17 @@ class DriveSession {
     if (configFingerprint(this.config) === configFingerprint(merged)) return;
 
     this.config = merged;
+    this.sensorFusion.options.sensitivity = merged.motionSensitivity;
+    this.sensorFusion.options.noiseFloor = merged.motionNoiseFloor;
     if (next.mix && merged.mix) this.baseMix = merged.mix;
     const profile = getProfile(this.config.profileId);
     const gain = cappedGain(this.config.volume, this.config.profileGain, profile);
     this.engine?.setVolume(gain);
     this.engine?.setProfileGain(1);
     this.engine?.setIntensityCeiling(cappedGain(1, 1, profile));
-    if (next.profileId && next.profileId !== prevId) {
+    if (merged.profileId !== prevId) {
+      this.powertrainSim = null;
+      this.powertrainSoundProfileId = null;
       try {
         this.engine?.setProfile(profile);
       } catch (error) {
@@ -271,10 +538,23 @@ class DriveSession {
       this.ruleLatched.clear();
       this.suggestedProfileId = null;
     }
-    if (next.environmentId) this.engine?.setEnvironment(next.environmentId);
+    if (merged.environmentId !== prevEnv) {
+      this.engine?.setEnvironment(merged.environmentId);
+    }
     if (next.mix) this.engine?.setMix(next.mix);
     if (next.snippets) void this.engine?.setSnippets(next.snippets);
     if (next.cabinEq) this.engine?.setCabinEq(next.cabinEq);
+    if (next.dynamicDrive !== undefined) {
+      const profile = getProfile(this.config.profileId);
+      this.engine?.setDynamicDriveEnabled(this.powertrainSimActive(profile));
+      if (!this.powertrainSimActive(profile)) {
+        this.powertrainSim = null;
+        this.powertrainSoundProfileId = null;
+      }
+    }
+    if (next.teslaFleetTelemetry !== undefined) {
+      this.syncVehicleTelemetryProvider();
+    }
     this.bindMediaSession();
     this.emit();
   }
@@ -300,6 +580,8 @@ class DriveSession {
   private applyProfile(profileId: string) {
     if (profileId === this.config.profileId) return;
     this.config.profileId = profileId;
+    this.powertrainSim = null;
+    this.powertrainSoundProfileId = null;
     try {
       this.engine?.setProfile(getProfile(profileId));
     } catch (error) {
@@ -324,8 +606,7 @@ class DriveSession {
   setDemo(next: Partial<DemoControls>) {
     const merged = { ...DEMO_DEFAULTS, ...this.demo, ...next };
     const sel = merged.selector;
-    merged.selector =
-      sel === "P" || sel === "R" || sel === "N" || sel === "D" ? sel : "D";
+    merged.selector = sel === "P" || sel === "R" || sel === "N" || sel === "D" ? sel : "D";
     this.demo = merged;
     this.emit();
   }
@@ -352,7 +633,14 @@ class DriveSession {
       this.ruleLatched.clear();
       this.baseMix = normalizeMix(this.config.mix ?? DEFAULT_LAYER_MIX);
       this.recorder.start(this.config.profileId);
+      resetSensorFusion(this.sensorFusion);
+      this.pipeline.reset();
+      cancelPhoneRelayGrace(this.relayGrace);
+      if (this.debugDriveDiagnostics) this.diagnosticsRecorder.clear();
+      this.sensorFusion.options.sensitivity = this.config.motionSensitivity;
+      this.sensorFusion.options.noiseFloor = this.config.motionNoiseFloor;
       if (!opts?.demoMotion) await this.attachSensors();
+      this.syncVehicleTelemetryProvider();
       this.status = "running";
       this.kind = "drive";
       this.lastTick = performance.now();
@@ -369,10 +657,10 @@ class DriveSession {
     }
   }
 
-  async startDemo() {
+  async startDemo(initialDemo?: Partial<DemoControls>) {
     try {
       await this.begin("demo", { signature: true });
-      this.demo = { ...DEMO_DEFAULTS };
+      this.demo = { ...DEMO_DEFAULTS, ...(initialDemo ?? {}) };
       this.speed = 0;
       this.status = "running";
       this.kind = "demo";
@@ -407,9 +695,7 @@ class DriveSession {
     this.setAuditionKmh(kmh);
     if (
       this.engine &&
-      (this.status === "running" ||
-        this.status === "starting" ||
-        this.status === "suspended")
+      (this.status === "running" || this.status === "starting" || this.status === "suspended")
     ) {
       this.emit();
       return;
@@ -468,12 +754,17 @@ class DriveSession {
     const peakB = this.engineB.getMeter()?.rms ?? 0.1;
     const match = Math.min(2, (peakA + 0.04) / (peakB + 0.04));
     if (this.ab.active === "a") {
-      this.engine.setVolume(cappedGain(this.config.volume, this.config.profileGain, getProfile(this.ab.a)));
+      this.engine.setVolume(
+        cappedGain(this.config.volume, this.config.profileGain, getProfile(this.ab.a)),
+      );
       this.engineB.setVolume(0.0001);
     } else {
       this.engine.setVolume(0.0001);
       this.engineB.setVolume(
-        Math.min(0.85, cappedGain(this.config.volume, this.config.profileGain, getProfile(this.ab.b)) * match),
+        Math.min(
+          0.85,
+          cappedGain(this.config.volume, this.config.profileGain, getProfile(this.ab.b)) * match,
+        ),
       );
     }
     this.emit();
@@ -498,7 +789,9 @@ class DriveSession {
     this.kind = "idle";
     this.status = "idle";
     this.state = IDLE_STATE;
+    this.motion = IDLE_MOTION;
     this.speed = 0;
+    this.hasImu = false;
     this.ab = null;
     this.replay = null;
     this.ducking = false;
@@ -512,6 +805,15 @@ class DriveSession {
     this.ruleLatched.clear();
     this.classifier.reset();
     this.context = "city";
+    resetSensorFusion(this.sensorFusion);
+    this.pipeline.reset();
+    cancelPhoneRelayGrace(this.relayGrace);
+    this.releaseVehicleTelemetryProvider();
+    this.lastVehicleMotion = vehicleMotionFromDrive({
+      speedMps: 0,
+      accelerationMps2: 0,
+      timestamp: 0,
+    });
     if (typeof navigator !== "undefined" && navigator.mediaSession) {
       navigator.mediaSession.playbackState = "none";
     }
@@ -529,15 +831,19 @@ class DriveSession {
     try {
       const profile = getProfile(this.config.profileId);
       const engine = new SoundEngine();
+      const primedContext = this.gestureAudioContext;
+      this.gestureAudioContext = null;
       await engine.start(profile, {
         signature: opts.signature,
         environmentId: this.config.environmentId,
         mix: this.config.mix,
         snippets: this.config.snippets,
+        ...(primedContext ? { context: primedContext } : {}),
       });
       engine.setCabinEq(this.config.cabinEq);
       engine.setIntensityCeiling(cappedGain(1, 1, profile));
       engine.setVolume(cappedGain(this.config.volume, this.config.profileGain, profile));
+      engine.setDynamicDriveEnabled(this.powertrainSimActive(profile));
       this.engine = engine;
     } catch (error) {
       reportAudioError(error);
@@ -554,10 +860,13 @@ class DriveSession {
     if (this.raf !== null) cancelAnimationFrame(this.raf);
     this.raf = null;
     this.detachSensors();
+    this.releaseVehicleTelemetryProvider();
     const eng = this.engine;
     const engB = this.engineB;
     this.engine = null;
     this.engineB = null;
+    this.powertrainSim = null;
+    this.powertrainSoundProfileId = null;
     const stops: Promise<void>[] = [];
     if (eng) stops.push(eng.stop().catch(() => undefined));
     if (engB) stops.push(engB.stop().catch(() => undefined));
@@ -577,47 +886,24 @@ class DriveSession {
         this.stop();
         return;
       }
-      this.state = sample;
+      this.noteMotion(sample, dt);
       this.tickAudio(sample, dt);
     } else {
       let acceleration = 0;
+      let driveVehicleMotion = this.lastVehicleMotion;
       if (this.kind === "drive") {
-        const fused = fuseMotion({
-          gpsSpeed: this.gpsAt ? this.gpsSpeed : null,
-          gpsAt: this.gpsAt,
-          accY: this.accY,
-          imuAt: this.imuAt,
-          now,
-          dt,
-          previousSpeed: this.speed,
-          sensitivity: this.config.motionSensitivity,
-          noiseFloor: this.config.motionNoiseFloor,
-        });
-        this.speed = fused.speed;
-        acceleration = fused.accel || (this.speed - this.state.speed) / dt;
+        const vehicleMotion = tickSensorFusion(this.sensorFusion, { now, dt });
+        this.pipeline.noteFusion(now);
+        this.lastVehicleMotion = vehicleMotion;
+        driveVehicleMotion = vehicleMotion;
+        this.speed = vehicleMotion.speedKmh / 3.6;
+        acceleration = vehicleMotion.accelerationMs2;
         this.tickAutoRules();
         this.tickPlaylistSegments();
       } else if (this.kind === "demo") {
-        const { throttle, accel, regen, selector } = this.demo;
-        const drag = 0.02 * this.speed + 0.25;
-        // P/N: no drive force. D/R: throttle pushes. P/N bleed speed to a stop.
-        const freewheeling = selector === "P" || selector === "N";
-        const push = freewheeling ? 0 : throttle * (1.6 + accel * 4.4);
-        const holdBrake =
-          selector === "P"
-            ? this.speed > 0.15
-              ? 0.95
-              : 0
-            : selector === "N"
-              ? this.speed > 0.15
-                ? 0.55
-                : 0
-              : 0;
-        const brake = Math.max(regen, holdBrake) * (selector === "P" ? 5.5 : 4.2);
-        const a = push - brake - (this.speed > 0 ? drag : 0);
-        const prev = this.speed;
-        this.speed = Math.max(0, Math.min(80, prev + a * dt));
-        acceleration = (this.speed - prev) / dt;
+        const demoTick = tickDemoSpeed(this.speed, dt, this.demo);
+        this.speed = demoTick.speedMs;
+        acceleration = demoTick.accelerationMs2;
       } else if (this.kind === "audition" || this.kind === "ab") {
         const target = this.auditionKmh / 3.6;
         const rate = target > this.speed ? 2.6 : 3.4;
@@ -628,62 +914,38 @@ class DriveSession {
         acceleration = (this.speed - prev) / dt;
       }
 
-      const next = computeDriveState({
+      const next = this.computeNextDriveState({
         speed: this.speed,
         acceleration: Number.isFinite(acceleration) ? acceleration : 0,
-        previous: this.state,
         profile,
         dt,
-        tuning: this.config.tuning,
-        shiftFeel: this.config.shiftFeel,
+        now,
+        ...(this.kind === "drive" ? { vehicleMotion: driveVehicleMotion } : {}),
       });
       if (this.kind === "demo") {
-        const sel = this.demo.selector;
-        const canRev = sel === "N" || sel === "D" || sel === "R";
-        const throttle = canRev ? Math.min(1, Math.max(0, this.demo.throttle)) : 0;
-        const regen = Math.min(1, Math.max(0, this.demo.regen));
-        const neutralRev = sel === "N";
-
-        next.throttle = Math.max(next.throttle, throttle);
-        next.regen =
-          sel === "P" && this.speed > 0.2
-            ? Math.max(next.regen, 0.85, regen)
-            : Math.max(next.regen, regen);
-
-        if (canRev && throttle > 0.02) {
-          next.load = Math.max(
-            next.load,
-            Math.min(1, throttle * (neutralRev ? 0.98 : 0.88)),
-          );
-          const tx = profile.transmission;
-          if (profile.drivetrainMode !== "continuous" && tx) {
-            const revRpm =
-              tx.idleRpm +
-              this.speed * 3.6 * (tx.gearRatios[Math.max(0, next.gear - 1)] ?? tx.gearRatios[0]!) +
-              throttle * (tx.redlineRpm - tx.idleRpm) * (neutralRev ? 0.96 : 0.55);
-            next.rpm = Math.max(next.rpm, Math.min(tx.redlineRpm, revRpm));
-          }
-        } else if (sel === "P") {
-          next.throttle = 0;
-        }
-
-        if (sel === "P" || sel === "N") next.gear = 0;
-        else if (sel === "R") next.gear = -1;
+        applyDemoDriveOverrides(next, {
+          demo: this.demo,
+          speedMs: this.speed,
+          profile,
+          dynamicDriveActive: this.powertrainSimActive(profile),
+        });
       }
       this.context = this.classifier.push(next);
       if (this.kind === "drive" || this.kind === "demo" || this.kind === "audition") {
         this.applyProfileRules(next);
       }
-      const audioState =
-        this.config.latencyCompMs > 0 ? predictState(next, this.config.latencyCompMs) : next;
-      this.state = next;
+      const audioState = this.applyMotionLatencyComp(next);
+      this.noteMotion(next, dt);
       this.tickAudio(audioState, dt);
       if (this.kind === "drive") this.recorder.push(next);
+      if (this.kind === "drive" && this.debugDriveDiagnostics) {
+        this.recordDriveDiagnostics(next);
+      }
     }
 
     if (now - this.lastUi > UI_MS) {
       this.lastUi = now;
-      this.emit();
+      this.tryEmitUi();
     }
     this.raf = requestAnimationFrame(this.loop);
   };
@@ -756,7 +1018,69 @@ class DriveSession {
     result.snippetIds.forEach((id) => this.engine?.fireSnippetById(id));
   }
 
+  private computeNextDriveState(input: {
+    speed: number;
+    acceleration: number;
+    profile: ReturnType<typeof getProfile>;
+    dt: number;
+    now: number;
+    vehicleMotion?: VehicleMotionState;
+  }): DriveState {
+    const { speed, acceleration, profile, dt, now, vehicleMotion } = input;
+
+    if (this.powertrainSimActive(profile)) {
+      if (!this.powertrainSim || this.powertrainSoundProfileId !== profile.id) {
+        this.powertrainSim = new PowertrainSimulator({
+          profile: powertrainProfileForSound(profile),
+        });
+        this.powertrainSoundProfileId = profile.id;
+      }
+
+      let directThrottle: number | undefined;
+      let braking: number | undefined;
+      if (this.kind === "demo") {
+        const sel = this.demo.selector;
+        const canRev = sel === "N" || sel === "D" || sel === "R";
+        directThrottle = canRev ? Math.min(1, Math.max(0, this.demo.throttle)) : 0;
+        braking = Math.min(1, Math.max(0, this.demo.regen));
+        if (sel === "P" && speed > 0.2) braking = Math.max(braking, 0.85);
+      } else if (this.kind === "audition" || this.kind === "ab") {
+        directThrottle = Math.min(1, Math.max(0, acceleration / 2.6 + speed / 60));
+      }
+
+      const motion =
+        vehicleMotion ??
+        vehicleMotionFromDrive({
+          speedMps: speed,
+          accelerationMps2: acceleration,
+          timestamp: now,
+          throttle: directThrottle ?? this.state.throttle,
+          regen: this.state.regen,
+          source: this.kind === "demo" ? "simulator" : "phone",
+        });
+
+      const pt = this.powertrainSim.tick(motion, dt, {
+        ...(directThrottle !== undefined ? { directThrottle } : {}),
+        ...(braking !== undefined ? { braking } : {}),
+      });
+      this.pipeline.notePowertrain(performance.now());
+
+      return driveStateFromPowertrain(pt, motion, this.state, this.config.tuning, dt);
+    }
+
+    return computeDriveState({
+      speed,
+      acceleration,
+      previous: this.state,
+      profile: withPersonalityTransmission(profile),
+      dt,
+      tuning: this.config.tuning,
+      shiftFeel: this.config.shiftFeel,
+    });
+  }
+
   private tickAudio(state: DriveState, wallDt: number) {
+    this.pipeline.noteAudio(performance.now());
     const started = performance.now();
     this.engine?.update(state);
     this.engineB?.update(state);
@@ -803,8 +1127,16 @@ class DriveSession {
     // Prefer reported or delta samples. Skip "none" so fusion keeps the last
     // good fix instead of treating a null-speed browser fix as fresh zero.
     if (resolved.source !== "none") {
-      this.gpsSpeed = resolved.speed;
       this.gpsAt = atMs;
+      pushMotionSample(
+        this.sensorFusion,
+        browserGpsMotionSample({
+          speedMs: resolved.speed,
+          accuracyM: Number.isFinite(pos.coords.accuracy) ? pos.coords.accuracy : null,
+          timestamp: pos.timestamp || Date.now(),
+        }),
+        atMs,
+      );
     }
   }
 
@@ -845,8 +1177,13 @@ class DriveSession {
     this.motionHandler = (event: DeviceMotionEvent) => {
       const y = event.accelerationIncludingGravity?.y ?? event.acceleration?.y;
       if (typeof y === "number") {
-        this.accY = y;
-        this.imuAt = performance.now();
+        const at = performance.now();
+        this.hasImu = true;
+        pushMotionSample(
+          this.sensorFusion,
+          browserImuMotionSample({ accelMs2: y, timestamp: Date.now() }),
+          at,
+        );
       }
     };
     window.addEventListener("devicemotion", this.motionHandler);
@@ -946,6 +1283,201 @@ class DriveSession {
     this.engine?.triggerImprovedLayer(id);
   }
 
+  /** Ingest Tesla Fleet Telemetry record (server bridge). No-op when flag off or no mappable fields. */
+  ingestVehicleTelemetry(record: TeslaFleetTelemetryRecord) {
+    if (!this.config.teslaFleetTelemetry) return;
+    const tesla = getTeslaFleetTelemetryProvider();
+    if (tesla) {
+      tesla.ingest(record);
+      return;
+    }
+    const sample = mapTeslaFleetSignalsToMotionSample(record);
+    if (!sample) return;
+    pushMotionSample(this.sensorFusion, sample, performance.now());
+  }
+
+  /** Ingest Fleet Telemetry forwarded over the Drive relay (display role). */
+  ingestVehicleTelemetryRelay(message: RelayTelemetryMessage) {
+    if (!this.config.teslaFleetTelemetry) return;
+    this.pipeline.noteVehicleTelemetry(message, performance.now());
+    this.ingestVehicleTelemetry(message.record);
+  }
+
+  getVehicleTelemetryStatus() {
+    return this.vehicleTelemetryProvider?.getStatus() ?? null;
+  }
+
+  private syncVehicleTelemetryProvider() {
+    this.releaseVehicleTelemetryProvider();
+    const provider = createVehicleTelemetryProvider({
+      enabled: this.config.teslaFleetTelemetry,
+      kind: this.config.teslaFleetTelemetry ? "tesla-fleet" : "none",
+    });
+    this.vehicleTelemetryProvider = provider;
+    this.vehicleTelemetryUnsub = provider.subscribe((sample) => {
+      pushMotionSample(this.sensorFusion, sample, performance.now());
+    });
+    if (this.config.teslaFleetTelemetry) {
+      void provider.connect().catch(() => undefined);
+    }
+  }
+
+  private releaseVehicleTelemetryProvider() {
+    this.vehicleTelemetryUnsub?.();
+    this.vehicleTelemetryUnsub = null;
+    void this.vehicleTelemetryProvider?.disconnect();
+    this.vehicleTelemetryProvider = null;
+  }
+
+  /** Ingest phone relay motion with pipeline timestamps (no raw coordinates). */
+  ingestPhoneRelayMotion(message: RelayMotionMessage) {
+    const receivedAt = performance.now();
+    if (this.sensorFusion.fallback.phoneSuspended) {
+      markPhoneRelayRestored(this.sensorFusion, receivedAt);
+      this.pipeline.noteReconnect();
+    }
+    this.pipeline.notePhoneRelay(message, receivedAt);
+    pushMotionSample(this.sensorFusion, phoneRelayMotionSample(message.sample), receivedAt);
+    this.fuseMotionOnIngest(receivedAt);
+  }
+
+  /** Fuse immediately when relay samples arrive — do not wait for the next animation frame. */
+  private fuseMotionOnIngest(now: number) {
+    if (this.kind !== "drive" || this.status !== "running") return;
+    const dt = Math.min(
+      0.12,
+      Math.max(
+        0.001,
+        this.lastFusionIngestAt > 0 ? (now - this.lastFusionIngestAt) / 1000 : 1 / 60,
+      ),
+    );
+    this.lastFusionIngestAt = now;
+    const vehicleMotion = tickSensorFusion(this.sensorFusion, { now, dt });
+    this.pipeline.noteFusion(now);
+    this.lastVehicleMotion = vehicleMotion;
+    this.speed = vehicleMotion.speedKmh / 3.6;
+  }
+
+  /** Phone relay peer dropped — wait for reconnect before suspending phone tier. */
+  onPhoneRelayPeerLost() {
+    schedulePhoneRelayGrace(this.relayGrace, () => {
+      markPhoneRelayLost(this.sensorFusion);
+      this.pipeline.noteReconnect();
+    });
+  }
+
+  /** Phone relay peer returned within grace window. */
+  onPhoneRelayPeerAvailable() {
+    cancelPhoneRelayGrace(this.relayGrace);
+    markPhoneRelayRestored(this.sensorFusion);
+    this.pipeline.noteReconnect();
+  }
+
+  /** @deprecated Prefer onPhoneRelayPeerLost (grace). Immediate suspend for tests. */
+  notifyPhoneRelayLost() {
+    cancelPhoneRelayGrace(this.relayGrace);
+    markPhoneRelayLost(this.sensorFusion);
+  }
+
+  notifyPhoneRelayAvailable() {
+    this.onPhoneRelayPeerAvailable();
+  }
+
+  setDebugDriveDiagnostics(enabled: boolean) {
+    this.debugDriveDiagnostics = enabled;
+    if (!enabled) this.diagnosticsRecorder.clear();
+  }
+
+  getDebugDriveDiagnostics() {
+    return this.debugDriveDiagnostics;
+  }
+
+  getDriveDiagnostics(): DriveDiagnosticsFrame {
+    return this.collectDriveDiagnosticsFrame(this.state);
+  }
+
+  exportDriveDiagnosticsSession(): DiagnosticsSessionExport {
+    return buildDiagnosticsSessionExport(
+      this.diagnosticsRecorder.snapshot(),
+      this.diagnosticsSessionMeta(),
+    );
+  }
+
+  getDriveDiagnosticsSessionFrameCount(): number {
+    return this.diagnosticsRecorder.snapshot().length;
+  }
+
+  clearDriveDiagnosticsSession() {
+    this.diagnosticsRecorder.clear();
+  }
+
+  private diagnosticsSessionMeta(): DiagnosticsSessionMeta {
+    const profile = getProfile(this.config.profileId);
+    const synthesisMode = this.engine?.getDynamicDriveEnabled()
+      ? "dynamic-drive"
+      : (this.engine?.getSynthesisMode() ?? "legacy");
+    return {
+      profileId: this.config.profileId,
+      profileName: profile.name,
+      dynamicDrive: this.config.dynamicDrive,
+      synthesisMode,
+      productStatus: this.resolveProductStatus(),
+    };
+  }
+
+  private collectDriveDiagnosticsFrame(driveState: DriveState): DriveDiagnosticsFrame {
+    const synthesisMode = this.engine?.getDynamicDriveEnabled()
+      ? "dynamic-drive"
+      : (this.engine?.getSynthesisMode() ?? "legacy");
+    return collectDriveDiagnostics({
+      sensorFusion: this.sensorFusion,
+      vehicleMotion: this.lastVehicleMotion,
+      driveState,
+      pipeline: this.pipeline.snapshot(Date.now(), this.lastVehicleMotion.fallbackTier),
+      synthesisMode,
+      dynamicLayers: this.engine?.getDynamicDriveDebug() ?? [],
+      meter: this.safeMeter(),
+      perf: this.perf,
+    });
+  }
+
+  private recordDriveDiagnostics(driveState: DriveState) {
+    const now = Date.now();
+    if (now - this.diagnosticsRecordAt < 500) return;
+    this.diagnosticsRecordAt = now;
+    this.diagnosticsRecorder.record(this.collectDriveDiagnosticsFrame(driveState));
+  }
+
+  /** @deprecated Use ingestPhoneRelayMotion */
+  ingestPhoneMotion(sample: MotionSample) {
+    this.ingestPhoneRelayMotion({
+      type: "motion",
+      from: "phone",
+      at: Date.now(),
+      seq: 0,
+      sample,
+    });
+  }
+
+  getPipelineMetrics(): MotionPipelineMetrics {
+    return this.pipeline.snapshot();
+  }
+
+  /** Latest fused motion estimate for Dynamic Drive instrumentation. */
+  getVehicleMotion() {
+    return this.lastVehicleMotion;
+  }
+
+  private applyMotionLatencyComp(state: DriveState): DriveState {
+    const phoneLive = this.lastVehicleMotion.sourceHealth.phone;
+    const relayComp = phoneLive ? this.pipeline.suggestedLatencyCompMs() : 0;
+    const compMs = phoneLive
+      ? Math.max(this.config.latencyCompMs, relayComp)
+      : this.config.latencyCompMs;
+    if (compMs <= 0) return state;
+    return predictState(state, compMs);
+  }
+
   private bindMediaSession() {
     try {
       if (typeof navigator === "undefined" || !navigator.mediaSession) return;
@@ -957,8 +1489,7 @@ class DriveSession {
           album: "Sound in motion",
         });
       }
-      navigator.mediaSession.playbackState =
-        this.status === "running" ? "playing" : "paused";
+      navigator.mediaSession.playbackState = this.status === "running" ? "playing" : "paused";
       navigator.mediaSession.setActionHandler("play", () => {
         if (this.status === "idle") void this.startDrive();
         else void this.resume();
@@ -973,10 +1504,9 @@ class DriveSession {
 
   private stepPlaylist(dir: number) {
     const list = this.config.playlists[0];
-    const ids =
-      list?.segments?.length
-        ? list.segments.map((s) => s.profileId)
-        : (list?.profileIds ?? []);
+    const ids = list?.segments?.length
+      ? list.segments.map((s) => s.profileId)
+      : (list?.profileIds ?? []);
     if (!ids.length) return;
     const i = Math.max(0, ids.indexOf(this.config.profileId));
     const next = ids[(i + dir + ids.length) % ids.length];

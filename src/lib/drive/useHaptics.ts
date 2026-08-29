@@ -31,7 +31,9 @@ export function useHaptics({ enabled, active, throttle, regen }: Options) {
         // throttle: single pulse that grows. regen: a softer double pulse.
         const length = Math.round(8 + intensity * 26);
         try {
-          navigator.vibrate(r > t ? [Math.round(length * 0.6), 40, Math.round(length * 0.6)] : length);
+          navigator.vibrate(
+            r > t ? [Math.round(length * 0.6), 40, Math.round(length * 0.6)] : length,
+          );
         } catch {
           /* vibration blocked by the platform */
         }

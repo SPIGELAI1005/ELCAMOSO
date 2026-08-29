@@ -11,8 +11,8 @@ export function CabinEqPanel({
     <div>
       <p className="text-base">Cabin EQ</p>
       <p className="mt-2 text-sm text-muted-foreground">
-        Three bands after the layer mix, before the space. Use Phone speakers when listening on
-        a handset.
+        Three bands after the layer mix, before the space. Use Phone speakers when listening on a
+        handset.
       </p>
 
       <div className="mt-5 flex flex-wrap gap-2">

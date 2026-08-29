@@ -1,11 +1,7 @@
 import { useState } from "react";
 import { getSession } from "@/lib/drive/session";
 import { findSoundFn } from "@/lib/cloud/server-fns";
-import {
-  FIND_SOUND_EXAMPLES,
-  findSoundsFromPrompt,
-  type SoundMatch,
-} from "@/lib/sound/find-sound";
+import { FIND_SOUND_EXAMPLES, findSoundsFromPrompt, type SoundMatch } from "@/lib/sound/find-sound";
 import { useSettings } from "@/lib/drive/useSettings";
 
 interface Props {

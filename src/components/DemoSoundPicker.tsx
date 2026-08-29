@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   PROFILE_CATEGORIES,
   allProfiles,
@@ -21,11 +21,15 @@ export function DemoSoundPicker({
 }) {
   const current = useMemo(
     () => allProfiles().find((p) => p.id === settings.profileId),
-    [settings.profileId, settings.customSounds],
+    [settings.profileId],
   );
   const [category, setCategory] = useState<ProfileCategory | "Favourites">(
     () => current?.category ?? "Classic",
   );
+
+  useEffect(() => {
+    if (current?.category) setCategory(current.category);
+  }, [settings.profileId, current?.category]);
 
   const categories = useMemo(() => {
     const cats: Array<ProfileCategory | "Favourites"> = ["Favourites"];
@@ -43,7 +47,7 @@ export function DemoSoundPicker({
       return all.filter((p) => starred.has(p.id));
     }
     return all.filter((p) => p.category === category);
-  }, [category, settings.favourites, settings.customSounds]);
+  }, [category, settings.favourites]);
 
   return (
     <div className={className}>
@@ -90,7 +94,10 @@ export function DemoSoundPicker({
               <button
                 key={profile.id}
                 type="button"
-                onClick={() => onSelect(profile.id)}
+                onClick={() => {
+                  setCategory(profile.category);
+                  onSelect(profile.id);
+                }}
                 aria-pressed={selected}
                 className={`h-10 rounded-full border px-4 text-xs tracking-[0.12em] transition-colors ${
                   selected

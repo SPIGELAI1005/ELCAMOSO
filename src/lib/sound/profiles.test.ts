@@ -7,6 +7,7 @@ import {
   type SourceMode,
 } from "@/lib/sound/profiles";
 import { EXPANSION_PROFILES } from "@/lib/sound/profiles-expansion";
+import { FREE_SOUND_PROFILE_IDS } from "@/lib/sound/profile-access-config";
 import { getStrategy, listStrategyIds } from "@/lib/sound/realism/strategies";
 import { familyForProfile } from "@/lib/sound/realism/families";
 
@@ -84,6 +85,7 @@ describe("built-in sound profiles", () => {
       expect(p.description.length).toBeGreaterThan(10);
       expect(["virtual-transmission", "continuous"]).toContain(p.drivetrainMode);
       expect(p.voice.harmonics.length).toBeGreaterThan(0);
+      expect(p.access).toMatch(/^(free|drive_plus)$/);
       if (p.drivetrainMode === "virtual-transmission") {
         expect(p.transmission).toBeDefined();
         expect(p.transmission!.gearRatios.length).toBeGreaterThan(0);
@@ -100,6 +102,10 @@ describe("built-in sound profiles", () => {
       expect(MOTION_MODELS.has(p.motionModel!)).toBe(true);
       expect(p.sourceMode).toBeDefined();
       expect(SOURCE_MODES.has(p.sourceMode!)).toBe(true);
+      if (p.id === "electric-hypercar") {
+        expect(p.drivetrainMode).toBe("virtual-transmission");
+        expect(p.drivetrainPersonalityId).toBe("synthetic-ev");
+      }
     }
   });
 
@@ -110,6 +116,13 @@ describe("built-in sound profiles", () => {
       expect(getStrategy(p.id), `missing strategy for ${p.id}`).not.toBeNull();
       expect(familyForProfile(p)).toBeTruthy();
     }
+  });
+
+  it("marks configurable free profiles as free access", () => {
+    for (const id of FREE_SOUND_PROFILE_IDS) {
+      expect(getProfile(id).access).toBe("free");
+    }
+    expect(getProfile("dragon").access).toBe("drive_plus");
   });
 
   it("keeps ambient profiles valid at idle", () => {

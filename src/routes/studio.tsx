@@ -34,9 +34,15 @@ import { ProfileRulesEditor } from "@/components/ProfileRulesEditor";
 import { copyShareLink } from "@/lib/sound/share";
 import { trackEvent } from "@/lib/telemetry/analytics";
 import type { ProfileRule } from "@/lib/drive/rules";
-import { getSession } from "@/lib/drive/session";
+import { getSession, type DemoControls } from "@/lib/drive/session";
 import { useSessionStore } from "@/lib/store/session-store";
 import { chromeStickyTopClass, isLiveSessionStatus } from "@/lib/ui/chrome";
+import {
+  BASIC_FEEL_SLIDERS,
+  applyBasicFeel,
+  basicFeelFromTuning,
+  type StudioBasicKey,
+} from "@/lib/drive/studio-basic";
 
 export const Route = createFileRoute("/studio")({
   component: Studio,
@@ -46,12 +52,12 @@ export const Route = createFileRoute("/studio")({
       {
         name: "description",
         content:
-          "Shape pitch, brightness, texture and rhythm into your own ELCAMOSO sound, preview it with simulated motion and keep it in your Garage.",
+          "Make it yours. Shape character, weight and space into your own ELCAMOSO sound, preview it with simulated motion and keep it in your Garage.",
       },
       { property: "og:title", content: "Studio - Design your own EV sound | ELCAMOSO" },
       {
         property: "og:description",
-        content: "Shape your own ELCAMOSO sound and keep it in your Garage.",
+        content: "Make it yours. Shape your own ELCAMOSO sound and keep it in your Garage.",
       },
       { property: "og:type", content: "website" },
       { property: "og:url", content: "/studio" },
@@ -61,6 +67,35 @@ export const Route = createFileRoute("/studio")({
 });
 
 const PREVIEW_ID = "studio-preview";
+
+type PreviewPresetId = "idle" | "accelerate" | "cruise" | "decelerate";
+
+const PREVIEW_PRESETS: {
+  id: PreviewPresetId;
+  label: string;
+  kmh: number;
+  demo: Partial<DemoControls>;
+}[] = [
+  { id: "idle", label: "Idle", kmh: 0, demo: { selector: "D", throttle: 0, accel: 0, regen: 0 } },
+  {
+    id: "accelerate",
+    label: "Accelerate",
+    kmh: 110,
+    demo: { selector: "D", throttle: 0.9, accel: 0.85, regen: 0 },
+  },
+  {
+    id: "cruise",
+    label: "Cruise",
+    kmh: 90,
+    demo: { selector: "D", throttle: 0.28, accel: 0.2, regen: 0 },
+  },
+  {
+    id: "decelerate",
+    label: "Decelerate",
+    kmh: 25,
+    demo: { selector: "D", throttle: 0.05, accel: 0.1, regen: 0.75 },
+  },
+];
 
 function Studio() {
   const navigate = useNavigate();
@@ -80,6 +115,7 @@ function Studio() {
   const [shareNote, setShareNote] = useState<string | null>(null);
   const [prompt, setPrompt] = useState("");
   const [promptNote, setPromptNote] = useState<string | null>(null);
+  const [previewPreset, setPreviewPreset] = useState<PreviewPresetId>("cruise");
   const [sideB, setSideB] = useState<{
     tweaks: StudioTweaks;
     mix: LayerMix;
@@ -89,6 +125,7 @@ function Studio() {
   const future = useRef<{ tweaks: StudioTweaks; mix: LayerMix; environmentId: string }[]>([]);
   const sessionSnap = useSessionStore();
   const ab = sessionSnap.ab;
+  const basicFeel = useMemo(() => basicFeelFromTuning(tweaks, mix), [tweaks, mix]);
 
   const pushHistory = () => {
     past.current = [...past.current, { tweaks, mix, environmentId }].slice(-50);
@@ -186,6 +223,27 @@ function Studio() {
     setTweaks((t) => ({ ...t, ...next }));
   };
 
+  const setBasic = (key: StudioBasicKey, value: number) => {
+    pushHistory();
+    const next = applyBasicFeel(key, value, tweaks, mix);
+    setTweaks(next.tweaks);
+    setMix(next.mix);
+  };
+
+  const runPreviewPreset = (id: PreviewPresetId) => {
+    const preset = PREVIEW_PRESETS.find((p) => p.id === id);
+    if (!preset) return;
+    setPreviewPreset(id);
+    const session = getSession();
+    session.setAuditionKmh(preset.kmh);
+    session.setDemo(preset.demo);
+    setTarget(preset.kmh);
+    if (!active) {
+      trackEvent("studio_listen", { baseId, via: "preview_preset" });
+      void start();
+    }
+  };
+
   const save = () => {
     const id = `custom-${Date.now().toString(36)}`;
     const sound: CustomSound = {
@@ -247,16 +305,16 @@ function Studio() {
     const w = window as Window & {
       webkitSpeechRecognition?: new () => {
         lang: string;
-        onresult: ((ev: {
-          results: { [n: number]: { [n: number]: { transcript: string } } };
-        }) => void) | null;
+        onresult:
+          | ((ev: { results: { [n: number]: { [n: number]: { transcript: string } } } }) => void)
+          | null;
         start: () => void;
       };
       SpeechRecognition?: new () => {
         lang: string;
-        onresult: ((ev: {
-          results: { [n: number]: { [n: number]: { transcript: string } } };
-        }) => void) | null;
+        onresult:
+          | ((ev: { results: { [n: number]: { [n: number]: { transcript: string } } } }) => void)
+          | null;
         start: () => void;
       };
     };
@@ -280,9 +338,10 @@ function Studio() {
     <main className="min-h-screen">
       <div className="mx-auto w-full max-w-3xl px-6 pt-12 pb-28 sm:px-10 sm:pt-16">
         <p className="text-[11px] tracking-[0.34em] text-muted-foreground uppercase">Studio</p>
-        <h1 className="mt-4 text-3xl font-light">Design a sound of your own</h1>
+        <h1 className="mt-4 text-3xl font-light">Make it yours.</h1>
         <p className="mt-3 max-w-xl text-sm text-muted-foreground">
-          Pick a starting character, shape it while you Listen, then keep it in your Garage.
+          Shape the feel while you Listen. Open Advanced when you want the full dials, mix and keep
+          tools.
         </p>
 
         {/* Sticky listen strip under BrandNav (+ MiniPlayer when live). */}
@@ -331,12 +390,32 @@ function Studio() {
               </button>
             ) : null}
           </div>
+          <div className="mt-5 flex flex-wrap gap-2">
+            {PREVIEW_PRESETS.map((preset) => (
+              <button
+                key={preset.id}
+                type="button"
+                onClick={() => runPreviewPreset(preset.id)}
+                aria-pressed={previewPreset === preset.id}
+                className={`h-9 rounded-full border px-4 text-[10px] tracking-[0.16em] uppercase ${
+                  previewPreset === preset.id
+                    ? "border-foreground text-foreground"
+                    : "border-border text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {preset.label}
+              </button>
+            ))}
+          </div>
           <input
             type="range"
             min={0}
             max={180}
             value={targetKmh}
-            onChange={(e) => setTarget(Number(e.target.value))}
+            onChange={(e) => {
+              setPreviewPreset("cruise");
+              setTarget(Number(e.target.value));
+            }}
             aria-label="Simulated speed"
             className="mt-5 slider h-10 w-full"
           />
@@ -368,352 +447,414 @@ function Studio() {
           </div>
         </section>
 
-        <Accordion type="single" collapsible defaultValue="shape" className="mt-6 border-t border-border">
-          {/* 1 · Shape */}
-          <AccordionItem value="shape" className="border-border">
-            <AccordionTrigger className="py-6 hover:no-underline">
-              <WorkspaceLabel step="01" title="Shape" hint="Character and dials" />
-            </AccordionTrigger>
-            <AccordionContent className="pb-10">
-              <label className="block text-sm" htmlFor="studio-base">
-                Starting character
-              </label>
-              <select
-                id="studio-base"
-                value={baseId}
-                onChange={(e) => setBaseId(e.target.value)}
-                className="mt-3 h-12 w-full border border-border bg-background px-4 text-sm outline-none focus:border-foreground"
+        <section className="mt-12" aria-label="Basic feel">
+          <div className="flex items-baseline justify-between gap-4">
+            <h2 className="text-[11px] tracking-[0.28em] text-muted-foreground uppercase">Basic</h2>
+            <div className="flex gap-4">
+              <button
+                type="button"
+                onClick={undo}
+                className="text-[11px] tracking-[0.2em] text-muted-foreground uppercase hover:text-foreground"
               >
-                {PROFILE_CATEGORIES.filter((c) => c !== "Garage").map((category) => {
-                  const items = SOUND_PROFILES.filter((p) => p.category === category);
-                  if (!items.length) return null;
-                  return (
-                    <optgroup key={category} label={category}>
-                      {items.map((p) => (
-                        <option key={p.id} value={p.id}>
-                          {p.name}
-                        </option>
-                      ))}
-                    </optgroup>
-                  );
-                })}
-              </select>
-              <p className="mt-3 text-sm text-muted-foreground">{base.description}</p>
-
-              <div className="mt-10 flex items-baseline justify-between gap-4">
-                <h3 className="text-[11px] tracking-[0.28em] text-muted-foreground uppercase">
-                  Dials
-                </h3>
-                <div className="flex gap-4">
-                  <button
-                    type="button"
-                    onClick={undo}
-                    className="text-[11px] tracking-[0.2em] text-muted-foreground uppercase hover:text-foreground"
-                  >
-                    Undo
-                  </button>
-                  <button
-                    type="button"
-                    onClick={redo}
-                    className="text-[11px] tracking-[0.2em] text-muted-foreground uppercase hover:text-foreground"
-                  >
-                    Redo
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setTweaks(DEFAULT_TWEAKS)}
-                    className="text-[11px] tracking-[0.2em] text-muted-foreground uppercase hover:text-foreground"
-                  >
-                    Reset
-                  </button>
-                </div>
-              </div>
-
-              <div className="mt-6 grid gap-8 sm:grid-cols-2">
-                <Dial
-                  id="s-pitch"
-                  label="Pitch"
-                  hint="Lower for weight, higher for urgency"
-                  min={0.5}
-                  max={2}
-                  value={tweaks.pitch}
-                  onChange={(v) => set({ pitch: v })}
-                />
-                <Dial
-                  id="s-brightness"
-                  label="Brightness"
-                  hint="How open and forward the sound sits"
-                  min={0.4}
-                  max={2}
-                  value={tweaks.brightness}
-                  onChange={(v) => set({ brightness: v })}
-                />
-                <Dial
-                  id="s-grit"
-                  label="Grit"
-                  hint="Air, rasp and mechanical texture"
-                  min={0}
-                  max={2}
-                  value={tweaks.grit}
-                  onChange={(v) => set({ grit: v })}
-                />
-                <Dial
-                  id="s-texture"
-                  label="Atmosphere"
-                  hint="Water, gravel and wind beds"
-                  min={0}
-                  max={2}
-                  value={tweaks.texture}
-                  onChange={(v) => set({ texture: v })}
-                />
-                <Dial
-                  id="s-rhythm"
-                  label="Rhythm"
-                  hint="Pace of hooves, bells and chuffs"
-                  min={0}
-                  max={2}
-                  value={tweaks.rhythm}
-                  onChange={(v) => set({ rhythm: v })}
-                />
-                <Dial
-                  id="s-character"
-                  label="Character"
-                  hint="Spread and looseness of the voice"
-                  min={0}
-                  max={2}
-                  value={tweaks.character}
-                  onChange={(v) => set({ character: v })}
-                />
-              </div>
-
-              <label className="mt-8 flex items-center gap-4 text-sm">
-                <input
-                  type="checkbox"
-                  checked={tweaks.signals}
-                  onChange={(e) => set({ signals: e.target.checked })}
-                  className="h-4 w-4 accent-foreground"
-                />
-                Signature moments (horns, whinnies, laughter)
-              </label>
-
-              <div className="mt-12 border-t border-border pt-8">
-                <h3 className="text-[11px] tracking-[0.28em] text-muted-foreground uppercase">
-                  Or start from a feel
-                </h3>
-                <p className="mt-3 text-sm text-muted-foreground">
-                  Describe a mood. The recipe fills the dials above so you can keep shaping.
-                </p>
-                <textarea
-                  value={prompt}
-                  onChange={(e) => setPrompt(e.target.value)}
-                  aria-label="Sound prompt"
-                  className="mt-5 min-h-20 w-full border border-border bg-transparent p-4 text-sm outline-none focus:border-foreground"
-                />
-                <div className="mt-4 flex flex-wrap gap-3">
-                  <button
-                    type="button"
-                    onClick={() => void applyPrompt()}
-                    className="h-11 rounded-full border border-border px-5 text-[11px] tracking-[0.16em] uppercase"
-                  >
-                    Make recipe
-                  </button>
-                  <button
-                    type="button"
-                    onClick={startVoice}
-                    className="h-11 rounded-full border border-border px-5 text-[11px] tracking-[0.16em] uppercase"
-                  >
-                    Voice
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setName(nameFromTweaks(tweaks, base.name))}
-                    className="h-11 rounded-full border border-border px-5 text-[11px] tracking-[0.16em] uppercase"
-                  >
-                    Suggest name
-                  </button>
-                </div>
-                {promptNote ? (
-                  <p className="mt-4 text-sm text-muted-foreground">{promptNote}</p>
-                ) : null}
-              </div>
-            </AccordionContent>
-          </AccordionItem>
-
-          {/* 2 · Mix */}
-          <AccordionItem value="mix" className="border-border">
-            <AccordionTrigger className="py-6 hover:no-underline">
-              <WorkspaceLabel step="02" title="Mix" hint="Space and layers" />
-            </AccordionTrigger>
-            <AccordionContent className="pb-10">
-              <EnvironmentPicker value={environmentId} onChange={setEnvironmentId} />
-              <LayerMixer
-                className="mt-12 border-t border-border pt-8"
-                mix={mix}
-                onChange={(next) => {
+                Undo
+              </button>
+              <button
+                type="button"
+                onClick={redo}
+                className="text-[11px] tracking-[0.2em] text-muted-foreground uppercase hover:text-foreground"
+              >
+                Redo
+              </button>
+              <button
+                type="button"
+                onClick={() => {
                   pushHistory();
-                  setMix(next);
+                  setTweaks(DEFAULT_TWEAKS);
+                  setMix(DEFAULT_LAYER_MIX);
                 }}
+                className="text-[11px] tracking-[0.2em] text-muted-foreground uppercase hover:text-foreground"
+              >
+                Reset
+              </button>
+            </div>
+          </div>
+          <div className="mt-8 grid gap-10 sm:grid-cols-2">
+            {BASIC_FEEL_SLIDERS.map((slider) => (
+              <FeelSlider
+                key={slider.key}
+                id={`basic-${slider.key}`}
+                label={slider.label}
+                left={slider.left}
+                right={slider.right}
+                value={basicFeel[slider.key]}
+                onChange={(v) => setBasic(slider.key, v)}
               />
-            </AccordionContent>
-          </AccordionItem>
+            ))}
+          </div>
+        </section>
 
-          {/* 3 · Capture */}
-          <AccordionItem value="capture" className="border-border">
+        <Accordion type="single" collapsible className="mt-14 border-t border-border">
+          <AccordionItem value="advanced" className="border-border">
             <AccordionTrigger className="py-6 hover:no-underline">
-              <WorkspaceLabel step="03" title="Capture" hint="Snippets and triggers" />
+              <span className="text-base font-light tracking-normal normal-case">Advanced</span>
             </AccordionTrigger>
-            <AccordionContent className="pb-10">
-              <SnippetStudio
-                snippets={settings.snippets}
-                onChange={(snippets) => update({ snippets })}
-              />
-              <div className="mt-12 border-t border-border pt-8">
-                <ProfileRulesEditor
-                  rules={rules}
-                  snippets={settings.snippets}
-                  onChange={setRules}
-                />
-              </div>
-            </AccordionContent>
-          </AccordionItem>
+            <AccordionContent className="pb-4">
+              <Accordion
+                type="single"
+                collapsible
+                defaultValue="shape"
+                className="border-t border-border"
+              >
+                {/* 1 · Shape */}
+                <AccordionItem value="shape" className="border-border">
+                  <AccordionTrigger className="py-6 hover:no-underline">
+                    <WorkspaceLabel step="01" title="Shape" hint="Character and dials" />
+                  </AccordionTrigger>
+                  <AccordionContent className="pb-10">
+                    <label className="block text-sm" htmlFor="studio-base">
+                      Starting character
+                    </label>
+                    <select
+                      id="studio-base"
+                      value={baseId}
+                      onChange={(e) => setBaseId(e.target.value)}
+                      className="mt-3 h-12 w-full border border-border bg-background px-4 text-sm outline-none focus:border-foreground"
+                    >
+                      {PROFILE_CATEGORIES.filter((c) => c !== "Garage").map((category) => {
+                        const items = SOUND_PROFILES.filter((p) => p.category === category);
+                        if (!items.length) return null;
+                        return (
+                          <optgroup key={category} label={category}>
+                            {items.map((p) => (
+                              <option key={p.id} value={p.id}>
+                                {p.name}
+                              </option>
+                            ))}
+                          </optgroup>
+                        );
+                      })}
+                    </select>
+                    <p className="mt-3 text-sm text-muted-foreground">{base.description}</p>
 
-          {/* 4 · Keep */}
-          <AccordionItem value="keep" className="border-border">
-            <AccordionTrigger className="py-6 hover:no-underline">
-              <WorkspaceLabel step="04" title="Keep" hint="Name, save, share" />
-            </AccordionTrigger>
-            <AccordionContent className="pb-10">
-              <input
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                maxLength={40}
-                aria-label="Sound name"
-                placeholder="Sound name"
-                className="h-12 w-full border-b border-border bg-transparent text-xl font-light outline-none focus:border-foreground"
-              />
-              <input
-                value={takeLabel}
-                onChange={(e) => setTakeLabel(e.target.value)}
-                maxLength={24}
-                placeholder="Take label, e.g. Wet or Night"
-                aria-label="Take label"
-                className="mt-6 h-11 w-full border-b border-border bg-transparent text-sm text-muted-foreground outline-none focus:border-foreground"
-              />
-              <input
-                value={note}
-                onChange={(e) => setNote(e.target.value)}
-                maxLength={160}
-                placeholder="A short description"
-                aria-label="Description"
-                className="mt-6 h-11 w-full border-b border-border bg-transparent text-sm text-muted-foreground outline-none focus:border-foreground"
-              />
+                    <div className="mt-10 flex items-baseline justify-between gap-4">
+                      <h3 className="text-[11px] tracking-[0.28em] text-muted-foreground uppercase">
+                        Dials
+                      </h3>
+                      <div className="flex gap-4">
+                        <button
+                          type="button"
+                          onClick={undo}
+                          className="text-[11px] tracking-[0.2em] text-muted-foreground uppercase hover:text-foreground"
+                        >
+                          Undo
+                        </button>
+                        <button
+                          type="button"
+                          onClick={redo}
+                          className="text-[11px] tracking-[0.2em] text-muted-foreground uppercase hover:text-foreground"
+                        >
+                          Redo
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setTweaks(DEFAULT_TWEAKS)}
+                          className="text-[11px] tracking-[0.2em] text-muted-foreground uppercase hover:text-foreground"
+                        >
+                          Reset
+                        </button>
+                      </div>
+                    </div>
 
-              <div className="mt-10 flex flex-wrap gap-3">
-                <button
-                  type="button"
-                  onClick={saveAndDrive}
-                  className="h-12 rounded-full bg-primary px-8 text-[11px] tracking-[0.22em] text-primary-foreground uppercase"
-                >
-                  Save and drive
-                </button>
-                <button
-                  type="button"
-                  onClick={save}
-                  className="h-12 rounded-full border border-border px-8 text-[11px] tracking-[0.22em] uppercase hover:bg-secondary"
-                >
-                  Save to Garage
-                </button>
-                <button
-                  type="button"
-                  onClick={saveAsTake}
-                  className="h-12 rounded-full border border-border px-6 text-[11px] tracking-[0.22em] uppercase text-muted-foreground hover:text-foreground"
-                >
-                  Save as take
-                </button>
-                <button
-                  type="button"
-                  onClick={async () => {
-                    const sound: CustomSound = {
-                      ...draft,
-                      id: `share-${Date.now().toString(36)}`,
-                      name: name.trim() || "Untitled sound",
-                    };
-                    await copyShareLink(sound);
-                    trackEvent("share_create", { via: "studio" });
-                    setShareNote(
-                      typeof navigator.share === "function"
-                        ? "Share sheet opened. Anyone with the link can Listen in the browser."
-                        : "Link copied. Anyone with it can Listen in the browser.",
-                    );
-                  }}
-                  className="h-12 rounded-full border border-border px-6 text-[11px] tracking-[0.22em] uppercase text-muted-foreground hover:text-foreground"
-                >
-                  Share link
-                </button>
-              </div>
+                    <div className="mt-6 grid gap-8 sm:grid-cols-2">
+                      <Dial
+                        id="s-pitch"
+                        label="Pitch"
+                        hint="Lower for weight, higher for urgency"
+                        min={0.5}
+                        max={2}
+                        value={tweaks.pitch}
+                        onChange={(v) => set({ pitch: v })}
+                      />
+                      <Dial
+                        id="s-brightness"
+                        label="Brightness"
+                        hint="How open and forward the sound sits"
+                        min={0.4}
+                        max={2}
+                        value={tweaks.brightness}
+                        onChange={(v) => set({ brightness: v })}
+                      />
+                      <Dial
+                        id="s-grit"
+                        label="Grit"
+                        hint="Air, rasp and mechanical texture"
+                        min={0}
+                        max={2}
+                        value={tweaks.grit}
+                        onChange={(v) => set({ grit: v })}
+                      />
+                      <Dial
+                        id="s-texture"
+                        label="Atmosphere"
+                        hint="Water, gravel and wind beds"
+                        min={0}
+                        max={2}
+                        value={tweaks.texture}
+                        onChange={(v) => set({ texture: v })}
+                      />
+                      <Dial
+                        id="s-rhythm"
+                        label="Rhythm"
+                        hint="Pace of hooves, bells and chuffs"
+                        min={0}
+                        max={2}
+                        value={tweaks.rhythm}
+                        onChange={(v) => set({ rhythm: v })}
+                      />
+                      <Dial
+                        id="s-character"
+                        label="Character"
+                        hint="Spread and looseness of the voice"
+                        min={0}
+                        max={2}
+                        value={tweaks.character}
+                        onChange={(v) => set({ character: v })}
+                      />
+                    </div>
 
-              {saved ? (
-                <p className="mt-6 text-sm text-muted-foreground">
-                  {saved} is in your{" "}
-                  <Link to="/garage" className="text-foreground underline underline-offset-4">
-                    Garage
-                  </Link>
-                  .
-                </p>
-              ) : null}
-              {shareNote ? <p className="mt-4 text-sm text-muted-foreground">{shareNote}</p> : null}
+                    <label className="mt-8 flex items-center gap-4 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={tweaks.signals}
+                        onChange={(e) => set({ signals: e.target.checked })}
+                        className="h-4 w-4 accent-foreground"
+                      />
+                      Signature moments (horns, whinnies, laughter)
+                    </label>
 
-              <div className="mt-12 border-t border-border pt-8">
-                <div className="flex flex-wrap items-baseline justify-between gap-3">
-                  <h3 className="text-[11px] tracking-[0.28em] text-muted-foreground uppercase">
-                    Studio presets
-                  </h3>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const preset: StudioPreset = {
-                        id: `preset-${Date.now()}`,
-                        name: name.trim() || "Studio preset",
-                        createdAt: Date.now(),
-                        tweaks,
-                        mix,
-                        environmentId,
-                      };
-                      update({
-                        studioPresets: [...settings.studioPresets, preset].slice(-50),
-                      });
-                      trackEvent("studio_preset_save");
-                    }}
-                    className="text-[11px] tracking-[0.2em] text-muted-foreground uppercase hover:text-foreground"
-                  >
-                    Save current
-                  </button>
-                </div>
-                {settings.studioPresets.length ? (
-                  <div className="mt-5 flex flex-wrap gap-2">
-                    {settings.studioPresets.map((preset) => (
+                    <div className="mt-12 border-t border-border pt-8">
+                      <h3 className="text-[11px] tracking-[0.28em] text-muted-foreground uppercase">
+                        Or start from a feel
+                      </h3>
+                      <p className="mt-3 text-sm text-muted-foreground">
+                        Describe a mood. The recipe fills the dials above so you can keep shaping.
+                      </p>
+                      <textarea
+                        value={prompt}
+                        onChange={(e) => setPrompt(e.target.value)}
+                        aria-label="Sound prompt"
+                        className="mt-5 min-h-20 w-full border border-border bg-transparent p-4 text-sm outline-none focus:border-foreground"
+                      />
+                      <div className="mt-4 flex flex-wrap gap-3">
+                        <button
+                          type="button"
+                          onClick={() => void applyPrompt()}
+                          className="h-11 rounded-full border border-border px-5 text-[11px] tracking-[0.16em] uppercase"
+                        >
+                          Make recipe
+                        </button>
+                        <button
+                          type="button"
+                          onClick={startVoice}
+                          className="h-11 rounded-full border border-border px-5 text-[11px] tracking-[0.16em] uppercase"
+                        >
+                          Voice
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setName(nameFromTweaks(tweaks, base.name))}
+                          className="h-11 rounded-full border border-border px-5 text-[11px] tracking-[0.16em] uppercase"
+                        >
+                          Suggest name
+                        </button>
+                      </div>
+                      {promptNote ? (
+                        <p className="mt-4 text-sm text-muted-foreground">{promptNote}</p>
+                      ) : null}
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+
+                {/* 2 · Mix */}
+                <AccordionItem value="mix" className="border-border">
+                  <AccordionTrigger className="py-6 hover:no-underline">
+                    <WorkspaceLabel step="02" title="Mix" hint="Space and layers" />
+                  </AccordionTrigger>
+                  <AccordionContent className="pb-10">
+                    <EnvironmentPicker value={environmentId} onChange={setEnvironmentId} />
+                    <LayerMixer
+                      className="mt-12 border-t border-border pt-8"
+                      mix={mix}
+                      onChange={(next) => {
+                        pushHistory();
+                        setMix(next);
+                      }}
+                    />
+                  </AccordionContent>
+                </AccordionItem>
+
+                {/* 3 · Capture */}
+                <AccordionItem value="capture" className="border-border">
+                  <AccordionTrigger className="py-6 hover:no-underline">
+                    <WorkspaceLabel step="03" title="Capture" hint="Snippets and triggers" />
+                  </AccordionTrigger>
+                  <AccordionContent className="pb-10">
+                    <SnippetStudio
+                      snippets={settings.snippets}
+                      onChange={(snippets) => update({ snippets })}
+                    />
+                    <div className="mt-12 border-t border-border pt-8">
+                      <ProfileRulesEditor
+                        rules={rules}
+                        snippets={settings.snippets}
+                        onChange={setRules}
+                      />
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+
+                {/* 4 · Keep */}
+                <AccordionItem value="keep" className="border-border">
+                  <AccordionTrigger className="py-6 hover:no-underline">
+                    <WorkspaceLabel step="04" title="Keep" hint="Name, save, share" />
+                  </AccordionTrigger>
+                  <AccordionContent className="pb-10">
+                    <input
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      maxLength={40}
+                      aria-label="Sound name"
+                      placeholder="Sound name"
+                      className="h-12 w-full border-b border-border bg-transparent text-xl font-light outline-none focus:border-foreground"
+                    />
+                    <input
+                      value={takeLabel}
+                      onChange={(e) => setTakeLabel(e.target.value)}
+                      maxLength={24}
+                      placeholder="Take label, e.g. Wet or Night"
+                      aria-label="Take label"
+                      className="mt-6 h-11 w-full border-b border-border bg-transparent text-sm text-muted-foreground outline-none focus:border-foreground"
+                    />
+                    <input
+                      value={note}
+                      onChange={(e) => setNote(e.target.value)}
+                      maxLength={160}
+                      placeholder="A short description"
+                      aria-label="Description"
+                      className="mt-6 h-11 w-full border-b border-border bg-transparent text-sm text-muted-foreground outline-none focus:border-foreground"
+                    />
+
+                    <div className="mt-10 flex flex-wrap gap-3">
                       <button
-                        key={preset.id}
                         type="button"
-                        onClick={() => {
-                          pushHistory();
-                          setTweaks(preset.tweaks);
-                          setMix(preset.mix);
-                          setEnvironmentId(preset.environmentId);
-                          setName(preset.name);
-                        }}
-                        className="h-10 rounded-full border border-border px-4 text-[11px] tracking-[0.16em] uppercase"
+                        onClick={saveAndDrive}
+                        className="h-12 rounded-full bg-primary px-8 text-[11px] tracking-[0.22em] text-primary-foreground uppercase"
                       >
-                        {preset.name}
+                        Save and drive
                       </button>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="mt-4 text-sm text-muted-foreground">
-                    No presets yet. Save the current dials and mix to reuse later.
-                  </p>
-                )}
-              </div>
+                      <button
+                        type="button"
+                        onClick={save}
+                        className="h-12 rounded-full border border-border px-8 text-[11px] tracking-[0.22em] uppercase hover:bg-secondary"
+                      >
+                        Save to Garage
+                      </button>
+                      <button
+                        type="button"
+                        onClick={saveAsTake}
+                        className="h-12 rounded-full border border-border px-6 text-[11px] tracking-[0.22em] uppercase text-muted-foreground hover:text-foreground"
+                      >
+                        Save as take
+                      </button>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          const sound: CustomSound = {
+                            ...draft,
+                            id: `share-${Date.now().toString(36)}`,
+                            name: name.trim() || "Untitled sound",
+                          };
+                          await copyShareLink(sound);
+                          trackEvent("share_create", { via: "studio" });
+                          setShareNote(
+                            typeof navigator.share === "function"
+                              ? "Share sheet opened. Anyone with the link can Listen in the browser."
+                              : "Link copied. Anyone with it can Listen in the browser.",
+                          );
+                        }}
+                        className="h-12 rounded-full border border-border px-6 text-[11px] tracking-[0.22em] uppercase text-muted-foreground hover:text-foreground"
+                      >
+                        Share link
+                      </button>
+                    </div>
+
+                    {saved ? (
+                      <p className="mt-6 text-sm text-muted-foreground">
+                        {saved} is in your{" "}
+                        <Link to="/garage" className="text-foreground underline underline-offset-4">
+                          Garage
+                        </Link>
+                        .
+                      </p>
+                    ) : null}
+                    {shareNote ? (
+                      <p className="mt-4 text-sm text-muted-foreground">{shareNote}</p>
+                    ) : null}
+
+                    <div className="mt-12 border-t border-border pt-8">
+                      <div className="flex flex-wrap items-baseline justify-between gap-3">
+                        <h3 className="text-[11px] tracking-[0.28em] text-muted-foreground uppercase">
+                          Studio presets
+                        </h3>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const preset: StudioPreset = {
+                              id: `preset-${Date.now()}`,
+                              name: name.trim() || "Studio preset",
+                              createdAt: Date.now(),
+                              tweaks,
+                              mix,
+                              environmentId,
+                            };
+                            update({
+                              studioPresets: [...settings.studioPresets, preset].slice(-50),
+                            });
+                            trackEvent("studio_preset_save");
+                          }}
+                          className="text-[11px] tracking-[0.2em] text-muted-foreground uppercase hover:text-foreground"
+                        >
+                          Save current
+                        </button>
+                      </div>
+                      {settings.studioPresets.length ? (
+                        <div className="mt-5 flex flex-wrap gap-2">
+                          {settings.studioPresets.map((preset) => (
+                            <button
+                              key={preset.id}
+                              type="button"
+                              onClick={() => {
+                                pushHistory();
+                                setTweaks(preset.tweaks);
+                                setMix(preset.mix);
+                                setEnvironmentId(preset.environmentId);
+                                setName(preset.name);
+                              }}
+                              className="h-10 rounded-full border border-border px-4 text-[11px] tracking-[0.16em] uppercase"
+                            >
+                              {preset.name}
+                            </button>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="mt-4 text-sm text-muted-foreground">
+                          No presets yet. Save the current dials and mix to reuse later.
+                        </p>
+                      )}
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
             </AccordionContent>
           </AccordionItem>
         </Accordion>
@@ -722,15 +863,7 @@ function Studio() {
   );
 }
 
-function WorkspaceLabel({
-  step,
-  title,
-  hint,
-}: {
-  step: string;
-  title: string;
-  hint: string;
-}) {
+function WorkspaceLabel({ step, title, hint }: { step: string; title: string; hint: string }) {
   return (
     <span className="flex flex-col items-start gap-1 text-left sm:flex-row sm:items-baseline sm:gap-5">
       <span className="text-[10px] tracking-[0.28em] text-muted-foreground tabular-nums">
@@ -741,6 +874,44 @@ function WorkspaceLabel({
         {hint}
       </span>
     </span>
+  );
+}
+
+function FeelSlider({
+  id,
+  label,
+  left,
+  right,
+  value,
+  onChange,
+}: {
+  id: string;
+  label: string;
+  left: string;
+  right: string;
+  value: number;
+  onChange: (v: number) => void;
+}) {
+  return (
+    <div>
+      <label htmlFor={id} className="text-sm">
+        {label}
+      </label>
+      <div className="mt-3 flex items-baseline justify-between gap-3 text-xs text-muted-foreground">
+        <span>{left}</span>
+        <span>{right}</span>
+      </div>
+      <input
+        id={id}
+        type="range"
+        min={0}
+        max={1}
+        step={0.01}
+        value={value}
+        onChange={(e) => onChange(Number(e.target.value))}
+        className="mt-2 slider h-11 w-full"
+      />
+    </div>
   );
 }
 

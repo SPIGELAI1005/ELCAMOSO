@@ -1,11 +1,6 @@
 import type { DriveState } from "@/lib/drive/model";
 import { DEFAULT_CABIN_EQ, type CabinEq } from "@/lib/drive/types-extra";
-import type {
-  RhythmSpec,
-  SignalSpec,
-  SoundProfile,
-  TextureSpec,
-} from "@/lib/sound/profiles";
+import type { RhythmSpec, SignalSpec, SoundProfile, TextureSpec } from "@/lib/sound/profiles";
 import {
   DEFAULT_LAYER_MIX,
   getEnvironment,
@@ -19,7 +14,9 @@ import type { SoundSnippet } from "@/lib/sound/snippets";
 import { createMasterBus, type MasterBus } from "@/lib/sound/realism/master-bus";
 import { ImprovedSynth } from "@/lib/sound/realism/improved-synth";
 import { loudnessForProfile } from "@/lib/sound/realism/loudness";
-import type { SynthesisMode } from "@/lib/sound/realism/types";
+import type { DynamicLayerDebugInfo, SynthesisMode } from "@/lib/sound/realism/types";
+import { DynamicDriveSynth } from "@/lib/sound/dynamic-drive/synth";
+import { supportsDynamicDrive } from "@/lib/powertrain/adapters/profile-map";
 import { reportAudioError } from "@/lib/telemetry/crashes";
 
 export interface MeterReading {
@@ -127,6 +124,8 @@ export class SoundEngine {
   /** Original (legacy) vs improved multi-layer realism path. */
   private synthesisMode: SynthesisMode = "improved";
   private improved: ImprovedSynth | null = null;
+  private dynamicDriveEnabled = false;
+  private dynamicDrive: DynamicDriveSynth | null = null;
   private profileBus: MasterBus | null = null;
   /** hard ceiling applied before the limiter so no profile can spike */
 
@@ -140,7 +139,24 @@ export class SoundEngine {
     return this.synthesisMode;
   }
 
+  setDynamicDriveEnabled(enabled: boolean) {
+    if (this.dynamicDriveEnabled === enabled) return;
+    this.dynamicDriveEnabled = enabled;
+    if (this.profile) this.setProfile(this.profile, true);
+  }
+
+  getDynamicDriveEnabled() {
+    return this.dynamicDriveEnabled;
+  }
+
+  getDynamicDriveDebug(): DynamicLayerDebugInfo[] {
+    return this.dynamicDrive?.getDebugInfo() ?? [];
+  }
+
   listImprovedLayers() {
+    if (this.dynamicDrive) {
+      return this.dynamicDrive.listLayers().map((l) => ({ ...l, triggerable: false }));
+    }
     return this.improved?.listLayers() ?? [];
   }
 
@@ -174,14 +190,8 @@ export class SoundEngine {
 
   private safeVolume(value: number) {
     const balance =
-      this.synthesisMode === "improved" && this.profile
-        ? loudnessForProfile(this.profile.id)
-        : 1;
-    return Math.min(
-      SoundEngine.MAX_GAIN,
-      this.intensityCeiling,
-      Math.max(0.0001, value * balance),
-    );
+      this.synthesisMode === "improved" && this.profile ? loudnessForProfile(this.profile.id) : 1;
+    return Math.min(SoundEngine.MAX_GAIN, this.intensityCeiling, Math.max(0.0001, value * balance));
   }
 
   private now() {
@@ -307,12 +317,12 @@ export class SoundEngine {
     cabinLow.type = "lowshelf";
     cabinLow.frequency.value = 120;
     cabinLow.gain.value = this.cabinEq.low;
-  const cabinMid = ctx.createBiquadFilter();
-  cabinMid.type = "peaking";
-  // Center mid for cabin/phone presence rather than nasal 1 kHz only.
-  cabinMid.frequency.value = 900;
-  cabinMid.Q.value = 0.85;
-  cabinMid.gain.value = this.cabinEq.mid;
+    const cabinMid = ctx.createBiquadFilter();
+    cabinMid.type = "peaking";
+    // Center mid for cabin/phone presence rather than nasal 1 kHz only.
+    cabinMid.frequency.value = 900;
+    cabinMid.Q.value = 0.85;
+    cabinMid.gain.value = this.cabinEq.mid;
     const cabinHigh = ctx.createBiquadFilter();
     cabinHigh.type = "highshelf";
     cabinHigh.frequency.value = 3500;
@@ -439,11 +449,7 @@ export class SoundEngine {
     const ctx = this.ctx;
     if (!ctx) return;
     if (this.reverb) this.reverb.buffer = this.buildImpulse(ctx, env);
-    this.reverbDamp?.frequency.setTargetAtTime(
-      12000 - env.damping * 9000,
-      ctx.currentTime,
-      0.3,
-    );
+    this.reverbDamp?.frequency.setTargetAtTime(12000 - env.damping * 9000, ctx.currentTime, 0.3);
     this.wet?.gain.setTargetAtTime(env.wet, ctx.currentTime, 0.4);
     this.applyMix();
   }
@@ -463,13 +469,8 @@ export class SoundEngine {
       if (!chain) return;
       const setting = this.mix[key];
       const balance = this.environment.balance[key];
-      const texture =
-        key === "beds" ? (this.environment.textureScale ?? 1) : 1;
-      chain.out.gain.setTargetAtTime(
-        Math.max(0.0001, setting.volume * balance * texture),
-        t,
-        0.25,
-      );
+      const texture = key === "beds" ? (this.environment.textureScale ?? 1) : 1;
+      chain.out.gain.setTargetAtTime(Math.max(0.0001, setting.volume * balance * texture), t, 0.25);
       chain.tone.gain.setTargetAtTime((setting.tone - 1) * 12, t, 0.25);
       chain.send.gain.setTargetAtTime(setting.wet, t, 0.3);
     });
@@ -508,10 +509,7 @@ export class SoundEngine {
     if (this.wet) {
       const wetTarget = Math.max(
         0,
-        Math.min(
-          1,
-          env.wet + motion * env.motion.wetBySpeed + state.regen * env.motion.wetByRegen,
-        ),
+        Math.min(1, env.wet + motion * env.motion.wetBySpeed + state.regen * env.motion.wetByRegen),
       );
       this.wet.gain.setTargetAtTime(wetTarget, t, 0.35);
     }
@@ -634,7 +632,6 @@ export class SoundEngine {
     }
   }
 
-
   /**
    * Short, original ELCAMOSO sonic signature: two soft rising sines that open
    * outward like the O ))) mark. Deliberately not a starter-motor imitation.
@@ -735,22 +732,25 @@ export class SoundEngine {
     } catch {
       /* closed / interrupted context */
     }
-    this.swapTimer = setTimeout(() => {
-      this.swapTimer = null;
-      const c = this.ctx;
-      if (!c || !this.body) {
+    this.swapTimer = setTimeout(
+      () => {
+        this.swapTimer = null;
+        const c = this.ctx;
+        if (!c || !this.body) {
+          this.swapping = false;
+          return;
+        }
+        this.applyProfileBuild(profile);
+        try {
+          this.body.gain.setValueAtTime(0.0001, c.currentTime);
+          this.body.gain.linearRampToValueAtTime(1, c.currentTime + 0.35);
+        } catch {
+          /* closed / interrupted context */
+        }
         this.swapping = false;
-        return;
-      }
-      this.applyProfileBuild(profile);
-      try {
-        this.body.gain.setValueAtTime(0.0001, c.currentTime);
-        this.body.gain.linearRampToValueAtTime(1, c.currentTime + 0.35);
-      } catch {
-        /* closed / interrupted context */
-      }
-      this.swapping = false;
-    }, fade * 1000 + 30);
+      },
+      fade * 1000 + 30,
+    );
   }
 
   private applyProfileBuild(profile: SoundProfile) {
@@ -773,6 +773,29 @@ export class SoundEngine {
     }
     this.teardownVoices();
     this.profile = profile;
+
+    const useDynamicDrive =
+      this.dynamicDriveEnabled &&
+      this.synthesisMode === "improved" &&
+      supportsDynamicDrive(profile);
+
+    if (useDynamicDrive) {
+      const body = this.body;
+      const accents = this.accents;
+      const beds = this.beds;
+      if (body && accents && beds) {
+        this.dynamicDrive = new DynamicDriveSynth();
+        const ok = this.dynamicDrive.build(ctx, profile, {
+          body,
+          accents,
+          beds,
+          profile: this.profileBus?.input ?? body,
+        });
+        if (ok) return;
+        this.dynamicDrive?.dispose();
+        this.dynamicDrive = null;
+      }
+    }
 
     if (this.synthesisMode === "improved") {
       const body = this.body;
@@ -895,7 +918,6 @@ export class SoundEngine {
 
     const node: TextureNode = { spec, gain, filter, src, panner, phase };
 
-
     // Slow surge so water and wind breathe instead of sitting flat.
     if (spec.surge) {
       const osc = ctx.createOscillator();
@@ -915,11 +937,7 @@ export class SoundEngine {
   setVolume(value: number) {
     this.volume = value;
     if (this.ctx && this.master) {
-      this.master.gain.setTargetAtTime(
-        this.safeVolume(value * this.profileGain),
-        this.now(),
-        0.2,
-      );
+      this.master.gain.setTargetAtTime(this.safeVolume(value * this.profileGain), this.now(), 0.2);
     }
   }
 
@@ -975,8 +993,9 @@ export class SoundEngine {
     if (!ctx || !profile || !this.filter || this.swapping) return;
     const t = this.now();
 
-    if (this.improved) {
-      this.improved.update(state, t);
+    if (this.improved || this.dynamicDrive) {
+      if (this.improved) this.improved.update(state, t);
+      if (this.dynamicDrive) this.dynamicDrive.update(state, t);
       this.updateSpace(state, t);
       if (state.throttle > 0.72 && this.lastThrottle <= 0.72) this.fireSnippets("throttle", t);
       if (state.regen > 0.5 && this.lastRegen <= 0.5) this.fireSnippets("regen", t);
@@ -1012,9 +1031,7 @@ export class SoundEngine {
 
     const cutoff = v.filterBase + v.filterRange * Math.pow(state.load, 0.8);
     this.filter.frequency.setTargetAtTime(cutoff, t, 0.08);
-    const q =
-      v.filterQ ??
-      (profile.drivetrainMode === "continuous" ? 1.4 : 1.2);
+    const q = v.filterQ ?? (profile.drivetrainMode === "continuous" ? 1.4 : 1.2);
     this.filter.Q.setTargetAtTime(q, t, 0.3);
 
     if (this.lfo && v.lfoRate) {
@@ -1023,8 +1040,7 @@ export class SoundEngine {
 
     if (this.noise) {
       const texture = this.environment.textureScale ?? 1;
-      const level =
-        (v.noise * (0.18 + state.load * 0.55) + state.regen * v.noise * 0.35) * texture;
+      const level = (v.noise * (0.18 + state.load * 0.55) + state.regen * v.noise * 0.35) * texture;
       this.noise.gain.gain.setTargetAtTime(level * 0.22, t, 0.15);
     }
 
@@ -1074,7 +1090,6 @@ export class SoundEngine {
     });
   }
 
-
   /* -------------------------------------------------------------- rhythms */
 
   /** Rhythmic events (hooves, wheels, bells, chuffs, splashes) that follow speed. */
@@ -1097,10 +1112,10 @@ export class SoundEngine {
             ? 0.62
             : 1.38
           : spec.kind === "clack" || spec.kind === "chug"
-          ? clock.step % 2
-            ? 0.74
-            : 1.26
-          : 1;
+            ? clock.step % 2
+              ? 0.74
+              : 1.26
+            : 1;
       clock.next += interval * swing;
     }
   }
@@ -1753,6 +1768,8 @@ export class SoundEngine {
   private teardownVoices() {
     this.improved?.dispose();
     this.improved = null;
+    this.dynamicDrive?.dispose();
+    this.dynamicDrive = null;
     this.voices.forEach(({ osc }) => {
       try {
         osc.stop();
@@ -1829,4 +1846,3 @@ export class SoundEngine {
     this.profileBus = null;
   }
 }
-

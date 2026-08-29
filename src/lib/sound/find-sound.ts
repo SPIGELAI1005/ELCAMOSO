@@ -14,9 +14,17 @@ const ALIASES: Record<string, string[]> = {
   "farting-car": ["fart", "rude", "gas", "bubbly", "toilet", "flatulent"],
   "kazoo-kart": ["kazoo", "buzz", "silly", "toy", "kart", "pocket"],
   "neon-drive": ["neon", "night", "pulse", "digital", "cyber night", "electronic"],
-  "construction-monster": ["construction", "hydraulic", "diesel", "digger", "excavator", "industrial", "monster machine"],
+  "construction-monster": [
+    "construction",
+    "hydraulic",
+    "diesel",
+    "digger",
+    "excavator",
+    "industrial",
+    "monster machine",
+  ],
   "horse-gallop": ["horse", "gallop", "hoof", "equine"],
-  "heartbeat": ["heart", "pulse soft", "organic beat"],
+  heartbeat: ["heart", "pulse soft", "organic beat"],
   "deep-bass-pulse": ["bass", "sub", "cabin boom", "low end"],
   "zen-drive": ["zen", "calm", "meditat", "peaceful", "quiet"],
   "rain-drive": ["rain", "wet", "storm road"],
@@ -99,10 +107,16 @@ function scoreProfile(prompt: string, profile: SoundProfile): { score: number; r
     score += 4;
     hits.push("Playful");
   }
-  if (/(calm|gentle|quiet|soft|relax|zen)/.test(q) && /zen|rain|ocean|heartbeat|deep bass/i.test(profile.name)) {
+  if (
+    /(calm|gentle|quiet|soft|relax|zen)/.test(q) &&
+    /zen|rain|ocean|heartbeat|deep bass/i.test(profile.name)
+  ) {
     score += 5;
   }
-  if (/(intense|loud|race|aggress|spirited)/.test(q) && /Motorsport|Classic|Machines/.test(profile.category)) {
+  if (
+    /(intense|loud|race|aggress|spirited)/.test(q) &&
+    /Motorsport|Classic|Machines/.test(profile.category)
+  ) {
     score += 3;
   }
   if (/(night|neon|digital|future)/.test(q) && profile.category === "Future") {

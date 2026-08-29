@@ -26,8 +26,8 @@ function Cookies() {
       subtitle="Information about cookies and similar technologies (EU ePrivacy / GDPR; US disclosures)."
     >
       <LegalNote>
-        ELCAMOSO is primarily a client-side app. Most preferences use browser storage, not
-        classic third-party advertising cookies.
+        ELCAMOSO is primarily a client-side app. Most preferences use browser storage, not classic
+        third-party advertising cookies.
       </LegalNote>
 
       <LegalSection title="1. What we mean by cookies">
@@ -45,28 +45,28 @@ function Cookies() {
           <li>Optional service worker / PWA cache for offline shell assets</li>
         </ul>
         <p>
-          These are necessary to provide the service you request and to remember choices
-          between visits.
+          These are necessary to provide the service you request and to remember choices between
+          visits.
         </p>
       </LegalSection>
 
       <LegalSection title="3. Optional technologies">
         <p>
           <strong className="font-normal text-foreground">Usage insights</strong> - only if you
-          enable them in Settings. May use first-party storage or network requests for
-          aggregate analytics / crash reporting without uploading raw motion trails.
+          enable them in Settings. May use first-party storage or network requests for aggregate
+          analytics / crash reporting without uploading raw motion trails.
         </p>
         <p>
           <strong className="font-normal text-foreground">ELCAMOSO Cloud</strong> - only if you
-          enable Cloud sync. Uses network requests authenticated by your local account
-          identifier; not an advertising cookie.
+          enable Cloud sync. Uses network requests authenticated by your local account identifier;
+          not an advertising cookie.
         </p>
       </LegalSection>
 
       <LegalSection title="4. Your choices">
         <p>
-          Use the cookie bar (Essential only / Accept) when it appears, or clear site data in
-          your browser. You can also reset the consent flag:
+          Use the cookie bar (Essential only / Accept) when it appears, or clear site data in your
+          browser. You can also reset the consent flag:
         </p>
         <button
           type="button"

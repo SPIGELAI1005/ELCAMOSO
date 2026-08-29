@@ -1,5 +1,7 @@
 import type { DriveState } from "@/lib/drive/model";
+import type { VirtualPowertrainState } from "@/lib/powertrain/types";
 import type { SoundProfile } from "@/lib/sound/profiles";
+import type { DynamicLayerWeights } from "@/lib/sound/dynamic-drive/types";
 
 /**
  * Normalized motion controls every improved profile consumes.
@@ -29,8 +31,19 @@ export interface MotionFrame {
   isShifting: boolean;
   /** 0..1 torque dip during shift */
   shiftDip: number;
+  /** Dynamic Drive shift progress 0..1 */
+  shiftProgress: number;
+  shiftDirection: "up" | "down" | null;
+  revMatchActive: boolean;
+  revMatchProgress: number;
+  overrun: boolean;
+  drivingMode: VirtualPowertrainState["drivingMode"] | null;
+  /** Crossfade weights when Dynamic Drive audio is active */
+  dynamicLayers: DynamicLayerWeights | null;
   /** overall body energy */
   bodyLevel: number;
+  /** 0..1 driver intent for continuous profiles (accel/throttle vs cruise at same speed) */
+  syntheticLoad: number;
   /** Hz for combustion/harmonic fundamentals */
   engineFundamentalHz: number;
   pitchTau: number;
@@ -61,3 +74,5 @@ export interface LayerDebugInfo {
   muted: boolean;
   triggerable?: boolean;
 }
+
+export type { DynamicLayerDebugInfo } from "@/lib/sound/dynamic-drive/types";

@@ -3,6 +3,8 @@ export const NAV_H_MOBILE = "3.5rem";
 export const NAV_H_DESKTOP = "4rem";
 /** MiniPlayer bar height when a session is live. */
 export const MINI_PLAYER_H = "4.25rem";
+/** Mobile primary bottom nav height. */
+export const BOTTOM_NAV_H = "3.5rem";
 
 export function isLiveSessionStatus(status: string) {
   return status === "running" || status === "suspended" || status === "starting";

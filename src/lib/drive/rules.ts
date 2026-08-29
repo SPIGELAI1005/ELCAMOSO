@@ -69,11 +69,7 @@ export function ruleConditionMet(
         : opts.context === rule.value;
   }
   const actual =
-    rule.metric === "speedKmh"
-      ? opts.kmh
-      : rule.metric === "throttle"
-        ? opts.throttle
-        : opts.regen;
+    rule.metric === "speedKmh" ? opts.kmh : rule.metric === "throttle" ? opts.throttle : opts.regen;
   const target = typeof rule.value === "number" ? rule.value : 0;
   if (rule.op === "gt") return actual > target;
   if (rule.op === "lt") return actual < target;

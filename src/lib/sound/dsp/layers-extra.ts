@@ -67,10 +67,7 @@ function chain(
 
 const PENT = [0, 2, 4, 7, 9];
 
-export function createHeartbeatLayer(
-  ctx: BaseAudioContext,
-  opts: LayerBaseOpts,
-): LayerHandle {
+export function createHeartbeatLayer(ctx: BaseAudioContext, opts: LayerBaseOpts): LayerHandle {
   const bus = ctx.createGain();
   const { gain, handle } = chain(ctx, opts, bus);
   let next = 0;
@@ -275,10 +272,7 @@ export function createSynthwaveLayer(
  * - Clear pulse rate that pumps with motion (sidechain-like gaps between hits)
  * - Between pulses nearly silent so the boom is the character
  */
-export function createDeepBassPulseLayer(
-  ctx: BaseAudioContext,
-  opts: LayerBaseOpts,
-): LayerHandle {
+export function createDeepBassPulseLayer(ctx: BaseAudioContext, opts: LayerBaseOpts): LayerHandle {
   const bus = ctx.createGain();
   // Tiny residual bed so cabin never goes fully dead between hits.
   const bed = ctx.createOscillator();
@@ -512,8 +506,7 @@ export function createTrackCadenceLayer(
         if (knock < t) knock = t + 0.4 + audioRandom() * 0.8;
         while (knock < t + 0.15 && m.speedSlow > 0.08) {
           const at = knock;
-          const amp =
-            (opts.level ?? 0.35) * (0.2 + m.throttleFast * 0.45 + m.speedSlow * 0.25);
+          const amp = (opts.level ?? 0.35) * (0.2 + m.throttleFast * 0.45 + m.speedSlow * 0.25);
           const osc = ctx.createOscillator();
           const lp = ctx.createBiquadFilter();
           const g = ctx.createGain();
@@ -542,10 +535,7 @@ export function createTrackCadenceLayer(
   };
 }
 
-export function createHydraulicLayer(
-  ctx: BaseAudioContext,
-  opts: LayerBaseOpts,
-): LayerHandle {
+export function createHydraulicLayer(ctx: BaseAudioContext, opts: LayerBaseOpts): LayerHandle {
   const whine = ctx.createOscillator();
   whine.type = "sawtooth";
   whine.frequency.value = 280;
@@ -764,8 +754,7 @@ export function createRainLayer(ctx: BaseAudioContext, opts: LayerBaseOpts): Lay
       const road = smoothstep(5, 70, m.speedKmh);
       const drops = 1 - road * 0.75;
       // Peak spray in the mid band (~20–55 km/h), not only at full highway wash.
-      const midSpray =
-        smoothstep(12, 28, m.speedKmh) * (1 - smoothstep(50, 85, m.speedKmh));
+      const midSpray = smoothstep(12, 28, m.speedKmh) * (1 - smoothstep(50, 85, m.speedKmh));
       targetParam(
         washG.gain,
         softGate(0.12 + road * 0.45 + midSpray * 0.32 + m.accelFast * 0.12),
@@ -809,7 +798,12 @@ export function createRainLayer(ctx: BaseAudioContext, opts: LayerBaseOpts): Lay
         src.stop(at + 0.06);
         nextDrop += (1 / dropRate) * (0.6 + audioRandom() * 0.8);
       }
-      targetParam(gain.gain, softGate((opts.level ?? 0.45) * (0.32 + road * 0.5 + midSpray * 0.2)), t, 0.28);
+      targetParam(
+        gain.gain,
+        softGate((opts.level ?? 0.45) * (0.32 + road * 0.5 + midSpray * 0.2)),
+        t,
+        0.28,
+      );
     },
     dispose() {
       disposed = true;
@@ -820,10 +814,7 @@ export function createRainLayer(ctx: BaseAudioContext, opts: LayerBaseOpts): Lay
   };
 }
 
-export function createOceanWaveLayer(
-  ctx: BaseAudioContext,
-  opts: LayerBaseOpts,
-): LayerHandle {
+export function createOceanWaveLayer(ctx: BaseAudioContext, opts: LayerBaseOpts): LayerHandle {
   const bus = ctx.createGain();
   const swell = createLoopingNoise(ctx, "brown", 0.7);
   const swellLp = ctx.createBiquadFilter();
@@ -951,10 +942,7 @@ export function createMaglevLayer(ctx: BaseAudioContext, opts: LayerBaseOpts): L
  * Night-drive neon: gated bass pulse + bright square energy.
  * No chord stabs or ringing accents (those read as bells).
  */
-export function createNeonPulseLayer(
-  ctx: BaseAudioContext,
-  opts: LayerBaseOpts,
-): LayerHandle {
+export function createNeonPulseLayer(ctx: BaseAudioContext, opts: LayerBaseOpts): LayerHandle {
   const bus = ctx.createGain();
 
   const bass = ctx.createOscillator();

@@ -20,7 +20,12 @@ test.describe("Legal pages", () => {
   test("Privacy names the controller email", async ({ page }) => {
     await gotoPath(page, "/legal/privacy");
     await expect(page.locator("main").getByRole("heading", { name: /privacy/i })).toBeVisible();
-    await expect(page.locator("main").getByText(/support@elcamoso\.com/i).first()).toBeVisible();
+    await expect(
+      page
+        .locator("main")
+        .getByText(/support@elcamoso\.com/i)
+        .first(),
+    ).toBeVisible();
   });
 
   test("legal hub lists all notices", async ({ page }) => {

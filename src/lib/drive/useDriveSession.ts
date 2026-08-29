@@ -1,26 +1,15 @@
 import { useCallback } from "react";
 import { getSession } from "@/lib/drive/session";
 import { useSessionStore } from "@/lib/store/session-store";
-import type { ProfileTuning } from "@/lib/drive/settings";
-import type { LayerMix } from "@/lib/sound/environments";
-import type { SoundSnippet } from "@/lib/sound/snippets";
 
 export type DriveStatus = "idle" | "starting" | "driving" | "error";
 
-interface Options {
-  profileId: string;
-  volume: number;
+interface UseDriveSessionOptions {
   demoMotion: boolean;
-  tuning?: ProfileTuning | undefined;
-  profileGain?: number;
-  motionSensitivity?: number;
-  motionNoiseFloor?: number;
-  environmentId?: string;
-  mix?: LayerMix;
-  snippets?: SoundSnippet[];
 }
 
-export function useDriveSession({ demoMotion }: Options) {
+/** Drive lifecycle hook. Audio/profile sync is handled by `SessionBridge`. */
+export function useDriveSession({ demoMotion }: UseDriveSessionOptions) {
   const snap = useSessionStore();
   const session = getSession();
   const start = useCallback(() => session.startDrive({ demoMotion }), [session, demoMotion]);
@@ -35,5 +24,12 @@ export function useDriveSession({ demoMotion }: Options) {
           ? "error"
           : "idle";
 
-  return { status, error: snap.error, state: snap.state, start, stop };
+  return {
+    status,
+    error: snap.error,
+    state: snap.state,
+    sessionSnap: snap,
+    start,
+    stop,
+  };
 }

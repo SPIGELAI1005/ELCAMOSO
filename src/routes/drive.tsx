@@ -1,24 +1,69 @@
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { ElcamosoMark } from "@/components/ElcamosoLogo";
 import { BrandLoader } from "@/components/BrandLoader";
 import { useSettings } from "@/lib/drive/useSettings";
 import { useReducedMotion } from "@/lib/drive/useReducedMotion";
-import { getProfileGain, getTuning } from "@/lib/drive/settings";
+import { getProfileGain } from "@/lib/drive/settings";
 import { useHaptics } from "@/lib/drive/useHaptics";
 import { useDriveSession } from "@/lib/drive/useDriveSession";
-import { getSession } from "@/lib/drive/session";
-import { useSessionStore } from "@/lib/store/session-store";
+import { getSession, type DriveProductStatus } from "@/lib/drive/session";
+import type { DriveState } from "@/lib/drive/model";
 import { needsIntenseConfirm } from "@/lib/drive/safety";
+import { driveSecondaryReadout } from "@/lib/drive/drive-display";
+import { supportsDynamicDrive } from "@/lib/drive/drivetrain-resolve";
+import { DynamicDriveInstrument } from "@/components/DynamicDriveInstrument";
+import { DriveSessionPanel } from "@/components/DriveSessionPanel";
+import { useMonetizationEnabled } from "@/lib/billing/use-billing-public-config";
+import {
+  DynamicDriveTrialComplete,
+  DynamicDriveTrialDuringDrive,
+} from "@/components/dynamic-drive-trial";
+import { DynamicDriveSessionConflictNotice } from "@/components/DynamicDriveSessionConflictNotice";
+import { useEntitlements } from "@/lib/entitlements/useEntitlements";
+import { DrivePipelineMetrics } from "@/components/DrivePipelineMetrics";
+import { DriveDiagnosticsPanel } from "@/components/DriveDiagnosticsPanel";
+import { isDriveDebugModeActive } from "@/lib/diagnostics/debug-mode";
+import type { MotionPipelineMetrics } from "@/lib/motion/pipeline-metrics";
+import { IDLE_MOTION } from "@/lib/drive/motion-energy";
 import { formatSpeed, t } from "@/lib/i18n";
 import { driveCoachFn } from "@/lib/cloud/server-fns";
-import { getProfile } from "@/lib/sound/profiles";
+import { getProfile, type SoundProfile } from "@/lib/sound/profiles";
+
+const TeslaDrivePlusUpgrade = lazy(() =>
+  import("@/components/TeslaDrivePlusUpgrade").then((m) => ({
+    default: m.TeslaDrivePlusUpgrade,
+  })),
+);
 
 export const Route = createFileRoute("/drive")({
-  validateSearch: (search: Record<string, unknown>): { cockpit?: boolean } => {
+  validateSearch: (
+    search: Record<string, unknown>,
+  ): {
+    cockpit?: boolean;
+    debug?: boolean;
+    activateTrial?: boolean;
+    upgrade?: string;
+    start?: boolean;
+  } => {
     const raw = search["cockpit"];
-    if (raw === true || raw === "1" || raw === 1) return { cockpit: true };
-    return {};
+    const debugRaw = search["debug"];
+    const activateRaw = search["activateTrial"];
+    const startRaw = search["start"];
+    const upgrade = typeof search["upgrade"] === "string" ? search["upgrade"] : undefined;
+    const out: {
+      cockpit?: boolean;
+      debug?: boolean;
+      activateTrial?: boolean;
+      upgrade?: string;
+      start?: boolean;
+    } = {};
+    if (raw === true || raw === "1" || raw === 1) out.cockpit = true;
+    if (debugRaw === true || debugRaw === "1" || debugRaw === 1) out.debug = true;
+    if (activateRaw === true || activateRaw === "1" || activateRaw === 1) out.activateTrial = true;
+    if (startRaw === true || startRaw === "1" || startRaw === 1) out.start = true;
+    if (upgrade) out.upgrade = upgrade;
+    return out;
   },
   component: DriveScreen,
   head: () => ({
@@ -41,21 +86,18 @@ export const Route = createFileRoute("/drive")({
 });
 
 function DriveScreen() {
-  const { cockpit } = Route.useSearch();
+  const { cockpit, debug, activateTrial, upgrade, start: autostart } = Route.useSearch();
   const navigate = useNavigate();
+  const autostartHandled = useRef(false);
+  const { plan } = useEntitlements();
+  const [relaySessionId, setRelaySessionId] = useState<string | null>(null);
+  const [showTeslaUpgrade, setShowTeslaUpgrade] = useState(false);
   const { settings, update, loaded, loadReport } = useSettings();
   const profile = getProfile(settings.profileId);
   const reducedMotion = useReducedMotion();
-  const { status, error, state, start, stop } = useDriveSession({
-    profileId: settings.profileId,
-    volume: settings.volume,
+  const { status, error, state, sessionSnap, start, stop } = useDriveSession({
     demoMotion: settings.demoMotion,
-    tuning: getTuning(settings, settings.profileId),
-    profileGain: getProfileGain(settings, settings.profileId),
-    motionSensitivity: settings.motionSensitivity,
-    motionNoiseFloor: settings.motionNoiseFloor,
   });
-  const sessionSnap = useSessionStore();
 
   useHaptics({
     enabled: settings.haptics,
@@ -66,18 +108,32 @@ function DriveScreen() {
   const [showSafety, setShowSafety] = useState(false);
   const [showIntense, setShowIntense] = useState(false);
   const [coach, setCoach] = useState<string | null>(null);
+  const monetizationEnabled = useMonetizationEnabled();
+
+  useEffect(() => {
+    if (monetizationEnabled && upgrade === "drive-plus" && plan !== "DRIVE_PLUS") {
+      setShowTeslaUpgrade(true);
+    }
+  }, [monetizationEnabled, plan, upgrade]);
+
+  useEffect(() => {
+    if (!activateTrial) return;
+    if (!settings.dynamicDrive) {
+      update({ dynamicDrive: true });
+    }
+  }, [activateTrial, settings.dynamicDrive, update]);
 
   useEffect(() => {
     getSession().setCockpit(Boolean(cockpit));
   }, [cockpit]);
 
-  /**
-   * Safety fallback: Drive is always reachable once settings have loaded. A
-   * first-time visitor is offered setup inline instead of being redirected, so
-   * inconsistent onboarding flags can never bounce you back and forth.
-   */
+  const debugDriveActive = isDriveDebugModeActive(settings, Boolean(debug));
+
+  useEffect(() => {
+    getSession().setDebugDriveDiagnostics(debugDriveActive);
+  }, [debugDriveActive]);
+
   const needsSetup = loaded && !settings.onboarded && !settings.safetyAcknowledged;
-  /** storage problems never block Drive: defaults are used and it is said plainly */
   const storageWarning =
     loaded && (loadReport.outcome === "corrupt" || loadReport.outcome === "unavailable")
       ? "Saved settings could not be read on this device, so defaults are in use. Drive works as normal."
@@ -88,7 +144,9 @@ function DriveScreen() {
       setShowSafety(true);
       return;
     }
-    if (needsIntenseConfirm(profile, settings.volume, getProfileGain(settings, settings.profileId))) {
+    if (
+      needsIntenseConfirm(profile, settings.volume, getProfileGain(settings, settings.profileId))
+    ) {
       setShowIntense(true);
       return;
     }
@@ -99,6 +157,25 @@ function DriveScreen() {
     update({ lastDriveAt: Date.now(), driveCount: settings.driveCount + 1 });
     void start();
   };
+
+  const handleStartRef = useRef(handleStart);
+  handleStartRef.current = handleStart;
+
+  useEffect(() => {
+    if (!autostart || autostartHandled.current || !loaded) return;
+    autostartHandled.current = true;
+    void navigate({
+      to: "/drive",
+      search: {
+        ...(cockpit ? { cockpit: true } : {}),
+        ...(debug ? { debug: true } : {}),
+        ...(activateTrial ? { activateTrial: true } : {}),
+        ...(upgrade ? { upgrade } : {}),
+      },
+      replace: true,
+    });
+    if (status === "idle") handleStartRef.current();
+  }, [activateTrial, autostart, cockpit, debug, loaded, navigate, status, upgrade]);
 
   const handleStop = () => {
     stop();
@@ -123,10 +200,13 @@ function DriveScreen() {
   };
 
   const speed = formatSpeed(state.speed, settings.units, settings.language);
+  const liveProfile = getProfile(sessionSnap.profileId);
+  const motion = sessionSnap.motion ?? IDLE_MOTION;
+  const safetyMode = sessionSnap.safetyMode || Boolean(cockpit);
+  const secondary = driveSecondaryReadout(liveProfile, state, motion);
 
   return (
     <main className="flex min-h-screen flex-col px-6 pt-6 pb-10 sm:px-10">
-
       {showSafety ? (
         <Safety onAccept={acknowledge} onCancel={() => setShowSafety(false)} />
       ) : showIntense ? (
@@ -156,25 +236,33 @@ function DriveScreen() {
         <Driving
           kmh={speed.value}
           unit={speed.unit}
-          load={state.load}
+          motionEnergy={motion.motionEnergy}
           throttle={state.throttle}
           regen={state.regen}
-          waveResponse={profile.voice.waveResponse}
+          waveResponse={liveProfile.voice.waveResponse}
           reducedMotion={reducedMotion}
-          rpm={state.rpm}
-          gear={state.gear}
-          continuous={profile.drivetrainMode === "continuous"}
-          profileName={getProfile(sessionSnap.profileId).name}
-          traits={getProfile(sessionSnap.profileId).traits}
-          cockpit={Boolean(cockpit)}
-          context={sessionSnap.context}
+          secondary={secondary}
+          profile={liveProfile}
+          dynamicDriveActive={settings.dynamicDrive}
+          traits={liveProfile.traits}
+          safetyMode={safetyMode}
+          productStatus={sessionSnap.productStatus}
           rulesHeld={sessionSnap.rulesHeld}
           suggestedProfileId={sessionSnap.suggestedProfileId}
           autoRulesMode={settings.autoRulesMode}
+          driveState={state}
           onHold={() => getSession().setRulesHeld(!sessionSnap.rulesHeld)}
           onAcceptSuggestion={() => getSession().acceptSuggestion()}
           onDismissSuggestion={() => getSession().dismissSuggestion()}
           onStop={handleStop}
+          showPairing={Boolean(cockpit)}
+          showDebugDiagnostics={debugDriveActive}
+          devMode={debugDriveActive}
+          pipelineMetrics={sessionSnap.pipeline}
+          showTeslaUpgrade={Boolean(cockpit) && showTeslaUpgrade}
+          onCloseTeslaUpgrade={() => setShowTeslaUpgrade(false)}
+          relaySessionId={relaySessionId}
+          onRelaySessionChange={setRelaySessionId}
         />
       ) : (
         <div className="flex flex-1 flex-col items-center justify-center gap-10 text-center">
@@ -205,22 +293,27 @@ function DriveScreen() {
           >
             {t(settings.language, "drive.start")}
           </button>
-          <button
-            type="button"
-            onClick={() =>
-              void navigate({
-                to: "/drive",
-                search: cockpit ? {} : { cockpit: true },
-              })
-            }
-            className="h-11 text-[11px] tracking-[0.24em] text-muted-foreground uppercase"
-          >
-            {t(settings.language, "drive.cockpit")} {cockpit ? "on" : "off"}
-          </button>
           {coach ? <p className="max-w-sm text-sm text-muted-foreground">{coach}</p> : null}
-          <Link to="/replay" className="text-[11px] tracking-[0.24em] text-muted-foreground uppercase">
-            Drive recordings
-          </Link>
+          {!safetyMode ? (
+            <Link
+              to="/replay"
+              className="text-[11px] tracking-[0.24em] text-muted-foreground uppercase"
+            >
+              Drive recordings
+            </Link>
+          ) : null}
+          {cockpit ? <DriveSessionPanel className="max-w-lg" devMode={debugDriveActive} onRelaySessionChange={setRelaySessionId} /> : null}
+          {cockpit && showTeslaUpgrade ? (
+            <Suspense fallback={null}>
+              <TeslaDrivePlusUpgrade
+                open
+                relaySessionId={relaySessionId}
+                onClose={() => setShowTeslaUpgrade(false)}
+                className="mt-6 w-full max-w-lg"
+              />
+            </Suspense>
+          ) : null}
+          <DynamicDriveTrialComplete className="mt-6 w-full max-w-lg" />
         </div>
       )}
     </main>
@@ -230,64 +323,94 @@ function DriveScreen() {
 function Driving({
   kmh,
   unit,
-  load,
+  motionEnergy,
   throttle,
   regen,
   waveResponse,
   reducedMotion,
-  rpm,
-  gear,
-  continuous,
-  profileName,
+  secondary,
+  profile,
+  dynamicDriveActive,
   traits,
-  cockpit,
-  context,
+  safetyMode,
+  productStatus,
   rulesHeld,
   suggestedProfileId,
   autoRulesMode,
+  driveState,
   onHold,
   onAcceptSuggestion,
   onDismissSuggestion,
   onStop,
+  showPairing,
+  showDebugDiagnostics,
+  devMode,
+  pipelineMetrics,
+  showTeslaUpgrade,
+  onCloseTeslaUpgrade,
+  relaySessionId,
+  onRelaySessionChange,
 }: {
   kmh: number;
   unit: string;
-  load: number;
+  motionEnergy: number;
   throttle: number;
   regen: number;
   waveResponse: number;
   reducedMotion: boolean;
-  rpm: number;
-  gear: number;
-  continuous: boolean;
-  profileName: string;
+  secondary: { value: string; label: string; gearLabel: string | null };
+  profile: ReturnType<typeof getProfile>;
+  dynamicDriveActive: boolean;
   traits: string[];
-  cockpit: boolean;
-  context: string;
+  safetyMode: boolean;
+  productStatus: DriveProductStatus;
   rulesHeld: boolean;
   suggestedProfileId: string | null;
   autoRulesMode: string;
+  driveState: DriveState;
   onHold: () => void;
   onAcceptSuggestion: () => void;
   onDismissSuggestion: () => void;
   onStop: () => void;
+  showPairing: boolean;
+  showDebugDiagnostics: boolean;
+  devMode: boolean;
+  pipelineMetrics: MotionPipelineMetrics;
+  showTeslaUpgrade: boolean;
+  onCloseTeslaUpgrade: () => void;
+  relaySessionId: string | null;
+  onRelaySessionChange: (sessionId: string | null) => void;
 }) {
   const suggestion = suggestedProfileId ? getProfile(suggestedProfileId) : null;
+  const showExtras = !safetyMode;
+  const showDynamicInstrument =
+    dynamicDriveActive &&
+    supportsDynamicDrive(profile) &&
+    profile.drivetrainMode === "virtual-transmission";
 
   return (
-    <div className={`flex flex-1 flex-col items-center text-center ${cockpit ? "justify-center py-6" : "justify-between py-12"}`}>
+    <div
+      className={`flex flex-1 flex-col items-center justify-between py-10 text-center sm:py-12 ${
+        safetyMode ? "drive-tesla-cockpit px-4 sm:px-6" : ""
+      }`}
+    >
       <ElcamosoMark
-        intensity={load}
+        intensity={motionEnergy}
         throttle={throttle}
         regen={regen}
+        direction={regen > throttle + 0.08 ? "inward" : "outward"}
         waveResponse={waveResponse}
         reducedMotion={reducedMotion}
-        className={cockpit ? "h-16 w-auto" : "h-10 w-auto"}
+        className={safetyMode ? "h-16 w-auto" : "h-12 w-auto"}
       />
 
-      <div className="flex flex-col items-center gap-10">
-        <div>
-          <p className={`leading-none font-extralight tabular-nums ${cockpit ? "text-[8rem] sm:text-[10rem]" : "text-[6rem] sm:text-[8rem]"}`}>
+      <div className="flex flex-col items-center gap-8">
+        <div className="drive-speed-readout">
+          <p
+            className={`leading-none font-extralight tabular-nums ${
+              safetyMode ? "text-[7.5rem] sm:text-[9rem]" : "text-[6rem] sm:text-[8rem]"
+            }`}
+          >
             {kmh}
           </p>
           <p className="mt-2 text-[11px] tracking-[0.34em] text-muted-foreground uppercase">
@@ -295,44 +418,61 @@ function Driving({
           </p>
         </div>
 
-        {cockpit ? null : (
+        {showDynamicInstrument ? (
+          <DynamicDriveInstrument
+            profile={profile}
+            state={driveState}
+            productStatus={productStatus}
+            reducedMotion={reducedMotion}
+            driverDistance={safetyMode}
+            className="w-full px-1"
+          />
+        ) : (
           <>
             <div>
-              <p className="text-2xl font-light tabular-nums">
-                {continuous ? `${Math.round(load * 100)}` : Math.round(rpm)}
-              </p>
+              <p className="text-2xl font-light tabular-nums tracking-tight">{secondary.value}</p>
               <p className="mt-1 text-[11px] tracking-[0.34em] text-muted-foreground uppercase">
-                {continuous ? "Intensity" : "RPM"}
+                {secondary.label}
               </p>
             </div>
+
             <div className="w-56">
               <div className="h-px w-full bg-border">
                 <div
                   className="relative h-px bg-foreground transition-[width] duration-150"
-                  style={{ width: `${Math.min(100, load * 100)}%` }}
+                  style={{ width: `${Math.min(100, motionEnergy * 100)}%` }}
                 >
                   <span className="absolute -top-[3px] -right-[3px] block h-[7px] w-[7px] rounded-full bg-foreground" />
                 </div>
               </div>
-              <p className="mt-4 text-[11px] tracking-[0.34em] text-muted-foreground uppercase">
-                {continuous ? "Continuous" : `D${gear}`} · {context}
-              </p>
+              {secondary.gearLabel ? (
+                <p className="mt-4 text-[11px] tracking-[0.34em] text-muted-foreground uppercase">
+                  {secondary.gearLabel}
+                </p>
+              ) : null}
             </div>
           </>
         )}
+        <DynamicDriveTrialDuringDrive
+          dynamicDriveActive={dynamicDriveActive}
+          safetyMode={safetyMode}
+        />
+        <DynamicDriveSessionConflictNotice className="mt-4 w-full max-w-lg" />
       </div>
 
-      <div className="flex flex-col items-center gap-6">
-        {cockpit ? null : (
+      <div className="flex flex-col items-center gap-5">
+        {!showDynamicInstrument ? (
           <div>
-            <p className="text-lg font-light">{profileName}</p>
-            <p className="mt-2 text-xs tracking-[0.18em] text-muted-foreground uppercase">
-              {traits.join(" · ")}
-            </p>
+            <p className="text-lg font-light">{profile.name}</p>
+            {showExtras ? (
+              <p className="mt-2 text-xs tracking-[0.18em] text-muted-foreground uppercase">
+                {traits.join(" · ")}
+              </p>
+            ) : null}
           </div>
-        )}
+        ) : null}
 
-        {suggestion && autoRulesMode === "suggest" && !rulesHeld ? (
+        {showExtras && suggestion && autoRulesMode === "suggest" && !rulesHeld ? (
           <div className="flex flex-wrap items-center justify-center gap-3">
             <button
               type="button"
@@ -351,7 +491,7 @@ function Driving({
           </div>
         ) : null}
 
-        {autoRulesMode !== "off" ? (
+        {showExtras && autoRulesMode !== "off" ? (
           <button
             type="button"
             onClick={onHold}
@@ -372,6 +512,31 @@ function Driving({
         >
           Stop Drive
         </button>
+
+        {showPairing ? (
+          <DriveSessionPanel
+            className="mt-2 w-full max-w-lg"
+            devMode={devMode}
+            onRelaySessionChange={onRelaySessionChange}
+          />
+        ) : null}
+        {showTeslaUpgrade ? (
+          <Suspense fallback={null}>
+            <TeslaDrivePlusUpgrade
+              open
+              relaySessionId={relaySessionId}
+              onClose={onCloseTeslaUpgrade}
+              className="mt-4 w-full max-w-lg"
+            />
+          </Suspense>
+        ) : null}
+        <DynamicDriveTrialComplete className="mt-4" />
+        {showDebugDiagnostics ? (
+          <>
+            <DrivePipelineMetrics metrics={pipelineMetrics} className="mt-2 w-full max-w-lg" />
+            <DriveDiagnosticsPanel className="mt-2 w-full max-w-lg" />
+          </>
+        ) : null}
       </div>
     </div>
   );
@@ -383,8 +548,8 @@ function Safety({ onAccept, onCancel }: { onAccept: () => void; onCancel: () => 
       <ElcamosoMark className="h-10 w-auto" />
       <p className="text-xl font-light">Set your sound before you move.</p>
       <p className="text-sm text-muted-foreground">
-        ELCAMOSO responds to the motion of your car. Keep your attention on the road and
-        adjust nothing while driving.
+        ELCAMOSO responds to the motion of your car. Keep your attention on the road and adjust
+        nothing while driving.
       </p>
       <div className="flex w-full flex-col gap-3">
         <button
@@ -408,21 +573,24 @@ function ErrorState({ message, onRetry }: { message: string | null; onRetry: () 
   return (
     <div className="mx-auto flex max-w-sm flex-1 flex-col items-center justify-center gap-8 text-center">
       <ElcamosoMark intensity={0.34} className="h-10 w-auto" />
-      <p className="text-xl font-light">{message ?? "Location unavailable"}</p>
+      <p className="text-xl font-light">
+        {message === "Location unavailable" || !message ? "No motion yet." : message}
+      </p>
       <p className="text-sm text-muted-foreground">
-        ELCAMOSO needs your speed to make the sound respond to your drive.
+        Start moving and ELCAMOSO will bring the sound to life. You can also continue with GPS only
+        or try Demo Drive.
       </p>
       <button
         onClick={onRetry}
         className="h-14 rounded-full bg-primary px-10 text-sm tracking-[0.22em] text-primary-foreground uppercase"
       >
-        Try Again
+        Continue with GPS
       </button>
       <Link
-        to="/settings"
+        to="/demo"
         className="text-xs tracking-[0.24em] text-muted-foreground uppercase hover:text-foreground"
       >
-        Open settings
+        Open Demo Drive
       </Link>
     </div>
   );

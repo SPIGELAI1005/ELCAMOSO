@@ -61,9 +61,7 @@ export function HeadroomMeter({
     return (
       <div className={className}>
         <div className="flex items-baseline justify-between gap-3">
-          <p className="text-[10px] tracking-[0.18em] text-muted-foreground uppercase">
-            Headroom
-          </p>
+          <p className="text-[10px] tracking-[0.18em] text-muted-foreground uppercase">Headroom</p>
           <p className="text-[10px] text-muted-foreground tabular-nums">
             {headroomPct !== null ? `${headroomPct}%` : "idle"}
             {limiting ? " · lim" : ""}
@@ -94,9 +92,7 @@ export function HeadroomMeter({
         {limiting ? <span>Limiter active</span> : null}
       </div>
 
-      {warning ? (
-        <p className="mt-3 text-xs text-muted-foreground">{warning}</p>
-      ) : null}
+      {warning ? <p className="mt-3 text-xs text-muted-foreground">{warning}</p> : null}
     </div>
   );
 }

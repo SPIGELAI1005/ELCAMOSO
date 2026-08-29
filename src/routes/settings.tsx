@@ -18,6 +18,10 @@ import { loadGarageFn, syncGarageFn } from "@/lib/cloud/server-fns";
 import type { AutoRule, AutoRulesMode } from "@/lib/drive/rules";
 import { DRIVE_CONTEXTS } from "@/lib/drive/context";
 import { DiagnosticsPanel } from "@/components/DiagnosticsPanel";
+import { DynamicDriveTrialSettings } from "@/components/DynamicDriveTrialSettings";
+import { BillingSettingsPanel } from "@/components/BillingSettingsPanel";
+import { PremiumFeatureGate } from "@/components/premium/PremiumFeatureGate";
+import { TeslaVehicleConnect } from "@/components/TeslaVehicleConnect";
 import { hapticsSupported } from "@/lib/drive/useHaptics";
 import { getProfile } from "@/lib/sound/profiles";
 import { getSession } from "@/lib/drive/session";
@@ -29,6 +33,20 @@ import {
 } from "@/components/ui/accordion";
 
 export const Route = createFileRoute("/settings")({
+  validateSearch: (
+    search: Record<string, unknown>,
+  ): { workspace?: string; tesla?: string; teslaMsg?: string; billing?: string } => {
+    const workspace = typeof search["workspace"] === "string" ? search["workspace"] : undefined;
+    const tesla = typeof search["tesla"] === "string" ? search["tesla"] : undefined;
+    const teslaMsg = typeof search["teslaMsg"] === "string" ? search["teslaMsg"] : undefined;
+    const billing = typeof search["billing"] === "string" ? search["billing"] : undefined;
+    return {
+      ...(workspace ? { workspace } : {}),
+      ...(tesla ? { tesla } : {}),
+      ...(teslaMsg ? { teslaMsg } : {}),
+      ...(billing ? { billing } : {}),
+    };
+  },
   component: Settings,
   head: () => ({
     meta: [
@@ -59,6 +77,13 @@ type Workspace = {
 
 const WORKSPACES: Workspace[] = [
   {
+    id: "plan",
+    step: "00",
+    title: "Plan",
+    hint: "Account, billing, Drive+",
+    keywords: "plan subscription drive plus billing manage account sign in upgrade renewal cancel trial preview",
+  },
+  {
     id: "sound",
     step: "01",
     title: "Sound",
@@ -66,44 +91,46 @@ const WORKSPACES: Workspace[] = [
     keywords: "sound volume balance profile cabin eq gear shift clip studio garage",
   },
   {
-    id: "motion",
+    id: "driving",
     step: "02",
-    title: "Motion",
-    hint: "Sensors, calibrate, latency",
-    keywords: "motion calibrate sensor demo latency reduced haptic drive",
+    title: "Driving",
+    hint: "Smart switching, ducking",
+    keywords: "driving drive smart switch auto rule suggest ducking call",
   },
   {
-    id: "drive",
+    id: "sensors",
     step: "03",
-    title: "Drive",
-    hint: "Smart switching, ducking",
-    keywords: "drive smart switch auto rule suggest ducking call",
+    title: "Sensors",
+    hint: "Location, Motion, calibrate",
+    keywords: "sensors location motion calibrate sensor demo latency reduced haptic drive",
   },
   {
     id: "privacy",
     step: "04",
     title: "Privacy",
-    hint: "Cloud, insights, about",
-    keywords: "privacy cloud sync analytics insights about",
+    hint: "Insights, your drive",
+    keywords: "privacy analytics insights drive data",
   },
   {
-    id: "device",
+    id: "about",
     step: "05",
-    title: "Device",
-    hint: "Language, backup, recovery",
-    keywords: "device language units transfer export import backup recovery onboarding clear",
+    title: "About",
+    hint: "Language, units, legal",
+    keywords: "about language units legal impressum privacy cookies terms",
   },
   {
     id: "advanced",
     step: "06",
     title: "Advanced",
-    hint: "Diagnostics",
-    keywords: "advanced diagnostics debug panel",
+    hint: "Diagnostics, backup, cloud",
+    keywords:
+      "advanced diagnostics debug panel backup export import transfer recovery onboarding clear cloud sync",
   },
 ];
 
 function Settings() {
   const { settings, update, loaded, loadReport } = useSettings();
+  const { workspace, tesla, teslaMsg, billing } = Route.useSearch();
   const navigate = useNavigate();
   const [recoveryNote, setRecoveryNote] = useState<string | null>(null);
   const [canVibrate, setCanVibrate] = useState(true);
@@ -160,12 +187,15 @@ function Settings() {
     }
   };
 
+  const billingFlash =
+    billing === "success" ? "success" : billing === "cancel" ? "cancel" : null;
+
   return (
     <main className="min-h-screen">
       <div className="mx-auto w-full max-w-2xl px-6 pt-12 pb-28 sm:px-10 sm:pt-16">
         <h1 className="text-3xl font-light">Settings</h1>
         <p className="mt-3 max-w-md text-sm text-muted-foreground">
-          Open a group to change sound, motion, drive behaviour, privacy or this device.
+          Open a group to change sound, driving, sensors, privacy or about.
         </p>
 
         <input
@@ -186,7 +216,7 @@ function Settings() {
         <Accordion
           type="single"
           collapsible
-          defaultValue="sound"
+          defaultValue={workspace ?? "sound"}
           className="mt-8 border-t border-border"
         >
           {visible.map((workspace) => (
@@ -199,6 +229,9 @@ function Settings() {
                 />
               </AccordionTrigger>
               <AccordionContent className="pb-10">
+                {workspace.id === "plan" ? (
+                  <PlanWorkspace billingFlash={billingFlash} />
+                ) : null}
                 {workspace.id === "sound" ? (
                   <SoundWorkspace
                     settings={settings}
@@ -207,23 +240,30 @@ function Settings() {
                     virtualTx={virtualTx}
                   />
                 ) : null}
-                {workspace.id === "motion" ? (
-                  <MotionWorkspace
+                {workspace.id === "driving" ? (
+                  <DriveWorkspace settings={settings} update={update} />
+                ) : null}
+                {workspace.id === "sensors" ? (
+                  <SensorsWorkspace
                     settings={settings}
                     update={update}
                     canVibrate={canVibrate}
+                    teslaFlash={tesla ?? null}
+                    teslaFlashMessage={teslaMsg ?? null}
                   />
-                ) : null}
-                {workspace.id === "drive" ? (
-                  <DriveWorkspace settings={settings} update={update} />
                 ) : null}
                 {workspace.id === "privacy" ? (
                   <PrivacyWorkspace settings={settings} update={update} />
                 ) : null}
-                {workspace.id === "device" ? (
-                  <DeviceWorkspace
+                {workspace.id === "about" ? (
+                  <AboutWorkspace settings={settings} update={update} />
+                ) : null}
+                {workspace.id === "advanced" ? (
+                  <AdvancedWorkspace
                     settings={settings}
                     update={update}
+                    loaded={loaded}
+                    loadReport={loadReport}
                     navigate={navigate}
                     fileRef={fileRef}
                     importMode={importMode}
@@ -232,14 +272,6 @@ function Settings() {
                     transferDetails={transferDetails}
                     recoveryNote={recoveryNote}
                     setRecoveryNote={setRecoveryNote}
-                  />
-                ) : null}
-                {workspace.id === "advanced" ? (
-                  <AdvancedWorkspace
-                    settings={settings}
-                    update={update}
-                    loaded={loaded}
-                    loadReport={loadReport}
                   />
                 ) : null}
               </AccordionContent>
@@ -255,15 +287,7 @@ function Settings() {
   );
 }
 
-function WorkspaceLabel({
-  step,
-  title,
-  hint,
-}: {
-  step: string;
-  title: string;
-  hint: string;
-}) {
+function WorkspaceLabel({ step, title, hint }: { step: string; title: string; hint: string }) {
   return (
     <span className="flex flex-col items-start gap-1 text-left sm:flex-row sm:items-baseline sm:gap-5">
       <span className="text-[10px] tracking-[0.28em] text-muted-foreground tabular-nums">
@@ -301,8 +325,8 @@ function SoundWorkspace({
           aria-label="Sound Volume"
         />
         <p className="mt-3 text-sm text-muted-foreground">
-          Master level for every profile. A limiter keeps sudden peaks in check without
-          flattening the dynamics.
+          Master level for every profile. A limiter keeps sudden peaks in check without flattening
+          the dynamics.
         </p>
       </Block>
 
@@ -355,9 +379,14 @@ function SoundWorkspace({
       <CabinEqPanel value={settings.cabinEq} onChange={(cabinEq) => update({ cabinEq })} />
 
       {virtualTx ? (
+        <PremiumFeatureGate
+          context="dynamic_drive"
+          entitlement="virtual_transmission"
+          promptTitle="Gear-shift feel"
+        >
         <Block title="Gear-shift feel">
           <p className="mt-2 text-sm text-muted-foreground">
-            For virtual-transmission Sound Profiles only.
+            For Sound Profiles with gear shifts.
           </p>
           <label className="mt-6 block text-sm" htmlFor="shift-ms">
             Shift time
@@ -418,6 +447,7 @@ function SoundWorkspace({
             Reset shift feel
           </button>
         </Block>
+        </PremiumFeatureGate>
       ) : null}
 
       <Block title="Render a clip">
@@ -439,17 +469,23 @@ function SoundWorkspace({
   );
 }
 
-function MotionWorkspace({
+function SensorsWorkspace({
   settings,
   update,
   canVibrate,
+  teslaFlash,
+  teslaFlashMessage,
 }: {
   settings: ReturnType<typeof useSettings>["settings"];
   update: ReturnType<typeof useSettings>["update"];
   canVibrate: boolean;
+  teslaFlash: string | null;
+  teslaFlashMessage: string | null;
 }) {
   return (
     <div className="space-y-12">
+      <TeslaVehicleConnect flash={teslaFlash} flashMessage={teslaFlashMessage} />
+
       <div className="flex items-start justify-between gap-8">
         <div>
           <p className="text-base">Motion calibration</p>
@@ -498,10 +534,10 @@ function MotionWorkspace({
         </Link>
       </div>
 
+      <PremiumFeatureGate context="advanced_controls">
       <Block title="Match sound to motion">
         <p className="mt-2 text-sm text-muted-foreground">
-          On Bluetooth headphones the sound can lag. Lookahead keeps the feel locked. 0 to 250
-          ms.
+          On Bluetooth headphones the sound can lag. Lookahead keeps the feel locked. 0 to 250 ms.
         </p>
         <input
           type="range"
@@ -531,6 +567,7 @@ function MotionWorkspace({
           </button>
         </div>
       </Block>
+      </PremiumFeatureGate>
 
       <RowToggle
         title="Haptic feedback"
@@ -562,8 +599,8 @@ function DriveWorkspace({
     <div className="space-y-12">
       <Block title="Smart Sound Profile switching">
         <p className="mt-2 text-sm text-muted-foreground">
-          Switch by speed band, hour, drive minutes, or Motion context. Hold on Drive keeps
-          your current Sound Profile.
+          Switch by speed band, hour, drive minutes, or Motion context. Hold on Drive keeps your
+          current Sound Profile.
         </p>
         <div className="mt-5 flex flex-wrap gap-3">
           {(
@@ -646,8 +683,8 @@ function DriveWorkspace({
 
       <Block title="Calls and ducking">
         <p className="mt-2 text-sm text-muted-foreground">
-          On an audio interrupt, ELCAMOSO fades to a quiet duck, then restores when audio can
-          run again. iOS Safari still needs a user gesture to start audio.
+          On an audio interrupt, ELCAMOSO fades to a quiet duck, then restores when audio can run
+          again. iOS Safari still needs a user gesture to start audio.
         </p>
       </Block>
     </div>
@@ -663,10 +700,279 @@ function PrivacyWorkspace({
 }) {
   return (
     <div className="space-y-12">
+      <RowToggle
+        title="Usage insights"
+        hint="Optional counts with an anonymous install id. No Motion, GPS or audio."
+        checked={settings.analyticsEnabled}
+        onChange={(v) => update({ analyticsEnabled: v })}
+        label="Usage insights"
+      />
+
+      <Block title="Your drive stays yours.">
+        <p className="mt-2 text-sm text-muted-foreground">
+          Speed and motion data are processed on this device. ELCAMOSO does not upload your driving
+          route in this MVP.
+        </p>
+      </Block>
+    </div>
+  );
+}
+
+function PlanWorkspace({
+  billingFlash,
+}: {
+  billingFlash: "success" | "cancel" | null;
+}) {
+  return (
+    <div className="space-y-12">
+      <Block title="Your plan">
+        <p className="mt-2 text-sm text-muted-foreground">
+          Plan status and Dynamic Drive preview.
+        </p>
+        <div className="mt-4">
+          <BillingSettingsPanel billingFlash={billingFlash} />
+        </div>
+      </Block>
+    </div>
+  );
+}
+
+function AboutWorkspace({
+  settings,
+  update,
+}: {
+  settings: ReturnType<typeof useSettings>["settings"];
+  update: ReturnType<typeof useSettings>["update"];
+}) {
+  return (
+    <div className="space-y-12">
+      <Block title={t(settings.language, "settings.language")}>
+        <div className="mt-4 flex gap-2">
+          {(["en", "de", "ro"] as Locale[]).map((code) => (
+            <button
+              key={code}
+              type="button"
+              onClick={() => update({ language: code })}
+              aria-pressed={settings.language === code}
+              className={`h-11 rounded-full border px-4 text-[11px] tracking-[0.16em] uppercase ${
+                settings.language === code
+                  ? "border-foreground bg-foreground text-background"
+                  : "border-border text-muted-foreground"
+              }`}
+            >
+              {code}
+            </button>
+          ))}
+        </div>
+      </Block>
+
+      <Block title={t(settings.language, "settings.units")}>
+        <div className="mt-4 flex gap-2">
+          <button
+            type="button"
+            onClick={() => update({ units: "metric" })}
+            aria-pressed={settings.units === "metric"}
+            className={`h-11 rounded-full border px-4 text-[11px] uppercase ${
+              settings.units === "metric"
+                ? "border-foreground bg-foreground text-background"
+                : "border-border text-muted-foreground"
+            }`}
+          >
+            Metric
+          </button>
+          <button
+            type="button"
+            onClick={() => update({ units: "imperial" })}
+            aria-pressed={settings.units === "imperial"}
+            className={`h-11 rounded-full border px-4 text-[11px] uppercase ${
+              settings.units === "imperial"
+                ? "border-foreground bg-foreground text-background"
+                : "border-border text-muted-foreground"
+            }`}
+          >
+            Imperial
+          </button>
+        </div>
+      </Block>
+
+      <Block title="ELCAMOSO">
+        <p className="mt-2 text-sm text-muted-foreground">Your EV. Your Sound.</p>
+        <div className="mt-5 flex flex-wrap gap-x-5 gap-y-2">
+          <Link
+            to="/about"
+            className="text-xs tracking-[0.24em] text-muted-foreground uppercase hover:text-foreground"
+          >
+            About
+          </Link>
+          <Link
+            to="/legal/privacy"
+            className="text-xs tracking-[0.24em] text-muted-foreground uppercase hover:text-foreground"
+          >
+            Privacy
+          </Link>
+          <Link
+            to="/legal/impressum"
+            className="text-xs tracking-[0.24em] text-muted-foreground uppercase hover:text-foreground"
+          >
+            Impressum
+          </Link>
+          <Link
+            to="/legal/cookies"
+            className="text-xs tracking-[0.24em] text-muted-foreground uppercase hover:text-foreground"
+          >
+            Cookies
+          </Link>
+          <Link
+            to="/legal/terms"
+            className="text-xs tracking-[0.24em] text-muted-foreground uppercase hover:text-foreground"
+          >
+            Terms
+          </Link>
+        </div>
+      </Block>
+    </div>
+  );
+}
+
+function AdvancedWorkspace({
+  settings,
+  update,
+  loaded,
+  loadReport,
+  navigate,
+  fileRef,
+  importMode,
+  handleImport,
+  transferNote,
+  transferDetails,
+  recoveryNote,
+  setRecoveryNote,
+}: {
+  settings: ReturnType<typeof useSettings>["settings"];
+  update: ReturnType<typeof useSettings>["update"];
+  loaded: boolean;
+  loadReport: ReturnType<typeof useSettings>["loadReport"];
+  navigate: ReturnType<typeof useNavigate>;
+  fileRef: React.RefObject<HTMLInputElement | null>;
+  importMode: React.MutableRefObject<ImportMode>;
+  handleImport: (file: File | undefined) => Promise<void>;
+  transferNote: string | null;
+  transferDetails: string[];
+  recoveryNote: string | null;
+  setRecoveryNote: (v: string | null) => void;
+}) {
+  return (
+    <div className="space-y-12">
+      <DynamicDriveTrialSettings settings={settings} />
+      <PremiumFeatureGate context="dynamic_drive">
+      <RowToggle
+        title="Motion character"
+        hint="Gears and response follow your driving. Off keeps a simpler speed-based feel."
+        checked={settings.dynamicDrive}
+        onChange={(v) => update({ dynamicDrive: v })}
+        label="Motion-matched sound"
+      />
+      </PremiumFeatureGate>
+      <RowToggle
+        title="Diagnostics panel"
+        hint="Shows the last storage load result and landing flags."
+        checked={settings.devPanel}
+        onChange={(v) => update({ devPanel: v, ...(v ? {} : { debugDriveDiagnostics: false }) })}
+        label="Diagnostics panel"
+      />
+      {settings.devPanel ? (
+        <>
+          <RowToggle
+            title="Drive debug mode"
+            hint="Developer overlay on Drive: timings and export. Never shown unless this is on."
+            checked={settings.debugDriveDiagnostics}
+            onChange={(v) => update({ debugDriveDiagnostics: v })}
+            label="Drive debug diagnostics"
+          />
+          <DiagnosticsPanel settings={settings} loadReport={loadReport} loaded={loaded} />
+          {import.meta.env.DEV ? (
+            <p className="text-sm text-muted-foreground">
+              <Link to="/debug" className="underline underline-offset-4 hover:text-foreground">
+                Open sound debug harness
+              </Link>{" "}
+              for Original / Improved A/B, motion scenarios and layer solo.{" "}
+              <Link
+                to="/debug/diagnostics"
+                className="underline underline-offset-4 hover:text-foreground"
+              >
+                Drive diagnostics
+              </Link>{" "}
+              for live fusion and network export.{" "}
+              <Link
+                to="/debug/billing"
+                className="underline underline-offset-4 hover:text-foreground"
+              >
+                Billing admin
+              </Link>{" "}
+              for subscription lookup and Stripe re-sync.
+            </p>
+          ) : null}
+        </>
+      ) : null}
+
+      <Block title="Transfer">
+        <p className="mt-2 text-sm text-muted-foreground">
+          Export sounds, tuning and drive settings, then import on another device.
+        </p>
+        <div className="mt-5 flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            onClick={() => exportSettingsFile()}
+            className="h-11 rounded-full border border-border px-6 text-[11px] tracking-[0.2em] uppercase hover:bg-secondary"
+          >
+            Export
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              importMode.current = "merge";
+              fileRef.current?.click();
+            }}
+            className="h-11 rounded-full border border-border px-6 text-[11px] tracking-[0.2em] uppercase hover:bg-secondary"
+          >
+            Import and merge
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              importMode.current = "replace";
+              fileRef.current?.click();
+            }}
+            className="h-11 rounded-full border border-border px-6 text-[11px] tracking-[0.2em] text-muted-foreground uppercase hover:bg-secondary hover:text-foreground"
+          >
+            Import and replace
+          </button>
+          <input
+            ref={fileRef}
+            type="file"
+            accept="application/json,.json"
+            className="sr-only"
+            aria-label="Import settings file"
+            onChange={(e) => {
+              void handleImport(e.target.files?.[0]);
+              e.target.value = "";
+            }}
+          />
+        </div>
+        {transferNote ? <p className="mt-4 text-sm text-muted-foreground">{transferNote}</p> : null}
+        {transferDetails.length ? (
+          <ul className="mt-3 space-y-1 text-xs text-muted-foreground">
+            {transferDetails.map((line) => (
+              <li key={line}>{line}</li>
+            ))}
+          </ul>
+        ) : null}
+      </Block>
+
       <Block title="ELCAMOSO Cloud">
         <p className="mt-2 text-sm text-muted-foreground">
-          Opt-in sync for Garage, playlists and settings. Motion stays on this device unless
-          you enable drive history.
+          Opt-in sync for Garage, playlists and settings. Motion stays on this device unless you
+          enable drive history.
         </p>
         <div className="mt-5">
           <Toggle
@@ -729,184 +1035,6 @@ function PrivacyWorkspace({
         </div>
       </Block>
 
-      <RowToggle
-        title="Usage insights"
-        hint="Optional counts with an anonymous install id. No Motion, GPS or audio."
-        checked={settings.analyticsEnabled}
-        onChange={(v) => update({ analyticsEnabled: v })}
-        label="Usage insights"
-      />
-
-      <Block title="Your drive stays yours.">
-        <p className="mt-2 text-sm text-muted-foreground">
-          Speed and motion data are processed on this device. ELCAMOSO does not upload your
-          driving route in this MVP.
-        </p>
-        <div className="mt-5 flex flex-wrap gap-x-5 gap-y-2">
-          <Link
-            to="/about"
-            className="text-xs tracking-[0.24em] text-muted-foreground uppercase hover:text-foreground"
-          >
-            About
-          </Link>
-          <Link
-            to="/legal/privacy"
-            className="text-xs tracking-[0.24em] text-muted-foreground uppercase hover:text-foreground"
-          >
-            Privacy
-          </Link>
-          <Link
-            to="/legal/impressum"
-            className="text-xs tracking-[0.24em] text-muted-foreground uppercase hover:text-foreground"
-          >
-            Impressum
-          </Link>
-          <Link
-            to="/legal/cookies"
-            className="text-xs tracking-[0.24em] text-muted-foreground uppercase hover:text-foreground"
-          >
-            Cookies
-          </Link>
-          <Link
-            to="/legal/terms"
-            className="text-xs tracking-[0.24em] text-muted-foreground uppercase hover:text-foreground"
-          >
-            Terms
-          </Link>
-        </div>
-      </Block>
-    </div>
-  );
-}
-
-function DeviceWorkspace({
-  settings,
-  update,
-  navigate,
-  fileRef,
-  importMode,
-  handleImport,
-  transferNote,
-  transferDetails,
-  recoveryNote,
-  setRecoveryNote,
-}: {
-  settings: ReturnType<typeof useSettings>["settings"];
-  update: ReturnType<typeof useSettings>["update"];
-  navigate: ReturnType<typeof useNavigate>;
-  fileRef: React.RefObject<HTMLInputElement | null>;
-  importMode: React.MutableRefObject<ImportMode>;
-  handleImport: (file: File | undefined) => Promise<void>;
-  transferNote: string | null;
-  transferDetails: string[];
-  recoveryNote: string | null;
-  setRecoveryNote: (v: string | null) => void;
-}) {
-  return (
-    <div className="space-y-12">
-      <Block title={t(settings.language, "settings.language")}>
-        <div className="mt-4 flex gap-2">
-          {(["en", "de", "ro"] as Locale[]).map((code) => (
-            <button
-              key={code}
-              type="button"
-              onClick={() => update({ language: code })}
-              aria-pressed={settings.language === code}
-              className={`h-11 rounded-full border px-4 text-[11px] tracking-[0.16em] uppercase ${
-                settings.language === code
-                  ? "border-foreground bg-foreground text-background"
-                  : "border-border text-muted-foreground"
-              }`}
-            >
-              {code}
-            </button>
-          ))}
-        </div>
-      </Block>
-
-      <Block title={t(settings.language, "settings.units")}>
-        <div className="mt-4 flex gap-2">
-          <button
-            type="button"
-            onClick={() => update({ units: "metric" })}
-            aria-pressed={settings.units === "metric"}
-            className={`h-11 rounded-full border px-4 text-[11px] uppercase ${
-              settings.units === "metric"
-                ? "border-foreground bg-foreground text-background"
-                : "border-border text-muted-foreground"
-            }`}
-          >
-            Metric
-          </button>
-          <button
-            type="button"
-            onClick={() => update({ units: "imperial" })}
-            aria-pressed={settings.units === "imperial"}
-            className={`h-11 rounded-full border px-4 text-[11px] uppercase ${
-              settings.units === "imperial"
-                ? "border-foreground bg-foreground text-background"
-                : "border-border text-muted-foreground"
-            }`}
-          >
-            Imperial
-          </button>
-        </div>
-      </Block>
-
-      <Block title="Transfer">
-        <p className="mt-2 text-sm text-muted-foreground">
-          Export sounds, tuning and drive settings, then import on another device.
-        </p>
-        <div className="mt-5 flex flex-wrap items-center gap-3">
-          <button
-            type="button"
-            onClick={() => exportSettingsFile()}
-            className="h-11 rounded-full border border-border px-6 text-[11px] tracking-[0.2em] uppercase hover:bg-secondary"
-          >
-            Export
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              importMode.current = "merge";
-              fileRef.current?.click();
-            }}
-            className="h-11 rounded-full border border-border px-6 text-[11px] tracking-[0.2em] uppercase hover:bg-secondary"
-          >
-            Import and merge
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              importMode.current = "replace";
-              fileRef.current?.click();
-            }}
-            className="h-11 rounded-full border border-border px-6 text-[11px] tracking-[0.2em] text-muted-foreground uppercase hover:bg-secondary hover:text-foreground"
-          >
-            Import and replace
-          </button>
-          <input
-            ref={fileRef}
-            type="file"
-            accept="application/json,.json"
-            className="sr-only"
-            aria-label="Import settings file"
-            onChange={(e) => {
-              void handleImport(e.target.files?.[0]);
-              e.target.value = "";
-            }}
-          />
-        </div>
-        {transferNote ? <p className="mt-4 text-sm text-muted-foreground">{transferNote}</p> : null}
-        {transferDetails.length ? (
-          <ul className="mt-3 space-y-1 text-xs text-muted-foreground">
-            {transferDetails.map((line) => (
-              <li key={line}>{line}</li>
-            ))}
-          </ul>
-        ) : null}
-      </Block>
-
       <Block title="Setup and recovery">
         <p className="mt-2 text-sm text-muted-foreground">
           Run guided setup again, or clear saved data if the app gets stuck.
@@ -952,43 +1080,6 @@ function DeviceWorkspace({
         </div>
         {recoveryNote ? <p className="mt-4 text-sm text-muted-foreground">{recoveryNote}</p> : null}
       </Block>
-    </div>
-  );
-}
-
-function AdvancedWorkspace({
-  settings,
-  update,
-  loaded,
-  loadReport,
-}: {
-  settings: ReturnType<typeof useSettings>["settings"];
-  update: ReturnType<typeof useSettings>["update"];
-  loaded: boolean;
-  loadReport: ReturnType<typeof useSettings>["loadReport"];
-}) {
-  return (
-    <div className="space-y-8">
-      <RowToggle
-        title="Diagnostics panel"
-        hint="Shows the last storage load result and landing flags."
-        checked={settings.devPanel}
-        onChange={(v) => update({ devPanel: v })}
-        label="Diagnostics panel"
-      />
-      {settings.devPanel ? (
-        <>
-          <DiagnosticsPanel settings={settings} loadReport={loadReport} loaded={loaded} />
-          {import.meta.env.DEV ? (
-            <p className="text-sm text-muted-foreground">
-              <Link to="/debug" className="underline underline-offset-4 hover:text-foreground">
-                Open sound debug harness
-              </Link>{" "}
-              for Original / Improved A/B, motion scenarios and layer solo.
-            </p>
-          ) : null}
-        </>
-      ) : null}
     </div>
   );
 }

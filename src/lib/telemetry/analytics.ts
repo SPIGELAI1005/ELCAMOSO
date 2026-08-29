@@ -4,7 +4,22 @@ export type AnalyticsName =
   | "studio_listen"
   | "calibrate_complete"
   | "share_create"
-  | "audio_error";
+  | "audio_error"
+  | "pricing_viewed"
+  | "dynamic_trial_offered"
+  | "dynamic_trial_started"
+  | "dynamic_trial_session_started"
+  | "dynamic_trial_session_completed"
+  | "dynamic_trial_low_remaining"
+  | "dynamic_trial_exhausted"
+  | "premium_feature_clicked"
+  | "upgrade_clicked"
+  | "checkout_started"
+  | "checkout_completed"
+  | "checkout_canceled"
+  | "subscription_started"
+  | "subscription_canceled"
+  | "plan_interval_selected";
 
 export interface AnalyticsEvent {
   name: AnalyticsName;
