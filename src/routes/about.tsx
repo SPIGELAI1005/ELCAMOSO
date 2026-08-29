@@ -140,6 +140,21 @@ function About() {
             <ElcamosoMark intensity={0.72} className="my-2 h-10 w-auto text-foreground" />
             <p className="text-foreground">Dynamic Sound</p>
           </div>
+          <div className="mt-12 space-y-4">
+            <p className="text-sm leading-relaxed text-muted-foreground">
+              In the cabin: motion from the drive, sound shaped to match.
+            </p>
+            <div className="grid gap-8 sm:grid-cols-2">
+              <AboutFieldClip
+                src="/about/tesla-motion-1.mp4"
+                label="In the cabin — motion to sound"
+              />
+              <AboutFieldClip
+                src="/about/tesla-motion-2.mp4"
+                label="On the road — sound follows drive"
+              />
+            </div>
+          </div>
         </section>
 
         <section className="mt-16 border-t border-border pt-16">
