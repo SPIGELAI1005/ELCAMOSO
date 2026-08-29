@@ -54,6 +54,23 @@ export function LandingStartDriveButton({ className }: { className?: string }) {
   );
 }
 
+function HeroReadAboutLink({ className }: { className?: string }) {
+  return (
+    <Link
+      to="/about"
+      className={cn(
+        "group shrink-0 text-[10px] leading-[1.2] tracking-[0.24em] text-muted-foreground uppercase sm:text-[11px] lg:text-xs",
+        className,
+      )}
+    >
+      Read{" "}
+      <span className="text-[#e53935] transition-colors group-hover:text-[#ff5252]">
+        About
+      </span>
+    </Link>
+  );
+}
+
 function HeroBrandTitle({
   phase,
   reducedMotion,
@@ -97,15 +114,6 @@ function HeroBrandTitle({
         className="mt-[0.7rem] text-[10px] sm:text-[11px] md:col-start-1 md:row-start-3 md:-mt-2.5 md:justify-self-start md:self-baseline lg:-mt-3.5 lg:text-xs"
         width={wordmarkWidth}
       />
-      <Link
-        to="/about"
-        className="group mt-4 shrink-0 self-baseline text-[10px] leading-[1.2] tracking-[0.24em] text-muted-foreground uppercase sm:text-[11px] md:col-start-2 md:row-start-3 md:mt-0 md:justify-self-start lg:text-xs"
-      >
-        Read{" "}
-        <span className="text-[#e53935] transition-colors group-hover:text-[#ff5252]">
-          About
-        </span>
-      </Link>
     </div>
   );
 }
@@ -145,7 +153,10 @@ export function LandingHero() {
           >
             Hear it
           </Link>
+          <HeroReadAboutLink className="mt-4 md:hidden" />
         </div>
+
+        <HeroReadAboutLink className="hidden md:inline-flex md:col-start-2 md:row-start-3 md:justify-self-start md:self-baseline" />
       </div>
     </section>
   );
