@@ -66,15 +66,23 @@ export function BrandNav() {
 
   return (
     <header className="fixed inset-x-0 top-0 z-50 border-b border-border/60 bg-background/95 pt-[env(safe-area-inset-top,0px)] backdrop-blur-md supports-[backdrop-filter]:bg-background/80">
-      <div className="flex h-14 items-center justify-between gap-4 px-4 sm:h-16 sm:px-8">
-        <Link to="/" aria-label="ELCAMOSO home" className="hidden min-w-0 shrink md:inline-flex">
+      <div className="flex h-14 items-center justify-between gap-3 px-4 sm:h-16 sm:px-6 lg:gap-4 lg:px-8">
+        <Link
+          to="/"
+          aria-label="ELCAMOSO home"
+          className="hidden min-w-0 shrink-0 md:inline-flex lg:hidden"
+        >
+          <ElcamosoMark className="h-8 w-auto" />
+        </Link>
+
+        <Link to="/" aria-label="ELCAMOSO home" className="hidden min-w-0 shrink-0 lg:inline-flex">
           <ElcamosoLogo variant="full" />
         </Link>
 
-        <div className="flex-1 md:hidden" aria-hidden="true" />
+        <div className="flex-1 lg:hidden" aria-hidden="true" />
 
         <nav
-          className="hidden items-center gap-5 text-[11px] tracking-[0.18em] uppercase md:flex md:gap-6 md:text-xs"
+          className="hidden min-w-0 items-center gap-4 text-[11px] tracking-[0.16em] uppercase lg:flex xl:gap-6 xl:text-xs"
           aria-label="Primary"
         >
           {DESKTOP_LINKS.map((link) => (
@@ -94,7 +102,7 @@ export function BrandNav() {
             <button
               type="button"
               data-testid="nav-menu"
-              className="inline-flex h-11 w-11 items-center justify-center rounded-full text-foreground transition-colors hover:bg-secondary md:hidden"
+              className="inline-flex h-11 w-11 items-center justify-center rounded-full text-foreground transition-colors hover:bg-secondary lg:hidden"
               aria-label={t(settings.language, "nav.menu")}
             >
               <WaveMenuIcon open={false} />

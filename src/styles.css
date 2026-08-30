@@ -155,7 +155,7 @@
 }
 
 /** O circle centered above ELCAMOSO wordmark (mark viewBox 92, circle cx 20). Desktop lockup only. */
-@media (min-width: 768px) {
+@media (min-width: 1024px) {
   .elcamoso-mark-lockup {
     translate: calc((46 - 20) / 92 * 100%) 0;
   }
@@ -163,15 +163,23 @@
 
 .wordmark-expansion {
   box-sizing: border-box;
+  display: flex;
+  width: 100%;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: clamp(0.35rem, 1.6vw, 0.85rem);
   font-family: var(--font-display);
   font-weight: 300;
   text-transform: uppercase;
   letter-spacing: 0;
   line-height: 1.2;
   color: var(--foreground-secondary);
-  text-align: justify;
-  text-align-last: justify;
-  text-justify: inter-character;
+}
+
+.wordmark-expansion > span {
+  flex: 0 1 auto;
+  min-width: 0;
+  white-space: nowrap;
 }
 
 /** Native range control: track + thumb styled in base; keep touch height in className. */

@@ -266,7 +266,7 @@ export function ElcamosoWordmark({
   );
 }
 
-const WORDMARK_EXPANSION = "ELECTRIC CAR MOTION SOUND";
+const WORDMARK_EXPANSION_WORDS = ["ELECTRIC", "CAR", "MOTION", "SOUND"] as const;
 
 export const WordmarkExpansion = memo(function WordmarkExpansion({
   className,
@@ -283,7 +283,11 @@ export const WordmarkExpansion = memo(function WordmarkExpansion({
       aria-hidden={ariaHidden ? true : undefined}
       style={width ? { width, maxWidth: width, minWidth: width } : undefined}
     >
-      {WORDMARK_EXPANSION}
+      {WORDMARK_EXPANSION_WORDS.map((word) => (
+        <span key={word} className="shrink-0">
+          {word}
+        </span>
+      ))}
     </p>
   );
 });

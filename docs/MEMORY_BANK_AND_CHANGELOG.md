@@ -57,14 +57,17 @@ Canonical product rules still live in `elcamoso-comprehensive-spec.md`. Update *
 
 ### Landing page (`/`) conventions
 
-- Hero: brand column stacks **O )))** mark (centered on the wordmark) → **ELCAMOSO** → **Electric Car Motion Sound** → **Read About** (row-aligned with expansion; **About** in red `#e53935`). Mark + **MOSO** letters share phased hero animation (`useHeroWavePhase`: intro → hold → idle `wave-radiate` matching header mark).
-- CTA column: tagline + supporting line + **Start Drive** + **Hear it**; no duplicate bottom tagline block.
+- **Breakpoints:** Stacked centered hero on phone + tablet (&lt; `lg` / 1024px). Two-column hero only at **`lg+`** to avoid wordmark / **Start Drive** overlap on iPad.
+- Hero: brand block stacks **O )))** mark → **ELCAMOSO** → **Electric Car Motion Sound** (flex word row, width locked to wordmark — no Safari `text-justify`). Mark + **MOSO** letters share phased hero animation (`useHeroWavePhase`: intro → hold → idle `wave-radiate` matching header mark).
+- **Read About:** under **Hear it** on phone/tablet; at **`lg+`** aligns with expansion row beside **Electric Car Motion Sound** (**About** in red `#e53935`).
+- CTA column (`lg+`): tagline + supporting line + **Start Drive** + **Hear it**; no duplicate bottom tagline block.
 - Below fold: curated sound previews + **Plans** (`LandingPlansSection`: monthly/yearly toggle, early-adopter strikethrough pricing, red billing notice when checkout disabled) + privacy blurb (no duplicate legal links — footer only).
-- `/about`: founder story, **Motion becomes sound.** visual, field-capture clips in `public/about/` (user-controlled `<video>`, no autoplay).
+- `/about`: founder story, **Motion becomes sound.** visual + Tesla cabin clips, field-capture clips in `public/about/` (user-controlled `<video>`, no autoplay).
 
 ### Header nav (`BrandNav`)
 
-- Desktop + mobile sheet: **Pricing** → `/pricing`; **Drive** and **About** use accent red (`#e53935`).
+- **Breakpoints:** Inline primary nav + full logo lockup at **`lg+` only**. Tablet uses mark + hamburger sheet (same as phone) — prevents link overlap at ~768–1023px.
+- **Pricing** → `/pricing`; **Drive** and **About** accent red (`#e53935`).
 - i18n keys: `nav.pricing`, `nav.about`, `nav.drive`, etc.
 
 ### Pricing (`/pricing`)
@@ -76,7 +79,7 @@ Canonical product rules still live in `elcamoso-comprehensive-spec.md`. Update *
 
 - Sticky MiniPlayer shows while session is live (hidden on `/`).
 - Compact **Headroom** meter is always visible; full loudness copy remains in Audition.
-- Mobile: wave-inspired hamburger (`WaveMenuIcon`) opens a right sheet; desktop keeps inline nav.
+- Mobile: wave-inspired hamburger (`WaveMenuIcon`) opens a right sheet until **`lg`**; inline nav at **`lg+`**.
 - Files: `src/components/MiniPlayer.tsx`, `src/components/HeadroomMeter.tsx`, `src/components/BrandNav.tsx`, `src/components/WaveMenuIcon.tsx`
 
 ### Branding assets
@@ -136,6 +139,14 @@ Canonical product rules still live in `elcamoso-comprehensive-spec.md`. Update *
 ---
 
 ## Changelog
+
+### 2026-08-30 (Responsive hero, nav, and wordmark expansion)
+
+- **Wordmark expansion:** Replaced Safari-broken `text-justify: inter-character` with flex `space-between` word spans; width synced to **ELCAMOSO** lockup; clamped gaps for iPhone/iPad.
+- **Tablet / iPad:** Hero two-column layout deferred to **`lg` (1024px)** — stacked layout below that prevents **Start Drive** overlapping wordmark and **Read About** colliding with expansion text.
+- **Header:** Full logo + inline nav also at **`lg+`**; tablet shows mark + hamburger to fix nav link overlap.
+- **Read About (mobile):** CTA stack places link under **Hear it** (not floating in brand column).
+- **About:** Tesla cabin clips under **Motion becomes sound.** (`public/about/tesla-motion-*.mp4`).
 
 ### 2026-08-30 (Landing, About, pricing UX)
 
