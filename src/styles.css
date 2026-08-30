@@ -154,20 +154,9 @@
   gap: 0.38em;
 }
 
-/** O circle centered above ELCAMOSO wordmark (mark viewBox 92, circle cx 20). Desktop lockup only. */
-@media (min-width: 1024px) {
-  .elcamoso-mark-lockup {
-    translate: calc((46 - 20) / 92 * 100%) 0;
-  }
-}
-
 .wordmark-expansion {
   box-sizing: border-box;
-  display: flex;
-  width: 100%;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: clamp(0.35rem, 1.6vw, 0.85rem);
+  margin-inline: auto;
   font-family: var(--font-display);
   font-weight: 300;
   text-transform: uppercase;
@@ -176,19 +165,9 @@
   color: var(--foreground-secondary);
 }
 
-.wordmark-expansion > span {
-  flex: 0 1 auto;
-  min-width: 0;
+.wordmark-expansion--inline {
   white-space: nowrap;
-}
-
-.wordmark-expansion--mobile {
-  display: block;
-  width: 100%;
-  max-width: 100%;
-  text-align: center;
-  white-space: normal;
-  line-height: 1.35;
+  overflow: visible;
 }
 
 /** Native range control: track + thumb styled in base; keep touch height in className. */
@@ -203,21 +182,11 @@
 @keyframes wave-in {
   from {
     opacity: 0;
-    transform: translateX(-4px);
+    transform: translateX(-4px) scale(var(--wave-scale, 1));
   }
   to {
     opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-@keyframes wave-radiate-hero {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.88;
+    transform: translateX(0) scale(var(--wave-scale, 1));
   }
 }
 
@@ -366,18 +335,40 @@
   }
 }
 
+@keyframes start-drive-warm-overlay {
+  0%,
+  100% {
+    opacity: 0;
+  }
+  24% {
+    opacity: 0.22;
+  }
+  52% {
+    opacity: 0.58;
+  }
+  78% {
+    opacity: 0.1;
+  }
+}
+
 @keyframes start-drive-ripple {
   0% {
     opacity: 0.55;
     transform: scale(1);
+    border-color: oklch(1 0 0 / 0.34);
+  }
+  32% {
+    border-color: oklch(0.84 0.07 27 / 0.26);
   }
   65% {
     opacity: 0;
     transform: scale(1.55);
+    border-color: oklch(0.68 0.12 27 / 0.14);
   }
   100% {
     opacity: 0;
     transform: scale(1.55);
+    border-color: oklch(1 0 0 / 0.08);
   }
 }
 
@@ -386,15 +377,16 @@
   100% {
     opacity: 0.35;
     box-shadow:
-      0 0 0 1px oklch(1 0 0 / 0.05),
-      0 0 18px 0 oklch(1 0 0 / 0.06);
+      0 0 0 1px oklch(1 0 0 / 0.06),
+      0 0 18px 0 oklch(1 0 0 / 0.08);
   }
   52% {
     opacity: 1;
     box-shadow:
-      0 0 0 1px oklch(1 0 0 / 0.2),
-      0 0 28px 4px oklch(1 0 0 / 0.18),
-      0 0 56px 14px oklch(1 0 0 / 0.07);
+      0 0 0 1px oklch(1 0 0 / 0.18),
+      0 0 22px 2px oklch(1 0 0 / 0.22),
+      0 0 36px 10px oklch(0.62 0.14 27 / 0.16),
+      0 0 56px 16px oklch(0.58 0.08 27 / 0.07);
   }
 }
 
@@ -414,20 +406,36 @@
   inset: -6px;
   background: radial-gradient(
     75% 120% at 50% 50%,
-    oklch(1 0 0 / 0.55) 0%,
-    oklch(1 0 0 / 0.14) 42%,
+    oklch(1 0 0 / 0.58) 0%,
+    oklch(1 0 0 / 0.16) 42%,
     transparent 72%
   );
   filter: blur(10px);
   animation: start-drive-breathe 3.6s cubic-bezier(0.45, 0.05, 0.25, 1) infinite;
 }
 
+.start-drive-beacon__bloom::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(
+    72% 118% at 50% 54%,
+    oklch(0.64 0.17 27 / 0.9) 0%,
+    oklch(0.58 0.1 27 / 0.38) 40%,
+    transparent 72%
+  );
+  filter: blur(10px);
+  opacity: 0;
+  animation: start-drive-warm-overlay 3.6s cubic-bezier(0.45, 0.05, 0.25, 1) infinite;
+}
+
 .start-drive-beacon__halo {
   inset: -18px;
   background: radial-gradient(
     80% 140% at 50% 50%,
-    oklch(1 0 0 / 0.22) 0%,
-    oklch(1 0 0 / 0.06) 38%,
+    oklch(1 0 0 / 0.24) 0%,
+    oklch(1 0 0 / 0.07) 38%,
     transparent 68%
   );
   filter: blur(22px);
@@ -435,9 +443,26 @@
   animation-delay: -1.2s;
 }
 
+.start-drive-beacon__halo::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(
+    85% 145% at 50% 50%,
+    oklch(0.6 0.13 27 / 0.55) 0%,
+    oklch(0.56 0.07 27 / 0.12) 42%,
+    transparent 70%
+  );
+  filter: blur(22px);
+  opacity: 0;
+  animation: start-drive-warm-overlay 3.6s cubic-bezier(0.45, 0.05, 0.25, 1) infinite;
+  animation-delay: -1.2s;
+}
+
 .start-drive-beacon__ripple {
   inset: 0;
-  border: 1px solid oklch(1 0 0 / 0.28);
+  border: 1px solid oklch(1 0 0 / 0.34);
   animation: start-drive-ripple 3.6s cubic-bezier(0.22, 1, 0.36, 1) infinite;
 }
 

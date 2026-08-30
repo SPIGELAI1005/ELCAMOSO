@@ -1,4 +1,13 @@
-import { memo, useEffect, useRef, useState, type CSSProperties } from "react";
+import {
+  forwardRef,
+  memo,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type RefObject,
+} from "react";
 import { useReducedMotion } from "@/lib/drive/useReducedMotion";
 import { cn } from "@/lib/utils";
 
@@ -42,12 +51,13 @@ export const MARK_WAVE_IN_DURATION_MS =
 export const HERO_WAVE_HANDOFF_MS = 220;
 
 /** Static hold on hero before idle radiate loop starts. */
-export const HERO_MARK_RADIATE_DELAY_MS = 2000;
+export const HERO_MARK_RADIATE_DELAY_MS = 600;
 
 const WAVE_RADIATE_STAGGER_MS = 130;
-/** Hero idle pulse uses the same stagger as the intro wave-in for visual continuity. */
-const HERO_RADIATE_STAGGER_MS = WAVE_IN_STAGGER_MS;
 const MOSO_START_INDEX = 4;
+
+/** Start wave-radiate at peak opacity so hold → idle matches header pulse without a flash. */
+const WAVE_RADIATE_PEAK_OFFSET = 0.35;
 
 export type HeroWavePhase = "intro" | "hold" | "radiate";
 
@@ -64,12 +74,13 @@ function markRadiateCycleMs(
 /** Idle mark pulse at full intensity — matches header logo. */
 export const MARK_IDLE_RADIATE_CYCLE_MS = markRadiateCycleMs(1, 1, 0);
 
-function markRadiateAnimation(index: number, cycleMs: number) {
-  return `wave-radiate ${cycleMs}ms ease-out ${index * WAVE_RADIATE_STAGGER_MS}ms infinite`;
+function markRadiateAnimation(index: number, cycleMs: number, phaseOffsetMs = 0) {
+  const delayMs = index * WAVE_RADIATE_STAGGER_MS + phaseOffsetMs;
+  return `wave-radiate ${cycleMs}ms ease-out ${delayMs}ms infinite`;
 }
 
 function markHeroRadiateAnimation(index: number, cycleMs: number) {
-  return `wave-radiate-hero ${cycleMs}ms ease-in-out ${index * HERO_RADIATE_STAGGER_MS}ms infinite`;
+  return markRadiateAnimation(index, cycleMs, -cycleMs * WAVE_RADIATE_PEAK_OFFSET);
 }
 
 export function useHeroWavePhase(): { phase: HeroWavePhase; reducedMotion: boolean } {
@@ -84,8 +95,8 @@ export function useHeroWavePhase(): { phase: HeroWavePhase; reducedMotion: boole
       return;
     }
 
-    const holdAt = MARK_WAVE_IN_DURATION_MS + HERO_WAVE_HANDOFF_MS;
-    const radiateAt = holdAt + HERO_MARK_RADIATE_DELAY_MS;
+    const holdAt = MARK_WAVE_IN_DURATION_MS;
+    const radiateAt = holdAt + HERO_WAVE_HANDOFF_MS + HERO_MARK_RADIATE_DELAY_MS;
 
     const holdTimer = window.setTimeout(() => setPhase("hold"), holdAt);
     const radiateTimer = window.setTimeout(() => setPhase("radiate"), radiateAt);
@@ -181,10 +192,17 @@ export const ElcamosoMark = memo(function ElcamosoMark({
           ? (brake * 0.7 + (1 - intensity) * 0.35) * (1.2 + i * 0.9)
           : brake * (1.2 + i * 0.9);
         const shift = reducedMotion ? 0 : out - inn;
+        const waveScale = 1 + intensity * 0.04 * (i + 1);
         const waveOpacity = heroHold ? 1 : (0.08 + lit * 0.92) * (1 - brake * 0.45);
-        const waveTransform = heroHold
-          ? `translateX(0px) scale(${1 + intensity * 0.04 * (i + 1)})`
-          : `translateX(${shift}px) scale(${1 + intensity * 0.04 * (i + 1)})`;
+        const waveTransform = heroPhase
+          ? `translateX(0px) scale(${waveScale})`
+          : `translateX(${shift}px) scale(${waveScale})`;
+        const waveTransition =
+          animateIn || heroRadiate
+            ? undefined
+            : reducedMotion
+              ? "opacity 400ms ease-out"
+              : "opacity 260ms ease-out, transform 220ms ease-out";
         return (
           <path
             key={wave.d}
@@ -193,12 +211,11 @@ export const ElcamosoMark = memo(function ElcamosoMark({
             strokeWidth={wave.w}
             strokeLinecap="round"
             style={{
+              ["--wave-scale" as string]: String(waveScale),
               opacity: waveOpacity,
               transform: waveTransform,
               transformOrigin: "20px 36px",
-              transition: reducedMotion
-                ? "opacity 400ms ease-out"
-                : "opacity 260ms ease-out, transform 220ms ease-out",
+              transition: waveTransition,
               ...(animateIn
                 ? {
                     animation: `wave-in ${WAVE_IN_MS}ms ease-out ${WAVE_IN_LEAD_MS + i * WAVE_IN_STAGGER_MS}ms both`,
@@ -250,19 +267,21 @@ function mosoLetterStyle(
   };
 }
 
-export function ElcamosoWordmark({
-  className,
-  ariaHidden,
-  heroPhase = "off",
-  reducedMotion = false,
-}: {
-  className?: string;
-  ariaHidden?: boolean;
-  heroPhase?: HeroWavePhase | "off";
-  reducedMotion?: boolean;
-}) {
+export const ElcamosoWordmark = forwardRef<
+  HTMLSpanElement,
+  {
+    className?: string;
+    ariaHidden?: boolean;
+    heroPhase?: HeroWavePhase | "off";
+    reducedMotion?: boolean;
+  }
+>(function ElcamosoWordmark(
+  { className, ariaHidden, heroPhase = "off", reducedMotion = false },
+  ref,
+) {
   return (
     <span
+      ref={ref}
       className={cn("wordmark wordmark-lockup", className)}
       aria-label={ariaHidden ? undefined : "ELCAMOSO"}
       aria-hidden={ariaHidden ? true : undefined}
@@ -280,13 +299,54 @@ export function ElcamosoWordmark({
       })}
     </span>
   );
-}
+});
 
 const WORDMARK_EXPANSION_WORDS = ["ELECTRIC", "CAR", "MOTION", "SOUND"] as const;
 
-const MOBILE_WORDMARK_EXPANSION = WORDMARK_EXPANSION_WORDS.map((word) =>
-  word.split("").join(" "),
-).join("  ");
+const WORDMARK_EXPANSION_INLINE_TEXT = WORDMARK_EXPANSION_WORDS.map((word) =>
+  word.split("").join("\u00a0"),
+).join("\u00a0\u00a0");
+
+function useFitExpansionWidth(
+  targetWidth: number | undefined,
+  enabled: boolean,
+) {
+  const ref = useRef<HTMLParagraphElement>(null);
+
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el || !enabled || !targetWidth) return;
+
+    const fit = () => {
+      el.style.width = "auto";
+      el.style.minWidth = "0";
+      el.style.maxWidth = "none";
+      el.style.letterSpacing = "0px";
+
+      const naturalWidth = el.getBoundingClientRect().width;
+      el.style.width = `${targetWidth}px`;
+      el.style.minWidth = `${targetWidth}px`;
+      el.style.maxWidth = `${targetWidth}px`;
+
+      if (naturalWidth >= targetWidth - 0.5 || WORDMARK_EXPANSION_INLINE_TEXT.length < 2) {
+        el.style.letterSpacing = "0px";
+        return;
+      }
+
+      const spacing =
+        (targetWidth - naturalWidth) / (WORDMARK_EXPANSION_INLINE_TEXT.length - 1);
+      el.style.letterSpacing = `${spacing}px`;
+    };
+
+    fit();
+    const observer = new ResizeObserver(fit);
+    observer.observe(el);
+    if (el.parentElement) observer.observe(el.parentElement);
+    return () => observer.disconnect();
+  }, [targetWidth, enabled]);
+
+  return ref;
+}
 
 export const WordmarkExpansion = memo(function WordmarkExpansion({
   className,
@@ -297,43 +357,104 @@ export const WordmarkExpansion = memo(function WordmarkExpansion({
   ariaHidden?: boolean;
   width?: number;
 }) {
+  const ref = useFitExpansionWidth(width, Boolean(width));
+
+  if (!width) return null;
+
   return (
-    <>
-      <p
-        className={cn("wordmark-expansion wordmark-expansion--mobile lg:hidden", className)}
-        aria-hidden={ariaHidden ? true : undefined}
-      >
-        {MOBILE_WORDMARK_EXPANSION}
-      </p>
-      <p
-        className={cn("wordmark-expansion hidden lg:flex", className)}
-        aria-hidden={ariaHidden ? true : undefined}
-        style={width ? { width, maxWidth: width, minWidth: width } : undefined}
-      >
-        {WORDMARK_EXPANSION_WORDS.map((word) => (
-          <span key={word} className="shrink-0">
-            {word}
-          </span>
-        ))}
-      </p>
-    </>
+    <p
+      ref={ref}
+      className={cn("wordmark-expansion wordmark-expansion--inline block", className)}
+      aria-hidden={ariaHidden ? true : undefined}
+    >
+      {WORDMARK_EXPANSION_INLINE_TEXT}
+    </p>
   );
 });
 
 interface LogoLockupProps extends MarkProps {
   markClassName?: string | undefined;
   wordmarkClassName?: string | undefined;
+  wordmarkRef?: RefObject<HTMLSpanElement | null> | undefined;
+  wordmarkAriaHidden?: boolean | undefined;
+}
+
+const MARK_VIEWBOX_W = 92;
+const MARK_CIRCLE_CX = 20;
+
+function useMarkAlignOverWordmark(
+  wordmarkRef: RefObject<HTMLSpanElement | null> | undefined,
+  markWrapRef: RefObject<HTMLSpanElement | null>,
+) {
+  const [translateX, setTranslateX] = useState(0);
+
+  useLayoutEffect(() => {
+    const wordmark = wordmarkRef?.current;
+    const wrap = markWrapRef.current;
+    if (!wordmark || !wrap) return;
+
+    const measure = () => {
+      const svg = wrap.querySelector("svg");
+      if (!svg) return;
+
+      const wordmarkRect = wordmark.getBoundingClientRect();
+      const svgRect = svg.getBoundingClientRect();
+      const wordmarkCenterX = wordmarkRect.left + wordmarkRect.width / 2;
+      const circleX = svgRect.left + (MARK_CIRCLE_CX / MARK_VIEWBOX_W) * svgRect.width;
+      setTranslateX(wordmarkCenterX - circleX);
+    };
+
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(wordmark);
+    observer.observe(wrap);
+    const svg = wrap.querySelector("svg");
+    if (svg) observer.observe(svg);
+
+    window.addEventListener("resize", measure);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", measure);
+    };
+  }, [wordmarkRef, markWrapRef]);
+
+  return translateX;
 }
 
 export function ElcamosoLogoLockup({
   markClassName,
   wordmarkClassName,
+  wordmarkRef,
+  wordmarkAriaHidden,
+  heroPhase,
+  reducedMotion,
   ...markProps
 }: LogoLockupProps) {
+  const markWrapRef = useRef<HTMLSpanElement>(null);
+  const translateX = useMarkAlignOverWordmark(wordmarkRef, markWrapRef);
+
   return (
-    <span className="inline-flex flex-col items-center text-center">
-      <ElcamosoMark {...markProps} className={cn("elcamoso-mark-lockup", markClassName)} />
-      <ElcamosoWordmark className={cn(wordmarkClassName)} />
+    <span className="inline-flex w-fit flex-col items-center text-center">
+      <span ref={markWrapRef} className="block overflow-visible">
+        <span
+          className="block will-change-transform"
+          style={translateX ? { transform: `translateX(${translateX}px)` } : undefined}
+        >
+          <ElcamosoMark
+            {...markProps}
+            heroPhase={heroPhase}
+            reducedMotion={reducedMotion}
+            className={markClassName}
+          />
+        </span>
+      </span>
+      <ElcamosoWordmark
+        ref={wordmarkRef}
+        ariaHidden={wordmarkAriaHidden}
+        heroPhase={heroPhase ?? "off"}
+        reducedMotion={reducedMotion ?? false}
+        className={cn(wordmarkClassName)}
+      />
     </span>
   );
 }

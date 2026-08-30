@@ -111,7 +111,7 @@ export function PlansBillingIntervalToggle({
           );
         })}
       </div>
-      <p className="text-xs text-[#e53935]">Special offer for early adopters.</p>
+      <p className="text-xs text-[#e53935]">Limited offer for early adopters.</p>
     </div>
   );
 }
@@ -179,11 +179,6 @@ export function PlansOverview({
               <li key={feature}>{feature}</li>
             ))}
           </ul>
-          {!compact ? (
-            <p className="mt-4 text-sm text-muted-foreground">
-              Full Dynamic Drive, every Sound Profile, phone motion link, and fine tuning.
-            </p>
-          ) : null}
           {!monetizationEnabled ? (
             <p
               className={cn(
