@@ -182,6 +182,15 @@
   white-space: nowrap;
 }
 
+.wordmark-expansion--mobile {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  text-align: center;
+  white-space: normal;
+  line-height: 1.35;
+}
+
 /** Native range control: track + thumb styled in base; keep touch height in className. */
 @utility slider {
   display: block;
@@ -199,6 +208,16 @@
   to {
     opacity: 1;
     transform: translateX(0);
+  }
+}
+
+@keyframes wave-radiate-hero {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.88;
   }
 }
 

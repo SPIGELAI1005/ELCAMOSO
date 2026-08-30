@@ -45,6 +45,8 @@ export const HERO_WAVE_HANDOFF_MS = 220;
 export const HERO_MARK_RADIATE_DELAY_MS = 2000;
 
 const WAVE_RADIATE_STAGGER_MS = 130;
+/** Hero idle pulse uses the same stagger as the intro wave-in for visual continuity. */
+const HERO_RADIATE_STAGGER_MS = WAVE_IN_STAGGER_MS;
 const MOSO_START_INDEX = 4;
 
 export type HeroWavePhase = "intro" | "hold" | "radiate";
@@ -64,6 +66,10 @@ export const MARK_IDLE_RADIATE_CYCLE_MS = markRadiateCycleMs(1, 1, 0);
 
 function markRadiateAnimation(index: number, cycleMs: number) {
   return `wave-radiate ${cycleMs}ms ease-out ${index * WAVE_RADIATE_STAGGER_MS}ms infinite`;
+}
+
+function markHeroRadiateAnimation(index: number, cycleMs: number) {
+  return `wave-radiate-hero ${cycleMs}ms ease-in-out ${index * HERO_RADIATE_STAGGER_MS}ms infinite`;
 }
 
 export function useHeroWavePhase(): { phase: HeroWavePhase; reducedMotion: boolean } {
@@ -160,7 +166,13 @@ export const ElcamosoMark = memo(function ElcamosoMark({
         r="17"
         stroke="currentColor"
         strokeWidth="3.4"
-        style={animateIn ? { animation: `wave-in ${WAVE_IN_MS}ms ease-out both` } : undefined}
+        style={
+          animateIn
+            ? { animation: `wave-in ${WAVE_IN_MS}ms ease-out both` }
+            : heroHold || heroRadiate
+              ? { opacity: 1, transform: "translateX(0)" }
+              : undefined
+        }
       />
       {WAVES.map((wave, i) => {
         const lit = Math.min(1, Math.max(0, intensity * 3 - i));
@@ -169,6 +181,10 @@ export const ElcamosoMark = memo(function ElcamosoMark({
           ? (brake * 0.7 + (1 - intensity) * 0.35) * (1.2 + i * 0.9)
           : brake * (1.2 + i * 0.9);
         const shift = reducedMotion ? 0 : out - inn;
+        const waveOpacity = heroHold ? 1 : (0.08 + lit * 0.92) * (1 - brake * 0.45);
+        const waveTransform = heroHold
+          ? `translateX(0px) scale(${1 + intensity * 0.04 * (i + 1)})`
+          : `translateX(${shift}px) scale(${1 + intensity * 0.04 * (i + 1)})`;
         return (
           <path
             key={wave.d}
@@ -177,8 +193,8 @@ export const ElcamosoMark = memo(function ElcamosoMark({
             strokeWidth={wave.w}
             strokeLinecap="round"
             style={{
-              opacity: (0.08 + lit * 0.92) * (1 - brake * 0.45),
-              transform: `translateX(${shift}px) scale(${1 + intensity * 0.04 * (i + 1)})`,
+              opacity: waveOpacity,
+              transform: waveTransform,
               transformOrigin: "20px 36px",
               transition: reducedMotion
                 ? "opacity 400ms ease-out"
@@ -191,7 +207,7 @@ export const ElcamosoMark = memo(function ElcamosoMark({
                   ? {}
                   : heroRadiate
                     ? {
-                        animation: markRadiateAnimation(i, MARK_IDLE_RADIATE_CYCLE_MS),
+                        animation: markHeroRadiateAnimation(i, MARK_IDLE_RADIATE_CYCLE_MS),
                       }
                     : live
                       ? {
@@ -230,7 +246,7 @@ function mosoLetterStyle(
 
   return {
     ...display,
-    animation: markRadiateAnimation(mosoIndex, MARK_IDLE_RADIATE_CYCLE_MS),
+    animation: markHeroRadiateAnimation(mosoIndex, MARK_IDLE_RADIATE_CYCLE_MS),
   };
 }
 
@@ -268,6 +284,10 @@ export function ElcamosoWordmark({
 
 const WORDMARK_EXPANSION_WORDS = ["ELECTRIC", "CAR", "MOTION", "SOUND"] as const;
 
+const MOBILE_WORDMARK_EXPANSION = WORDMARK_EXPANSION_WORDS.map((word) =>
+  word.split("").join(" "),
+).join("  ");
+
 export const WordmarkExpansion = memo(function WordmarkExpansion({
   className,
   ariaHidden,
@@ -278,17 +298,25 @@ export const WordmarkExpansion = memo(function WordmarkExpansion({
   width?: number;
 }) {
   return (
-    <p
-      className={cn("wordmark-expansion", className)}
-      aria-hidden={ariaHidden ? true : undefined}
-      style={width ? { width, maxWidth: width, minWidth: width } : undefined}
-    >
-      {WORDMARK_EXPANSION_WORDS.map((word) => (
-        <span key={word} className="shrink-0">
-          {word}
-        </span>
-      ))}
-    </p>
+    <>
+      <p
+        className={cn("wordmark-expansion wordmark-expansion--mobile lg:hidden", className)}
+        aria-hidden={ariaHidden ? true : undefined}
+      >
+        {MOBILE_WORDMARK_EXPANSION}
+      </p>
+      <p
+        className={cn("wordmark-expansion hidden lg:flex", className)}
+        aria-hidden={ariaHidden ? true : undefined}
+        style={width ? { width, maxWidth: width, minWidth: width } : undefined}
+      >
+        {WORDMARK_EXPANSION_WORDS.map((word) => (
+          <span key={word} className="shrink-0">
+            {word}
+          </span>
+        ))}
+      </p>
+    </>
   );
 });
 

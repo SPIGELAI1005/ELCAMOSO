@@ -98,7 +98,7 @@ function HeroBrandTitle({
   return (
     <div
       ref={wordmarkRef}
-      className="mt-8 flex w-fit flex-col items-center lg:col-start-1 lg:row-start-2 lg:row-span-2 lg:mt-0 lg:items-start lg:justify-self-start lg:self-center"
+      className="mt-4 flex w-fit flex-col items-center lg:col-start-1 lg:row-start-2 lg:row-span-2 lg:mt-0 lg:items-start lg:justify-self-start lg:self-center"
       aria-label="ELCAMOSO, Electric Car Motion Sound"
     >
       <ElcamosoWordmark
@@ -109,7 +109,7 @@ function HeroBrandTitle({
       />
       <WordmarkExpansion
         ariaHidden
-        className="mt-[0.7rem] w-full text-[10px] sm:text-[11px] lg:-mt-2.5 lg:text-xs xl:-mt-3.5"
+        className="mt-[0.55rem] w-full text-[9px] sm:text-[10px] lg:-mt-2.5 lg:text-xs xl:-mt-3.5"
         width={wordmarkWidth}
       />
     </div>
@@ -120,24 +120,24 @@ export function LandingHero() {
   const { phase, reducedMotion } = useHeroWavePhase();
 
   return (
-    <section className="flex min-h-[calc(100svh-4.5rem)] items-center px-6 py-16 pb-28 sm:px-12 lg:px-10 xl:px-16">
-      <div className="mx-auto grid w-full max-w-6xl justify-items-center gap-10 lg:grid-cols-2 lg:grid-rows-[auto_auto_auto] lg:justify-items-stretch lg:gap-x-12 lg:gap-y-8 xl:gap-x-20 xl:gap-y-10">
+    <section className="flex min-h-0 items-start px-6 pt-3 pb-14 sm:px-12 sm:pt-6 lg:min-h-[calc(100svh-4.5rem)] lg:items-center lg:px-10 lg:py-16 lg:pb-28 xl:px-16">
+      <div className="mx-auto grid w-full max-w-6xl justify-items-center gap-5 sm:gap-7 lg:grid-cols-2 lg:grid-rows-[auto_auto_auto] lg:justify-items-stretch lg:gap-x-12 lg:gap-y-8 lg:gap-10 xl:gap-x-20 xl:gap-y-10">
         <HeroMark
           phase={phase}
           reducedMotion={reducedMotion}
-          className="elcamoso-mark-lockup h-[9.45rem] w-auto sm:h-[10.8rem] lg:col-start-1 lg:row-start-1 lg:h-[11.475rem] lg:justify-self-start xl:h-[12.825rem]"
+          className="elcamoso-mark-lockup h-[7.65rem] w-auto sm:h-[9rem] lg:col-start-1 lg:row-start-1 lg:h-[11.475rem] lg:justify-self-start xl:h-[12.825rem]"
         />
         <HeroBrandTitle phase={phase} reducedMotion={reducedMotion} />
 
         <div className="flex w-full max-w-xs flex-col items-center text-center lg:col-start-2 lg:row-start-1 lg:max-w-none lg:items-start lg:self-end lg:text-left">
-          <h1 className="text-4xl leading-[1.08] font-light tracking-tight sm:text-5xl xl:text-[3.25rem] xl:leading-[1.06]">
+          <h1 className="text-[2.05rem] leading-[1.08] font-light tracking-tight sm:text-5xl xl:text-[3.25rem] xl:leading-[1.06]">
             Your EV.
             <br />
             Your Sound.
             <br />
             More Emotion.
           </h1>
-          <p className="mt-6 max-w-md text-base text-muted-foreground">
+          <p className="mt-3 max-w-md text-[0.9375rem] text-muted-foreground sm:mt-6 sm:text-base">
             Feel the e-motion in your electrical motion.
           </p>
         </div>
@@ -147,11 +147,11 @@ export function LandingHero() {
           <Link
             to="/demo"
             hash="feel"
-            className="mt-4 shrink-0 text-[11px] tracking-[0.24em] text-muted-foreground uppercase hover:text-foreground lg:mt-0"
+            className="mt-3 shrink-0 text-[11px] tracking-[0.24em] text-muted-foreground uppercase hover:text-foreground sm:mt-4 lg:mt-0"
           >
             Hear it
           </Link>
-          <HeroReadAboutLink className="mt-4 lg:hidden" />
+          <HeroReadAboutLink className="mt-3 sm:mt-4 lg:hidden" />
         </div>
 
         <HeroReadAboutLink className="hidden lg:inline-flex lg:col-start-2 lg:row-start-3 lg:justify-self-start lg:self-baseline" />
