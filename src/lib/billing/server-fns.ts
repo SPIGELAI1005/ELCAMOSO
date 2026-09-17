@@ -1,8 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
 
-import { getAccountSession } from "@/lib/account/auth-service";
-import { resolveAuthenticatedUserId } from "@/lib/account/resolve-authenticated-user";
-import { tryResolveRequestSessionToken } from "@/lib/account/session-request";
 import type { CheckoutIntervalSlug, CheckoutPlanSlug } from "@/lib/billing/checkout-request";
 import { beginDrivePlusCheckout } from "@/lib/billing/checkout-service";
 
@@ -22,6 +19,10 @@ import { getDynamicDriveTrialService } from "@/lib/dynamic-drive-trial/service";
 export const getSubscriptionSummaryFn = createServerFn({ method: "POST" })
   .inputValidator((data: { sessionToken?: string | null }) => data)
   .handler(async ({ data }) => {
+    const { getAccountSession } = await import("@/lib/account/auth-service");
+    const { tryResolveRequestSessionToken } = await import(
+      "@/lib/account/session-cookies.server"
+    );
     const token = tryResolveRequestSessionToken(data.sessionToken);
     const session = token ? getAccountSession(token) : null;
     if (!session) {
@@ -56,7 +57,13 @@ export const getSubscriptionSummaryFn = createServerFn({ method: "POST" })
 export const getBillingHealthFn = createServerFn({ method: "POST" })
   .inputValidator((data: { sessionToken?: string | null }) => data)
   .handler(async ({ data }) => {
-    const userId = resolveAuthenticatedUserId(data.sessionToken);
+    const { resolveAuthenticatedUserId } = await import(
+      "@/lib/account/resolve-authenticated-user"
+    );
+    const { tryResolveRequestSessionToken } = await import(
+      "@/lib/account/session-cookies.server"
+    );
+    const userId = resolveAuthenticatedUserId(tryResolveRequestSessionToken(data.sessionToken));
     const health = await getBillingHealthSnapshot(userId);
     return { health };
   });
@@ -65,7 +72,13 @@ export const getBillingHealthFn = createServerFn({ method: "POST" })
 export const reconcileBillingFn = createServerFn({ method: "POST" })
   .inputValidator((data: { sessionToken?: string | null }) => data)
   .handler(async ({ data }) => {
-    const userId = resolveAuthenticatedUserId(data.sessionToken);
+    const { resolveAuthenticatedUserId } = await import(
+      "@/lib/account/resolve-authenticated-user"
+    );
+    const { tryResolveRequestSessionToken } = await import(
+      "@/lib/account/session-cookies.server"
+    );
+    const userId = resolveAuthenticatedUserId(tryResolveRequestSessionToken(data.sessionToken));
     return reconcileUserBillingFromStripe(userId);
   });
 
@@ -81,6 +94,10 @@ export const createCheckoutSessionFn = createServerFn({ method: "POST" })
     }) => data,
   )
   .handler(async ({ data }) => {
+    const { getAccountSession } = await import("@/lib/account/auth-service");
+    const { tryResolveRequestSessionToken } = await import(
+      "@/lib/account/session-cookies.server"
+    );
     const token = tryResolveRequestSessionToken(data.sessionToken);
     const session = token ? getAccountSession(token) : null;
     if (!session) throw new Error("Sign in required");
@@ -103,7 +120,13 @@ export const createBillingPortalSessionFn = createServerFn({ method: "POST" })
     (data: { sessionToken?: string | null; origin: string; returnPath?: string }) => data,
   )
   .handler(async ({ data }) => {
-    const userId = resolveAuthenticatedUserId(data.sessionToken);
+    const { resolveAuthenticatedUserId } = await import(
+      "@/lib/account/resolve-authenticated-user"
+    );
+    const { tryResolveRequestSessionToken } = await import(
+      "@/lib/account/session-cookies.server"
+    );
+    const userId = resolveAuthenticatedUserId(tryResolveRequestSessionToken(data.sessionToken));
     const stripeCustomerId = await getUserBillingRepository().getStripeCustomerId(userId);
     if (!stripeCustomerId) {
       throw new Error("No billing account linked");

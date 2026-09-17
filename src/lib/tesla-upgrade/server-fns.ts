@@ -1,7 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
 
-import { getAccountSession } from "@/lib/account/auth-service";
-import { tryResolveRequestSessionToken } from "@/lib/account/session-request";
 import { isBillingAvailable } from "@/lib/billing/billing-available";
 import { beginDrivePlusCheckout } from "@/lib/billing/checkout-service";
 import { getDrivePlusYearlyDisplay } from "@/lib/billing/plan-display";
@@ -24,6 +22,10 @@ export const createTeslaUpgradeTokenFn = createServerFn({ method: "POST" })
     if (!isBillingAvailable()) {
       throw new Error("Billing is not available");
     }
+    const { getAccountSession } = await import("@/lib/account/auth-service");
+    const { tryResolveRequestSessionToken } = await import(
+      "@/lib/account/session-cookies.server"
+    );
     const token = tryResolveRequestSessionToken(data.sessionToken);
     const session = token ? getAccountSession(token) : null;
     const created = createTeslaUpgradeToken({
@@ -69,6 +71,10 @@ export const beginTeslaUpgradeCheckoutFn = createServerFn({ method: "POST" })
     }) => data,
   )
   .handler(async ({ data }) => {
+    const { getAccountSession } = await import("@/lib/account/auth-service");
+    const { tryResolveRequestSessionToken } = await import(
+      "@/lib/account/session-cookies.server"
+    );
     const token = tryResolveRequestSessionToken(data.sessionToken);
     const session = token ? getAccountSession(token) : null;
     if (!session) throw new Error("Sign in required");

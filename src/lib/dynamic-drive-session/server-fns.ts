@@ -1,11 +1,18 @@
 import { createServerFn } from "@tanstack/react-start";
 
+async function resolveUserId(sessionToken?: string | null): Promise<string> {
+  const { tryResolveRequestSessionToken } = await import(
+    "@/lib/account/session-cookies.server"
+  );
+  const { resolveAuthenticatedUserId } = await import("@/lib/account/resolve-authenticated-user");
+  return resolveAuthenticatedUserId(tryResolveRequestSessionToken(sessionToken));
+}
+
 export const getDynamicDriveSessionStatusFn = createServerFn({ method: "POST" })
   .inputValidator((data: { sessionToken?: string | null }) => data)
   .handler(async ({ data }) => {
-    const { resolveAuthenticatedUserId } = await import("@/lib/account/resolve-authenticated-user");
     const { getDynamicDriveSessionService } = await import("@/lib/dynamic-drive-session/service");
-    const userId = resolveAuthenticatedUserId(data.sessionToken);
+    const userId = await resolveUserId(data.sessionToken);
     return getDynamicDriveSessionService().getSnapshot(userId);
   });
 
@@ -19,10 +26,9 @@ export const claimDynamicDriveSessionFn = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     const { assertServerEntitlement } = await import("@/lib/entitlements/server-assert");
-    const { resolveAuthenticatedUserId } = await import("@/lib/account/resolve-authenticated-user");
     const { getDynamicDriveSessionService } = await import("@/lib/dynamic-drive-session/service");
     await assertServerEntitlement(data.sessionToken, "dynamic_drive");
-    const userId = resolveAuthenticatedUserId(data.sessionToken);
+    const userId = await resolveUserId(data.sessionToken);
     return getDynamicDriveSessionService().claimSession({
       userId,
       driveSessionId: data.driveSessionId,
@@ -39,9 +45,8 @@ export const heartbeatDynamicDriveSessionFn = createServerFn({ method: "POST" })
     }) => data,
   )
   .handler(async ({ data }) => {
-    const { resolveAuthenticatedUserId } = await import("@/lib/account/resolve-authenticated-user");
     const { getDynamicDriveSessionService } = await import("@/lib/dynamic-drive-session/service");
-    const userId = resolveAuthenticatedUserId(data.sessionToken);
+    const userId = await resolveUserId(data.sessionToken);
     return getDynamicDriveSessionService().heartbeat({
       userId,
       driveSessionId: data.driveSessionId,
@@ -52,9 +57,8 @@ export const heartbeatDynamicDriveSessionFn = createServerFn({ method: "POST" })
 export const releaseDynamicDriveSessionFn = createServerFn({ method: "POST" })
   .inputValidator((data: { sessionToken?: string | null; driveSessionId: string }) => data)
   .handler(async ({ data }) => {
-    const { resolveAuthenticatedUserId } = await import("@/lib/account/resolve-authenticated-user");
     const { getDynamicDriveSessionService } = await import("@/lib/dynamic-drive-session/service");
-    const userId = resolveAuthenticatedUserId(data.sessionToken);
+    const userId = await resolveUserId(data.sessionToken);
     return getDynamicDriveSessionService().releaseSession({
       userId,
       driveSessionId: data.driveSessionId,

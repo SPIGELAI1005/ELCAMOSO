@@ -1,6 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
 
-import { assertServerEntitlement } from "@/lib/entitlements/server-assert";
 import {
   createDriveRelaySession,
   getDriveRelaySession,
@@ -10,6 +9,7 @@ import {
 export const createDriveRelaySessionFn = createServerFn({ method: "POST" })
   .inputValidator((data: { sessionToken?: string | null }) => data)
   .handler(async ({ data }) => {
+    const { assertServerEntitlement } = await import("@/lib/entitlements/server-assert");
     await assertServerEntitlement(data.sessionToken, "phone_sensor");
     return createDriveRelaySession();
   });
