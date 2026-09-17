@@ -75,6 +75,7 @@ import {
 } from "@/lib/powertrain/adapters/profile-map";
 import { vehicleMotionFromDrive } from "@/lib/powertrain/adapters/vehicle-motion";
 import { PowertrainSimulator } from "@/lib/powertrain/simulator";
+import { shouldUseDynamicPowertrainFromSessionConfig } from "@/lib/powertrain/dynamic-powertrain-gate";
 import type { ProfileTuning, Playlist } from "@/lib/drive/settings";
 import { DEFAULT_LAYER_MIX, normalizeMix, type LayerMix } from "@/lib/sound/environments";
 import type { SoundSnippet } from "@/lib/sound/snippets";
@@ -309,7 +310,11 @@ class DriveSession {
 
   /** Dynamic Drive powertrain sim — also used for Demo (simulated gears at realistic speeds). */
   private powertrainSimActive(profile: ReturnType<typeof getProfile>): boolean {
-    return supportsDynamicDrive(profile) && (this.config.dynamicDrive || this.kind === "demo");
+    return shouldUseDynamicPowertrainFromSessionConfig({
+      supportsVirtualTransmission: supportsDynamicDrive(profile),
+      configDynamicDrive: this.config.dynamicDrive,
+      sessionKind: this.kind,
+    });
   }
 
   /**
@@ -322,8 +327,7 @@ class DriveSession {
     try {
       const AudioCtx =
         window.AudioContext ??
-        (window as typeof window & { webkitAudioContext?: typeof AudioContext })
-          .webkitAudioContext;
+        (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
       if (!AudioCtx) return;
       if (!this.gestureAudioContext || this.gestureAudioContext.state === "closed") {
         this.gestureAudioContext = new AudioCtx();

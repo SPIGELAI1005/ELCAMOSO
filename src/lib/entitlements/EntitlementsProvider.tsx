@@ -26,16 +26,15 @@ export interface EntitlementsProviderProps {
 }
 
 export function EntitlementsProvider({ user, now, children }: EntitlementsProviderProps) {
-  const { session } = useAccount();
-  const sessionToken = session?.sessionToken ?? null;
+  const { session, isAuthenticated } = useAccount();
 
   const query = useQuery({
-    queryKey: ["entitlements", sessionToken],
+    queryKey: ["entitlements", session?.userId ?? null, isAuthenticated],
     queryFn: async () => {
       if (user) {
         return buildEntitlementSnapshot(user, now ?? Date.now());
       }
-      return getEntitlementsFn({ data: { sessionToken } });
+      return getEntitlementsFn({ data: { sessionToken: null } });
     },
     staleTime: 30_000,
     retry: false,

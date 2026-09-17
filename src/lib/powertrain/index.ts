@@ -57,14 +57,18 @@ export { POWERTRAIN_PROFILES, getPowertrainProfile } from "@/lib/powertrain/prof
 
 export {
   rpmFromSpeedAndGear,
+  speedKmhFromRpmAndGear,
   normalizeRpm,
   rpmAfterGearChange,
   rpmAfterUpshift,
   wheelRpmFromSpeedKmh,
+  rpmTrackTarget,
+  rpmTrackTargetEx,
 } from "@/lib/powertrain/rpm-model";
 
 export {
   selectTargetGear,
+  selectTargetGearDetailed,
   engageGear,
   resolveGearEngagement,
   upshiftRpmForLoad,
@@ -74,8 +78,29 @@ export {
   beginShift,
   tickShift,
   createShiftControllerState,
+  shiftPhaseFromProgress,
 } from "@/lib/powertrain/shift-controller";
 export { updateThrottleModel, createThrottleModelState } from "@/lib/powertrain/throttle-model";
+export {
+  updateDriverDemand,
+  createDriverDemandState,
+  roadLoadEstimate,
+} from "@/lib/powertrain/driver-demand";
+export {
+  generateShiftMap,
+  resolveShiftMap,
+  validateShiftMap,
+  roadSpeedForRpmGear,
+  rpmForRoadSpeedGear,
+  calibrationUpshiftTable,
+  scheduleUpshiftRpmForDemand,
+  DEMAND_BREAKPOINTS,
+} from "@/lib/powertrain/shift-map";
+export {
+  shouldUseDynamicPowertrain,
+  shouldUseDynamicPowertrainFromSessionConfig,
+} from "@/lib/powertrain/dynamic-powertrain-gate";
+export { reconcileKickdownQueue } from "@/lib/powertrain/kickdown-queue";
 export { updateOverrun, createOverrunState } from "@/lib/powertrain/overrun";
 
 export {

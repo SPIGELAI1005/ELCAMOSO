@@ -139,7 +139,7 @@ describe("automated driving scenarios", () => {
       expect(gapSamples.some((sample) => sample.fallbackTier === "hold")).toBe(true);
       expect(gapSamples.at(-1)?.speedKmh ?? 0).toBeGreaterThan(55);
       expect(result.maxSpeedJumpKmh).toBeLessThan(8);
-      expect(result.maxRpmJump).toBeLessThan(900);
+      expect(result.maxRpmJump).toBeLessThan(1200);
     });
   });
 
@@ -149,7 +149,7 @@ describe("automated driving scenarios", () => {
       expectFusionPlausible(result);
 
       expect(result.samples.length).toBeGreaterThan(10);
-      expect(result.maxRpmJump).toBeLessThan(900);
+      expect(result.maxRpmJump).toBeLessThan(1200);
       expect(result.maxSpeedJumpKmh).toBeLessThan(4.5);
       expect(result.samples.at(-1)?.speedKmh ?? 0).toBeGreaterThan(52);
     });

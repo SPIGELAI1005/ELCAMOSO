@@ -1,6 +1,7 @@
 import { requireAccountSession } from "@/lib/account/auth-service";
+import { ACCOUNT_SESSION_COOKIE_NAME } from "@/lib/account/session-cookie";
 
-/** Reads the ELCAMOSO account session token from an API request. */
+/** Reads the ELCAMOSO account session token from an API request (Bearer, header, or cookie). */
 export function readAccountSessionToken(request: Request): string | null {
   const authorization = request.headers.get("authorization");
   if (authorization?.startsWith("Bearer ")) {
@@ -10,6 +11,18 @@ export function readAccountSessionToken(request: Request): string | null {
 
   const headerToken = request.headers.get("x-elcamoso-session")?.trim();
   if (headerToken) return headerToken;
+
+  const cookieHeader = request.headers.get("cookie");
+  if (cookieHeader) {
+    for (const part of cookieHeader.split(";")) {
+      const [rawName, ...rest] = part.split("=");
+      const name = rawName?.trim();
+      if (name === ACCOUNT_SESSION_COOKIE_NAME) {
+        const value = rest.join("=").trim();
+        if (value) return decodeURIComponent(value);
+      }
+    }
+  }
 
   return null;
 }

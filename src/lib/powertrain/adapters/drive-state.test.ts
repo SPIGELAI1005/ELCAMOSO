@@ -29,6 +29,7 @@ describe("driveStateFromPowertrain", () => {
     expect(state.gear).toBe(4);
     expect(state.isShifting).toBe(true);
     expect(state.powertrain).toBe(pt);
+    expect(state.powertrainBackend).toBe("dynamic");
     expect(state.load).toBeLessThan(0.72);
   });
 });

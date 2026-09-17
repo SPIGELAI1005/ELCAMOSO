@@ -42,7 +42,7 @@ export function BillingSettingsPanel({ billingFlash = null }: BillingSettingsPan
     setError(null);
 
     void getSubscriptionSummaryFn({
-      data: { sessionToken: session?.sessionToken ?? null },
+      data: { sessionToken: null },
     })
       .then((result) => {
         if (cancelled) return;
@@ -62,7 +62,7 @@ export function BillingSettingsPanel({ billingFlash = null }: BillingSettingsPan
     return () => {
       cancelled = true;
     };
-  }, [session?.sessionToken, isAuthenticated]);
+  }, [session?.userId, isAuthenticated]);
 
   useEffect(() => {
     if (billingFlash === "success") {
@@ -80,11 +80,11 @@ export function BillingSettingsPanel({ billingFlash = null }: BillingSettingsPan
   }, [billingFlash]);
 
   async function handleManageSubscription() {
-    if (!session?.sessionToken || !summary.canManageSubscription) return;
+    if (!isAuthenticated || !summary.canManageSubscription) return;
     setIsOpeningPortal(true);
     setError(null);
     try {
-      await openBillingPortal(session.sessionToken, "/settings?workspace=plan");
+      await openBillingPortal("/settings?workspace=plan");
     } catch {
       setError("Could not open plan settings.");
       setIsOpeningPortal(false);

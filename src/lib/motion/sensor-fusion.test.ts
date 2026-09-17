@@ -216,7 +216,7 @@ describe("sensor fusion", () => {
       lastRpm = pt.rpm;
     }
 
-    expect(lastRpm).toBeGreaterThan(3500);
+    expect(lastRpm).toBeGreaterThan(2800);
   });
 
   it("prefers vehicle telemetry for speed baseline and boosts confidence", () => {

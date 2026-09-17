@@ -3,6 +3,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { SOUND_PROFILES, getProfile } from "@/lib/sound/profiles";
 import { SoundEngine } from "@/lib/sound/engine";
 import type { SynthesisMode } from "@/lib/sound/realism/types";
+import type { RealismEngineMode } from "@/lib/sound/realism/v2";
+import { isCombustionRealismV2Profile } from "@/lib/sound/realism/v2";
 import { DEBUG_SCENARIOS, getDebugScenario } from "@/lib/sound/realism/debug-scenarios";
 import { familyForProfile } from "@/lib/sound/realism/families";
 import type { DriveState } from "@/lib/drive/model";
@@ -33,6 +35,7 @@ function DebugHarness() {
   const [profileId, setProfileId] = useState(SOUND_PROFILES[0]!.id);
   const [scenarioId, setScenarioId] = useState("0-30-gentle");
   const [mode, setMode] = useState<SynthesisMode>("improved");
+  const [realismEngine, setRealismEngine] = useState<RealismEngineMode>("current");
   const [dynamicDrive, setDynamicDrive] = useState(false);
   const [playing, setPlaying] = useState(false);
   const [layers, setLayers] = useState<{ id: string; muted: boolean; triggerable?: boolean }[]>([]);
@@ -71,12 +74,19 @@ function DebugHarness() {
     stop();
     const engine = new SoundEngine();
     engine.setSynthesisMode(mode);
+    engine.setRealismEngine(realismEngine);
     const profile = getProfile(profileId);
     await engine.start(profile, { signature: false, seed: 42 });
     engine.setVolume(0.55);
-    engine.setDynamicDriveEnabled(dynamicDrive && supportsDynamicDrive(profile));
+    // Realism V2 owns combustion tonal core; Dynamic Drive remains available for current path.
+    engine.setDynamicDriveEnabled(
+      realismEngine === "current" && dynamicDrive && supportsDynamicDrive(profile),
+    );
     engineRef.current = engine;
-    if (dynamicDrive && supportsDynamicDrive(profile)) {
+    const wantPowertrain =
+      supportsDynamicDrive(profile) &&
+      (dynamicDrive || (realismEngine === "v2" && isCombustionRealismV2Profile(profile.id)));
+    if (wantPowertrain) {
       powertrainRef.current = new PowertrainSimulator({
         profile: powertrainProfileForSound(profile),
       });
@@ -127,11 +137,12 @@ function DebugHarness() {
       rafRef.current = requestAnimationFrame(tick);
     };
     rafRef.current = requestAnimationFrame(tick);
-  }, [dynamicDrive, mode, profileId, scenarioId, refreshLayers, stop]);
+  }, [dynamicDrive, mode, realismEngine, profileId, scenarioId, refreshLayers, stop]);
 
   const profile = getProfile(profileId);
   const vehicleScenarios = DEBUG_SCENARIOS.filter((s) => s.family === "vehicle");
   const motionScenarios = DEBUG_SCENARIOS.filter((s) => s.family === "motion");
+  const v2Eligible = isCombustionRealismV2Profile(profileId);
 
   return (
     <main className="min-h-screen bg-background text-foreground">
@@ -147,6 +158,12 @@ function DebugHarness() {
           className="mt-4 inline-block text-[11px] tracking-[0.2em] text-muted-foreground uppercase hover:text-foreground"
         >
           Dynamic Drive powertrain simulator →
+        </Link>
+        <Link
+          to="/debug/calibration"
+          className="mt-2 inline-block text-[11px] tracking-[0.2em] text-muted-foreground uppercase hover:text-foreground"
+        >
+          Road-test calibration lab →
         </Link>
         <Link
           to="/debug/billing"
@@ -188,6 +205,36 @@ function DebugHarness() {
                 </button>
               ))}
             </div>
+          </div>
+
+          <div>
+            <p className="text-sm text-muted-foreground">Realism engine (dev A/B)</p>
+            <div className="mt-2 flex gap-3">
+              {(
+                [
+                  ["current", "Current Engine"],
+                  ["v2", "Realism V2"],
+                ] as const
+              ).map(([id, label]) => (
+                <button
+                  key={id}
+                  type="button"
+                  aria-pressed={realismEngine === id}
+                  disabled={id === "v2" && !v2Eligible}
+                  onClick={() => setRealismEngine(id)}
+                  className={`h-10 rounded-full border px-5 text-[11px] tracking-[0.2em] uppercase disabled:opacity-40 ${
+                    realismEngine === id ? "border-foreground bg-secondary" : "border-border"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <p className="mt-2 text-[11px] text-muted-foreground">
+              {v2Eligible
+                ? "Same motion trace plays through Current or V2 for combustion profiles."
+                : "Realism V2 applies to combustion profiles (GT V8, Flat-Six, etc.)."}
+            </p>
           </div>
 
           <div>

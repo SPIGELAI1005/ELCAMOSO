@@ -3,7 +3,7 @@
 Living document for product context, recent architecture decisions, and a dated changelog.
 Canonical product rules still live in `elcamoso-comprehensive-spec.md`. Update **both** when direction or architecture changes.
 
-**Last updated:** 2026-08-30
+**Last updated:** 2026-09-17
 
 ---
 
@@ -33,12 +33,21 @@ Canonical product rules still live in `elcamoso-comprehensive-spec.md`. Update *
 
 ### Routes
 
-`/`, `/onboarding`, `/drive`, `/demo`, `/sounds`, `/studio`, `/garage`, `/calibrate`, `/settings`, `/about`, `/pricing`, `/legal` (+ impressum, privacy, cookies, terms, accessibility), `/debug` (dev-only)
+`/`, `/onboarding`, `/drive`, `/demo`, `/sounds`, `/studio`, `/garage`, `/calibrate`, `/settings`, `/about`, `/pricing`, `/legal` (+ impressum, privacy, cookies, terms, accessibility), `/auth/account/callback` (magic link), `/auth/account/google/callback` (Google OAuth, server GET), `/upgrade/$token`, `/connect/$sessionId`, `/debug` (dev-only; includes `/debug/calibration` road-test lab, `/debug` Realism V2 A/B)
+
+### Account / auth (current)
+
+- **Magic link** + **Google OAuth** (Authorization Code + PKCE + state/nonce + ID token validation).
+- Session: HttpOnly cookie `elcamoso_account_session` (Secure in production, SameSite=Lax). Profile UX in localStorage is `{ userId, email, expiresAt }` only — no session token, no Google tokens.
+- Server-only env: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI` (never `VITE_*`). Docs: `docs/account-google-oauth.md`.
+- **Continue with Google** only when all three Google env vars are set; partial config fails startup validation in `src/server.ts`.
+- Tesla vehicle OAuth remains separate (`docs/dynamic-drive/tesla-oauth-env.md`).
 
 ### Sound architecture (current)
 
 - **Built-in Sound Profiles:** **47** (22 original + 25 expansion in `src/lib/sound/profiles-expansion.ts`)
 - Default synthesis path: **improved** (`src/lib/sound/realism/`); original kept for A/B on `/debug`
+- **Realism V2** (dev A/B): hybrid combustion path `src/lib/sound/realism/v2/` + worklet `public/audio/combustion-processor.js` — docs `docs/AUDIO_REALISM_V2.md`
 - **UI categories** (`PROFILE_CATEGORIES`): Classic, Motorsport, Future, Nautical, Aviation, Machines, Nature, Heritage, Musical, Festive, Playful, Garage
 - **Technical families** (engine, not UI chips): `physical` | `designed` | `environmental` | `musical` — see `src/lib/sound/realism/families.ts`
 - Optional profile metadata: `motionModel`, `sourceMode`
@@ -48,6 +57,11 @@ Canonical product rules still live in `elcamoso-comprehensive-spec.md`. Update *
 - Subjective review notes: `docs/SOUND_PROFILE_REVIEW.md`
 - Noise / environments / fidelity: `docs/SOUND_NOISE_AND_FIDELITY.md`
 - Environments: `src/lib/sound/environments.ts` (`textureScale`; **Showroom** mutes beds/hiss)
+
+### Powertrain / Dynamic Drive calibration
+
+- Powertrain Calibration V2: demand bands, dual speed filters, kickdown queue — `docs/POWERTRAIN_CALIBRATION_V2.md`
+- Road-test calibration lab: `/debug/calibration` — capture/replay traces without GPS routes — `docs/ROAD_TEST_CALIBRATION.md`, `src/lib/calibration/`
 
 ### Session / audition pitfalls (fixed)
 
@@ -103,6 +117,10 @@ Canonical product rules still live in `elcamoso-comprehensive-spec.md`. Update *
 | Spec                         | `elcamoso-comprehensive-spec.md`                     |
 | Profiles                     | `src/lib/sound/profiles.ts`, `profiles-expansion.ts` |
 | Realism                      | `src/lib/sound/realism/*`                            |
+| Realism V2                   | `src/lib/sound/realism/v2/`, `docs/AUDIO_REALISM_V2.md` |
+| Calibration lab              | `src/lib/calibration/`, `docs/ROAD_TEST_CALIBRATION.md` |
+| Powertrain V2 notes          | `docs/POWERTRAIN_CALIBRATION_V2.md`                  |
+| Account / Google OAuth       | `src/lib/account/*`, `docs/account-google-oauth.md`  |
 | Session                      | `src/lib/drive/session.ts`                           |
 | GPS speed                    | `src/lib/drive/gps-speed.ts`                         |
 | Sensor fusion                | `src/lib/motion/sensor-fusion.ts`                    |
@@ -135,10 +153,33 @@ Canonical product rules still live in `elcamoso-comprehensive-spec.md`. Update *
 - Playwright e2e: `e2e/` + `playwright.config.ts`; scripts `npm run test:e2e` / `test:e2e:ui` (chromium + mobile-chrome)
 - Mid-play Sound Profile switch: `listenProfile` reuses the live engine (no AudioContext rebuild); awaited `stopSoft`; safer Media Session / meter / `setProfile`
 - **Premium UX refactor (P0–P3):** `MotionEnergy` + Drive instrument / safety mode; mobile bottom nav; Home storytelling + hold-to-accel; Sounds mood IA; Studio Basic/Advanced; Garage/Settings/Onboarding simplified
+- **Durable account store:** Google + magic-link sessions are still in-memory on the server until Postgres-backed account storage ships
+- **Realism V2:** sample-assisted combustion bank ready in schema; ship licensed/self-recorded WAVs when available
+- **Road-test loop:** collect Tesla traces via `/debug/calibration`, tune powertrain/audio offline against fixtures
 
 ---
 
 ## Changelog
+
+### 2026-09-17 (Google account OAuth + HttpOnly sessions)
+
+- Google Authorization Code flow with **PKCE**, **state**, **nonce**, and ID token validation (issuer / audience / exp / nonce).
+- Code exchange on server route `GET /auth/account/google/callback` only; `GOOGLE_CLIENT_SECRET` never leaves server env.
+- Account session cookie `elcamoso_account_session`: HttpOnly, Secure in production, SameSite=Lax; no Google tokens or session secrets in localStorage.
+- Header account UI: user icon + sign-in dialog; **Continue with Google** only when Google env is fully configured.
+- Startup validation for partial/misconfigured `GOOGLE_*`; production redirect URI must be `https://www.elcamoso.com/auth/account/google/callback`.
+- Docs: `docs/account-google-oauth.md`. Tests: `src/lib/account/google-oauth.test.ts`.
+- `.gitignore`: explicit `.env` / `.env.*` (keep `.env.example`).
+
+### 2026-09-17 (Realism V2 + powertrain calibration + road-test lab)
+
+- **Audio Realism V2:** hybrid combustion synth + AudioWorklet excitation; Current vs V2 A/B on `/debug` — `docs/AUDIO_REALISM_V2.md`.
+- **Powertrain Calibration V2:** dual speed filters, demand bands, kickdown queue, personality tables — `docs/POWERTRAIN_CALIBRATION_V2.md`.
+- Versioned calibration traces (`elcamoso.calibration.trace` v1): motion + powertrain time-series without GPS routes; JSON export/import.
+- Deterministic scenario library + replay/metrics/compare; sanitized Vitest fixtures under `src/lib/calibration/fixtures/`.
+- Dev route `/debug/calibration`: lab playback (Current vs Realism V2, Dynamic vs Legacy, scrub/rate), Tesla road-test recording mode, local subjective notes.
+- Docs: `docs/ROAD_TEST_CALIBRATION.md`.
+- Brand mark polish: **O )))** wave geometry / animation on header and landing.
 
 ### 2026-08-30 (Responsive hero, nav, and wordmark expansion)
 

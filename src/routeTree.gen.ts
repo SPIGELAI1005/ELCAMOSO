@@ -26,6 +26,7 @@ import { Route as SoundsRouteImport } from './routes/sounds'
 import { Route as StudioRouteImport } from './routes/studio'
 import { Route as ConnectSessionIdRouteImport } from './routes/connect.$sessionId'
 import { Route as DebugBillingRouteImport } from './routes/debug.billing'
+import { Route as DebugCalibrationRouteImport } from './routes/debug.calibration'
 import { Route as DebugDiagnosticsRouteImport } from './routes/debug.diagnostics'
 import { Route as DebugPowertrainRouteImport } from './routes/debug.powertrain'
 import { Route as LegalIndexRouteImport } from './routes/legal/index'
@@ -42,6 +43,7 @@ import { Route as ApiSoundAssetsManifestRouteImport } from './routes/api/sound-a
 import { Route as ApiStripeWebhookRouteImport } from './routes/api/stripe/webhook'
 import { Route as AuthAccountCallbackRouteImport } from './routes/auth/account/callback'
 import { Route as AuthTeslaCallbackRouteImport } from './routes/auth/tesla/callback'
+import { Route as AuthAccountGoogleCallbackRouteImport } from './routes/auth/account/google/callback'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -128,6 +130,11 @@ const DebugBillingRoute = DebugBillingRouteImport.update({
   path: '/billing',
   getParentRoute: () => DebugRoute,
 } as any)
+const DebugCalibrationRoute = DebugCalibrationRouteImport.update({
+  id: '/calibration',
+  path: '/calibration',
+  getParentRoute: () => DebugRoute,
+} as any)
 const DebugDiagnosticsRoute = DebugDiagnosticsRouteImport.update({
   id: '/diagnostics',
   path: '/diagnostics',
@@ -208,6 +215,12 @@ const AuthTeslaCallbackRoute = AuthTeslaCallbackRouteImport.update({
   path: '/auth/tesla/callback',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthAccountGoogleCallbackRoute =
+  AuthAccountGoogleCallbackRouteImport.update({
+    id: '/auth/account/google/callback',
+    path: '/auth/account/google/callback',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -227,6 +240,7 @@ export interface FileRoutesByFullPath {
   '/studio': typeof StudioRoute
   '/connect/$sessionId': typeof ConnectSessionIdRoute
   '/debug/billing': typeof DebugBillingRoute
+  '/debug/calibration': typeof DebugCalibrationRoute
   '/debug/diagnostics': typeof DebugDiagnosticsRoute
   '/debug/powertrain': typeof DebugPowertrainRoute
   '/legal/accessibility': typeof LegalAccessibilityRoute
@@ -243,6 +257,7 @@ export interface FileRoutesByFullPath {
   '/api/stripe/webhook': typeof ApiStripeWebhookRoute
   '/auth/account/callback': typeof AuthAccountCallbackRoute
   '/auth/tesla/callback': typeof AuthTeslaCallbackRoute
+  '/auth/account/google/callback': typeof AuthAccountGoogleCallbackRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -261,6 +276,7 @@ export interface FileRoutesByTo {
   '/studio': typeof StudioRoute
   '/connect/$sessionId': typeof ConnectSessionIdRoute
   '/debug/billing': typeof DebugBillingRoute
+  '/debug/calibration': typeof DebugCalibrationRoute
   '/debug/diagnostics': typeof DebugDiagnosticsRoute
   '/debug/powertrain': typeof DebugPowertrainRoute
   '/legal/accessibility': typeof LegalAccessibilityRoute
@@ -277,6 +293,7 @@ export interface FileRoutesByTo {
   '/api/stripe/webhook': typeof ApiStripeWebhookRoute
   '/auth/account/callback': typeof AuthAccountCallbackRoute
   '/auth/tesla/callback': typeof AuthTeslaCallbackRoute
+  '/auth/account/google/callback': typeof AuthAccountGoogleCallbackRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -297,6 +314,7 @@ export interface FileRoutesById {
   '/studio': typeof StudioRoute
   '/connect/$sessionId': typeof ConnectSessionIdRoute
   '/debug/billing': typeof DebugBillingRoute
+  '/debug/calibration': typeof DebugCalibrationRoute
   '/debug/diagnostics': typeof DebugDiagnosticsRoute
   '/debug/powertrain': typeof DebugPowertrainRoute
   '/legal/accessibility': typeof LegalAccessibilityRoute
@@ -313,6 +331,7 @@ export interface FileRoutesById {
   '/api/stripe/webhook': typeof ApiStripeWebhookRoute
   '/auth/account/callback': typeof AuthAccountCallbackRoute
   '/auth/tesla/callback': typeof AuthTeslaCallbackRoute
+  '/auth/account/google/callback': typeof AuthAccountGoogleCallbackRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -334,6 +353,7 @@ export interface FileRouteTypes {
     | '/studio'
     | '/connect/$sessionId'
     | '/debug/billing'
+    | '/debug/calibration'
     | '/debug/diagnostics'
     | '/debug/powertrain'
     | '/legal/accessibility'
@@ -350,6 +370,7 @@ export interface FileRouteTypes {
     | '/api/stripe/webhook'
     | '/auth/account/callback'
     | '/auth/tesla/callback'
+    | '/auth/account/google/callback'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -368,6 +389,7 @@ export interface FileRouteTypes {
     | '/studio'
     | '/connect/$sessionId'
     | '/debug/billing'
+    | '/debug/calibration'
     | '/debug/diagnostics'
     | '/debug/powertrain'
     | '/legal/accessibility'
@@ -384,6 +406,7 @@ export interface FileRouteTypes {
     | '/api/stripe/webhook'
     | '/auth/account/callback'
     | '/auth/tesla/callback'
+    | '/auth/account/google/callback'
   id:
     | '__root__'
     | '/'
@@ -403,6 +426,7 @@ export interface FileRouteTypes {
     | '/studio'
     | '/connect/$sessionId'
     | '/debug/billing'
+    | '/debug/calibration'
     | '/debug/diagnostics'
     | '/debug/powertrain'
     | '/legal/accessibility'
@@ -419,6 +443,7 @@ export interface FileRouteTypes {
     | '/api/stripe/webhook'
     | '/auth/account/callback'
     | '/auth/tesla/callback'
+    | '/auth/account/google/callback'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -446,6 +471,7 @@ export interface RootRouteChildren {
   ApiStripeWebhookRoute: typeof ApiStripeWebhookRoute
   AuthAccountCallbackRoute: typeof AuthAccountCallbackRoute
   AuthTeslaCallbackRoute: typeof AuthTeslaCallbackRoute
+  AuthAccountGoogleCallbackRoute: typeof AuthAccountGoogleCallbackRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -569,6 +595,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DebugBillingRouteImport
       parentRoute: typeof DebugRoute
     }
+    '/debug/calibration': {
+      id: '/debug/calibration'
+      path: '/calibration'
+      fullPath: '/debug/calibration'
+      preLoaderRoute: typeof DebugCalibrationRouteImport
+      parentRoute: typeof DebugRoute
+    }
     '/debug/diagnostics': {
       id: '/debug/diagnostics'
       path: '/diagnostics'
@@ -681,6 +714,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthTeslaCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/auth/account/google/callback': {
+      id: '/auth/account/google/callback'
+      path: '/auth/account/google/callback'
+      fullPath: '/auth/account/google/callback'
+      preLoaderRoute: typeof AuthAccountGoogleCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -708,12 +748,14 @@ const LegalRouteRouteWithChildren = LegalRouteRoute._addFileChildren(
 
 interface DebugRouteChildren {
   DebugBillingRoute: typeof DebugBillingRoute
+  DebugCalibrationRoute: typeof DebugCalibrationRoute
   DebugDiagnosticsRoute: typeof DebugDiagnosticsRoute
   DebugPowertrainRoute: typeof DebugPowertrainRoute
 }
 
 const DebugRouteChildren: DebugRouteChildren = {
   DebugBillingRoute: DebugBillingRoute,
+  DebugCalibrationRoute: DebugCalibrationRoute,
   DebugDiagnosticsRoute: DebugDiagnosticsRoute,
   DebugPowertrainRoute: DebugPowertrainRoute,
 }
@@ -745,6 +787,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiStripeWebhookRoute: ApiStripeWebhookRoute,
   AuthAccountCallbackRoute: AuthAccountCallbackRoute,
   AuthTeslaCallbackRoute: AuthTeslaCallbackRoute,
+  AuthAccountGoogleCallbackRoute: AuthAccountGoogleCallbackRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

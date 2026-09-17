@@ -28,15 +28,15 @@ export function TryDynamicDriveButton({
   const [busy, setBusy] = useState(false);
 
   async function activateTrialAndGo() {
-    if (!session?.sessionToken) return;
+    if (!session) return;
     setBusy(true);
     try {
       const snapshot = await startDynamicDriveTrialFn({
-        data: { sessionToken: session.sessionToken },
+        data: { sessionToken: null },
       });
       update({
         accountUserId: snapshot.userId,
-        accountSessionToken: session.sessionToken,
+        accountSessionToken: null,
         accountEmail: session.email,
         dynamicDriveTrialActivated: true,
         dynamicDrive: true,
@@ -77,13 +77,14 @@ export function TryDynamicDriveButton({
         open={showSignIn}
         onOpenChange={setShowSignIn}
         returnTo={returnTo}
+        title="Save your Dynamic Drive Preview"
+        description="Create a free account to keep your preview time and return to Drive right after sign-in. Basic Drive stays free without an account."
       />
     </>
   );
 }
 
 export async function activateDynamicDriveTrialForSession(
-  sessionToken: string,
   update: (patch: {
     accountUserId?: string | null;
     accountSessionToken?: string | null;
@@ -94,10 +95,10 @@ export async function activateDynamicDriveTrialForSession(
   email?: string,
 ): Promise<boolean> {
   try {
-    const snapshot = await startDynamicDriveTrialFn({ data: { sessionToken } });
+    const snapshot = await startDynamicDriveTrialFn({ data: { sessionToken: null } });
     update({
       accountUserId: snapshot.userId,
-      accountSessionToken: sessionToken,
+      accountSessionToken: null,
       ...(email ? { accountEmail: email } : {}),
       dynamicDriveTrialActivated: true,
       dynamicDrive: true,

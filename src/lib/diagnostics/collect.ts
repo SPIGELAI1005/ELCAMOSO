@@ -94,14 +94,30 @@ function readFusion(
 
 function readPowertrain(driveState: DriveState): PowertrainDiagnostics {
   const pt = driveState.powertrain;
+  const backend = driveState.powertrainBackend ?? (pt ? "dynamic" : "legacy");
   return {
+    powertrainBackend: backend,
     throttle: pt?.throttle ?? driveState.throttle,
     load: pt?.load ?? driveState.load,
+    driverDemand: pt?.driverDemand ?? null,
+    engineLoad: pt?.engineLoad ?? null,
     gear: pt?.gear ?? driveState.gear,
     targetGear: pt?.targetGear ?? null,
+    queuedTargetGear: pt?.queuedTargetGear ?? null,
     rpm: pt?.rpm ?? driveState.rpm,
+    mechanicalRpm: pt?.mechanicalRpm ?? null,
     shifting: pt?.shifting ?? driveState.isShifting,
     shiftDirection: pt?.shiftDirection ?? null,
+    shiftPhase: pt?.shiftPhase ?? null,
+    shiftProgress: pt?.shiftProgress ?? null,
+    lastShiftReason: pt?.lastShiftReason ?? null,
+    rawSpeedKmh: pt?.diagnostics?.rawSpeedKmh ?? null,
+    displaySpeedKmh: pt?.diagnostics?.displaySpeedKmh ?? null,
+    mechanicalSpeedKmh: pt?.diagnostics?.mechanicalSpeedKmh ?? null,
+    shiftDecisionSpeedKmh: pt?.diagnostics?.shiftDecisionSpeedKmh ?? null,
+    braking: pt?.diagnostics?.braking ?? null,
+    motionSource: pt?.diagnostics?.motionSource ?? null,
+    fallbackTier: pt?.diagnostics?.fallbackTier ?? null,
     drivingMode: pt?.drivingMode ?? null,
   };
 }

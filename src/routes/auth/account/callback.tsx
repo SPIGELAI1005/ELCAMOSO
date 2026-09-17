@@ -10,10 +10,10 @@ function parseSearch(search: Record<string, unknown>): {
   token?: string;
   returnTo?: string;
 } {
-  return {
-    token: typeof search["token"] === "string" ? search["token"] : undefined,
-    returnTo: typeof search["returnTo"] === "string" ? search["returnTo"] : undefined,
-  };
+  const out: { token?: string; returnTo?: string } = {};
+  if (typeof search["token"] === "string") out.token = search["token"];
+  if (typeof search["returnTo"] === "string") out.returnTo = search["returnTo"];
+  return out;
 }
 
 export const Route = createFileRoute("/auth/account/callback")({
@@ -25,7 +25,7 @@ export const Route = createFileRoute("/auth/account/callback")({
 });
 
 function AccountCallbackPage() {
-  const { token } = Route.useSearch();
+  const { token, returnTo } = Route.useSearch();
   const navigate = useNavigate();
   const { update } = useSettings();
   const [error, setError] = useState<string | null>(null);
@@ -40,17 +40,17 @@ function AccountCallbackPage() {
       try {
         const verified = await verifyAccountMagicLinkFn({ data: { token } });
         writePersistedAccountSession({
-          sessionToken: verified.sessionToken,
           userId: verified.userId,
           email: verified.email,
           expiresAt: verified.expiresAt,
         });
-        await activateDynamicDriveTrialForSession(
-          verified.sessionToken,
-          update,
-          verified.email,
-        );
-        await navigate({ to: "/drive", search: { activateTrial: true } });
+        await activateDynamicDriveTrialForSession(update, verified.email);
+        const next = returnTo?.startsWith("/") && !returnTo.startsWith("//") ? returnTo : "/drive";
+        if (next.startsWith("/drive")) {
+          await navigate({ to: "/drive", search: { activateTrial: true } });
+          return;
+        }
+        window.location.assign(next);
       } catch {
         setError("This sign-in link expired. Request a new one from Drive.");
       }

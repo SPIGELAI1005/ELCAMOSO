@@ -1,0 +1,140 @@
+/**
+ * Host for combustion excitation AudioWorklet with procedural fallback.
+ * Fallback uses one persistent noise source amplitude-modulated at firingHz —
+ * never spawns per-fire OscillatorNodes.
+ */
+
+import { getNoiseBuffer } from "@/lib/sound/dsp/noise";
+
+export interface CombustionExcitationHandle {
+  node: AudioNode;
+  setParams: (p: {
+    firingHz: number;
+    intensity: number;
+    irregularity: number;
+    load: number;
+    audioTime: number;
+  }) => void;
+  dispose: () => void;
+  mode: "worklet" | "fallback";
+}
+
+let workletReady = false;
+let workletLoadPromise: Promise<boolean> | null = null;
+
+export function isCombustionWorkletReady() {
+  return workletReady;
+}
+
+export function ensureCombustionWorklet(ctx: BaseAudioContext): Promise<boolean> {
+  if (!(ctx instanceof AudioContext)) return Promise.resolve(false);
+  if (workletReady) return Promise.resolve(true);
+  if (workletLoadPromise) return workletLoadPromise;
+  workletLoadPromise = (async () => {
+    try {
+      if (!ctx.audioWorklet) return false;
+      await ctx.audioWorklet.addModule("/audio/combustion-processor.js");
+      workletReady = true;
+      return true;
+    } catch {
+      workletReady = false;
+      return false;
+    }
+  })();
+  return workletLoadPromise;
+}
+
+function createFallbackExcitation(ctx: BaseAudioContext): CombustionExcitationHandle {
+  const noise = ctx.createBufferSource();
+  noise.buffer = getNoiseBuffer(ctx, "brown");
+  noise.loop = true;
+  const am = ctx.createGain();
+  am.gain.value = 0.2;
+  const tone = ctx.createOscillator();
+  tone.type = "sine";
+  tone.frequency.value = 40;
+  const toneGain = ctx.createGain();
+  toneGain.gain.value = 0.35;
+  const mix = ctx.createGain();
+  mix.gain.value = 0.45;
+  const shaper = ctx.createWaveShaper();
+  const curve = new Float32Array(256);
+  for (let i = 0; i < 256; i += 1) {
+    const x = i / 128 - 1;
+    curve[i] = Math.tanh(x * 2.4);
+  }
+  shaper.curve = curve;
+
+  noise.connect(am);
+  tone.connect(toneGain);
+  toneGain.connect(am.gain);
+  am.connect(shaper);
+  shaper.connect(mix);
+  noise.start();
+  tone.start();
+
+  return {
+    node: mix,
+    mode: "fallback",
+    setParams({ firingHz, intensity, irregularity, load, audioTime }) {
+      const hz = Math.max(8, Math.min(400, firingHz));
+      tone.frequency.setTargetAtTime(hz, audioTime, 0.04);
+      const depth = 0.12 + intensity * (0.35 + load * 0.25);
+      toneGain.gain.setTargetAtTime(depth * (1 + irregularity * 0.15), audioTime, 0.05);
+      mix.gain.setTargetAtTime(0.25 + intensity * 0.45, audioTime, 0.06);
+    },
+    dispose() {
+      try {
+        tone.stop();
+        noise.stop();
+      } catch {
+        /* already stopped */
+      }
+      tone.disconnect();
+      noise.disconnect();
+      am.disconnect();
+      toneGain.disconnect();
+      shaper.disconnect();
+      mix.disconnect();
+    },
+  };
+}
+
+function createWorkletExcitation(ctx: AudioContext): CombustionExcitationHandle | null {
+  try {
+    const node = new AudioWorkletNode(ctx, "elcamoso-combustion-excitation", {
+      numberOfInputs: 0,
+      numberOfOutputs: 1,
+      outputChannelCount: [2],
+    });
+    const firingHz = node.parameters.get("firingHz");
+    const intensity = node.parameters.get("intensity");
+    const irregularity = node.parameters.get("irregularity");
+    const load = node.parameters.get("load");
+    return {
+      node,
+      mode: "worklet",
+      setParams(p) {
+        const t = p.audioTime;
+        firingHz?.setTargetAtTime(Math.max(0, Math.min(800, p.firingHz)), t, 0.03);
+        intensity?.setTargetAtTime(Math.max(0, Math.min(1, p.intensity)), t, 0.04);
+        irregularity?.setTargetAtTime(Math.max(0, Math.min(1, p.irregularity)), t, 0.08);
+        load?.setTargetAtTime(Math.max(0, Math.min(1, p.load)), t, 0.05);
+      },
+      dispose() {
+        node.disconnect();
+      },
+    };
+  } catch {
+    return null;
+  }
+}
+
+/** Synchronous factory — prefers worklet when already loaded. */
+export function createCombustionExcitation(ctx: BaseAudioContext): CombustionExcitationHandle {
+  if (workletReady && ctx instanceof AudioContext) {
+    const worklet = createWorkletExcitation(ctx);
+    if (worklet) return worklet;
+  }
+  return createFallbackExcitation(ctx);
+}

@@ -1,6 +1,7 @@
 "use client";
 
 import { Link, useRouterState } from "@tanstack/react-router";
+import { AccountMenu } from "@/components/AccountMenu";
 import { ElcamosoLogo, ElcamosoMark } from "@/components/ElcamosoLogo";
 import { WaveMenuIcon } from "@/components/WaveMenuIcon";
 import {
@@ -95,86 +96,95 @@ export function BrandNav() {
               {t(settings.language, link.key)}
             </Link>
           ))}
+          <AccountMenu className="ml-1" />
         </nav>
 
-        <Sheet>
-          <SheetTrigger asChild>
-            <button
-              type="button"
-              data-testid="nav-menu"
-              className="inline-flex h-11 w-11 items-center justify-center rounded-full text-foreground transition-colors hover:bg-secondary lg:hidden"
-              aria-label={t(settings.language, "nav.menu")}
-            >
-              <WaveMenuIcon open={false} />
-            </button>
-          </SheetTrigger>
-
-          <SheetContent
-            side="right"
-            id="nav-sheet"
-            data-testid="nav-sheet"
-            className="flex w-[min(100%,20rem)] flex-col border-border bg-background px-0 pt-14"
-          >
-            <SheetHeader className="space-y-4 border-b border-border px-6 pb-6 text-left">
-              <div className="flex items-center gap-3">
-                <ElcamosoMark className="h-8 w-auto" />
-                <SheetTitle className="font-light tracking-[0.2em] uppercase">ELCAMOSO</SheetTitle>
-              </div>
-              <SheetDescription className="text-left text-xs tracking-[0.12em] text-muted-foreground">
-                {t(settings.language, "nav.menuHint")}
-              </SheetDescription>
-            </SheetHeader>
-            <nav className="flex flex-col px-2 py-4" aria-label="Mobile">
-              {MENU_LINKS.map((link) => (
-                <SheetClose asChild key={link.to}>
-                  <Link
-                    to={link.to}
-                    className={cn(
-                      "px-4 py-4 text-sm tracking-[0.2em] uppercase transition-colors",
-                      navLinkClassName(link.accent),
-                    )}
-                    activeProps={{ className: navLinkActiveClassName(link.accent) }}
-                  >
-                    {t(settings.language, link.key)}
-                  </Link>
-                </SheetClose>
-              ))}
-            </nav>
-            <div className="mt-auto border-t border-border px-6 py-6">
-              <p className="text-[10px] tracking-[0.24em] text-muted-foreground uppercase">Legal</p>
-              <nav
-                aria-label="Legal"
-                className="mt-4 flex flex-col gap-3 text-xs tracking-[0.16em] text-muted-foreground uppercase"
+        <div className="flex items-center gap-1 lg:hidden">
+          <AccountMenu />
+          <Sheet>
+            <SheetTrigger asChild>
+              <button
+                type="button"
+                data-testid="nav-menu"
+                className="inline-flex h-11 w-11 items-center justify-center rounded-full text-foreground transition-colors hover:bg-secondary"
+                aria-label={t(settings.language, "nav.menu")}
               >
-                <SheetClose asChild>
-                  <Link to="/legal/impressum" className="hover:text-foreground">
-                    Impressum
-                  </Link>
-                </SheetClose>
-                <SheetClose asChild>
-                  <Link to="/legal/privacy" className="hover:text-foreground">
-                    Privacy
-                  </Link>
-                </SheetClose>
-                <SheetClose asChild>
-                  <Link to="/legal/cookies" className="hover:text-foreground">
-                    Cookies
-                  </Link>
-                </SheetClose>
-                <SheetClose asChild>
-                  <Link to="/legal/terms" className="hover:text-foreground">
-                    Terms
-                  </Link>
-                </SheetClose>
-                <SheetClose asChild>
-                  <Link to="/legal" className="hover:text-foreground">
-                    All legal
-                  </Link>
-                </SheetClose>
+                <WaveMenuIcon open={false} />
+              </button>
+            </SheetTrigger>
+
+            <SheetContent
+              side="right"
+              id="nav-sheet"
+              data-testid="nav-sheet"
+              className="flex w-[min(100%,20rem)] flex-col border-border bg-background px-0 pt-14"
+            >
+              <SheetHeader className="space-y-4 border-b border-border px-6 pb-6 text-left">
+                <div className="flex items-center gap-3">
+                  <ElcamosoMark className="h-8 w-auto" />
+                  <SheetTitle className="font-light tracking-[0.2em] uppercase">
+                    ELCAMOSO
+                  </SheetTitle>
+                </div>
+                <SheetDescription className="text-left text-xs tracking-[0.12em] text-muted-foreground">
+                  {t(settings.language, "nav.menuHint")}
+                </SheetDescription>
+              </SheetHeader>
+              <nav className="flex flex-col px-2 py-4" aria-label="Mobile">
+                {MENU_LINKS.map((link) => (
+                  <SheetClose asChild key={link.to}>
+                    <Link
+                      to={link.to}
+                      className={cn(
+                        "px-4 py-4 text-sm tracking-[0.2em] uppercase transition-colors",
+                        navLinkClassName(link.accent),
+                      )}
+                      activeProps={{ className: navLinkActiveClassName(link.accent) }}
+                    >
+                      {t(settings.language, link.key)}
+                    </Link>
+                  </SheetClose>
+                ))}
+                <AccountMenu variant="row" />
               </nav>
-            </div>
-          </SheetContent>
-        </Sheet>
+              <div className="mt-auto border-t border-border px-6 py-6">
+                <p className="text-[10px] tracking-[0.24em] text-muted-foreground uppercase">
+                  Legal
+                </p>
+                <nav
+                  aria-label="Legal"
+                  className="mt-4 flex flex-col gap-3 text-xs tracking-[0.16em] text-muted-foreground uppercase"
+                >
+                  <SheetClose asChild>
+                    <Link to="/legal/impressum" className="hover:text-foreground">
+                      Impressum
+                    </Link>
+                  </SheetClose>
+                  <SheetClose asChild>
+                    <Link to="/legal/privacy" className="hover:text-foreground">
+                      Privacy
+                    </Link>
+                  </SheetClose>
+                  <SheetClose asChild>
+                    <Link to="/legal/cookies" className="hover:text-foreground">
+                      Cookies
+                    </Link>
+                  </SheetClose>
+                  <SheetClose asChild>
+                    <Link to="/legal/terms" className="hover:text-foreground">
+                      Terms
+                    </Link>
+                  </SheetClose>
+                  <SheetClose asChild>
+                    <Link to="/legal" className="hover:text-foreground">
+                      All legal
+                    </Link>
+                  </SheetClose>
+                </nav>
+              </div>
+            </SheetContent>
+          </Sheet>
+        </div>
       </div>
     </header>
   );

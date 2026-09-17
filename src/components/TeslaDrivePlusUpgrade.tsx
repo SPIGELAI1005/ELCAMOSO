@@ -50,7 +50,7 @@ export function TeslaDrivePlusUpgrade({
 
     void createTeslaUpgradeTokenFn({
       data: {
-        sessionToken: session?.sessionToken ?? null,
+        sessionToken: null,
         clientDriveSessionId: readClientDriveSessionId(),
         relaySessionId,
         origin: window.location.origin,
@@ -70,7 +70,7 @@ export function TeslaDrivePlusUpgrade({
     return () => {
       cancelled = true;
     };
-  }, [open, alreadyUnlocked, relaySessionId, session?.sessionToken]);
+  }, [open, alreadyUnlocked, relaySessionId, session?.userId]);
 
   useEffect(() => {
     if (!upgradeUrl) {
@@ -108,14 +108,12 @@ export function TeslaDrivePlusUpgrade({
   useEffect(() => {
     if (!open || phase !== "pending" || alreadyUnlocked) return;
     const interval = window.setInterval(() => {
-      void getEntitlementsFn({ data: { sessionToken: session?.sessionToken ?? null } }).then(
-        (snapshot) => {
-          if (snapshot.plan === "DRIVE_PLUS") markUnlocked();
-        },
-      );
+      void getEntitlementsFn({ data: { sessionToken: null } }).then((snapshot) => {
+        if (snapshot.plan === "DRIVE_PLUS") markUnlocked();
+      });
     }, 2500);
     return () => window.clearInterval(interval);
-  }, [alreadyUnlocked, markUnlocked, open, phase, session?.sessionToken]);
+  }, [alreadyUnlocked, markUnlocked, open, phase, session?.userId]);
 
   if (!open) return null;
 

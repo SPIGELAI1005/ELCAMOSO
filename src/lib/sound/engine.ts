@@ -18,6 +18,13 @@ import type { DynamicLayerDebugInfo, SynthesisMode } from "@/lib/sound/realism/t
 import { DynamicDriveSynth } from "@/lib/sound/dynamic-drive/synth";
 import { supportsDynamicDrive } from "@/lib/powertrain/adapters/profile-map";
 import { reportAudioError } from "@/lib/telemetry/crashes";
+import {
+  ensureCombustionWorklet,
+  HybridCombustionSynth,
+  isCombustionRealismV2Profile,
+  type HybridCombustionDiagnostics,
+  type RealismEngineMode,
+} from "@/lib/sound/realism/v2";
 
 export interface MeterReading {
   peak: number;
@@ -126,6 +133,9 @@ export class SoundEngine {
   private improved: ImprovedSynth | null = null;
   private dynamicDriveEnabled = false;
   private dynamicDrive: DynamicDriveSynth | null = null;
+  /** Dev-only A/B: current engine vs Realism V2 hybrid combustion. */
+  private realismEngine: RealismEngineMode = "current";
+  private hybrid: HybridCombustionSynth | null = null;
   private profileBus: MasterBus | null = null;
   /** hard ceiling applied before the limiter so no profile can spike */
 
@@ -137,6 +147,21 @@ export class SoundEngine {
 
   getSynthesisMode() {
     return this.synthesisMode;
+  }
+
+  /** Dev-only: Current Engine vs Realism V2. Not a customer setting. */
+  setRealismEngine(mode: RealismEngineMode) {
+    if (this.realismEngine === mode) return;
+    this.realismEngine = mode;
+    if (this.profile) this.setProfile(this.profile, true);
+  }
+
+  getRealismEngine(): RealismEngineMode {
+    return this.realismEngine;
+  }
+
+  getHybridCombustionDiagnostics(): HybridCombustionDiagnostics | null {
+    return this.hybrid?.getDiagnostics() ?? null;
   }
 
   setDynamicDriveEnabled(enabled: boolean) {
@@ -154,6 +179,9 @@ export class SoundEngine {
   }
 
   listImprovedLayers() {
+    if (this.hybrid) {
+      return this.hybrid.listLayers();
+    }
     if (this.dynamicDrive) {
       return this.dynamicDrive.listLayers().map((l) => ({ ...l, triggerable: false }));
     }
@@ -283,6 +311,8 @@ export class SoundEngine {
       await ctx.resume();
     }
     this.ctx = ctx;
+    // Prefetch combustion worklet for Realism V2 (safe no-op if unavailable).
+    void ensureCombustionWorklet(ctx);
 
     this.environment = getEnvironment(options?.environmentId ?? profile.environmentId);
     this.mix = normalizeMix(options?.mix ?? profile.mix);
@@ -761,6 +791,7 @@ export class SoundEngine {
       this.teardownVoices();
       this.profile = profile;
       this.improved = null;
+      this.hybrid = null;
     }
   }
 
@@ -774,46 +805,51 @@ export class SoundEngine {
     this.teardownVoices();
     this.profile = profile;
 
+    const busesOk = Boolean(this.body && this.accents && this.beds);
+    const strategyBuses = busesOk
+      ? {
+          body: this.body!,
+          accents: this.accents!,
+          beds: this.beds!,
+          profile: this.profileBus?.input ?? this.body!,
+        }
+      : null;
+
+    // Realism V2 hybrid combustion — A/B vs current Improved / Dynamic Drive path.
+    if (
+      this.realismEngine === "v2" &&
+      this.synthesisMode === "improved" &&
+      isCombustionRealismV2Profile(profile.id) &&
+      strategyBuses
+    ) {
+      this.hybrid = new HybridCombustionSynth();
+      const ok = this.hybrid.build(ctx, profile, strategyBuses);
+      if (ok) return;
+      this.hybrid.dispose();
+      this.hybrid = null;
+    }
+
     const useDynamicDrive =
       this.dynamicDriveEnabled &&
       this.synthesisMode === "improved" &&
+      this.realismEngine === "current" &&
       supportsDynamicDrive(profile);
 
-    if (useDynamicDrive) {
-      const body = this.body;
-      const accents = this.accents;
-      const beds = this.beds;
-      if (body && accents && beds) {
-        this.dynamicDrive = new DynamicDriveSynth();
-        const ok = this.dynamicDrive.build(ctx, profile, {
-          body,
-          accents,
-          beds,
-          profile: this.profileBus?.input ?? body,
-        });
-        if (ok) return;
-        this.dynamicDrive?.dispose();
-        this.dynamicDrive = null;
-      }
+    if (useDynamicDrive && strategyBuses) {
+      this.dynamicDrive = new DynamicDriveSynth();
+      const ok = this.dynamicDrive.build(ctx, profile, strategyBuses);
+      if (ok) return;
+      this.dynamicDrive?.dispose();
+      this.dynamicDrive = null;
     }
 
-    if (this.synthesisMode === "improved") {
-      const body = this.body;
-      const accents = this.accents;
-      const beds = this.beds;
-      if (body && accents && beds) {
-        this.improved = new ImprovedSynth();
-        const ok = this.improved.build(ctx, profile, {
-          body,
-          accents,
-          beds,
-          profile: this.profileBus?.input ?? body,
-        });
-        if (ok) return;
-        // Fall through to original if no strategy registered.
-        this.improved?.dispose();
-        this.improved = null;
-      }
+    if (this.synthesisMode === "improved" && strategyBuses) {
+      this.improved = new ImprovedSynth();
+      const ok = this.improved.build(ctx, profile, strategyBuses);
+      if (ok) return;
+      // Fall through to original if no strategy registered.
+      this.improved?.dispose();
+      this.improved = null;
     }
 
     profile.voice.harmonics.forEach((ratio, i) => {
@@ -993,7 +1029,8 @@ export class SoundEngine {
     if (!ctx || !profile || !this.filter || this.swapping) return;
     const t = this.now();
 
-    if (this.improved || this.dynamicDrive) {
+    if (this.improved || this.dynamicDrive || this.hybrid) {
+      if (this.hybrid) this.hybrid.update(state, t);
       if (this.improved) this.improved.update(state, t);
       if (this.dynamicDrive) this.dynamicDrive.update(state, t);
       this.updateSpace(state, t);
@@ -1770,6 +1807,8 @@ export class SoundEngine {
     this.improved = null;
     this.dynamicDrive?.dispose();
     this.dynamicDrive = null;
+    this.hybrid?.dispose();
+    this.hybrid = null;
     this.voices.forEach(({ osc }) => {
       try {
         osc.stop();

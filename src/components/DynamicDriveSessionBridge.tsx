@@ -14,6 +14,7 @@ import {
   showDynamicDriveSessionConflict,
 } from "@/lib/dynamic-drive-session/session-ui-store";
 import { readClientDriveSessionId } from "@/lib/tesla-upgrade/drive-session-id";
+import { useAccount } from "@/lib/account/AccountProvider";
 import { useFeatureAccess } from "@/lib/entitlements/selectors";
 import { useSettings } from "@/lib/drive/useSettings";
 import { useSessionSelector } from "@/lib/store/session-store";
@@ -29,6 +30,7 @@ function readDriveSessionId(): string {
  * Basic Drive without Dynamic Drive never touches this bridge.
  */
 export function DynamicDriveSessionBridge() {
+  const { isAuthenticated } = useAccount();
   const { settings, update } = useSettings();
   const { dynamicDrive: entitledToDynamicDrive } = useFeatureAccess();
   const drive = useSessionSelector((snap) => ({
@@ -39,28 +41,24 @@ export function DynamicDriveSessionBridge() {
   const claimedRef = useRef(false);
   const driveSessionIdRef = useRef("");
 
-  const sessionToken = settings.accountSessionToken;
   const liveDrive = drive.kind === "drive" && isLiveSessionStatus(drive.status);
   const driving = drive.kind === "drive" && drive.status === "running";
   const shouldLease =
-    Boolean(sessionToken) &&
-    entitledToDynamicDrive &&
-    settings.dynamicDrive &&
-    driving;
+    isAuthenticated && entitledToDynamicDrive && settings.dynamicDrive && driving;
 
   useEffect(() => {
-    if (!sessionToken || !entitledToDynamicDrive) {
+    if (!isAuthenticated || !entitledToDynamicDrive) {
       clearDynamicDriveSessionConflict();
     }
-  }, [sessionToken, entitledToDynamicDrive]);
+  }, [isAuthenticated, entitledToDynamicDrive]);
 
   useEffect(() => {
-    if (!shouldLease || !sessionToken) {
-      if (claimedRef.current && driveSessionIdRef.current && sessionToken) {
+    if (!shouldLease) {
+      if (claimedRef.current && driveSessionIdRef.current && isAuthenticated) {
         const driveSessionId = driveSessionIdRef.current;
         claimedRef.current = false;
         void releaseDynamicDriveSessionFn({
-          data: { sessionToken, driveSessionId },
+          data: { sessionToken: null, driveSessionId },
         });
       }
       return;
@@ -73,25 +71,27 @@ export function DynamicDriveSessionBridge() {
     if (!claimedRef.current) {
       claimedRef.current = true;
       void claimDynamicDriveSessionFn({
-        data: { sessionToken, driveSessionId, relaySessionId },
-      }).then((result) => {
-        if (!result.ok) {
+        data: { sessionToken: null, driveSessionId, relaySessionId },
+      })
+        .then((result) => {
+          if (!result.ok) {
+            claimedRef.current = false;
+            showDynamicDriveSessionConflict(result.message);
+            if (settings.dynamicDrive) update({ dynamicDrive: false });
+            return;
+          }
+          clearDynamicDriveSessionConflict();
+        })
+        .catch(() => {
           claimedRef.current = false;
-          showDynamicDriveSessionConflict(result.message);
           if (settings.dynamicDrive) update({ dynamicDrive: false });
-          return;
-        }
-        clearDynamicDriveSessionConflict();
-      }).catch(() => {
-        claimedRef.current = false;
-        if (settings.dynamicDrive) update({ dynamicDrive: false });
-      });
+        });
     }
 
     const timer = window.setInterval(() => {
       void heartbeatDynamicDriveSessionFn({
         data: {
-          sessionToken,
+          sessionToken: null,
           driveSessionId,
           relaySessionId: readClientRelaySessionId(),
         },
@@ -104,22 +104,17 @@ export function DynamicDriveSessionBridge() {
     return () => {
       window.clearInterval(timer);
     };
-  }, [
-    shouldLease,
-    sessionToken,
-    settings.dynamicDrive,
-    update,
-  ]);
+  }, [shouldLease, isAuthenticated, settings.dynamicDrive, update]);
 
   useEffect(() => {
-    if (!liveDrive && claimedRef.current && sessionToken && driveSessionIdRef.current) {
+    if (!liveDrive && claimedRef.current && isAuthenticated && driveSessionIdRef.current) {
       const driveSessionId = driveSessionIdRef.current;
       claimedRef.current = false;
       void releaseDynamicDriveSessionFn({
-        data: { sessionToken, driveSessionId },
+        data: { sessionToken: null, driveSessionId },
       });
     }
-  }, [liveDrive, sessionToken]);
+  }, [liveDrive, isAuthenticated]);
 
   return null;
 }

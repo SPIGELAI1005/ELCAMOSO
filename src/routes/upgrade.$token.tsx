@@ -44,14 +44,14 @@ function UpgradeTokenScreen() {
   }, [token]);
 
   async function startCheckout() {
-    if (!session?.sessionToken) return;
+    if (!session) return;
     setBusy(true);
     setError(null);
     try {
       const result = await beginTeslaUpgradeCheckoutFn({
         data: {
           token,
-          sessionToken: session.sessionToken,
+          sessionToken: null,
           origin: window.location.origin,
           returnPath: `/upgrade/${encodeURIComponent(token)}`,
         },

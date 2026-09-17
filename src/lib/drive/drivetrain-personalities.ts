@@ -61,6 +61,24 @@ export interface DrivetrainPersonalityConfig {
   engine: {
     idleRpm: number;
     redlineRpm: number;
+    /** Optional acoustic archetype for Realism V2 (cylinder count, firing character). */
+    acoustic?: {
+      cylinders: number;
+      architecture:
+        | "cross-plane-v8"
+        | "cross-plane-v8-lope"
+        | "flat-six"
+        | "inline-6"
+        | "v10-even"
+        | "inline-4"
+        | "v-twin"
+        | "single";
+      idleIrregularity?: number;
+      exhaustPulse?: number;
+      intakePresence?: number;
+      mechanicalIntensity?: number;
+      forcedInduction?: boolean;
+    };
   };
 
   transmission: {
@@ -137,6 +155,7 @@ function defaultDownshiftOffsets(gears: number): number[] {
 
 function buildTransmission(c: DrivetrainPersonalityConfig["transmission"]): TransmissionProfile {
   const gears = c.gearRatios.length;
+  const isAutomaticSoft = (c.shift.upshiftDurationMs ?? 0) >= 180;
   return {
     gears,
     gearRatios: c.gearRatios,
@@ -181,6 +200,20 @@ function buildTransmission(c: DrivetrainPersonalityConfig["transmission"]): Tran
     },
     redline: c.redline,
     rpm: c.rpm,
+    slip: {
+      launchSpeedKmh: 4,
+      launchSlipFraction: c.idle.revLimitFraction,
+      shiftSlipFraction: 0.12,
+      torqueConverter: isAutomaticSoft
+        ? { enabled: true, lockSpeedKmh: 52, maxSlipRpm: 320, slipGain: 0.55 }
+        : { enabled: false, lockSpeedKmh: 40, maxSlipRpm: 0, slipGain: 0 },
+    },
+    shiftMapOverrides: {
+      speedHysteresisKmh: Math.max(3.5, c.upshiftHysteresisRpm / 140),
+      allowSkipShifts: false,
+      minDemandDeltaForKickdown: 0.1,
+      kickdownCooldownMs: 400,
+    },
   };
 }
 
@@ -188,7 +221,10 @@ export function personalityToPowertrain(c: DrivetrainPersonalityConfig): Powertr
   return {
     id: c.id,
     name: c.name,
-    engine: c.engine,
+    engine: {
+      idleRpm: c.engine.idleRpm,
+      redlineRpm: c.engine.redlineRpm,
+    },
     transmission: buildTransmission(c.transmission),
     wheelCircumferenceM: c.wheelCircumferenceM,
     throttle: c.throttle,
@@ -235,7 +271,18 @@ export const DRIVETRAIN_PERSONALITIES: DrivetrainPersonalityConfig[] = [
   {
     id: "flat-six-sport",
     name: "Flat-Six Sport",
-    engine: { idleRpm: 880, redlineRpm: 8000 },
+    engine: {
+      idleRpm: 880,
+      redlineRpm: 8000,
+      acoustic: {
+        cylinders: 6,
+        architecture: "flat-six",
+        idleIrregularity: 0.12,
+        exhaustPulse: 0.58,
+        intakePresence: 0.55,
+        mechanicalIntensity: 0.48,
+      },
+    },
     transmission: {
       gearRatios: [3.15, 2.05, 1.52, 1.18, 0.96, 0.8, 0.68],
       finalDrive: 3.44,
@@ -250,7 +297,7 @@ export const DRIVETRAIN_PERSONALITIES: DrivetrainPersonalityConfig[] = [
         enabled: true,
         throttleThreshold: 0.82,
         rpmFractionOfUpshift: 0.5,
-        maxSteps: 1,
+        maxSteps: 2,
       },
       shift: {
         upshiftDurationMs: 110,
@@ -322,7 +369,18 @@ export const DRIVETRAIN_PERSONALITIES: DrivetrainPersonalityConfig[] = [
   {
     id: "american-v8",
     name: "American V8",
-    engine: { idleRpm: 680, redlineRpm: 6000 },
+    engine: {
+      idleRpm: 680,
+      redlineRpm: 6000,
+      acoustic: {
+        cylinders: 8,
+        architecture: "cross-plane-v8-lope",
+        idleIrregularity: 0.42,
+        exhaustPulse: 0.88,
+        intakePresence: 0.32,
+        mechanicalIntensity: 0.22,
+      },
+    },
     transmission: {
       gearRatios: [3.5, 2.2, 1.45, 1.08, 0.85],
       finalDrive: 3.73,
@@ -418,7 +476,19 @@ export const DRIVETRAIN_PERSONALITIES: DrivetrainPersonalityConfig[] = [
   {
     id: "turbo-inline-6",
     name: "Turbo Inline-6",
-    engine: { idleRpm: 750, redlineRpm: 7000 },
+    engine: {
+      idleRpm: 750,
+      redlineRpm: 7000,
+      acoustic: {
+        cylinders: 6,
+        architecture: "inline-6",
+        idleIrregularity: 0.1,
+        exhaustPulse: 0.5,
+        intakePresence: 0.45,
+        mechanicalIntensity: 0.35,
+        forcedInduction: true,
+      },
+    },
     transmission: {
       gearRatios: [3.2, 2.0, 1.45, 1.12, 0.92, 0.78, 0.68],
       finalDrive: 3.15,
@@ -519,7 +589,18 @@ export const DRIVETRAIN_PERSONALITIES: DrivetrainPersonalityConfig[] = [
   {
     id: "gt-v8",
     name: "GT V8",
-    engine: { idleRpm: 900, redlineRpm: 6500 },
+    engine: {
+      idleRpm: 900,
+      redlineRpm: 6500,
+      acoustic: {
+        cylinders: 8,
+        architecture: "cross-plane-v8",
+        idleIrregularity: 0.18,
+        exhaustPulse: 0.72,
+        intakePresence: 0.38,
+        mechanicalIntensity: 0.28,
+      },
+    },
     transmission: {
       gearRatios: [3.4, 2.15, 1.5, 1.12, 0.92, 0.78],
       finalDrive: 3.55,
@@ -534,7 +615,7 @@ export const DRIVETRAIN_PERSONALITIES: DrivetrainPersonalityConfig[] = [
         enabled: true,
         throttleThreshold: 0.78,
         rpmFractionOfUpshift: 0.52,
-        maxSteps: 1,
+        maxSteps: 2,
       },
       shift: {
         upshiftDurationMs: 95,

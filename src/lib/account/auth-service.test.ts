@@ -6,10 +6,7 @@ import {
   requireAccountSession,
   verifyAccountMagicLink,
 } from "@/lib/account/auth-service";
-import {
-  resetAccountAuthStoreForTests,
-  saveAccountSession,
-} from "@/lib/account/session-store";
+import { resetAccountAuthStoreForTests, saveAccountSession } from "@/lib/account/session-store";
 
 describe("account auth service", () => {
   beforeEach(() => {

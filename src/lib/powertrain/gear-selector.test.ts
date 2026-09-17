@@ -1,9 +1,19 @@
 import { describe, expect, it } from "vitest";
-import { selectTargetGear, upshiftRpmForLoad } from "@/lib/powertrain/gear-selector";
+import {
+  selectTargetGear,
+  selectTargetGearDetailed,
+  upshiftRpmForLoad,
+} from "@/lib/powertrain/gear-selector";
 import { getPowertrainProfile } from "@/lib/powertrain/profiles";
-import { rpmFromSpeedAndGear } from "@/lib/powertrain/rpm-model";
+import {
+  resolveShiftMap,
+  upshiftSpeedForDemand,
+  validateShiftMap,
+} from "@/lib/powertrain/shift-map";
+import { rpmFromSpeedAndGear, speedKmhFromRpmAndGear } from "@/lib/powertrain/rpm-model";
 
 const profile = getPowertrainProfile("flat-six-sport");
+const map = resolveShiftMap(profile);
 
 function ctx(overrides: Partial<Parameters<typeof selectTargetGear>[0]> = {}) {
   return {
@@ -12,6 +22,7 @@ function ctx(overrides: Partial<Parameters<typeof selectTargetGear>[0]> = {}) {
     throttle: 0.5,
     load: 0.5,
     speedKmh: 80,
+    shiftDecisionSpeedKmh: 80,
     braking: 0,
     lastShiftCompletedAt: 0,
     now: 10_000,
@@ -21,6 +32,21 @@ function ctx(overrides: Partial<Parameters<typeof selectTargetGear>[0]> = {}) {
     ...overrides,
   };
 }
+
+describe("shift map", () => {
+  it("validates generated map for flat-six", () => {
+    const validation = validateShiftMap(map, profile);
+    expect(validation.ok, validation.issues.join("; ")).toBe(true);
+  });
+
+  it("WOT upshift speed is at or above gentle for each gear", () => {
+    for (let g = 1; g < profile.transmission.gears; g += 1) {
+      const gentle = upshiftSpeedForDemand(map, g, 0.1);
+      const wot = upshiftSpeedForDemand(map, g, 0.95);
+      expect(wot).toBeGreaterThanOrEqual(gentle - 0.05);
+    }
+  });
+});
 
 describe("upshiftRpmForLoad", () => {
   it("interpolates between load bands", () => {
@@ -33,50 +59,85 @@ describe("upshiftRpmForLoad", () => {
 });
 
 describe("selectTargetGear", () => {
-  it("requests upshift when RPM exceeds load-dependent threshold", () => {
-    const upshift = upshiftRpmForLoad(0.5, 0.5, profile);
-    const target = selectTargetGear(ctx({ rpm: upshift + 200 }), profile);
+  it("requests upshift when decision speed exceeds schedule", () => {
+    const upLine = upshiftSpeedForDemand(map, 3, 0.5);
+    const target = selectTargetGear(
+      ctx({
+        speedKmh: upLine + 8,
+        shiftDecisionSpeedKmh: upLine + 8,
+        rpm: rpmFromSpeedAndGear(upLine + 8, 3, profile),
+      }),
+      profile,
+    );
     expect(target).toBe(4);
   });
 
-  it("requests downshift when RPM is low", () => {
+  it("requests downshift when speed is below schedule", () => {
     const target = selectTargetGear(
       ctx({
-        rpm: profile.transmission.downshift.baseRpm - 600,
         currentGear: 4,
+        throttle: 0.1,
+        load: 0.1,
+        speedKmh: 25,
+        shiftDecisionSpeedKmh: 25,
+        rpm: rpmFromSpeedAndGear(25, 4, profile),
       }),
       profile,
     );
     expect(target).toBe(3);
   });
 
-  it("applies upshift hysteresis after a recent upshift", () => {
-    const upshift = upshiftRpmForLoad(0.5, 0.5, profile);
-    const without = selectTargetGear(ctx({ rpm: upshift + 40, lastShiftWasUp: false }), profile);
-    const withHyst = selectTargetGear(ctx({ rpm: upshift + 40, lastShiftWasUp: true }), profile);
+  it("applies speed hysteresis after a recent upshift", () => {
+    const upLine = upshiftSpeedForDemand(map, 3, 0.5);
+    const speed = upLine + map.speedHysteresisKmh + 0.5;
+    const without = selectTargetGear(
+      ctx({
+        speedKmh: speed,
+        shiftDecisionSpeedKmh: speed,
+        lastShiftWasUp: false,
+        rpm: rpmFromSpeedAndGear(speed, 3, profile),
+      }),
+      profile,
+    );
+    const withHyst = selectTargetGear(
+      ctx({
+        speedKmh: speed,
+        shiftDecisionSpeedKmh: speed,
+        lastShiftWasUp: true,
+        rpm: rpmFromSpeedAndGear(speed, 3, profile),
+      }),
+      profile,
+    );
     expect(without).toBe(4);
     expect(withHyst).toBe(3);
   });
 
-  it("kickdown requests one lower gear under heavy throttle", () => {
-    const upshift = upshiftRpmForLoad(0.85, 0.9, profile);
-    const target = selectTargetGear(
+  it("kickdown requests lower gear under heavy throttle", () => {
+    const speed = 95;
+    const detailed = selectTargetGearDetailed(
       ctx({
         currentGear: 5,
-        rpm: upshift * profile.transmission.kickdown.rpmFractionOfUpshift * 0.95,
+        speedKmh: speed,
+        shiftDecisionSpeedKmh: speed,
+        rpm: rpmFromSpeedAndGear(speed, 5, profile) * 0.7,
         throttle: 0.92,
         load: 0.88,
+        previousDemand: 0.3,
       }),
       profile,
     );
-    expect(target).toBe(4);
+    expect(detailed.reason).toBe("kickdown");
+    expect(detailed.desiredGear).toBeLessThan(5);
   });
 
   it("respects minimum gear hold time", () => {
-    const upshift = upshiftRpmForLoad(0.9, 0.9, profile);
+    const upLine = upshiftSpeedForDemand(map, 3, 0.9);
     const target = selectTargetGear(
       ctx({
-        rpm: upshift + 500,
+        speedKmh: upLine + 20,
+        shiftDecisionSpeedKmh: upLine + 20,
+        throttle: 0.9,
+        load: 0.9,
         lastShiftCompletedAt: 9_200,
         now: 9_800,
       }),
@@ -99,41 +160,25 @@ describe("selectTargetGear", () => {
     expect(target).toBe(4);
   });
 
-  it("blocks kickdown under heavy braking", () => {
-    const upshift = upshiftRpmForLoad(0.85, 0.9, profile);
-    const target = selectTargetGear(
+  it("refuses downshift that would exceed redline protection", () => {
+    // High speed in gear 3 — dropping to 2 would exceed redline fraction.
+    const unsafe = speedKmhFromRpmAndGear(
+      profile.engine.redlineRpm * profile.transmission.redline.maxDownshiftFraction + 400,
+      2,
+      profile,
+    );
+    const detailed = selectTargetGearDetailed(
       ctx({
-        currentGear: 5,
-        rpm: upshift * profile.transmission.kickdown.rpmFractionOfUpshift * 0.95,
-        throttle: 0.92,
-        load: 0.88,
-        braking: 0.85,
+        currentGear: 3,
+        throttle: 0.05,
+        load: 0.05,
+        speedKmh: unsafe,
+        shiftDecisionSpeedKmh: unsafe,
+        rpm: rpmFromSpeedAndGear(unsafe, 3, profile),
       }),
       profile,
     );
-    expect(target).toBe(5);
-  });
-
-  it("refuses downshift that would exceed redline", () => {
-    const highSpeed = 180;
-    const gear = 2;
-    const rpm = rpmFromSpeedAndGear(highSpeed, gear, profile);
-    const target = selectTargetGear(
-      ctx({ currentGear: gear, rpm: rpm * 0.4, speedKmh: highSpeed, throttle: 0.1 }),
-      profile,
-    );
-    expect(target).toBe(gear);
-  });
-});
-
-describe("hysteresis — no gear bouncing", () => {
-  it("holds gear when RPM oscillates near upshift threshold after upshift", () => {
-    const upshift = upshiftRpmForLoad(0.5, 0.5, profile);
-    const g1 = selectTargetGear(ctx({ rpm: upshift - 50 }), profile);
-    const g2 = selectTargetGear(
-      ctx({ rpm: upshift - 50, currentGear: g1, lastShiftWasUp: true }),
-      profile,
-    );
-    expect(g2).toBe(g1);
+    // May upshift on schedule, but must not downshift to 2.
+    expect(detailed.desiredGear).toBeGreaterThanOrEqual(3);
   });
 });

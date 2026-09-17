@@ -21,14 +21,12 @@ export function TrialRemaining({ className = "", compact = false }: TrialRemaini
   const [snapshot, setSnapshot] = useState<DynamicDriveTrialSnapshot | null>(null);
 
   useEffect(() => {
-    if (!isAuthenticated || !session?.sessionToken) {
+    if (!isAuthenticated || !session) {
       setSnapshot(null);
       return;
     }
-    void getDynamicDriveTrialStatusFn({ data: { sessionToken: session.sessionToken } }).then(
-      setSnapshot,
-    );
-  }, [isAuthenticated, session?.sessionToken]);
+    void getDynamicDriveTrialStatusFn({ data: { sessionToken: null } }).then(setSnapshot);
+  }, [isAuthenticated, session]);
 
   if (!snapshot || snapshot.status === "converted") return null;
   if (snapshot.status !== "active" && snapshot.status !== "available") return null;

@@ -28,7 +28,7 @@ export function DrivePlusCheckoutButton({
   const [error, setError] = useState<string | null>(null);
 
   async function startCheckout() {
-    if (!session?.sessionToken) return;
+    if (!session) return;
     setBusy(true);
     setError(null);
     trackMonetizationEvent("plan_interval_selected", {
@@ -42,7 +42,7 @@ export function DrivePlusCheckoutButton({
       interval,
     });
     try {
-      await openDrivePlusCheckout(session.sessionToken, interval, returnTo, source);
+      await openDrivePlusCheckout(interval, returnTo, source);
     } catch {
       setError("Payment is unavailable right now.");
       setBusy(false);

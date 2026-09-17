@@ -2,12 +2,23 @@ import "./lib/error-capture";
 
 import { consumeLastCapturedError } from "./lib/error-capture";
 import { renderErrorPage } from "./lib/error-page";
+import { validateGoogleOAuthEnvAtStartup } from "./lib/account/google-oauth-config";
 
 type ServerEntry = {
   fetch: (request: Request, env: unknown, ctx: unknown) => Promise<Response> | Response;
 };
 
 let serverEntryPromise: Promise<ServerEntry> | undefined;
+let googleOAuthStartupValidated = false;
+
+function ensureGoogleOAuthEnvValidated(): void {
+  if (googleOAuthStartupValidated) return;
+  googleOAuthStartupValidated = true;
+  const result = validateGoogleOAuthEnvAtStartup();
+  for (const warning of result.warnings) {
+    console.info(`[elcamoso] ${warning}`);
+  }
+}
 
 async function getServerEntry(): Promise<ServerEntry> {
   if (!serverEntryPromise) {
@@ -47,6 +58,7 @@ function isH3SwallowedErrorBody(body: string): boolean {
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     try {
+      ensureGoogleOAuthEnvValidated();
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);
       return await normalizeCatastrophicSsrResponse(response);

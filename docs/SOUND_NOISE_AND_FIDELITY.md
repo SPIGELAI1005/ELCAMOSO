@@ -1,6 +1,6 @@
 # Sound noise control and fidelity pass
 
-**Date:** 2026-08-21  
+**Date:** 2026-08-21 (noise/fidelity pass); Realism V2 combustion path documented 2026-09-17 in `docs/AUDIO_REALISM_V2.md`  
 **Scope:** Built-in environments + voice noise / texture beds across all 47 profiles; Horse Gallop gait fidelity; documentation.
 
 ## Goals
@@ -59,6 +59,10 @@ Largest cuts: Turbine Jet, Private Jet, Rain Drive, steam / ocean / wind beds.
 ### Texture beds
 
 Lowered loud wind / water / sizzle texture levels on aviation and nature profiles so Showroom + Open road stay clean without killing character when textureScale is high.
+
+## Realism V2 note (2026)
+
+Combustion profiles under **Realism V2** no longer rely on constant texture beds for “engine presence.” Excitation is impulse/formant based; avoid adding broadband hiss for realism. Showroom `textureScale: 0` remains the quiet reference for non-combustion beds. See `docs/AUDIO_REALISM_V2.md`.
 
 ## Horse Gallop fidelity
 

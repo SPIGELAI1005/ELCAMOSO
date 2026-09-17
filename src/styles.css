@@ -154,6 +154,16 @@
   gap: 0.38em;
 }
 
+/**
+ * Center the full O ))) mark over the wordmark, not just the O.
+ * ViewBox is 0..92. Circle ink ~x=3..37 (cx=20, r=17); outer wave peaks ~x=86.
+ * Optical center of the whole mark ≈ (3 + 86) / 2 = 44.5.
+ * Used with `absolute left-1/2` so the SVG does not widen the lockup.
+ */
+.elcamoso-mark-over-wordmark {
+  transform: translateX(calc(-44.5 / 92 * 100%));
+}
+
 .wordmark-expansion {
   box-sizing: border-box;
   margin-inline: auto;
@@ -187,6 +197,16 @@
   to {
     opacity: 1;
     transform: translateX(0) scale(var(--wave-scale, 1));
+  }
+}
+
+/** Wordmark letters: opacity only so layout/measurement stays stable on refresh. */
+@keyframes wordmark-letter-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
   }
 }
 

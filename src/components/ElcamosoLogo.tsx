@@ -253,7 +253,7 @@ function mosoLetterStyle(
   if (heroPhase === "intro") {
     return {
       ...display,
-      animation: `wave-in ${WAVE_IN_MS}ms ease-out ${WAVE_IN_LEAD_MS + mosoIndex * WAVE_IN_STAGGER_MS}ms both`,
+      animation: `wordmark-letter-in ${WAVE_IN_MS}ms ease-out ${WAVE_IN_LEAD_MS + mosoIndex * WAVE_IN_STAGGER_MS}ms both`,
     };
   }
 
@@ -323,7 +323,7 @@ function useFitExpansionWidth(
       el.style.maxWidth = "none";
       el.style.letterSpacing = "0px";
 
-      const naturalWidth = el.getBoundingClientRect().width;
+      const naturalWidth = el.offsetWidth;
       el.style.width = `${targetWidth}px`;
       el.style.minWidth = `${targetWidth}px`;
       el.style.maxWidth = `${targetWidth}px`;
@@ -379,48 +379,6 @@ interface LogoLockupProps extends MarkProps {
   wordmarkAriaHidden?: boolean | undefined;
 }
 
-const MARK_VIEWBOX_W = 92;
-const MARK_CIRCLE_CX = 20;
-
-function useMarkAlignOverWordmark(
-  wordmarkRef: RefObject<HTMLSpanElement | null> | undefined,
-  markWrapRef: RefObject<HTMLSpanElement | null>,
-) {
-  const [translateX, setTranslateX] = useState(0);
-
-  useLayoutEffect(() => {
-    const wordmark = wordmarkRef?.current;
-    const wrap = markWrapRef.current;
-    if (!wordmark || !wrap) return;
-
-    const measure = () => {
-      const svg = wrap.querySelector("svg");
-      if (!svg) return;
-
-      const wordmarkRect = wordmark.getBoundingClientRect();
-      const svgRect = svg.getBoundingClientRect();
-      const wordmarkCenterX = wordmarkRect.left + wordmarkRect.width / 2;
-      const circleX = svgRect.left + (MARK_CIRCLE_CX / MARK_VIEWBOX_W) * svgRect.width;
-      setTranslateX(wordmarkCenterX - circleX);
-    };
-
-    measure();
-    const observer = new ResizeObserver(measure);
-    observer.observe(wordmark);
-    observer.observe(wrap);
-    const svg = wrap.querySelector("svg");
-    if (svg) observer.observe(svg);
-
-    window.addEventListener("resize", measure);
-    return () => {
-      observer.disconnect();
-      window.removeEventListener("resize", measure);
-    };
-  }, [wordmarkRef, markWrapRef]);
-
-  return translateX;
-}
-
 export function ElcamosoLogoLockup({
   markClassName,
   wordmarkClassName,
@@ -430,23 +388,21 @@ export function ElcamosoLogoLockup({
   reducedMotion,
   ...markProps
 }: LogoLockupProps) {
-  const markWrapRef = useRef<HTMLSpanElement>(null);
-  const translateX = useMarkAlignOverWordmark(wordmarkRef, markWrapRef);
-
   return (
-    <span className="inline-flex w-fit flex-col items-center text-center">
-      <span ref={markWrapRef} className="block overflow-visible">
-        <span
-          className="block will-change-transform"
-          style={translateX ? { transform: `translateX(${translateX}px)` } : undefined}
-        >
-          <ElcamosoMark
-            {...markProps}
-            heroPhase={heroPhase}
-            reducedMotion={reducedMotion}
-            className={markClassName}
-          />
-        </span>
+    <span className="inline-flex w-fit max-w-full flex-col items-center text-center">
+      <span
+        className={cn(
+          "relative block overflow-visible",
+          markClassName,
+          "w-full max-w-full",
+        )}
+      >
+        <ElcamosoMark
+          {...markProps}
+          heroPhase={heroPhase}
+          reducedMotion={reducedMotion}
+          className="elcamoso-mark-over-wordmark absolute top-0 left-1/2 h-full w-auto max-w-none"
+        />
       </span>
       <ElcamosoWordmark
         ref={wordmarkRef}

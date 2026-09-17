@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { DynamicDriveTrialOffer } from "@/components/dynamic-drive-trial/DynamicDriveTrialOffer";
+import { useAccount } from "@/lib/account/AccountProvider";
 import { useMonetizationEnabled } from "@/lib/billing/use-billing-public-config";
 import { formatTrialRemainingMinutes } from "@/lib/dynamic-drive-trial/display";
 import { getDynamicDriveTrialStatusFn } from "@/lib/dynamic-drive-trial/server-fns";
@@ -14,13 +15,13 @@ interface DynamicDriveTrialSettingsProps {
 /** Trial status in Settings — offer, active preview, or exhausted note. */
 export function DynamicDriveTrialSettings({ settings }: DynamicDriveTrialSettingsProps) {
   const monetizationEnabled = useMonetizationEnabled();
+  const { isAuthenticated } = useAccount();
   const [snapshot, setSnapshot] = useState<DynamicDriveTrialSnapshot | null>(null);
-  const sessionToken = settings.accountSessionToken;
 
   useEffect(() => {
-    if (!sessionToken || !settings.dynamicDriveTrialActivated) return;
-    void getDynamicDriveTrialStatusFn({ data: { sessionToken } }).then(setSnapshot);
-  }, [sessionToken, settings.dynamicDriveTrialActivated]);
+    if (!isAuthenticated || !settings.dynamicDriveTrialActivated) return;
+    void getDynamicDriveTrialStatusFn({ data: { sessionToken: null } }).then(setSnapshot);
+  }, [isAuthenticated, settings.dynamicDriveTrialActivated]);
 
   if (!monetizationEnabled || settings.dynamicDriveTrialConverted) return null;
 

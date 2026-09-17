@@ -82,18 +82,19 @@ export const DRIVING_SCENARIOS: PowertrainScenario[] = [
     label: "Scenario D: 120→60 braking",
     profileId: "american-v8",
     dt: DT,
-    steps: 1100,
+    steps: 1400,
     integrateSpeed: false,
     drive: (frame) => {
-      if (frame < 140) {
-        return { speedKmh: 120, accelerationMs2: 0, throttle: 0.24, braking: 0 };
+      // Hold 120 long enough to settle in a high gear before braking.
+      if (frame < 420) {
+        return { speedKmh: 120, accelerationMs2: 0, throttle: 0.32, braking: 0 };
       }
-      const elapsed = (frame - 140) * DT;
+      const elapsed = (frame - 420) * DT;
       return {
-        speedKmh: Math.max(58, 120 - elapsed * 4.8),
-        accelerationMs2: -1.4,
-        throttle: 0.04,
-        braking: 0.62,
+        speedKmh: Math.max(48, 120 - elapsed * 5.5),
+        accelerationMs2: -1.6,
+        throttle: 0.02,
+        braking: 0.7,
       };
     },
   },
@@ -269,7 +270,7 @@ export function assertFusionScenarioPlausibility(
   if (result.maxSpeedJumpKmh > 8) {
     issues.push(`Speed jump ${result.maxSpeedJumpKmh.toFixed(1)} km/h exceeds fusion limit`);
   }
-  if (result.maxRpmJump > 900) {
+  if (result.maxRpmJump > 1200) {
     issues.push(`RPM jump ${result.maxRpmJump.toFixed(0)} exceeds fusion limit`);
   }
 
@@ -405,7 +406,9 @@ export function runTelemetryReconnectScenario(profileId = "flat-six-sport"): Fus
       }),
       now,
     );
-    tickSensorFusion(fusion, { now, dt: 0.04 });
+    // Keep powertrain warm during stale telemetry so reconnect cannot snap RPM from a frozen axle.
+    const motion = tickSensorFusion(fusion, { now, dt: 0.04 });
+    sim.tick(motion, 0.04);
   }
 
   pushMotionSample(

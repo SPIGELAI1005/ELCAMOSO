@@ -1,8 +1,20 @@
 # ELCAMOSO — Monetization Audit
 
 **Date:** 2026-08-29  
-**Status:** Read-only audit. **No production behavior was changed.**  
-**Next step:** Implement in phases per separate instructions after this audit is approved.
+**Status:** Historical read-only audit (snapshot). **Implementation has progressed since this date** — see Progress update below and `docs/MEMORY_BANK_AND_CHANGELOG.md`.  
+**Original next step:** Implement in phases per separate instructions after this audit is approved.
+
+### Progress update (2026-09-17)
+
+| Area | Audit said | Now |
+| ---- | ---------- | --- |
+| User accounts | None | Magic link + **Google OAuth** (PKCE); HttpOnly session cookie |
+| Billing / Stripe | None | Stripe Checkout, portal, webhooks, entitlements (see `docs/billing/`) |
+| Entitlements | None | Server `assertServerEntitlement` + client gates |
+| Dynamic Drive trial | — | Preview trial with server-authoritative usage |
+| Account docs | — | `docs/account-google-oauth.md` |
+
+The sections below remain the original 2026-08-29 recommendations for historical context.
 
 **Target commercial model (v1):**
 

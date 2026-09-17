@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 
 import { getAccountSession } from "@/lib/account/auth-service";
+import { tryResolveRequestSessionToken } from "@/lib/account/session-request";
 import { isBillingAvailable } from "@/lib/billing/billing-available";
 import { beginDrivePlusCheckout } from "@/lib/billing/checkout-service";
 import { getDrivePlusYearlyDisplay } from "@/lib/billing/plan-display";
@@ -23,7 +24,8 @@ export const createTeslaUpgradeTokenFn = createServerFn({ method: "POST" })
     if (!isBillingAvailable()) {
       throw new Error("Billing is not available");
     }
-    const session = data.sessionToken ? getAccountSession(data.sessionToken) : null;
+    const token = tryResolveRequestSessionToken(data.sessionToken);
+    const session = token ? getAccountSession(token) : null;
     const created = createTeslaUpgradeToken({
       userId: session?.userId ?? null,
       clientDriveSessionId: data.clientDriveSessionId,
@@ -59,10 +61,16 @@ export const resolveTeslaUpgradeTokenFn = createServerFn({ method: "POST" })
 
 export const beginTeslaUpgradeCheckoutFn = createServerFn({ method: "POST" })
   .inputValidator(
-    (data: { token: string; sessionToken: string; origin: string; returnPath?: string }) => data,
+    (data: {
+      token: string;
+      sessionToken?: string | null;
+      origin: string;
+      returnPath?: string;
+    }) => data,
   )
   .handler(async ({ data }) => {
-    const session = getAccountSession(data.sessionToken);
+    const token = tryResolveRequestSessionToken(data.sessionToken);
+    const session = token ? getAccountSession(token) : null;
     if (!session) throw new Error("Sign in required");
 
     bindUserToTeslaUpgradeToken(data.token, session.userId);

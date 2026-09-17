@@ -42,5 +42,6 @@ export function driveStateFromPowertrain(
     speedNormalized: clamp(motion.speedKmh / 160),
     accelerationNormalized: clamp(Math.abs(acceleration) / 4.5),
     powertrain,
+    powertrainBackend: "dynamic",
   };
 }

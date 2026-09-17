@@ -1,5 +1,5 @@
 import type { SoundProfile } from "@/lib/sound/profiles";
-import type { VirtualPowertrainState } from "@/lib/powertrain/types";
+import type { PowertrainBackend, VirtualPowertrainState } from "@/lib/powertrain/types";
 import { DEFAULT_TUNING, type ProfileTuning } from "@/lib/drive/settings";
 import { DEFAULT_SHIFT_FEEL, type ShiftFeel } from "@/lib/drive/types-extra";
 
@@ -26,6 +26,11 @@ export interface DriveState {
   isShifting: boolean;
   /** Dynamic Drive powertrain overlay — present when Dynamic Drive mode is active */
   powertrain?: VirtualPowertrainState;
+  /**
+   * Dev/diagnostics only: which transmission backend produced this frame.
+   * Never surface in consumer UI — use to avoid mistaking Legacy for Dynamic Drive.
+   */
+  powertrainBackend?: PowertrainBackend;
   /** 0..1 speed vs ~160 km/h */
   speedNormalized: number;
   /** 0..1 |acceleration| vs ~4.5 m/s² */
@@ -45,6 +50,7 @@ export const IDLE_STATE: DriveState = {
   isShifting: false,
   speedNormalized: 0,
   accelerationNormalized: 0,
+  powertrainBackend: "legacy",
 };
 
 const clamp = (v: number, min = 0, max = 1) => Math.min(max, Math.max(min, v));
@@ -72,7 +78,9 @@ export function computeDriveState({
 }: ModelInput): DriveState {
   const tune = { ...DEFAULT_TUNING, ...(tuning ?? {}) };
   const feel = { ...DEFAULT_SHIFT_FEEL, ...(shiftFeel ?? {}) };
-  const throttleTarget = clamp((acceleration / 2.6 + speed / 60) * tune.throttle);
+  // Road speed is not driver demand — only a small road-load term.
+  const roadLoad = Math.min(0.12, (speed / 50) * 0.08 + (speed / 70) ** 2 * 0.04);
+  const throttleTarget = clamp((Math.max(0, acceleration) / 2.6) * tune.throttle + roadLoad);
   const regenTarget = clamp((-acceleration / 2.6) * tune.regen);
   const smooth = clamp(dt / 0.28, 0, 1);
   const throttle = previous.throttle + (throttleTarget - previous.throttle) * smooth;
@@ -94,21 +102,32 @@ export function computeDriveState({
       isShifting: false,
       speedNormalized: clamp((speed * 3.6) / 160),
       accelerationNormalized: clamp(Math.abs(acceleration) / 4.5),
+      powertrainBackend: "legacy",
     };
   }
 
   const t = profile.transmission!;
   const kmh = speed * 3.6;
-  // pick highest gear that keeps rpm under ~85% of redline
-  let gear = 1;
-  for (let i = 0; i < t.gearRatios.length; i += 1) {
-    const rpm = t.idleRpm + kmh * t.gearRatios[i]!;
-    if (rpm < t.redlineRpm * 0.85 || i === 0) gear = i + 1;
-    if (rpm < t.redlineRpm * 0.85) break;
+  // Prefer staying in previous gear when still valid (hysteresis vs hunting).
+  let gear = previous.gear >= 1 ? previous.gear : 1;
+  const pickGear = (candidate: number) => {
+    const rpmAt = t.idleRpm + kmh * t.gearRatios[candidate - 1]!;
+    return rpmAt < t.redlineRpm * 0.85;
+  };
+  if (gear > t.gearRatios.length) gear = t.gearRatios.length;
+  // Upshift only when clearly past threshold; downshift with margin.
+  while (gear < t.gearRatios.length && !pickGear(gear)) gear += 1;
+  while (gear > 1) {
+    const rpmHere = t.idleRpm + kmh * t.gearRatios[gear - 1]!;
+    const downLine = t.idleRpm + (t.redlineRpm - t.idleRpm) * 0.28;
+    if (rpmHere < downLine && pickGear(gear - 1)) gear -= 1;
+    else break;
   }
+  // Mechanical-ish RPM from legacy slope — no throttle×900 wander at cruise.
+  const launchSlip = kmh < 8 ? throttle * 450 : throttle * 40;
   const targetRpm = Math.min(
     t.redlineRpm,
-    t.idleRpm + kmh * t.gearRatios[gear - 1]! + throttle * 900,
+    Math.max(t.idleRpm * 0.9, t.idleRpm + kmh * t.gearRatios[gear - 1]! + launchSlip),
   );
   const shiftWindow = Math.max(0.04, (feel.shiftMs / 1000) * (1.15 - feel.revMatch * 0.5));
   const shift = clamp(dt / (t.shiftSmoothing * (shiftWindow / 0.16)), 0, 1);
@@ -133,5 +152,6 @@ export function computeDriveState({
     isShifting: shifting,
     speedNormalized: clamp(kmh / 160),
     accelerationNormalized: clamp(Math.abs(acceleration) / 4.5),
+    powertrainBackend: "legacy",
   };
 }

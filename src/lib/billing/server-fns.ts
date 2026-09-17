@@ -1,6 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
 
+import { getAccountSession } from "@/lib/account/auth-service";
 import { resolveAuthenticatedUserId } from "@/lib/account/resolve-authenticated-user";
+import { tryResolveRequestSessionToken } from "@/lib/account/session-request";
 import type { CheckoutIntervalSlug, CheckoutPlanSlug } from "@/lib/billing/checkout-request";
 import { beginDrivePlusCheckout } from "@/lib/billing/checkout-service";
 
@@ -20,7 +22,8 @@ import { getDynamicDriveTrialService } from "@/lib/dynamic-drive-trial/service";
 export const getSubscriptionSummaryFn = createServerFn({ method: "POST" })
   .inputValidator((data: { sessionToken?: string | null }) => data)
   .handler(async ({ data }) => {
-    const session = data.sessionToken ? getAccountSession(data.sessionToken) : null;
+    const token = tryResolveRequestSessionToken(data.sessionToken);
+    const session = token ? getAccountSession(token) : null;
     if (!session) {
       return {
         authenticated: false as const,
@@ -51,7 +54,7 @@ export const getSubscriptionSummaryFn = createServerFn({ method: "POST" })
   });
 
 export const getBillingHealthFn = createServerFn({ method: "POST" })
-  .inputValidator((data: { sessionToken: string }) => data)
+  .inputValidator((data: { sessionToken?: string | null }) => data)
   .handler(async ({ data }) => {
     const userId = resolveAuthenticatedUserId(data.sessionToken);
     const health = await getBillingHealthSnapshot(userId);
@@ -60,7 +63,7 @@ export const getBillingHealthFn = createServerFn({ method: "POST" })
 
 /** Explicit Stripe reconciliation — never used by Drive audio or entitlement gates. */
 export const reconcileBillingFn = createServerFn({ method: "POST" })
-  .inputValidator((data: { sessionToken: string }) => data)
+  .inputValidator((data: { sessionToken?: string | null }) => data)
   .handler(async ({ data }) => {
     const userId = resolveAuthenticatedUserId(data.sessionToken);
     return reconcileUserBillingFromStripe(userId);
@@ -69,7 +72,7 @@ export const reconcileBillingFn = createServerFn({ method: "POST" })
 export const createCheckoutSessionFn = createServerFn({ method: "POST" })
   .inputValidator(
     (data: {
-      sessionToken: string;
+      sessionToken?: string | null;
       plan: CheckoutPlanSlug;
       interval: CheckoutIntervalSlug;
       origin: string;
@@ -78,7 +81,8 @@ export const createCheckoutSessionFn = createServerFn({ method: "POST" })
     }) => data,
   )
   .handler(async ({ data }) => {
-    const session = getAccountSession(data.sessionToken);
+    const token = tryResolveRequestSessionToken(data.sessionToken);
+    const session = token ? getAccountSession(token) : null;
     if (!session) throw new Error("Sign in required");
 
     return beginDrivePlusCheckout({
@@ -96,7 +100,7 @@ export const createCheckoutSessionFn = createServerFn({ method: "POST" })
 
 export const createBillingPortalSessionFn = createServerFn({ method: "POST" })
   .inputValidator(
-    (data: { sessionToken: string; origin: string; returnPath?: string }) => data,
+    (data: { sessionToken?: string | null; origin: string; returnPath?: string }) => data,
   )
   .handler(async ({ data }) => {
     const userId = resolveAuthenticatedUserId(data.sessionToken);

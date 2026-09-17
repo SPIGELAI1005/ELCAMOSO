@@ -287,7 +287,8 @@ export const DEFAULT_SETTINGS: ElcamosoSettings = {
   analyticsEnabled: false,
   devPanel: false,
   debugDriveDiagnostics: false,
-  dynamicDrive: false,
+  /** Default on — SessionBridge still ANDs with Drive+ entitlement / trial. */
+  dynamicDrive: true,
   teslaFleetTelemetry: false,
   teslaLinkId: null,
   teslaVehicleVin: null,
@@ -726,7 +727,7 @@ export function sanitizeSettings(input: unknown): {
     analyticsEnabled: bool(p["analyticsEnabled"], false),
     devPanel: bool(p["devPanel"], false),
     debugDriveDiagnostics: bool(p["debugDriveDiagnostics"], false),
-    dynamicDrive: bool(p["dynamicDrive"], false),
+    dynamicDrive: bool(p["dynamicDrive"], true),
     teslaFleetTelemetry: bool(p["teslaFleetTelemetry"], false),
     teslaLinkId:
       typeof p["teslaLinkId"] === "string" && p["teslaLinkId"].trim()
@@ -906,7 +907,7 @@ export function readRawStored(): string | null {
 /* ---------------------------------------------------------------- transfer */
 
 const BACKUP_KIND = "elcamoso.settings.backup";
-const BACKUP_VERSION = 7;
+const BACKUP_VERSION = 8;
 
 export interface SettingsBackup {
   kind: typeof BACKUP_KIND;
@@ -984,7 +985,7 @@ function migratePayload(payload: Record<string, unknown>, version: number) {
     }
     if (p["driveCount"] === undefined) p["driveCount"] = 0;
     if (p["devPanel"] === undefined) p["devPanel"] = false;
-    if (p["dynamicDrive"] === undefined) p["dynamicDrive"] = false;
+    // dynamicDrive default is applied in v8 (true for unset). Do not force false here.
     if (p["teslaFleetTelemetry"] === undefined) p["teslaFleetTelemetry"] = false;
     if (p["teslaLinkId"] === undefined) p["teslaLinkId"] = null;
     if (p["teslaVehicleVin"] === undefined) p["teslaVehicleVin"] = null;
@@ -1024,6 +1025,14 @@ function migratePayload(payload: Record<string, unknown>, version: number) {
 
   if (version < 7) {
     if (p["debugDriveDiagnostics"] === undefined) p["debugDriveDiagnostics"] = false;
+  }
+
+  if (version < 8) {
+    // New default is on, but never overwrite an explicit prior choice of false/true.
+    if (p["dynamicDrive"] === undefined) {
+      p["dynamicDrive"] = true;
+      notes.push("Defaulted Motion-matched gears on for new / unset settings (entitlement still gates).");
+    }
   }
 
   return { payload: p, notes };

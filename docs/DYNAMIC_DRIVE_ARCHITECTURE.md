@@ -276,3 +276,7 @@ Audit criteria: duplicate models, giant hooks, drivetrain logic in React, hard-c
 | `docs/dynamic-drive/tesla-telemetry.md` | Fleet Telemetry onboarding |
 | `docs/TESLA_BROWSER_PERFORMANCE_AUDIT.md` | Tesla browser profiling |
 | `docs/MEMORY_BANK_AND_CHANGELOG.md` | Dated changelog |
+| `docs/AUDIO_REALISM_V2.md` | Hybrid combustion Realism V2 path |
+| `docs/POWERTRAIN_CALIBRATION_V2.md` | Virtual transmission calibration tables |
+| `docs/ROAD_TEST_CALIBRATION.md` | Tesla/phone road-test capture + replay lab |
+| `docs/account-google-oauth.md` | ELCAMOSO account Google OAuth (not Tesla) |

@@ -65,6 +65,33 @@ export interface RpmTrackingProfile {
   downshiftEasePower: number;
 }
 
+/** Explicit slip — launch / optional torque converter only (no generic cruise slip). */
+export interface SlipProfile {
+  /** Below this speed, launch slip may raise RPM above mechanical. */
+  launchSpeedKmh: number;
+  /** Fraction of (redline−idle) available as launch rev from demand. */
+  launchSlipFraction: number;
+  /** Limited slip while a shift is in progress (fraction of ratio delta). */
+  shiftSlipFraction?: number;
+  torqueConverter?: {
+    enabled: boolean;
+    /** Road speed above which the converter locks. */
+    lockSpeedKmh: number;
+    maxSlipRpm: number;
+    slipGain: number;
+  };
+}
+
+/** Optional overrides for the generated speed×demand shift map. */
+export interface ShiftMapOverrides {
+  speedHysteresisKmh?: number;
+  allowSkipShifts?: boolean;
+  minDemandDeltaForKickdown?: number;
+  kickdownCooldownMs?: number;
+  upshiftSpeedKmh?: number[][];
+  downshiftSpeedKmh?: number[][];
+}
+
 /** Automatic transmission tuning — profile-specific, not global. */
 export interface TransmissionProfile {
   gears: number;
@@ -80,6 +107,11 @@ export interface TransmissionProfile {
   idle: IdleStopProfile;
   redline: RedlineProfile;
   rpm: RpmTrackingProfile;
+  /** Explicit slip model (defaults applied when omitted). */
+  slip?: SlipProfile;
+  /** Precomputed map; when omitted, generated from ratios + RPM targets. */
+  shiftMap?: import("@/lib/powertrain/shift-map").ShiftMap;
+  shiftMapOverrides?: ShiftMapOverrides;
   /** @deprecated use shift.upshiftDurationMs */
   shiftDurationMs?: number;
   kickdownEnabled?: boolean;

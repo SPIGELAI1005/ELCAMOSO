@@ -8,7 +8,6 @@ import { connectPagePath } from "@/lib/drive-relay/protocol";
 
 import { createDriveRelaySessionFn } from "@/lib/drive-relay/server-fns";
 import { setClientRelaySessionId } from "@/lib/dynamic-drive-session/client-relay-id";
-import { useAccount } from "@/lib/account/AccountProvider";
 import { PremiumFeatureGate } from "@/components/premium/PremiumFeatureGate";
 
 import { getSession } from "@/lib/drive/session";
@@ -47,7 +46,6 @@ export function DriveSessionPanel({
   onRelaySessionChange,
 }: DriveSessionPanelProps) {
   const { settings } = useSettings();
-  const { session } = useAccount();
   const pipelineMetrics = useSessionSelector((snap) => snap.pipeline);
 
   const [creating, setCreating] = useState(false);
@@ -161,7 +159,7 @@ export function DriveSessionPanel({
 
     try {
       const created = await createDriveRelaySessionFn({
-        data: { sessionToken: session?.sessionToken ?? null },
+        data: { sessionToken: null },
       });
 
       setSessionId(created.sessionId);

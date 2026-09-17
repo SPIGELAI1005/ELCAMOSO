@@ -35,10 +35,10 @@ export function updateOverrun(input: OverrunInput): OverrunResult {
 
   const pedal = input.pedalRequest ?? input.throttle;
   const wasLoaded = input.previousThrottle >= cfg.minPriorThrottle;
-  const lifting =
-    input.throttle < input.previousThrottle - 0.12 ||
-    (wasLoaded && pedal <= cfg.minPriorThrottle * 0.35);
-  const accelLow = input.accelerationFiltered < cfg.liftOffAccelThreshold;
+  const pedalLift = wasLoaded && pedal <= cfg.minPriorThrottle * 0.45;
+  const filteredLift = input.throttle < input.previousThrottle - 0.08;
+  const lifting = pedalLift || filteredLift;
+  const accelLow = input.accelerationFiltered < cfg.liftOffAccelThreshold + 0.35;
   const moving = input.speedKmh > 25;
   const cooled = now >= state.cooldownUntil;
 

@@ -2,9 +2,9 @@
 
 **Purpose:** Long-term driving engagement. The same Sound Profile should feel subtly different drive to drive because sound emerges from **driving behavior**, not random effects.
 
-**Last updated:** 2026-08-29
+**Last updated:** 2026-09-17
 
-**Related:** `docs/audio-asset-requirements.md`, `docs/drivetrain-personalities.md`, `docs/DYNAMIC_DRIVE_ARCHITECTURE.md`
+**Related:** `docs/audio-asset-requirements.md`, `docs/drivetrain-personalities.md`, `docs/DYNAMIC_DRIVE_ARCHITECTURE.md`, `docs/AUDIO_REALISM_V2.md`
 
 ---
 
@@ -26,6 +26,9 @@ A continuous procedural sound impresses for minutes, then the ear learns the env
 - **No decoupled random** — every transient requires shift phase, load delta, overrun entry, or prior-throttle gate.
 - **Restraint** — target ≤ 1 meaningful transient / 8–15 s in normal city driving (personality defaults).
 
+### Realism V2 (combustion)
+
+For GT V8 / American Muscle / Flat-Six / Turbo I6 / Racing V10 / Race Car / Rally Car, prefer **`HybridCombustionSynth`** (dev A/B: Current vs Realism V2) over sawtooth-dominant stacks. See `docs/AUDIO_REALISM_V2.md`. Do not treat oscillator EQ as the realism path.
 ---
 
 ## 2. Asset and path reality (2026-08-29)

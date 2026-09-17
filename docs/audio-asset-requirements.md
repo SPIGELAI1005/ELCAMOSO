@@ -1,13 +1,25 @@
 # Audio asset requirements
 
-**Status:** No engine samples are shipped (2026-08-29). ELCAMOSO uses **100% procedural Web Audio**. This document specifies recorded assets that would **materially improve** long-term driving engagement for Motion-matched sound profiles.
+**Status:** No engine samples are shipped. ELCAMOSO uses **procedural Web Audio** by default. Realism V2 adds a hybrid combustion backend (`docs/AUDIO_REALISM_V2.md`) that is sample-ready via this schema. This document specifies recorded assets that would **materially improve** long-term driving engagement.
 
 **Do not fabricate files** — implement procedural fallbacks until assets exist. When adding samples, follow naming and metadata below.
 
-**Related:** `docs/SOUND_CHARACTER_SPEC.md`, `src/lib/sound/dynamic-drive/transient-scheduler.ts`, `docs/premium-sound-asset-protection.md`
+**Related:** `docs/SOUND_CHARACTER_SPEC.md`, `docs/AUDIO_REALISM_V2.md`, `src/lib/sound/dynamic-drive/transient-scheduler.ts`, `src/lib/sound/realism/v2/sample-bank.ts`, `docs/premium-sound-asset-protection.md`
 
 **Personalities implemented (8):** `flat-six-sport`, `american-v8`, `turbo-inline-6`, `gt-v8`, `synthetic-ev`, `motorcycle-inline-4`, `v-twin-cruiser`, `single-cylinder-ag`. Procedural `variantPools` exist for all eight; WAV files replace noise bursts per event kind.
 
+### Steady combustion loops (Realism V2)
+
+In addition to one-shots below, sample-assisted mode expects **RPM × load** loop entries (see `CombustionSampleEntry`):
+
+| Field | Requirement |
+| ----- | ----------- |
+| `rpmRef` | Center RPM of the recording |
+| `load` | `idle` \| `low` \| `medium` \| `high` \| `overrun` |
+| Loop seams | Zero-crossing; optional `loopStart` / `loopEnd` |
+| Playback rate | Prefer neighbor crossfade outside ~0.85–1.18 vs `rpmRef` |
+
+Example GT V8 set: 900 idle; 1800/2500/3500 low; 2500/3500/4500/5500 high; overrun bed.
 ---
 
 ## Fallback policy

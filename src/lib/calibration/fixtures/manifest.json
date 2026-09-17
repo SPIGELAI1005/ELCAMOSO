@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "fixtures": [
+    {
+      "id": "gentle-city-launch",
+      "samples": 100,
+      "upshifts": 1,
+      "downshifts": 0,
+      "gearHuntingEvents": 0,
+      "rpmDiscontinuitiesOutsideShifts": 0
+    },
+    {
+      "id": "cruise-80",
+      "samples": 100,
+      "upshifts": 3,
+      "downshifts": 0,
+      "gearHuntingEvents": 0,
+      "rpmDiscontinuitiesOutsideShifts": 0
+    },
+    {
+      "id": "highway-kickdown",
+      "samples": 100,
+      "upshifts": 3,
+      "downshifts": 0,
+      "gearHuntingEvents": 0,
+      "rpmDiscontinuitiesOutsideShifts": 0
+    },
+    {
+      "id": "noisy-gps-2",
+      "samples": 100,
+      "upshifts": 3,
+      "downshifts": 0,
+      "gearHuntingEvents": 0,
+      "rpmDiscontinuitiesOutsideShifts": 0
+    },
+    {
+      "id": "phone-relay-reconnect",
+      "samples": 120,
+      "upshifts": 3,
+      "downshifts": 0,
+      "gearHuntingEvents": 0,
+      "rpmDiscontinuitiesOutsideShifts": 0
+    }
+  ]
+}

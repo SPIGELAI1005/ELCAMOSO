@@ -24,7 +24,7 @@ describe("remote-control", () => {
     const parsed = parseDriveRemoteState(state);
     expect(parsed?.profileId).toBe(DEFAULT_SETTINGS.profileId);
     expect(parsed?.volume).toBe(DEFAULT_SETTINGS.volume);
-    expect(parsed?.dynamicDrive).toBe(false);
+    expect(parsed?.dynamicDrive).toBe(true);
   });
 
   it("maps phone profile change to settings patch", () => {

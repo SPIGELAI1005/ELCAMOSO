@@ -78,13 +78,17 @@ function useWordmarkWidth() {
     const wordmark = wordmarkRef.current;
     if (!wordmark) return;
 
+    // Layout width only — getBoundingClientRect includes letter wave-in transforms
+    // and can make the expansion (and perceived lockup) jitter on refresh.
     const sync = () => {
-      setWordmarkWidth(wordmark.getBoundingClientRect().width);
+      const width = wordmark.offsetWidth;
+      if (width > 0) setWordmarkWidth(width);
     };
 
     sync();
     const observer = new ResizeObserver(sync);
     observer.observe(wordmark);
+    void document.fonts?.ready?.then(sync);
     return () => observer.disconnect();
   }, []);
 
@@ -100,7 +104,7 @@ export function LandingHero() {
   const { wordmarkRef, wordmarkWidth } = useWordmarkWidth();
 
   return (
-    <section className="flex min-h-0 items-start px-6 pt-3 pb-14 sm:px-12 sm:pt-6 lg:min-h-[calc(100svh-4.5rem)] lg:items-center lg:px-10 lg:py-16 lg:pb-28 xl:px-16">
+    <section className="flex min-h-0 items-start overflow-x-clip px-6 pt-3 pb-14 sm:px-12 sm:pt-6 lg:min-h-[calc(100svh-4.5rem)] lg:items-center lg:px-10 lg:py-16 lg:pb-28 xl:px-16">
       <div className="mx-auto grid w-full max-w-6xl justify-items-center gap-5 sm:gap-7 lg:grid-cols-2 lg:grid-rows-[auto_auto_auto] lg:justify-items-stretch lg:gap-x-12 lg:gap-y-8 lg:gap-10 xl:gap-x-20 xl:gap-y-10">
         <div className="flex w-full flex-col items-center lg:contents">
           <div className="lg:col-start-1 lg:row-start-1 lg:row-span-2 lg:flex lg:justify-center lg:justify-self-center lg:self-end">

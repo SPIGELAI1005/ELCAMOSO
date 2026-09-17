@@ -118,8 +118,10 @@ Verify return paths:
 ## Production domain
 
 - [ ] `ELCAMOSO_ALLOWED_ORIGINS` includes production HTTPS origin
-- [ ] Magic-link and OAuth redirect URIs registered for production domain
+- [x] Google OAuth redirect URI registered: `https://www.elcamoso.com/auth/account/google/callback` (also support local `http://localhost:5173/...` for dev) — see `docs/account-google-oauth.md`
+- [ ] Magic-link origin/redirects registered for production domain
 - [ ] HTTPS enforced (Stripe requires secure contexts for live checkout return)
+- [x] Account session cookie: HttpOnly + Secure in production + SameSite=Lax
 - [ ] Cookie / PWA scope matches production host
 
 ---

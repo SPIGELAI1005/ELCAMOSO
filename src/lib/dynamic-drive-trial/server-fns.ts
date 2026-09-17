@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 
 export const getDynamicDriveTrialStatusFn = createServerFn({ method: "POST" })
-  .inputValidator((data: { sessionToken: string }) => data)
+  .inputValidator((data: { sessionToken?: string | null }) => data)
   .handler(async ({ data }) => {
     const { resolveAuthenticatedUserId } = await import("@/lib/account/resolve-authenticated-user");
     const { getDynamicDriveTrialService } = await import("@/lib/dynamic-drive-trial/service");
@@ -11,7 +11,7 @@ export const getDynamicDriveTrialStatusFn = createServerFn({ method: "POST" })
 
 /** Explicit Dynamic Drive preview activation for an authenticated user. */
 export const startDynamicDriveTrialFn = createServerFn({ method: "POST" })
-  .inputValidator((data: { sessionToken: string }) => data)
+  .inputValidator((data: { sessionToken?: string | null }) => data)
   .handler(async ({ data }) => {
     const { isMonetizationEnabled } = await import("@/lib/billing/monetization-flag");
     if (!isMonetizationEnabled()) {
@@ -24,7 +24,7 @@ export const startDynamicDriveTrialFn = createServerFn({ method: "POST" })
   });
 
 export const startDynamicDriveTrialSessionFn = createServerFn({ method: "POST" })
-  .inputValidator((data: { sessionToken: string; driveSessionId: string }) => data)
+  .inputValidator((data: { sessionToken?: string | null; driveSessionId: string }) => data)
   .handler(async ({ data }) => {
     const { assertServerEntitlement } = await import("@/lib/entitlements/server-assert");
     const { resolveAuthenticatedUserId } = await import("@/lib/account/resolve-authenticated-user");
@@ -36,8 +36,11 @@ export const startDynamicDriveTrialSessionFn = createServerFn({ method: "POST" }
 
 export const heartbeatDynamicDriveTrialFn = createServerFn({ method: "POST" })
   .inputValidator(
-    (data: { sessionToken: string; driveSessionId: string; dynamicDriveEnabled: boolean }) =>
-      data,
+    (data: {
+      sessionToken?: string | null;
+      driveSessionId: string;
+      dynamicDriveEnabled: boolean;
+    }) => data,
   )
   .handler(async ({ data }) => {
     const { assertServerEntitlement } = await import("@/lib/entitlements/server-assert");
@@ -54,8 +57,11 @@ export const heartbeatDynamicDriveTrialFn = createServerFn({ method: "POST" })
 
 export const endDynamicDriveTrialSessionFn = createServerFn({ method: "POST" })
   .inputValidator(
-    (data: { sessionToken: string; driveSessionId: string; dynamicDriveEnabled: boolean }) =>
-      data,
+    (data: {
+      sessionToken?: string | null;
+      driveSessionId: string;
+      dynamicDriveEnabled: boolean;
+    }) => data,
   )
   .handler(async ({ data }) => {
     const { resolveAuthenticatedUserId } = await import("@/lib/account/resolve-authenticated-user");

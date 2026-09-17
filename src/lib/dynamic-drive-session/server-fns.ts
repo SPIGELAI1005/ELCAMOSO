@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 
 export const getDynamicDriveSessionStatusFn = createServerFn({ method: "POST" })
-  .inputValidator((data: { sessionToken: string }) => data)
+  .inputValidator((data: { sessionToken?: string | null }) => data)
   .handler(async ({ data }) => {
     const { resolveAuthenticatedUserId } = await import("@/lib/account/resolve-authenticated-user");
     const { getDynamicDriveSessionService } = await import("@/lib/dynamic-drive-session/service");
@@ -11,8 +11,11 @@ export const getDynamicDriveSessionStatusFn = createServerFn({ method: "POST" })
 
 export const claimDynamicDriveSessionFn = createServerFn({ method: "POST" })
   .inputValidator(
-    (data: { sessionToken: string; driveSessionId: string; relaySessionId?: string | null }) =>
-      data,
+    (data: {
+      sessionToken?: string | null;
+      driveSessionId: string;
+      relaySessionId?: string | null;
+    }) => data,
   )
   .handler(async ({ data }) => {
     const { assertServerEntitlement } = await import("@/lib/entitlements/server-assert");
@@ -30,7 +33,7 @@ export const claimDynamicDriveSessionFn = createServerFn({ method: "POST" })
 export const heartbeatDynamicDriveSessionFn = createServerFn({ method: "POST" })
   .inputValidator(
     (data: {
-      sessionToken: string;
+      sessionToken?: string | null;
       driveSessionId: string;
       relaySessionId?: string | null;
     }) => data,
@@ -47,7 +50,7 @@ export const heartbeatDynamicDriveSessionFn = createServerFn({ method: "POST" })
   });
 
 export const releaseDynamicDriveSessionFn = createServerFn({ method: "POST" })
-  .inputValidator((data: { sessionToken: string; driveSessionId: string }) => data)
+  .inputValidator((data: { sessionToken?: string | null; driveSessionId: string }) => data)
   .handler(async ({ data }) => {
     const { resolveAuthenticatedUserId } = await import("@/lib/account/resolve-authenticated-user");
     const { getDynamicDriveSessionService } = await import("@/lib/dynamic-drive-session/service");

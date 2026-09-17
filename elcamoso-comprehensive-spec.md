@@ -415,6 +415,8 @@ Primary navigation is minimal. Main routes:
 | `/pricing`             | FREE vs Drive+ plans, emotional positioning, Stripe Checkout entry                                        |
 | `/upgrade/$token`      | Phone-side Tesla Drive+ checkout (QR destination); auth + Stripe, no card entry in car browser              |
 | `/connect/$sessionId`  | Phone pairing relay for in-car display motion                                                               |
+| `/auth/account/callback` | Email magic-link verification; sets HttpOnly account session cookie                                     |
+| `/auth/account/google/callback` | Google OAuth Authorization Code callback (server GET exchange + cookie); never expose client secret |
 | `/about`               | Product about                                                                                             |
 | `/legal`               | Legal hub                                                                                                 |
 | `/legal/impressum`     | German Impressum (TMG)                                                                                    |
@@ -422,9 +424,12 @@ Primary navigation is minimal. Main routes:
 | `/legal/cookies`       | Cookie notice + consent reset                                                                             |
 | `/legal/terms`         | Terms of use                                                                                              |
 | `/legal/accessibility` | Accessibility statement                                                                                   |
-| `/debug` (dev-only)    | Diagnostics panel                                                                                         |
+| `/debug` (dev-only)    | Diagnostics panel; Original/Improved/Realism V2 A/B                                                       |
+| `/debug/calibration` (dev-only) | Road-test calibration lab: capture/replay traces, Current vs V2, Dynamic vs Legacy               |
 
 Site footer (`SiteFooter`) and cookie consent bar (`CookieConsent`) render from the root layout. Operator details live in `src/lib/legal/operator.ts` (replace PLACEHOLDERs before public DE/EU launch).
+
+**Account auth:** magic link and Google OAuth create an ELCAMOSO account session (HttpOnly cookie). Tesla Fleet OAuth is separate and must not be confused with account sign-in. Google secrets: `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` / `GOOGLE_REDIRECT_URI` (server-only; see `docs/account-google-oauth.md`).
 
 Root layout (`__root.tsx`) renders `<Outlet />` and global providers/Toaster. No `_app/index.tsx` or `_authenticated/index.tsx` should duplicate `/`.
 

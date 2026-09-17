@@ -23,6 +23,7 @@ import {
   startDynamicDriveTrialSessionFn,
 } from "@/lib/dynamic-drive-trial/server-fns";
 import { deferSettingsClampUntilDriveEnds } from "@/lib/entitlements/live-drive-access";
+import { useAccount } from "@/lib/account/AccountProvider";
 import { useSettings } from "@/lib/drive/useSettings";
 import { useSessionSelector } from "@/lib/store/session-store";
 import { isLiveSessionStatus } from "@/lib/ui/chrome";
@@ -56,6 +57,7 @@ function applyTrialExhaustion(
 
 /** Server-authoritative Dynamic Drive trial usage while driving. */
 export function DynamicDriveTrialBridge() {
+  const { isAuthenticated } = useAccount();
   const { settings, update } = useSettings();
   const drive = useSessionSelector((snap) => ({
     kind: snap.kind,
@@ -65,9 +67,8 @@ export function DynamicDriveTrialBridge() {
   const driveSessionIdRef = useRef<string>("");
   const wasLiveDriveRef = useRef(false);
 
-  const sessionToken = settings.accountSessionToken;
   const trialActive =
-    Boolean(sessionToken) &&
+    isAuthenticated &&
     settings.dynamicDriveTrialActivated &&
     !settings.dynamicDriveTrialConverted;
   const liveDrive = drive.kind === "drive" && isLiveSessionStatus(drive.status);
@@ -86,22 +87,24 @@ export function DynamicDriveTrialBridge() {
   }, [liveDrive, settings.dynamicDrive, settings.dynamicDriveTrialConverted]);
 
   useEffect(() => {
-    if (!trialActive || !sessionToken) {
+    if (!trialActive) {
       setDynamicDriveTrialSnapshot(null);
       return;
     }
-    void getDynamicDriveTrialStatusFn({ data: { sessionToken } }).then(setDynamicDriveTrialSnapshot);
-  }, [sessionToken, trialActive]);
+    void getDynamicDriveTrialStatusFn({ data: { sessionToken: null } }).then(
+      setDynamicDriveTrialSnapshot,
+    );
+  }, [trialActive]);
 
   useEffect(() => {
-    if (!trialActive || !sessionToken) return;
+    if (!trialActive) return;
     if (!driving || !settings.dynamicDrive) {
       if (startedRef.current && driveSessionIdRef.current) {
         const driveSessionId = driveSessionIdRef.current;
         startedRef.current = false;
         void endDynamicDriveTrialSessionFn({
           data: {
-            sessionToken,
+            sessionToken: null,
             driveSessionId,
             dynamicDriveEnabled: settings.dynamicDrive,
           },
@@ -126,7 +129,7 @@ export function DynamicDriveTrialBridge() {
       startedRef.current = true;
       void claimDynamicDriveSessionFn({
         data: {
-          sessionToken,
+          sessionToken: null,
           driveSessionId,
           relaySessionId: readClientRelaySessionId(),
         },
@@ -138,7 +141,9 @@ export function DynamicDriveTrialBridge() {
             update({ dynamicDrive: false });
             return null;
           }
-          return startDynamicDriveTrialSessionFn({ data: { sessionToken, driveSessionId } });
+          return startDynamicDriveTrialSessionFn({
+            data: { sessionToken: null, driveSessionId },
+          });
         })
         .then((result) => {
           if (result) {
@@ -158,7 +163,7 @@ export function DynamicDriveTrialBridge() {
     const timer = window.setInterval(() => {
       void heartbeatDynamicDriveTrialFn({
         data: {
-          sessionToken,
+          sessionToken: null,
           driveSessionId,
           dynamicDriveEnabled: settings.dynamicDrive,
         },
@@ -173,7 +178,7 @@ export function DynamicDriveTrialBridge() {
     return () => {
       window.clearInterval(timer);
     };
-  }, [driving, liveDrive, sessionToken, settings.dynamicDrive, trialActive, update]);
+  }, [driving, liveDrive, settings.dynamicDrive, trialActive, update]);
 
   return null;
 }

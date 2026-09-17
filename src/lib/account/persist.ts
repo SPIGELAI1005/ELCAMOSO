@@ -1,7 +1,7 @@
 import type { ElcamosoSettings } from "@/lib/drive/settings";
 
+/** Client-visible account profile. Session token lives only in an HttpOnly cookie. */
 export interface PersistedAccountSession {
-  sessionToken: string;
   userId: string;
   email: string;
   expiresAt: number;
@@ -14,9 +14,8 @@ export function readPersistedAccountSession(): PersistedAccountSession | null {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
-    const parsed = JSON.parse(raw) as PersistedAccountSession;
+    const parsed = JSON.parse(raw) as PersistedAccountSession & { sessionToken?: unknown };
     if (
-      typeof parsed.sessionToken !== "string" ||
       typeof parsed.userId !== "string" ||
       typeof parsed.email !== "string" ||
       typeof parsed.expiresAt !== "number"
@@ -27,7 +26,12 @@ export function readPersistedAccountSession(): PersistedAccountSession | null {
       localStorage.removeItem(STORAGE_KEY);
       return null;
     }
-    return parsed;
+    // Drop any legacy sessionToken that may still be in storage.
+    return {
+      userId: parsed.userId,
+      email: parsed.email,
+      expiresAt: parsed.expiresAt,
+    };
   } catch {
     return null;
   }
@@ -35,7 +39,14 @@ export function readPersistedAccountSession(): PersistedAccountSession | null {
 
 export function writePersistedAccountSession(session: PersistedAccountSession): void {
   if (typeof window === "undefined") return;
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(session));
+  localStorage.setItem(
+    STORAGE_KEY,
+    JSON.stringify({
+      userId: session.userId,
+      email: session.email,
+      expiresAt: session.expiresAt,
+    }),
+  );
 }
 
 export function clearPersistedAccountSession(): void {
@@ -47,7 +58,7 @@ export function accountSessionToSettingsPatch(
   session: PersistedAccountSession,
 ): Partial<ElcamosoSettings> {
   return {
-    accountSessionToken: session.sessionToken,
+    accountSessionToken: null,
     accountUserId: session.userId,
     accountEmail: session.email,
   };

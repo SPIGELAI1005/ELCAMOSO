@@ -45,27 +45,9 @@ export function AccountProvider({ children }: { children: ReactNode }) {
   );
 
   const refresh = useCallback(async () => {
-    const persisted =
-      readPersistedAccountSession() ??
-      (settings.accountSessionToken &&
-      settings.accountUserId &&
-      settings.accountEmail
-        ? {
-            sessionToken: settings.accountSessionToken,
-            userId: settings.accountUserId,
-            email: settings.accountEmail,
-            expiresAt: Date.now() + 60_000,
-          }
-        : null);
-
-    if (!persisted?.sessionToken) {
-      setSession(null);
-      setIsLoading(false);
-      return;
-    }
-
     try {
-      const result = await getAccountSessionFn({ data: { sessionToken: persisted.sessionToken } });
+      // Session authenticity comes from the HttpOnly cookie; localStorage is profile UX only.
+      const result = await getAccountSessionFn({ data: {} });
       if (!result.authenticated) {
         clearPersistedAccountSession();
         setSession(null);
@@ -73,7 +55,6 @@ export function AccountProvider({ children }: { children: ReactNode }) {
         return;
       }
       const next: PersistedAccountSession = {
-        sessionToken: persisted.sessionToken,
         userId: result.userId,
         email: result.email,
         expiresAt: result.expiresAt,
@@ -82,28 +63,35 @@ export function AccountProvider({ children }: { children: ReactNode }) {
       setSession(next);
       update(accountSessionToSettingsPatch(next));
     } catch {
+      const persisted =
+        readPersistedAccountSession() ??
+        (settings.accountUserId && settings.accountEmail
+          ? {
+              userId: settings.accountUserId,
+              email: settings.accountEmail,
+              expiresAt: Date.now() + 60_000,
+            }
+          : null);
       setSession(persisted);
     } finally {
       setIsLoading(false);
     }
-  }, [settings.accountEmail, settings.accountSessionToken, settings.accountUserId, update]);
+  }, [settings.accountEmail, settings.accountUserId, update]);
 
   useEffect(() => {
     void refresh();
   }, [refresh]);
 
   const signOut = useCallback(async () => {
-    if (session?.sessionToken) {
-      try {
-        await signOutAccountFn({ data: { sessionToken: session.sessionToken } });
-      } catch {
-        // Local sign-out still clears client state.
-      }
+    try {
+      await signOutAccountFn({ data: {} });
+    } catch {
+      // Local sign-out still clears client state.
     }
     clearPersistedAccountSession();
     setSession(null);
     update(clearAccountSettingsPatch());
-  }, [session?.sessionToken, update]);
+  }, [update]);
 
   const value = useMemo(
     (): AccountContextValue => ({

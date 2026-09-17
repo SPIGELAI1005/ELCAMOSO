@@ -144,12 +144,20 @@ function PowertrainDebug() {
           Powertrain domain only — no audio, no vehicle sensors. Pick any personality; tune speed,
           acceleration, throttle and braking; inspect gear, RPM, load and driving state.
         </p>
-        <Link
-          to="/debug"
-          className="mt-4 inline-block text-[11px] tracking-[0.2em] text-muted-foreground uppercase hover:text-foreground"
-        >
-          ← Sound debug
-        </Link>
+        <div className="mt-4 flex flex-wrap gap-4">
+          <Link
+            to="/debug"
+            className="inline-block text-[11px] tracking-[0.2em] text-muted-foreground uppercase hover:text-foreground"
+          >
+            ← Sound debug
+          </Link>
+          <Link
+            to="/debug/calibration"
+            className="inline-block text-[11px] tracking-[0.2em] text-muted-foreground uppercase hover:text-foreground"
+          >
+            Calibration lab →
+          </Link>
+        </div>
 
         <section className="mt-10 space-y-6 border border-border p-6">
           <label className="block text-sm">
@@ -299,33 +307,56 @@ function PowertrainDebug() {
             <p className="mt-6 text-sm text-muted-foreground">{profile.name}</p>
           </div>
           <div className="mx-auto mt-8 grid max-w-md gap-4">
-            <MeterBar label="Throttle" value={state.throttle} />
-            <MeterBar label="Load" value={state.load} />
+            <MeterBar label="Driver demand" value={state.driverDemand} />
+            <MeterBar label="Engine load" value={state.engineLoad} />
           </div>
         </section>
 
         <section className="mt-8 grid gap-4 border border-border p-6 text-sm sm:grid-cols-2">
+          <Readout label="Backend" value={state.diagnostics?.powertrainBackend ?? "dynamic"} />
           <Readout label="Driving state" value={state.drivingMode} />
           <Readout label="Target gear" value={String(state.targetGear)} />
-          <Readout label="Throttle" value={state.throttle.toFixed(2)} />
-          <Readout label="Load" value={state.load.toFixed(2)} />
+          <Readout label="Queued target" value={String(state.queuedTargetGear)} />
+          <Readout label="Driver demand" value={state.driverDemand.toFixed(2)} />
+          <Readout label="Engine load" value={state.engineLoad.toFixed(2)} />
+          <Readout
+            label="Mechanical RPM"
+            value={Math.round(state.mechanicalRpm).toLocaleString()}
+          />
           <Readout label="Normalized RPM" value={state.normalizedRpm.toFixed(2)} />
           <Readout
-            label="Shifting"
+            label="Shift phase"
             value={
               state.shifting
-                ? `${state.shiftDirection} ${((state.shiftProgress ?? 0) * 100).toFixed(0)}%`
-                : "no"
+                ? `${state.shiftPhase ?? "?"} ${((state.shiftProgress ?? 0) * 100).toFixed(0)}%`
+                : "idle"
             }
           />
+          <Readout label="Last shift reason" value={state.lastShiftReason ?? "none"} />
           <Readout
             label="Rev match"
             value={state.revMatchActive ? state.revMatchProgress.toFixed(2) : "no"}
           />
           <Readout label="Overrun" value={state.overrun ? "yes" : "no"} />
           <Readout label="Engine" value={state.engineRunning ? "running" : "off"} />
-          <Readout label="Speed (control)" value={`${controls.speedKmh.toFixed(0)} km/h`} />
-          <Readout label="Accel (control)" value={`${controls.accelerationMs2.toFixed(1)} m/s²`} />
+          <Readout
+            label="Display speed"
+            value={`${(state.diagnostics?.displaySpeedKmh ?? controls.speedKmh).toFixed(1)} km/h`}
+          />
+          <Readout
+            label="Mechanical speed"
+            value={`${(state.diagnostics?.mechanicalSpeedKmh ?? controls.speedKmh).toFixed(1)} km/h`}
+          />
+          <Readout
+            label="Shift-decision speed"
+            value={`${(state.diagnostics?.shiftDecisionSpeedKmh ?? controls.speedKmh).toFixed(1)} km/h`}
+          />
+          <Readout
+            label="Braking"
+            value={(state.diagnostics?.braking ?? controls.braking).toFixed(2)}
+          />
+          <Readout label="Motion source" value={state.diagnostics?.motionSource ?? "simulator"} />
+          <Readout label="Fallback tier" value={state.diagnostics?.fallbackTier ?? "—"} />
           <Readout label="Redline" value={String(profile.engine.redlineRpm)} />
           <Readout label="Gears" value={String(profile.transmission.gears)} />
         </section>

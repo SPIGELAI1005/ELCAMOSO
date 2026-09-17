@@ -38,13 +38,29 @@ export interface FusionDiagnostics {
 }
 
 export interface PowertrainDiagnostics {
+  /** Explicit backend — never confuse Legacy Mode with Dynamic Drive in tests. */
+  powertrainBackend: "legacy" | "dynamic";
   throttle: number;
   load: number;
+  driverDemand: number | null;
+  engineLoad: number | null;
   gear: number;
   targetGear: number | null;
+  queuedTargetGear: number | null;
   rpm: number;
+  mechanicalRpm: number | null;
   shifting: boolean;
   shiftDirection: string | null;
+  shiftPhase: string | null;
+  shiftProgress: number | null;
+  lastShiftReason: string | null;
+  rawSpeedKmh: number | null;
+  displaySpeedKmh: number | null;
+  mechanicalSpeedKmh: number | null;
+  shiftDecisionSpeedKmh: number | null;
+  braking: number | null;
+  motionSource: string | null;
+  fallbackTier: string | null;
   drivingMode: string | null;
 }
 

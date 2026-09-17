@@ -414,8 +414,9 @@ function inferThrottleFromMotion(
 function inferThrottleFromAccel(accelFiltered: number, speedKmh: number): number {
   if (accelFiltered <= 0) return 0;
   const fromAccel = clamp01(accelFiltered / 3.4);
-  const fromSpeed = clamp01(speedKmh / 150) * 0.12;
-  return clamp01(fromAccel * 0.78 + fromSpeed);
+  // Tiny road-load only — steady cruise must not look like open throttle.
+  const fromSpeed = clamp01(speedKmh / 180) * 0.06;
+  return clamp01(fromAccel * 0.9 + fromSpeed);
 }
 
 function collectFreshness(state: SensorFusionState, now: number): SourceFreshness {
