@@ -34,16 +34,20 @@ export interface ShiftMapOverrides {
 /**
  * How early light-throttle upshifts occur relative to each personality's
  * published lowLoad RPM (sound-character anchor, not a gentle-driving map).
+ *
+ * Road Feel V3: mainstream combustion personalities shift much earlier under
+ * light/normal demand so 1→2 is ~25–32 km/h, not ~45–50 km/h. High-RPM
+ * personalities (motorcycle, ag) stay intentionally tall.
  */
 const LIGHT_DEMAND_FACTOR: Record<string, number> = {
-  "gt-v8": 0.58,
-  "american-v8": 0.5,
-  "flat-six-sport": 0.7,
-  "turbo-inline-6": 0.64,
+  "gt-v8": 0.48,
+  "american-v8": 0.48,
+  "flat-six-sport": 0.34,
+  "turbo-inline-6": 0.36,
   "motorcycle-inline-4": 0.82,
-  "v-twin-cruiser": 0.52,
+  "v-twin-cruiser": 0.5,
   "single-cylinder-ag": 0.88,
-  "synthetic-ev": 0.72,
+  "synthetic-ev": 0.42,
 };
 
 function lerp(a: number, b: number, t: number): number {
@@ -81,6 +85,10 @@ export function rpmForRoadSpeedGear(
  * Continuous demand → upshift RPM for schedule generation.
  * Remaps personality low/med/high anchors so gentle road driving is not stuck
  * at sound-character "lowLoad" RPMs that were often written for mid/high drama.
+ *
+ * Demand bands (product intent):
+ * 0–15% early economy · 15–35% comfortable · 35–60% progressive pull
+ * 60–80% sport hold · 80–100% WOT / soft-redline
  */
 export function scheduleUpshiftRpmForDemand(
   demand: number,
@@ -91,17 +99,25 @@ export function scheduleUpshiftRpmForDemand(
   const idle = profileIdleRpm(profile);
   const softRedline = profile.engine.redlineRpm * profile.transmission.redline.softFraction;
   const { lowLoad, mediumLoad, highLoad } = profile.transmission.upshiftRpm;
-  const lightFactor = lightFactorOverride ?? LIGHT_DEMAND_FACTOR[profile.id] ?? 0.68;
-  const economyRpm = idle + (lowLoad - idle) * lightFactor;
-  const veryLightRpm = idle + (economyRpm - idle) * 0.88;
+  const lightFactor = lightFactorOverride ?? LIGHT_DEMAND_FACTOR[profile.id] ?? 0.48;
+  const span = Math.max(1, lowLoad - idle);
+
+  // Road-feel anchors stay below sound-character lowLoad until stronger demand.
+  const economyRpm = idle + span * lightFactor;
+  const veryLightRpm = idle + (economyRpm - idle) * 0.82;
+  const comfortRpm = idle + span * Math.min(0.95, lightFactor + 0.15);
+  const pullRpm = idle + span * Math.min(1, lightFactor + 0.32);
+  // At ~75% demand, approach lowLoad without jumping straight to mediumLoad drama.
+  const sportRpm = lerp(pullRpm, lowLoad, 0.72);
+  const highAnchor = lerp(sportRpm, mediumLoad, 0.55);
 
   if (d <= 0.15) return lerp(veryLightRpm, economyRpm, d / 0.15);
-  if (d <= 0.35) return lerp(economyRpm, lowLoad, (d - 0.15) / 0.2);
-  if (d <= 0.6) return lerp(lowLoad, mediumLoad, (d - 0.35) / 0.25);
-  if (d <= 0.8) return lerp(mediumLoad, highLoad, (d - 0.6) / 0.2);
+  if (d <= 0.35) return lerp(economyRpm, comfortRpm, (d - 0.15) / 0.2);
+  if (d <= 0.6) return lerp(comfortRpm, pullRpm, (d - 0.35) / 0.25);
+  if (d <= 0.8) return lerp(pullRpm, highAnchor, (d - 0.6) / 0.2);
   return lerp(
-    highLoad,
-    Math.min(softRedline, highLoad + (softRedline - highLoad) * 0.55),
+    highAnchor,
+    Math.min(softRedline, highLoad + (softRedline - highLoad) * 0.35),
     (d - 0.8) / 0.2,
   );
 }

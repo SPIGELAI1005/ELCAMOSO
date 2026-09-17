@@ -135,21 +135,52 @@ function FusionSection({ frame }: { frame: DriveDiagnosticsFrame }) {
 
 function PowertrainSection({ frame }: { frame: DriveDiagnosticsFrame }) {
   const { powertrain } = frame;
-  const shiftState = powertrain.shifting
-    ? `Shifting ${powertrain.shiftDirection ?? ""}`.trim()
-    : "Steady";
+  const [profileLabel, setProfileLabel] = useState("—");
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      setProfileLabel(getSession().snapshot().profileName || "—");
+    }, 500);
+    setProfileLabel(getSession().snapshot().profileName || "—");
+    return () => window.clearInterval(id);
+  }, []);
+  const gearLabel = powertrain.gear > 0 ? `D${powertrain.gear}` : "N";
+  const phase = powertrain.shifting ? (powertrain.shiftPhase ?? "—") : "none";
+  const queued =
+    powertrain.queuedTargetGear == null || powertrain.queuedTargetGear === powertrain.gear
+      ? "—"
+      : String(powertrain.queuedTargetGear);
+  const sensor =
+    powertrain.motionSource ?? frame.fusion.primarySource ?? powertrain.fallbackTier ?? "—";
+
   return (
-    <Section title="Powertrain">
-      <MetricRow label="Throttle" value={fmtPct(powertrain.throttle)} />
-      <MetricRow label="Load" value={fmtPct(powertrain.load)} />
-      <MetricRow label="Gear" value={String(powertrain.gear)} />
+    <Section title="Powertrain runtime">
+      <MetricRow label="PROFILE" value={profileLabel} />
       <MetricRow
-        label="Target gear"
-        value={powertrain.targetGear === null ? "—" : String(powertrain.targetGear)}
+        label="POWERTRAIN"
+        value={powertrain.powertrainBackend === "dynamic" ? "Dynamic" : "Legacy"}
       />
-      <MetricRow label="RPM" value={fmtNum(powertrain.rpm, 0)} />
-      <MetricRow label="Shift state" value={shiftState} />
-      <MetricRow label="Driving mode" value={powertrain.drivingMode ?? "—"} />
+      <MetricRow label="GEAR" value={gearLabel} />
+      <MetricRow
+        label="TARGET GEAR"
+        value={powertrain.targetGear == null ? "—" : String(powertrain.targetGear)}
+      />
+      <MetricRow label="QUEUED GEAR" value={queued} />
+      <MetricRow label="RPM" value={fmtNum(powertrain.mechanicalRpm ?? powertrain.rpm, 0)} />
+      <MetricRow label="DRIVER DEMAND" value={fmtPct(powertrain.driverDemand ?? powertrain.throttle)} />
+      <MetricRow label="ENGINE LOAD" value={fmtPct(powertrain.engineLoad ?? powertrain.load)} />
+      <MetricRow label="SHIFT PHASE" value={phase} />
+      <MetricRow label="SENSOR SOURCE" value={String(sensor)} />
+      <MetricRow label="AUDIO BACKEND" value={frame.audio.synthesisMode || "—"} />
+      <MetricRow label="Last shift reason" value={powertrain.lastShiftReason ?? "—"} />
+      <MetricRow label="Display speed" value={`${fmtNum(powertrain.displaySpeedKmh, 1)} km/h`} />
+      <MetricRow
+        label="Mechanical speed"
+        value={`${fmtNum(powertrain.mechanicalSpeedKmh, 1)} km/h`}
+      />
+      <MetricRow
+        label="Shift decision speed"
+        value={`${fmtNum(powertrain.shiftDecisionSpeedKmh, 1)} km/h`}
+      />
     </Section>
   );
 }

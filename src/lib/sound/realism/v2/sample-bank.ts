@@ -82,4 +82,6 @@ export const EMPTY_COMBUSTION_SAMPLE_BANKS: Record<string, CombustionSampleBank>
   "american-v8": { personalityId: "american-v8", entries: [] },
   "flat-six-sport": { personalityId: "flat-six-sport", entries: [] },
   "turbo-inline-6": { personalityId: "turbo-inline-6", entries: [] },
+  "motorcycle-inline-4": { personalityId: "motorcycle-inline-4", entries: [] },
+  "v-twin-cruiser": { personalityId: "v-twin-cruiser", entries: [] },
 };

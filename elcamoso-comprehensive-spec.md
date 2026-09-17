@@ -404,7 +404,7 @@ Primary navigation is minimal. Main routes:
 | ---------------------- | --------------------------------------------------------------------------------------------------------- |
 | `/`                    | Landing / hero with [Start Drive]                                                                         |
 | `/onboarding`          | 3-step first-time setup                                                                                   |
-| `/drive`               | Active driving interface                                                                                  |
+| `/drive`               | Active driving interface; optional Free phone QR pairing (sensor source)                                  |
 | `/demo`                | Pedals + P R N D, guided character tour, no sensors                                                       |
 | `/sounds`              | Browse, Find a sound → Listen, audition, select profiles                                                  |
 | `/studio`              | Sound shaping, mixer, environments, snippets, AI prompt-to-sound, audio monitor, share link               |
@@ -414,7 +414,9 @@ Primary navigation is minimal. Main routes:
 | `/settings`            | Master volume, per-profile gain, haptics, reduced motion, usage insights, reset onboarding, export/import |
 | `/pricing`             | FREE vs Drive+ plans, emotional positioning, Stripe Checkout entry                                        |
 | `/upgrade/$token`      | Phone-side Tesla Drive+ checkout (QR destination); auth + Stripe, no card entry in car browser              |
-| `/connect/$sessionId`  | Phone pairing relay for in-car display motion                                                               |
+| `/pair`                | Phone manual pairing code entry (motion sensor only; sound stays in car)                                  |
+| `/pair/$token`         | Phone QR claim (opaque short-lived token → session join secret)                                           |
+| `/connect/$sessionId`  | Legacy phone join path (still supported)                                                                  |
 | `/auth/account/callback` | Email magic-link verification; sets HttpOnly account session cookie                                     |
 | `/auth/account/google/callback` | Google OAuth Authorization Code callback (server GET exchange + cookie); never expose client secret |
 | `/about`               | Product about                                                                                             |

@@ -1,9 +1,9 @@
 # Dynamic Drive — Architecture Guide
 
 **Audience:** engineers onboarding to ELCAMOSO motion, relay, powertrain, and audio.  
-**Last updated:** 2026-08-29
+**Last updated:** 2026-09-17
 
-This is the **canonical** reference for the Dynamic Drive pipeline. For field validation in Tesla browser, see `docs/TESLA_BROWSER_SMOKE_TEST.md`. For performance constraints, see `docs/TESLA_BROWSER_PERFORMANCE_AUDIT.md`. Historical planning notes: `docs/dynamic-drive-audit.md`.
+This is the **canonical** reference for the Dynamic Drive pipeline. For field validation in Tesla browser, see `docs/TESLA_BROWSER_SMOKE_TEST.md`. For phone QR pairing (Free), see `docs/PHONE_PAIRING.md`. For performance constraints, see `docs/TESLA_BROWSER_PERFORMANCE_AUDIT.md`. Historical planning notes: `docs/dynamic-drive-audit.md`.
 
 ---
 
@@ -13,7 +13,7 @@ Read this section top to bottom once. Each step names the module you open in the
 
 ### 1. Phone → relay
 
-A phone tab at `/connect/{sessionId}` is a **sensor relay only** — it never runs the audio engine.
+A phone tab at `/pair` or `/pair/{claimToken}` (legacy: `/connect/{sessionId}`) is a **sensor relay only** — it never runs the audio engine. Basic pairing is **Free** (`phone_sensor`).
 
 ```
 Phone tab
@@ -28,7 +28,9 @@ Phone tab
 
 | File | Role |
 | ---- | ---- |
-| `src/routes/connect.$sessionId.tsx` | Phone UI, pairing code, remote controls |
+| `src/routes/pair.tsx` / `pair_.$token.tsx` | Phone QR claim + manual code |
+| `src/components/PhonePairSession.tsx` | Confirm, sensors, disconnect |
+| `src/routes/connect.$sessionId.tsx` | Legacy phone join |
 | `src/lib/motion/phone-sensor-client.ts` | GPS watch, DeviceMotion, ~15 Hz tick |
 | `src/lib/drive/gps-speed.ts` | Reported speed or haversine delta |
 | `src/lib/drive-relay/client.ts` | One WebSocket per tab; heartbeat, reconnect |
@@ -131,15 +133,15 @@ Dynamic Drive: RPM harmonic bands + transient scheduler (`transient-scheduler.ts
 
 Session calls `engine.update(state)` every RAF tick. Profile switch crossfades on the same context — never stack a second `AudioContext`.
 
-### 7. Tesla cockpit → React UI
+### 7. Tesla Drive → React UI
 
-**Route:** `/drive?cockpit=1` — `src/routes/drive.tsx`
+**Route:** `/drive` — `src/routes/drive.tsx` (phone pairing always available on Free; `?cockpit=1` still enables safety / upgrade extras)
 
 ```
 session-store snapshot (≤12.5 Hz)
        │
        ├── DynamicDriveInstrument   (gear, rev arc)
-       ├── DriveSessionPanel          (QR pairing, phone link)
+       ├── DriveSessionPanel          (QR pairing — Free)
        ├── VehicleTelemetryBridge     (Fleet poll → ingest)
        └── DriveDiagnosticsPanel      (dev only)
 ```
@@ -150,8 +152,8 @@ Product language: **Rev**, **character**, **linked** — not fusion, oscillator,
 
 | Surface | Default | Hidden until needed |
 | ------- | ------- | ------------------- |
-| Tesla Drive | Speed, O ))) mark, gear arc, profile name | Connection hint, phone QR |
-| Phone connect | "Phone linked" + one line | Sensor grid, remote controls |
+| Tesla Drive | Speed, O ))) mark, gear arc, profile name, Phone sensor | Full QR when connecting |
+| Phone `/pair` | Confirm + sensor status | Remote controls |
 | Settings | Sound Profile, volume | Motion-matched sound, Drive debug |
 
 Dev diagnostics: Settings → Advanced → Drive debug, or `/drive?debug=1`. See `docs/drive-diagnostics.md`.
@@ -161,7 +163,7 @@ Dev diagnostics: Settings → Advanced → Drive debug, or `/drive?debug=1`. See
 ## End-to-end diagram
 
 ```
-Phone (/connect)          Tesla browser (/drive?cockpit=1)
+Phone (/pair)             Tesla browser (/drive)
       │                              │
       │  GPS + IMU @ ~15 Hz          │  GPS + IMU (local) + relay ingest
       ▼                              ▼
@@ -185,6 +187,8 @@ Phone (/connect)          Tesla browser (/drive?cockpit=1)
                                       ▼
                      Drive UI (React, throttled ~80 ms)
 ```
+
+See `docs/PHONE_PAIRING.md` for claim tokens, Free entitlement, and fallback.
 
 ---
 

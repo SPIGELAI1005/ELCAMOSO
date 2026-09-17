@@ -19,6 +19,11 @@ import { DynamicDriveSynth } from "@/lib/sound/dynamic-drive/synth";
 import { supportsDynamicDrive } from "@/lib/powertrain/adapters/profile-map";
 import { reportAudioError } from "@/lib/telemetry/crashes";
 import {
+  loadAwareMasterScale,
+  PROFILE_SWITCH_VOLUME_SCALE,
+  STARTUP_VOLUME_SCALE,
+} from "@/lib/sound/perceptual-volume";
+import {
   ensureCombustionWorklet,
   HybridCombustionSynth,
   isCombustionRealismV2Profile,
@@ -133,8 +138,8 @@ export class SoundEngine {
   private improved: ImprovedSynth | null = null;
   private dynamicDriveEnabled = false;
   private dynamicDrive: DynamicDriveSynth | null = null;
-  /** Dev-only A/B: current engine vs Realism V2 hybrid combustion. */
-  private realismEngine: RealismEngineMode = "current";
+  /** Dev A/B: current engine vs Realism V2. Default v2 for combustion when eligible. */
+  private realismEngine: RealismEngineMode = "v2";
   private hybrid: HybridCombustionSynth | null = null;
   private profileBus: MasterBus | null = null;
   /** hard ceiling applied before the limiter so no profile can spike */
@@ -209,7 +214,7 @@ export class SoundEngine {
     this.profileGain = Math.min(1.6, Math.max(0.2, gain));
     if (this.ctx && this.master) {
       this.master.gain.setTargetAtTime(
-        this.safeVolume(this.volume * this.profileGain * 0.8),
+        this.safeVolume(this.volume * this.profileGain * PROFILE_SWITCH_VOLUME_SCALE),
         this.now(),
         0.25,
       );
@@ -217,8 +222,8 @@ export class SoundEngine {
   }
 
   private safeVolume(value: number) {
-    const balance =
-      this.synthesisMode === "improved" && this.profile ? loudnessForProfile(this.profile.id) : 1;
+    // Loudness trim applies to every backend so GT V8 / Flat-Six stay comparable.
+    const balance = this.profile ? loudnessForProfile(this.profile.id) : 1;
     return Math.min(SoundEngine.MAX_GAIN, this.intensityCeiling, Math.max(0.0001, value * balance));
   }
 
@@ -284,7 +289,7 @@ export class SoundEngine {
     const t = ctx.currentTime;
     this.master.gain.setValueAtTime(0.0001, t);
     this.master.gain.setTargetAtTime(
-      this.safeVolume(this.volume * this.profileGain * 0.55),
+      this.safeVolume(this.volume * this.profileGain * STARTUP_VOLUME_SCALE),
       t,
       0.25,
     );
@@ -439,7 +444,7 @@ export class SoundEngine {
     this.setProfile(profile);
     master.gain.setValueAtTime(0.0001, ctx.currentTime);
     master.gain.setTargetAtTime(
-      this.safeVolume(this.volume * this.profileGain * 0.55),
+      this.safeVolume(this.volume * this.profileGain * STARTUP_VOLUME_SCALE),
       signatureEnd - 0.35,
       0.55,
     );
@@ -1040,9 +1045,8 @@ export class SoundEngine {
       this.lastThrottle = state.throttle;
       this.lastRegen = state.regen;
       if (this.master) {
-        const duck = 1 - state.regen * 0.28;
         const target = this.safeVolume(
-          this.volume * this.profileGain * (0.52 + state.load * 0.42) * duck,
+          this.volume * this.profileGain * loadAwareMasterScale(state.load, state.regen),
         );
         this.master.gain.setTargetAtTime(target, t, 0.12);
       }
@@ -1092,9 +1096,8 @@ export class SoundEngine {
     this.lastRegen = state.regen;
 
     if (this.master) {
-      const duck = 1 - state.regen * 0.35;
       const target = this.safeVolume(
-        this.volume * this.profileGain * (0.55 + state.load * 0.45) * duck,
+        this.volume * this.profileGain * loadAwareMasterScale(state.load, state.regen),
       );
       this.master.gain.setTargetAtTime(target, t, 0.12);
     }

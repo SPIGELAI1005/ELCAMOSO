@@ -4,7 +4,7 @@
 **Status:** Historical baseline. **Canonical reference:** `docs/DYNAMIC_DRIVE_ARCHITECTURE.md`  
 **Scope:** Read-only audit from pre-rollout planning. Production behavior documented in the architecture guide.
 
-**Related:** `docs/TESLA_BROWSER_SMOKE_TEST.md`, `docs/drive-relay-sessions.md`.
+**Related:** `docs/TESLA_BROWSER_SMOKE_TEST.md`, `docs/drive-relay-sessions.md`, `docs/PHONE_PAIRING.md` (Free QR pairing, 2026-09-17).
 
 ---
 
@@ -361,7 +361,7 @@ interface SoundProfile {
 
 | Mechanism | Purpose |
 |-----------|---------|
-| Relay pairing | 6-digit code + `joinSecret` in QR (`/connect/{id}?token=…`) |
+| Relay pairing | Opaque claim token in QR (`/pair/{token}`) + 6-digit code; `joinSecret` only after claim (see `docs/PHONE_PAIRING.md`) |
 | Anonymous cloud | Client `cloudAccountId` (`local-{timestamp}`) |
 | Analytics | `elcamoso.installId` in localStorage |
 | Tesla Fleet | OAuth (server-side tokens, AES-256-GCM) |
@@ -553,17 +553,17 @@ No events for: drive session start, phone paired/disconnected, dynamic drive ena
 
 ### Phone ↔ Tesla shared sessions
 
-| Status | **Implemented** — `drive-relay/` + `DriveSessionPanel` + `/connect/$sessionId` |
+| Status | **Implemented** — `drive-relay/` + `DriveSessionPanel` + `/pair` + `/pair/$token` (legacy `/connect/$sessionId`). Free `phone_sensor`. |
 |--------|---|
-| **Reuse** | `store.ts`, `protocol.ts`, `client.ts`, `server-fns.ts`, QR + pairing code UX |
+| **Reuse** | `store.ts`, `protocol.ts`, `client.ts`, `server-fns.ts`, claim tokens + QR UX |
 | **Refactor** | None required for v1 |
-| **Extend** | Redis/KV session store for deploy survival; explicit `audioRole` in types (policy today is implicit) |
+| **Extend** | Redis/KV session store for deploy survival; dedicated production WS host (Vercel HTTP-only) |
 
 ### Phone sensors
 
 | Status | **Implemented** — `phone-sensor-client.ts`, relay motion @ ~15 Hz, no coords on wire |
 |--------|---|
-| **Reuse** | `/connect` route, permission patterns from onboarding/calibrate, `PhoneSensorStatus` |
+| **Reuse** | `/pair` routes + legacy `/connect`, permission patterns from onboarding/calibrate, `PhonePairSession` |
 | **Refactor** | None |
 | **Extend** | Mount-orientation / longitudinal accel projection; richer calibration copy |
 

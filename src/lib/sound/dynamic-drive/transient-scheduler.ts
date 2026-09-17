@@ -491,6 +491,23 @@ export function tickTransientScheduler(input: {
     );
   }
 
+  // Upshift reengage: brief mechanical engagement (not a fake swoosh).
+  if (
+    pt.shifting &&
+    pt.shiftDirection === "up" &&
+    (pt.shiftPhase === "reengage" || (pt.shiftProgress ?? 0) > 0.72) &&
+    (prevPt?.shiftProgress ?? 0) <= 0.72 &&
+    speedKmh >= profile.drivetrainThump.minSpeedKmh * 0.5
+  ) {
+    fire(
+      "drivetrain-thump",
+      Math.min(1, profile.drivetrainThump.probability + 0.15),
+      Math.max(180, profile.drivetrainThump.cooldownMs * 0.7),
+      pools.thump,
+      t.upshiftStrength * 0.55,
+    );
+  }
+
   if (
     overrunStarted(pt, prevPt) &&
     speedKmh >= profile.overrun.minSpeedKmh &&

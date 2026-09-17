@@ -23,6 +23,7 @@ import { DynamicDriveSessionConflictNotice } from "@/components/DynamicDriveSess
 import { useEntitlements } from "@/lib/entitlements/useEntitlements";
 import { DrivePipelineMetrics } from "@/components/DrivePipelineMetrics";
 import { DriveDiagnosticsPanel } from "@/components/DriveDiagnosticsPanel";
+import { TeslaRoadTestHud } from "@/components/TeslaRoadTestHud";
 import { isDriveDebugModeActive } from "@/lib/diagnostics/debug-mode";
 import type { MotionPipelineMetrics } from "@/lib/motion/pipeline-metrics";
 import { IDLE_MOTION } from "@/lib/drive/motion-energy";
@@ -42,24 +43,28 @@ export const Route = createFileRoute("/drive")({
   ): {
     cockpit?: boolean;
     debug?: boolean;
+    roadTest?: boolean;
     activateTrial?: boolean;
     upgrade?: string;
     start?: boolean;
   } => {
     const raw = search["cockpit"];
     const debugRaw = search["debug"];
+    const roadTestRaw = search["roadTest"];
     const activateRaw = search["activateTrial"];
     const startRaw = search["start"];
     const upgrade = typeof search["upgrade"] === "string" ? search["upgrade"] : undefined;
     const out: {
       cockpit?: boolean;
       debug?: boolean;
+      roadTest?: boolean;
       activateTrial?: boolean;
       upgrade?: string;
       start?: boolean;
     } = {};
     if (raw === true || raw === "1" || raw === 1) out.cockpit = true;
     if (debugRaw === true || debugRaw === "1" || debugRaw === 1) out.debug = true;
+    if (roadTestRaw === true || roadTestRaw === "1" || roadTestRaw === 1) out.roadTest = true;
     if (activateRaw === true || activateRaw === "1" || activateRaw === 1) out.activateTrial = true;
     if (startRaw === true || startRaw === "1" || startRaw === 1) out.start = true;
     if (upgrade) out.upgrade = upgrade;
@@ -86,7 +91,7 @@ export const Route = createFileRoute("/drive")({
 });
 
 function DriveScreen() {
-  const { cockpit, debug, activateTrial, upgrade, start: autostart } = Route.useSearch();
+  const { cockpit, debug, roadTest, activateTrial, upgrade, start: autostart } = Route.useSearch();
   const navigate = useNavigate();
   const autostartHandled = useRef(false);
   const { plan } = useEntitlements();
@@ -128,6 +133,7 @@ function DriveScreen() {
   }, [cockpit]);
 
   const debugDriveActive = isDriveDebugModeActive(settings, Boolean(debug));
+  const roadTestHudActive = debugDriveActive || (settings.devPanel && Boolean(roadTest));
 
   useEffect(() => {
     getSession().setDebugDriveDiagnostics(debugDriveActive);
@@ -255,8 +261,9 @@ function DriveScreen() {
           onAcceptSuggestion={() => getSession().acceptSuggestion()}
           onDismissSuggestion={() => getSession().dismissSuggestion()}
           onStop={handleStop}
-          showPairing={Boolean(cockpit)}
+          showPairing
           showDebugDiagnostics={debugDriveActive}
+          showRoadTestHud={roadTestHudActive}
           devMode={debugDriveActive}
           pipelineMetrics={sessionSnap.pipeline}
           showTeslaUpgrade={Boolean(cockpit) && showTeslaUpgrade}
@@ -302,7 +309,12 @@ function DriveScreen() {
               Drive recordings
             </Link>
           ) : null}
-          {cockpit ? <DriveSessionPanel className="max-w-lg" devMode={debugDriveActive} onRelaySessionChange={setRelaySessionId} /> : null}
+          <DriveSessionPanel
+            className="max-w-lg"
+            compact
+            devMode={debugDriveActive}
+            onRelaySessionChange={setRelaySessionId}
+          />
           {cockpit && showTeslaUpgrade ? (
             <Suspense fallback={null}>
               <TeslaDrivePlusUpgrade
@@ -344,6 +356,7 @@ function Driving({
   onStop,
   showPairing,
   showDebugDiagnostics,
+  showRoadTestHud,
   devMode,
   pipelineMetrics,
   showTeslaUpgrade,
@@ -374,6 +387,7 @@ function Driving({
   onStop: () => void;
   showPairing: boolean;
   showDebugDiagnostics: boolean;
+  showRoadTestHud: boolean;
   devMode: boolean;
   pipelineMetrics: MotionPipelineMetrics;
   showTeslaUpgrade: boolean;
@@ -516,6 +530,7 @@ function Driving({
         {showPairing ? (
           <DriveSessionPanel
             className="mt-2 w-full max-w-lg"
+            compact
             devMode={devMode}
             onRelaySessionChange={onRelaySessionChange}
           />
@@ -531,6 +546,7 @@ function Driving({
           </Suspense>
         ) : null}
         <DynamicDriveTrialComplete className="mt-4" />
+        {showRoadTestHud ? <TeslaRoadTestHud className="mt-2 w-full max-w-lg" /> : null}
         {showDebugDiagnostics ? (
           <>
             <DrivePipelineMetrics metrics={pipelineMetrics} className="mt-2 w-full max-w-lg" />

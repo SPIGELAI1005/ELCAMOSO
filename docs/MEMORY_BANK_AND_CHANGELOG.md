@@ -33,7 +33,7 @@ Canonical product rules still live in `elcamoso-comprehensive-spec.md`. Update *
 
 ### Routes
 
-`/`, `/onboarding`, `/drive`, `/demo`, `/sounds`, `/studio`, `/garage`, `/calibrate`, `/settings`, `/about`, `/pricing`, `/legal` (+ impressum, privacy, cookies, terms, accessibility), `/auth/account/callback` (magic link), `/auth/account/google/callback` (Google OAuth, server GET), `/upgrade/$token`, `/connect/$sessionId`, `/debug` (dev-only; includes `/debug/calibration` road-test lab, `/debug` Realism V2 A/B)
+`/`, `/onboarding`, `/drive`, `/demo`, `/sounds`, `/studio`, `/garage`, `/calibrate`, `/settings`, `/about`, `/pricing`, `/legal` (+ impressum, privacy, cookies, terms, accessibility), `/auth/account/callback` (magic link), `/auth/account/google/callback` (Google OAuth, server GET), `/upgrade/$token`, `/pair`, `/pair/$token` (Tesla↔phone QR claim), `/connect/$sessionId` (legacy join), `/debug` (dev-only; includes `/debug/calibration` road-test lab, `/debug` Realism V2 A/B)
 
 ### Account / auth (current)
 
@@ -45,9 +45,12 @@ Canonical product rules still live in `elcamoso-comprehensive-spec.md`. Update *
 
 ### Sound architecture (current)
 
+- Web Audio only. Improved strategies + Dynamic Drive layered synth for virtual-transmission profiles.
+- **Realism V2.1 (default for combustion):** continuous worklet combustion excitation → formants/body resonance; Powertrain-authored RPM/load/shift phases. A/B vs Current on `/debug`. See `docs/AUDIO_REALISM_V2.md`.
+- Road Feel V3 master gain / perceptual volume remains authoritative for cabin loudness.
+
 - **Built-in Sound Profiles:** **47** (22 original + 25 expansion in `src/lib/sound/profiles-expansion.ts`)
 - Default synthesis path: **improved** (`src/lib/sound/realism/`); original kept for A/B on `/debug`
-- **Realism V2** (dev A/B): hybrid combustion path `src/lib/sound/realism/v2/` + worklet `public/audio/combustion-processor.js` — docs `docs/AUDIO_REALISM_V2.md`
 - **UI categories** (`PROFILE_CATEGORIES`): Classic, Motorsport, Future, Nautical, Aviation, Machines, Nature, Heritage, Musical, Festive, Playful, Garage
 - **Technical families** (engine, not UI chips): `physical` | `designed` | `environmental` | `musical` — see `src/lib/sound/realism/families.ts`
 - Optional profile metadata: `motionModel`, `sourceMode`
@@ -61,6 +64,8 @@ Canonical product rules still live in `elcamoso-comprehensive-spec.md`. Update *
 ### Powertrain / Dynamic Drive calibration
 
 - Powertrain Calibration V2: demand bands, dual speed filters, kickdown queue — `docs/POWERTRAIN_CALIBRATION_V2.md`
+- **Road Feel V3 (Tesla cabin):** earlier light/normal shift maps for mainstream combustion; phase-aware shift load in Dynamic Drive synth; perceptual volume + coherent master gain staging; Tesla Road Test HUD (`?roadTest=1` or Drive debug diagnostics)
+- Regen calibration tables: `npx tsx scripts/generate-powertrain-calibration-v2.ts`
 - Road-test calibration lab: `/debug/calibration` — capture/replay traces without GPS routes — `docs/ROAD_TEST_CALIBRATION.md`, `src/lib/calibration/`
 
 ### Session / audition pitfalls (fixed)
@@ -104,11 +109,11 @@ Canonical product rules still live in `elcamoso-comprehensive-spec.md`. Update *
 ### Session / Drive (phone path)
 
 - GPS: prefer `coords.speed`; if null, derive m/s from lat/lon deltas (`src/lib/drive/gps-speed.ts`) then fuse via `src/lib/motion/sensor-fusion.ts`.
-- Phone relay: `/connect/{sessionId}` → WebSocket `motion` messages → `DriveSession.ingestPhoneRelayMotion()`.
+- Phone relay: `/drive` Connect phone → QR `/pair/{token}` → WebSocket `motion` → `DriveSession.ingestPhoneRelayMotion()`. Free includes `phone_sensor`. Docs: `docs/PHONE_PAIRING.md`.
 - Dynamic Drive: `PowertrainSimulator` + `DynamicDriveSynth` when `settings.dynamicDrive` and profile support it. See `docs/DYNAMIC_DRIVE_ARCHITECTURE.md`.
 - Wake lock: requested for **all** live Drive (not only Cockpit); re-acquired on visibility resume / pageshow / wake `release`.
 - Visibility: Drive uses ~2.8 s hide grace before audio suspend (notification shade); pagehide still suspends immediately.
-- Tesla / in-car browser: field checklist `docs/TESLA_BROWSER_SMOKE_TEST.md`. Cockpit mode: `/drive?cockpit=1` with shared session panel.
+- Tesla / in-car browser: field checklist `docs/TESLA_BROWSER_SMOKE_TEST.md`. Phone pairing always on `/drive` (Free). Cockpit `?cockpit=1` still enables safety / upgrade layout extras.
 
 ### Key files
 
@@ -160,6 +165,28 @@ Canonical product rules still live in `elcamoso-comprehensive-spec.md`. Update *
 ---
 
 ## Changelog
+
+### 2026-09-17 (Tesla ↔ phone QR pairing — Free)
+
+- Free includes `phone_sensor` for basic Tesla↔phone QR pairing (Drive+ still gates premium audio/profiles).
+- `/drive` always shows **Phone sensor / Connect phone** (no `?cockpit=1` / Drive+ gate).
+- Short-lived single-use claim tokens → `/pair/{token}`; manual `/pair` code entry; existing drive-relay WebSocket reused.
+- Docs: `docs/PHONE_PAIRING.md`.
+
+### 2026-09-17 (Combustion Realism V2.1)
+
+- Continuous worklet combustion (architecture/sharpness/load); body resonances; load→timbre tilt.
+- Shift audio follows Powertrain `shiftPhase` + `shiftLoadMultiplier` (not noise swooshes).
+- Realism V2 default for eligible combustion profiles; Current Engine remains A/B on `/debug`.
+- Sample dual-player crossfade ready when buffers injected; docs `docs/AUDIO_REALISM_V2.md`.
+
+### 2026-09-17 (Tesla Road Feel V3 — shift frequency, audibility, cabin gain)
+
+- Recalibrated light/normal shift maps so Flat-Six / Turbo I6 1→2 is ~26–30 km/h (was ~43–52).
+- Shift audibility: synth uses controller `shiftLoadMultiplier` / phases; deeper duck + reengage thump (no fake swoosh).
+- Gain staging: perceptual volume curve, higher MasterBus (0.90), load floor ~0.82, removed source-like 0.55 soft-start cut; profile loudness on all backends.
+- Developer Tesla Road Test HUD + expanded powertrain runtime diagnostics (gear / phase / demand / backend).
+- Deterministic road-feel scenarios + tests; audio regression snapshots **not** auto-updated (still green).
 
 ### 2026-09-17 (Google account OAuth + HttpOnly sessions)
 

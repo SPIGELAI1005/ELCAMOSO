@@ -17,6 +17,8 @@ export const ALL_ENTITLEMENTS: readonly Entitlement[] = [
 export const FREE_ENTITLEMENTS: readonly Entitlement[] = [
   "basic_drive",
   "basic_sound_profiles",
+  /** Basic Tesla ↔ phone QR pairing + sensor relay (not premium telemetry). */
+  "phone_sensor",
 ] as const;
 
 /** Premium entitlements — everything beyond FREE. */

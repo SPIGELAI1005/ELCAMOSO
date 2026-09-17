@@ -18,6 +18,7 @@ import { Route as DriveRouteImport } from './routes/drive'
 import { Route as GarageRouteImport } from './routes/garage'
 import { Route as LegalRouteRouteImport } from './routes/legal/route'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
+import { Route as PairRouteImport } from './routes/pair'
 import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as ReplayRouteImport } from './routes/replay'
 import { Route as SettingsRouteImport } from './routes/settings'
@@ -35,6 +36,7 @@ import { Route as LegalCookiesRouteImport } from './routes/legal/cookies'
 import { Route as LegalImpressumRouteImport } from './routes/legal/impressum'
 import { Route as LegalPrivacyRouteImport } from './routes/legal/privacy'
 import { Route as LegalTermsRouteImport } from './routes/legal/terms'
+import { Route as PairTokenRouteImport } from './routes/pair_.$token'
 import { Route as UpgradeTokenRouteImport } from './routes/upgrade.$token'
 import { Route as ApiBillingCheckoutRouteImport } from './routes/api/billing/checkout'
 import { Route as ApiBillingPortalRouteImport } from './routes/api/billing/portal'
@@ -88,6 +90,11 @@ const LegalRouteRoute = LegalRouteRouteImport.update({
 const OnboardingRoute = OnboardingRouteImport.update({
   id: '/onboarding',
   path: '/onboarding',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PairRoute = PairRouteImport.update({
+  id: '/pair',
+  path: '/pair',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PricingRoute = PricingRouteImport.update({
@@ -175,6 +182,11 @@ const LegalTermsRoute = LegalTermsRouteImport.update({
   path: '/terms',
   getParentRoute: () => LegalRouteRoute,
 } as any)
+const PairTokenRoute = PairTokenRouteImport.update({
+  id: '/pair_/$token',
+  path: '/pair/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const UpgradeTokenRoute = UpgradeTokenRouteImport.update({
   id: '/upgrade/$token',
   path: '/upgrade/$token',
@@ -232,6 +244,7 @@ export interface FileRoutesByFullPath {
   '/drive': typeof DriveRoute
   '/garage': typeof GarageRoute
   '/onboarding': typeof OnboardingRoute
+  '/pair': typeof PairRoute
   '/pricing': typeof PricingRoute
   '/replay': typeof ReplayRoute
   '/settings': typeof SettingsRoute
@@ -248,6 +261,7 @@ export interface FileRoutesByFullPath {
   '/legal/impressum': typeof LegalImpressumRoute
   '/legal/privacy': typeof LegalPrivacyRoute
   '/legal/terms': typeof LegalTermsRoute
+  '/pair/$token': typeof PairTokenRoute
   '/upgrade/$token': typeof UpgradeTokenRoute
   '/legal/': typeof LegalIndexRoute
   '/api/billing/checkout': typeof ApiBillingCheckoutRoute
@@ -268,6 +282,7 @@ export interface FileRoutesByTo {
   '/drive': typeof DriveRoute
   '/garage': typeof GarageRoute
   '/onboarding': typeof OnboardingRoute
+  '/pair': typeof PairRoute
   '/pricing': typeof PricingRoute
   '/replay': typeof ReplayRoute
   '/settings': typeof SettingsRoute
@@ -284,6 +299,7 @@ export interface FileRoutesByTo {
   '/legal/impressum': typeof LegalImpressumRoute
   '/legal/privacy': typeof LegalPrivacyRoute
   '/legal/terms': typeof LegalTermsRoute
+  '/pair/$token': typeof PairTokenRoute
   '/upgrade/$token': typeof UpgradeTokenRoute
   '/legal': typeof LegalIndexRoute
   '/api/billing/checkout': typeof ApiBillingCheckoutRoute
@@ -306,6 +322,7 @@ export interface FileRoutesById {
   '/drive': typeof DriveRoute
   '/garage': typeof GarageRoute
   '/onboarding': typeof OnboardingRoute
+  '/pair': typeof PairRoute
   '/pricing': typeof PricingRoute
   '/replay': typeof ReplayRoute
   '/settings': typeof SettingsRoute
@@ -322,6 +339,7 @@ export interface FileRoutesById {
   '/legal/impressum': typeof LegalImpressumRoute
   '/legal/privacy': typeof LegalPrivacyRoute
   '/legal/terms': typeof LegalTermsRoute
+  '/pair_/$token': typeof PairTokenRoute
   '/upgrade/$token': typeof UpgradeTokenRoute
   '/legal/': typeof LegalIndexRoute
   '/api/billing/checkout': typeof ApiBillingCheckoutRoute
@@ -345,6 +363,7 @@ export interface FileRouteTypes {
     | '/drive'
     | '/garage'
     | '/onboarding'
+    | '/pair'
     | '/pricing'
     | '/replay'
     | '/settings'
@@ -361,6 +380,7 @@ export interface FileRouteTypes {
     | '/legal/impressum'
     | '/legal/privacy'
     | '/legal/terms'
+    | '/pair/$token'
     | '/upgrade/$token'
     | '/legal/'
     | '/api/billing/checkout'
@@ -381,6 +401,7 @@ export interface FileRouteTypes {
     | '/drive'
     | '/garage'
     | '/onboarding'
+    | '/pair'
     | '/pricing'
     | '/replay'
     | '/settings'
@@ -397,6 +418,7 @@ export interface FileRouteTypes {
     | '/legal/impressum'
     | '/legal/privacy'
     | '/legal/terms'
+    | '/pair/$token'
     | '/upgrade/$token'
     | '/legal'
     | '/api/billing/checkout'
@@ -418,6 +440,7 @@ export interface FileRouteTypes {
     | '/drive'
     | '/garage'
     | '/onboarding'
+    | '/pair'
     | '/pricing'
     | '/replay'
     | '/settings'
@@ -434,6 +457,7 @@ export interface FileRouteTypes {
     | '/legal/impressum'
     | '/legal/privacy'
     | '/legal/terms'
+    | '/pair_/$token'
     | '/upgrade/$token'
     | '/legal/'
     | '/api/billing/checkout'
@@ -456,6 +480,7 @@ export interface RootRouteChildren {
   DriveRoute: typeof DriveRoute
   GarageRoute: typeof GarageRoute
   OnboardingRoute: typeof OnboardingRoute
+  PairRoute: typeof PairRoute
   PricingRoute: typeof PricingRoute
   ReplayRoute: typeof ReplayRoute
   SettingsRoute: typeof SettingsRoute
@@ -463,6 +488,7 @@ export interface RootRouteChildren {
   SoundsRoute: typeof SoundsRoute
   StudioRoute: typeof StudioRoute
   ConnectSessionIdRoute: typeof ConnectSessionIdRoute
+  PairTokenRoute: typeof PairTokenRoute
   UpgradeTokenRoute: typeof UpgradeTokenRoute
   ApiBillingCheckoutRoute: typeof ApiBillingCheckoutRoute
   ApiBillingPortalRoute: typeof ApiBillingPortalRoute
@@ -537,6 +563,13 @@ declare module '@tanstack/react-router' {
       path: '/onboarding'
       fullPath: '/onboarding'
       preLoaderRoute: typeof OnboardingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pair': {
+      id: '/pair'
+      path: '/pair'
+      fullPath: '/pair'
+      preLoaderRoute: typeof PairRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/pricing': {
@@ -658,6 +691,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LegalTermsRouteImport
       parentRoute: typeof LegalRouteRoute
     }
+    '/pair_/$token': {
+      id: '/pair_/$token'
+      path: '/pair/$token'
+      fullPath: '/pair/$token'
+      preLoaderRoute: typeof PairTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/upgrade/$token': {
       id: '/upgrade/$token'
       path: '/upgrade/$token'
@@ -772,6 +812,7 @@ const rootRouteChildren: RootRouteChildren = {
   DriveRoute: DriveRoute,
   GarageRoute: GarageRoute,
   OnboardingRoute: OnboardingRoute,
+  PairRoute: PairRoute,
   PricingRoute: PricingRoute,
   ReplayRoute: ReplayRoute,
   SettingsRoute: SettingsRoute,
@@ -779,6 +820,7 @@ const rootRouteChildren: RootRouteChildren = {
   SoundsRoute: SoundsRoute,
   StudioRoute: StudioRoute,
   ConnectSessionIdRoute: ConnectSessionIdRoute,
+  PairTokenRoute: PairTokenRoute,
   UpgradeTokenRoute: UpgradeTokenRoute,
   ApiBillingCheckoutRoute: ApiBillingCheckoutRoute,
   ApiBillingPortalRoute: ApiBillingPortalRoute,

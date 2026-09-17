@@ -192,6 +192,7 @@ describe("sensor fusion", () => {
 
     let speedMs = 0;
     let lastRpm = 0;
+    let peakRpm = 0;
     for (let i = 0; i < 500; i += 1) {
       const now = (i + 1) * 16;
       speedMs = Math.min(27.8, speedMs + 0.08);
@@ -214,9 +215,13 @@ describe("sensor fusion", () => {
         expect(pt.rpm).toBeGreaterThanOrEqual(lastRpm * 0.5);
       }
       lastRpm = pt.rpm;
+      peakRpm = Math.max(peakRpm, pt.rpm);
     }
 
-    expect(lastRpm).toBeGreaterThan(2800);
+    // Road Feel V3 shifts earlier under load, so settle RPM in a tall gear can be mid-range;
+    // peak during the pull must still climb clearly.
+    expect(peakRpm).toBeGreaterThan(2800);
+    expect(lastRpm).toBeGreaterThan(1400);
   });
 
   it("prefers vehicle telemetry for speed baseline and boosts confidence", () => {

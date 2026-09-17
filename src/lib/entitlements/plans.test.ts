@@ -10,8 +10,8 @@ import {
 } from "@/lib/entitlements/plans";
 
 describe("plan entitlements", () => {
-  it("FREE includes only basic drive and sound profiles", () => {
-    expect(FREE_ENTITLEMENTS).toEqual(["basic_drive", "basic_sound_profiles"]);
+  it("FREE includes basic drive, sound profiles, and phone sensor pairing", () => {
+    expect(FREE_ENTITLEMENTS).toEqual(["basic_drive", "basic_sound_profiles", "phone_sensor"]);
     expect(entitlementsForPlan("FREE")).toEqual(FREE_ENTITLEMENTS);
   });
 

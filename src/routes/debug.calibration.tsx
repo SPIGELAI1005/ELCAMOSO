@@ -45,7 +45,7 @@ function DebugCalibrationLab() {
   const [replayTrace, setReplayTrace] = useState<CalibrationTrace | null>(null);
   const [scenarioId, setScenarioId] = useState(CALIBRATION_SCENARIOS[0]!.id);
   const [profileId, setProfileId] = useState("gt-v8");
-  const [realismEngine, setRealismEngine] = useState<RealismEngineMode>("current");
+  const [realismEngine, setRealismEngine] = useState<RealismEngineMode>("v2");
   const [dynamicDrive, setDynamicDrive] = useState(true);
   const [playing, setPlaying] = useState(false);
   const [paused, setPaused] = useState(false);

@@ -38,6 +38,8 @@ export interface VirtualPowertrainState {
   shiftDirection?: "up" | "down";
   shiftProgress?: number;
   shiftPhase?: ShiftPhase;
+  /** Phase-aware combustion/load scale from shift controller (1 = full). */
+  shiftLoadMultiplier?: number;
   lastShiftReason?: string;
 
   revMatchActive: boolean;

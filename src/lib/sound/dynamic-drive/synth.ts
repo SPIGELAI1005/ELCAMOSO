@@ -248,18 +248,13 @@ export class DynamicDriveSynth {
       "dd-drivetrain-thump",
     ]);
 
-    const shift = this.drivetrain.powertrain.transmission.shift;
-    const shiftDip = pt.shifting
-      ? pt.shiftDirection === "up"
-        ? shift.torqueDipUp
-        : shift.torqueDipDown
-      : 0;
-    const loadMul = 1 - shiftDip * (pt.shiftProgress ?? 0);
+    // Use controller phase load (torque cut → reengage), not progress-linear duck.
+    const loadMul = pt.shifting ? (pt.shiftLoadMultiplier ?? 1) : 1;
 
     for (const band of this.bands) {
       const w = weightMap[band.id] ?? 0;
       const hz = fundamentalHzForLayer(band.id, pt, this.drivetrain);
-      const level = clamp(w * loadMul * maxGain * (0.55 + pt.load * 0.35), 0, maxGain);
+      const level = clamp(w * loadMul * maxGain * (0.62 + pt.load * 0.38), 0, maxGain);
       targetLayerGain(band.gain.gain, level, audioTime, GAIN_TAU);
       const bright = 0.2 + pt.load * 0.55 + (band.id === "dd-redline" ? 0.25 : 0);
       targetParam(

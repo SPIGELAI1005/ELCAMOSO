@@ -60,7 +60,10 @@ export function computeDynamicLayerWeights(
   const high = bandWeight(rpmNorm, RPM_BAND_CENTERS.high, bw.high);
   const redlineW = bandWeight(rpmNorm, RPM_BAND_CENTERS.redline, bw.redline);
 
-  const shiftDuck = pt.shifting ? 1 - 0.14 * Math.sin(Math.PI * clamp(pt.shiftProgress ?? 0)) : 1;
+  // Deeper mid-shift duck so torque cut / ratio change reads as load drop, not noise.
+  const shiftDuck = pt.shifting
+    ? 1 - 0.28 * Math.sin(Math.PI * clamp(pt.shiftProgress ?? 0)) * (2 - (pt.shiftLoadMultiplier ?? 1))
+    : 1;
 
   const steadySum = idle + low + mid + high + redlineW || 1;
   const norm = Math.min(1, 0.94 / steadySum);
@@ -74,9 +77,18 @@ export function computeDynamicLayerWeights(
   let revMatchTransient = 0;
   if (pt.shifting) {
     const p = pt.shiftProgress ?? 0;
-    const bell = Math.sin(Math.PI * clamp(p, 0, 1));
-    if (pt.shiftDirection === "up") upshiftTransient = bell * t.upshiftStrength * 0.55;
-    else if (pt.shiftDirection === "down") downshiftTransient = bell * t.downshiftStrength * 0.5;
+    const phase = pt.shiftPhase;
+    // Emphasize torque_cut→disengage and reengage, not a flat progress bell.
+    const phaseBell =
+      phase === "torque_cut" || phase === "disengage"
+        ? 0.85
+        : phase === "ratio_transition"
+          ? Math.sin(Math.PI * clamp((p - 0.36) / 0.36, 0, 1))
+          : phase === "reengage"
+            ? 1
+            : Math.sin(Math.PI * clamp(p, 0, 1)) * 0.65;
+    if (pt.shiftDirection === "up") upshiftTransient = phaseBell * t.upshiftStrength * 0.72;
+    else if (pt.shiftDirection === "down") downshiftTransient = phaseBell * t.downshiftStrength * 0.65;
   }
   if (pt.revMatchActive && powertrain.transmission.shift.revMatchEnabled) {
     revMatchTransient = Math.max(

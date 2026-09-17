@@ -884,7 +884,7 @@ function AdvancedWorkspace({
         <>
           <RowToggle
             title="Drive debug mode"
-            hint="Developer overlay on Drive: timings and export. Never shown unless this is on."
+            hint="Developer overlay on Drive: timings, road-test HUD, and export. Never shown unless this is on (or ?debug=1 / ?roadTest=1 with Diagnostics panel)."
             checked={settings.debugDriveDiagnostics}
             onChange={(v) => update({ debugDriveDiagnostics: v })}
             label="Drive debug diagnostics"

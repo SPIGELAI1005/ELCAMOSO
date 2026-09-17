@@ -35,7 +35,7 @@ function DebugHarness() {
   const [profileId, setProfileId] = useState(SOUND_PROFILES[0]!.id);
   const [scenarioId, setScenarioId] = useState("0-30-gentle");
   const [mode, setMode] = useState<SynthesisMode>("improved");
-  const [realismEngine, setRealismEngine] = useState<RealismEngineMode>("current");
+  const [realismEngine, setRealismEngine] = useState<RealismEngineMode>("v2");
   const [dynamicDrive, setDynamicDrive] = useState(false);
   const [playing, setPlaying] = useState(false);
   const [layers, setLayers] = useState<{ id: string; muted: boolean; triggerable?: boolean }[]>([]);
@@ -43,6 +43,8 @@ function DebugHarness() {
   const [solo, setSolo] = useState<string | null>(null);
   const [state, setState] = useState<DriveState>(IDLE_STATE);
   const [meter, setMeter] = useState({ peak: 0, rms: 0, headroom: 1 });
+  const [hybridDiag, setHybridDiag] =
+    useState<ReturnType<SoundEngine["getHybridCombustionDiagnostics"]>>(null);
 
   const engineRef = useRef<SoundEngine | null>(null);
   const powertrainRef = useRef<PowertrainSimulator | null>(null);
@@ -129,6 +131,7 @@ function DebugHarness() {
       setDynamicLayers(eng.getDynamicDriveDebug());
       const m = eng.getMeter();
       if (m) setMeter({ peak: m.peak, rms: m.rms, headroom: m.headroom });
+      setHybridDiag(eng.getHybridCombustionDiagnostics());
       indexRef.current += 1;
       if (indexRef.current >= queue.length) {
         // hold last frame
@@ -232,7 +235,7 @@ function DebugHarness() {
             </div>
             <p className="mt-2 text-[11px] text-muted-foreground">
               {v2Eligible
-                ? "Same motion trace plays through Current or V2 for combustion profiles."
+                ? "Same motion trace — match volume before judging. Realism V2.1 is default for combustion."
                 : "Realism V2 applies to combustion profiles (GT V8, Flat-Six, etc.)."}
             </p>
           </div>
@@ -327,9 +330,18 @@ function DebugHarness() {
           <MeterRow label="Peak" value={meter.peak.toFixed(3)} />
           <MeterRow label="RMS" value={meter.rms.toFixed(3)} />
           <MeterRow label="Headroom" value={meter.headroom.toFixed(2)} />
+          {hybridDiag ? (
+            <>
+              <MeterRow label="V2 excitation" value={hybridDiag.excitationMode} />
+              <MeterRow label="Firing Hz" value={hybridDiag.firingHz.toFixed(0)} />
+              <MeterRow label="Shift phase" value={hybridDiag.shiftPhase} />
+              <MeterRow label="Audio nodes ~" value={String(hybridDiag.activeNodeEstimate)} />
+              <MeterRow label="Ctx state" value={hybridDiag.audioContextState} />
+            </>
+          ) : null}
         </section>
 
-        {dynamicDrive && dynamicLayers.length > 0 ? (
+        {dynamicDrive && realismEngine === "current" && dynamicLayers.length > 0 ? (
           <section className="mt-8 border border-border p-6">
             <h2 className="text-base">Dynamic Drive layers</h2>
             <p className="mt-2 text-xs text-muted-foreground">
@@ -339,7 +351,7 @@ function DebugHarness() {
           </section>
         ) : null}
 
-        {mode === "improved" && layers.length > 0 && !dynamicDrive ? (
+        {mode === "improved" && layers.length > 0 && (realismEngine === "v2" || !dynamicDrive) ? (
           <section className="mt-8 border border-border p-6">
             <div className="flex items-center justify-between gap-4">
               <h2 className="text-base">Layers</h2>

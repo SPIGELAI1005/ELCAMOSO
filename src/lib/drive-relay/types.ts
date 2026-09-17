@@ -15,6 +15,10 @@ export interface DriveRelaySessionRecord {
   id: string;
   joinSecret: string;
   pairingCode: string;
+  /** Opaque one-time QR claim token (not the long-lived join secret). */
+  claimToken: string;
+  claimExpiresAt: number;
+  claimUsedAt: number | null;
   createdAt: number;
   expiresAt: number;
   lastHeartbeatAt: number;
@@ -29,8 +33,15 @@ export interface DriveRelaySessionRecord {
 export interface CreateDriveRelaySessionResult {
   sessionId: string;
   pairingCode: string;
+  /** Display-side WebSocket credential (Tesla). */
   joinSecret: string;
+  /** Short-lived QR / claim URL token — single-use for phone claim. */
+  claimToken: string;
+  claimExpiresAt: number;
   expiresAt: number;
+  /** Path for QR: `/pair/{claimToken}` */
+  pairPath: string;
+  /** @deprecated Prefer pairPath — kept for older clients. */
   connectPath: string;
 }
 

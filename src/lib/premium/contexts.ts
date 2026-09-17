@@ -47,9 +47,9 @@ export const PREMIUM_CONTEXTS: Record<PremiumContext, PremiumContextCopy> = {
   phone_pairing: {
     context: "phone_pairing",
     entitlement: "phone_sensor",
-    badge: "Drive+",
-    title: "Richer motion from your phone",
-    body: "Pair once so acceleration and tilt from your phone reach the car display. Basic Drive works without pairing.",
+    badge: "Included",
+    title: "Phone sensor pairing",
+    body: "Basic Tesla ↔ phone QR pairing is included on Free. Drive+ unlocks premium profiles and Dynamic Drive.",
     ctaLabel: "See Drive+",
     dismissible: true,
     pricingHref: "/pricing",

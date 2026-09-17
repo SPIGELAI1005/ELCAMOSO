@@ -1,20 +1,24 @@
 /**
- * Host for combustion excitation AudioWorklet with procedural fallback.
+ * Host for combustion excitation AudioWorklet with procedural fallback (V2.1).
  * Fallback uses one persistent noise source amplitude-modulated at firingHz —
  * never spawns per-fire OscillatorNodes.
  */
 
 import { getNoiseBuffer } from "@/lib/sound/dsp/noise";
 
+export interface CombustionExcitationParams {
+  firingHz: number;
+  intensity: number;
+  irregularity: number;
+  load: number;
+  sharpness: number;
+  architecture: number;
+  audioTime: number;
+}
+
 export interface CombustionExcitationHandle {
   node: AudioNode;
-  setParams: (p: {
-    firingHz: number;
-    intensity: number;
-    irregularity: number;
-    load: number;
-    audioTime: number;
-  }) => void;
+  setParams: (p: CombustionExcitationParams) => void;
   dispose: () => void;
   mode: "worklet" | "fallback";
 }
@@ -61,27 +65,33 @@ function createFallbackExcitation(ctx: BaseAudioContext): CombustionExcitationHa
   const curve = new Float32Array(256);
   for (let i = 0; i < 256; i += 1) {
     const x = i / 128 - 1;
-    curve[i] = Math.tanh(x * 2.4);
+    curve[i] = Math.tanh(x * (2.2 + i * 0.002));
   }
   shaper.curve = curve;
+  const tilt = ctx.createBiquadFilter();
+  tilt.type = "lowshelf";
+  tilt.frequency.value = 220;
+  tilt.gain.value = 2;
 
   noise.connect(am);
   tone.connect(toneGain);
   toneGain.connect(am.gain);
   am.connect(shaper);
-  shaper.connect(mix);
+  shaper.connect(tilt);
+  tilt.connect(mix);
   noise.start();
   tone.start();
 
   return {
     node: mix,
     mode: "fallback",
-    setParams({ firingHz, intensity, irregularity, load, audioTime }) {
+    setParams({ firingHz, intensity, irregularity, load, sharpness, audioTime }) {
       const hz = Math.max(8, Math.min(400, firingHz));
       tone.frequency.setTargetAtTime(hz, audioTime, 0.04);
-      const depth = 0.12 + intensity * (0.35 + load * 0.25);
+      const depth = 0.1 + intensity * (0.32 + load * 0.28) * (0.7 + sharpness * 0.4);
       toneGain.gain.setTargetAtTime(depth * (1 + irregularity * 0.15), audioTime, 0.05);
-      mix.gain.setTargetAtTime(0.25 + intensity * 0.45, audioTime, 0.06);
+      mix.gain.setTargetAtTime(0.22 + intensity * 0.48, audioTime, 0.06);
+      tilt.gain.setTargetAtTime(1.5 + load * 3 - sharpness, audioTime, 0.08);
     },
     dispose() {
       try {
@@ -95,6 +105,7 @@ function createFallbackExcitation(ctx: BaseAudioContext): CombustionExcitationHa
       am.disconnect();
       toneGain.disconnect();
       shaper.disconnect();
+      tilt.disconnect();
       mix.disconnect();
     },
   };
@@ -111,6 +122,8 @@ function createWorkletExcitation(ctx: AudioContext): CombustionExcitationHandle 
     const intensity = node.parameters.get("intensity");
     const irregularity = node.parameters.get("irregularity");
     const load = node.parameters.get("load");
+    const sharpness = node.parameters.get("sharpness");
+    const architecture = node.parameters.get("architecture");
     return {
       node,
       mode: "worklet",
@@ -120,6 +133,8 @@ function createWorkletExcitation(ctx: AudioContext): CombustionExcitationHandle 
         intensity?.setTargetAtTime(Math.max(0, Math.min(1, p.intensity)), t, 0.04);
         irregularity?.setTargetAtTime(Math.max(0, Math.min(1, p.irregularity)), t, 0.08);
         load?.setTargetAtTime(Math.max(0, Math.min(1, p.load)), t, 0.05);
+        sharpness?.setTargetAtTime(Math.max(0, Math.min(1, p.sharpness)), t, 0.06);
+        architecture?.setTargetAtTime(Math.max(0, Math.min(5, p.architecture)), t, 0.2);
       },
       dispose() {
         node.disconnect();

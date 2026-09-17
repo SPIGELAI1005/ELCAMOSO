@@ -1,26 +1,34 @@
-import { describe, expect, it, beforeEach } from "vitest";
+import { describe, expect, it, beforeEach, vi } from "vitest";
 import {
   attachRelayPeer,
+  claimDriveRelayToken,
   createDriveRelaySession,
   detachRelayPeer,
+  DRIVE_RELAY_CLAIM_TTL_MS,
+  joinDriveRelayByPairingCode,
   joinDriveRelaySession,
+  peekClaimToken,
   pushTelemetryToDisplay,
   relayToPeer,
   resetDriveRelayStoreForTests,
   validateRelayToken,
 } from "@/lib/drive-relay/store";
-import { parseRelayMessage } from "@/lib/drive-relay/protocol";
+import { formatPairingCode, parseRelayMessage } from "@/lib/drive-relay/protocol";
 
 describe("drive-relay store", () => {
   beforeEach(() => {
     resetDriveRelayStoreForTests();
   });
 
-  it("creates a session with pairing code and secret", () => {
+  it("creates a session with pairing code, claim token, and secrets", () => {
     const created = createDriveRelaySession();
     expect(created.sessionId.length).toBeGreaterThan(8);
     expect(created.pairingCode).toMatch(/^\d{6}$/);
     expect(created.joinSecret.length).toBeGreaterThan(12);
+    expect(created.claimToken.length).toBeGreaterThan(16);
+    expect(created.pairPath).toBe(`/pair/${encodeURIComponent(created.claimToken)}`);
+    expect(created.claimExpiresAt).toBeGreaterThan(Date.now());
+    expect(created.claimExpiresAt - Date.now()).toBeLessThanOrEqual(DRIVE_RELAY_CLAIM_TTL_MS + 50);
   });
 
   it("joins with pairing code and validates token", () => {
@@ -28,6 +36,57 @@ describe("drive-relay store", () => {
     const joined = joinDriveRelaySession(created.sessionId, created.pairingCode);
     expect(joined?.joinSecret).toBe(created.joinSecret);
     expect(validateRelayToken(created.sessionId, created.joinSecret)?.id).toBe(created.sessionId);
+  });
+
+  it("joins by pairing code alone (manual /pair entry)", () => {
+    const created = createDriveRelaySession();
+    const joined = joinDriveRelayByPairingCode(formatPairingCode(created.pairingCode));
+    expect(joined?.sessionId).toBe(created.sessionId);
+    expect(joined?.joinSecret).toBe(created.joinSecret);
+  });
+
+  it("claims QR token once and rejects reuse", () => {
+    const created = createDriveRelaySession();
+    const peek = peekClaimToken(created.claimToken);
+    expect(peek?.expired).toBe(false);
+    expect(peek?.used).toBe(false);
+
+    const claimed = claimDriveRelayToken(created.claimToken);
+    expect(claimed?.sessionId).toBe(created.sessionId);
+    expect(claimed?.joinSecret).toBe(created.joinSecret);
+
+    expect(claimDriveRelayToken(created.claimToken)).toBeNull();
+    expect(peekClaimToken(created.claimToken)?.used).toBe(true);
+  });
+
+  it("rejects expired claim tokens", () => {
+    vi.useFakeTimers();
+    const created = createDriveRelaySession();
+    // Keep session alive past claim TTL (idle sessions purge on heartbeat stale).
+    attachRelayPeer(created.sessionId, "display", { id: "display-1", send: () => {} });
+    vi.advanceTimersByTime(DRIVE_RELAY_CLAIM_TTL_MS + 1_000);
+    expect(claimDriveRelayToken(created.claimToken)).toBeNull();
+    expect(peekClaimToken(created.claimToken)?.expired).toBe(true);
+    vi.useRealTimers();
+  });
+
+  it("rejects a second phone while one is connected", () => {
+    const created = createDriveRelaySession();
+    attachRelayPeer(created.sessionId, "phone", { id: "phone-1", send: () => {} });
+    expect(joinDriveRelayByPairingCode(created.pairingCode)).toBeNull();
+    expect(claimDriveRelayToken(created.claimToken)).toBeNull();
+    expect(
+      attachRelayPeer(created.sessionId, "phone", { id: "phone-2", send: () => {} }),
+    ).toBeNull();
+  });
+
+  it("allows reconnect after phone disconnects via pairing code", () => {
+    const created = createDriveRelaySession();
+    claimDriveRelayToken(created.claimToken);
+    attachRelayPeer(created.sessionId, "phone", { id: "phone-1", send: () => {} });
+    detachRelayPeer(created.sessionId, "phone", "phone-1");
+    const rejoined = joinDriveRelayByPairingCode(created.pairingCode);
+    expect(rejoined?.joinSecret).toBe(created.joinSecret);
   });
 
   it("relays messages between display and phone peers", () => {
@@ -74,6 +133,10 @@ describe("drive-relay store", () => {
 });
 
 describe("drive-relay protocol", () => {
+  it("formats pairing codes for display", () => {
+    expect(formatPairingCode("482193")).toBe("482 193");
+  });
+
   it("parses action and latency messages", () => {
     expect(
       parseRelayMessage({

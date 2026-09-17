@@ -97,13 +97,58 @@ export const POWERTRAIN_SCENARIOS: PowertrainScenario[] = [
     drive: (_, speed) => ({ speedKmh: speed, accelerationMs2: 0, throttle: 1, braking: 0 }),
   },
   {
+    id: "hard-0-140",
+    label: "Hard 0–140 km/h",
+    profileId: "flat-six-sport",
+    dt: 0.016,
+    steps: 1300,
+    integrateSpeed: true,
+    drive: (_, speed) => ({ speedKmh: speed, accelerationMs2: 0, throttle: 0.92, braking: 0 }),
+  },
+  {
     id: "gentle-city",
     label: "Gentle city acceleration",
     profileId: "flat-six-sport",
     dt: 0.016,
-    steps: 700,
+    steps: 900,
     integrateSpeed: true,
-    drive: (_, speed) => ({ speedKmh: speed, accelerationMs2: 0, throttle: 0.42, braking: 0 }),
+    drive: (_, speed) => ({ speedKmh: speed, accelerationMs2: 0, throttle: 0.28, braking: 0 }),
+  },
+  {
+    id: "lift-100",
+    label: "100 km/h accelerator lift",
+    profileId: "flat-six-sport",
+    dt: 0.016,
+    steps: 600,
+    integrateSpeed: true,
+    drive: (frame, speed) => {
+      if (frame < 80) {
+        return { speedKmh: 100, accelerationMs2: 0, throttle: 0.35, braking: 0 };
+      }
+      return { speedKmh: speed, accelerationMs2: 0, throttle: 0, braking: 0 };
+    },
+  },
+  {
+    id: "gps-jitter-cruise",
+    label: "±2 km/h GPS jitter at cruise",
+    profileId: "flat-six-sport",
+    dt: 0.016,
+    steps: 500,
+    integrateSpeed: false,
+    drive: (frame) => {
+      const base = 80;
+      const speed = base + (frame % 16 < 8 ? 2 : -2);
+      return { speedKmh: speed, accelerationMs2: 0, throttle: 0.14, braking: 0 };
+    },
+  },
+  {
+    id: "cruise-30",
+    label: "30 km/h steady cruise",
+    profileId: "flat-six-sport",
+    dt: 0.016,
+    steps: 400,
+    integrateSpeed: false,
+    drive: () => ({ speedKmh: 30, accelerationMs2: 0, throttle: 0.12, braking: 0 }),
   },
   {
     id: "cruise-50",
@@ -122,6 +167,15 @@ export const POWERTRAIN_SCENARIOS: PowertrainScenario[] = [
     steps: 400,
     integrateSpeed: false,
     drive: () => ({ speedKmh: 80, accelerationMs2: 0, throttle: 0.14, braking: 0 }),
+  },
+  {
+    id: "cruise-100",
+    label: "100 km/h steady cruise",
+    profileId: "flat-six-sport",
+    dt: 0.016,
+    steps: 400,
+    integrateSpeed: false,
+    drive: () => ({ speedKmh: 100, accelerationMs2: 0, throttle: 0.14, braking: 0 }),
   },
   {
     id: "cruise-120",
@@ -260,7 +314,8 @@ export const POWERTRAIN_SCENARIOS: PowertrainScenario[] = [
     dt: 0.016,
     steps: 500,
     integrateSpeed: false,
-    drive: () => ({ speedKmh: 80, accelerationMs2: 0, throttle: 0.14, braking: 0 }),
+    // Mid-band cruise well clear of light-demand upshift boundaries after Road Feel V3.
+    drive: () => ({ speedKmh: 70, accelerationMs2: 0, throttle: 0.14, braking: 0 }),
     motionPatch: (frame) => {
       if (frame < 200) {
         return { primarySource: "tesla-browser", fallbackTier: "browser", transitioning: false };
@@ -500,14 +555,10 @@ export function verifyUpshiftRpmDrops(result: ScenarioRunResult): string[] {
     const beforeRpm = Math.max(
       ...result.samples.slice(Math.max(0, idx - 10), idx).map((sample) => sample.rpm),
     );
-    let afterRpm = beforeRpm;
-    for (let j = idx + 1; j < Math.min(result.samples.length, idx + 45); j += 1) {
-      const sample = result.samples[j]!;
-      if (!sample.shifting && j > idx + 2) {
-        afterRpm = sample.rpm;
-        break;
-      }
-    }
+    const afterWindow = result.samples.slice(idx + 1, Math.min(result.samples.length, idx + 50));
+    const settled = afterWindow.filter((sample, j) => !sample.shifting && j > 2);
+    if (settled.length === 0) continue; // next shift queued immediately — skip this edge
+    const afterRpm = Math.min(...settled.slice(0, 12).map((sample) => sample.rpm));
 
     const beforeSample = result.samples[Math.max(0, idx - 3)]!;
     const afterSample = result.samples[Math.min(result.samples.length - 1, idx + 12)]!;

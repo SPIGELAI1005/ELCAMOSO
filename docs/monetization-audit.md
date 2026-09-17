@@ -20,8 +20,8 @@ The sections below remain the original 2026-08-29 recommendations for historical
 
 | Plan | Price | Scope |
 | ---- | ----- | ----- |
-| **FREE** | €0 | Tesla browser, essential Sound Profiles, basic motion-responsive audio, basic Drive, limited Dynamic Drive preview |
-| **DRIVE+** | €2.99/mo · €24.99/yr | All standard profiles, full Dynamic Drive, phone pairing, advanced controls, future premium features |
+| **FREE** | €0 | Tesla browser, essential Sound Profiles, basic motion-responsive audio, basic Drive, **basic Tesla↔phone QR pairing**, limited Dynamic Drive preview |
+| **DRIVE+** | €2.99/mo · €24.99/yr | All standard profiles, full Dynamic Drive, advanced controls, future premium features |
 | **PRO** | — | **Not in v1.** Architecture must allow a third plan later without rewrites. |
 
 **Principles (non-negotiable):**
@@ -49,7 +49,7 @@ This is favorable for monetization: the product already separates **on-device Dr
 | Feature gates | UX toggles only (`dynamicDrive`, etc.) | **Hooks exist, ungated** |
 | Sound catalog | 47 profiles, no tier field | **Needs catalog metadata** |
 | Dynamic Drive | User toggle, default off | **Strong DRIVE+ anchor** |
-| Phone relay | Open create/join, in-memory | **DRIVE+ candidate** |
+| Phone relay | Free basic QR pairing (`phone_sensor`); claim tokens + WS | **Free for pairing; Drive+ for premium audio** |
 | Deployment | Vercel + Nitro, in-memory server state | **Needs persistent store for billing** |
 
 ---
@@ -200,11 +200,11 @@ Cloud garage sync (`syncGarageFn`) should remain **optional** and not block v1 b
 | ------- | -------- |
 | Create / join | `src/lib/drive-relay/server-fns.ts` |
 | WS hub | `src/lib/drive-relay/hub.ts`, `/api/drive-relay/ws` |
-| Phone route | `src/routes/connect.$sessionId.tsx` |
+| Phone route | `src/routes/pair.tsx`, `pair_.$token.tsx` (legacy `connect.$sessionId`) |
 | Tesla panel | `src/components/DriveSessionPanel.tsx` |
 
-**Current:** Anyone can create a relay session; no account or quota.  
-**DRIVE+ mapping:** Phone sensor pairing is a natural paid feature; gate `createDriveRelaySessionFn` and/or phone motion stream by entitlement **server-side**, with FREE seeing upsell copy on Tesla.
+**Current (2026-09-17):** Free includes `phone_sensor`. Create/claim/join use opaque claim tokens (`/pair/{token}`) and short codes; QR never embeds `joinSecret`.  
+**DRIVE+ mapping:** Premium profiles / Dynamic Drive / advanced audio stay Drive+. Pairing itself is Free — see `docs/PHONE_PAIRING.md`.
 
 ---
 
@@ -282,7 +282,7 @@ Documented in `docs/drive-relay-sessions.md`.
 - Motion ~15 Hz when `RELAY_MOTION_STREAM_ENABLED` (`src/lib/drive-relay/config.ts`)
 - Production caveat: Vercel serverless = HTTP only today; relay WS works in dev/preview/dedicated host
 
-**Monetization:** DRIVE+ owns phone pairing + advanced remote controls (`PhoneRemoteController`, `RelayRemoteControlBridge`). FREE Tesla browser Drive stays valid without phone.
+**Monetization (updated 2026-09-17):** Free includes basic Tesla↔phone QR pairing + sensor relay (`phone_sensor`). Drive+ owns premium profiles, full Dynamic Drive, and advanced audio — not the pairing mechanism itself. See `docs/PHONE_PAIRING.md`.
 
 ---
 

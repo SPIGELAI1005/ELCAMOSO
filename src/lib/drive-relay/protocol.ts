@@ -138,3 +138,15 @@ export function buildRelayWsUrl(
 export function connectPagePath(sessionId: string): string {
   return `/connect/${encodeURIComponent(sessionId)}`;
 }
+
+export function pairPagePath(claimToken?: string): string {
+  if (!claimToken) return "/pair";
+  return `/pair/${encodeURIComponent(claimToken)}`;
+}
+
+/** Display pairing code as `482 193`. */
+export function formatPairingCode(code: string): string {
+  const digits = code.replace(/\D/g, "").slice(0, 6);
+  if (digits.length <= 3) return digits;
+  return `${digits.slice(0, 3)} ${digits.slice(3)}`;
+}

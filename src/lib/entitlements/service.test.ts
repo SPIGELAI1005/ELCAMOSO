@@ -40,7 +40,7 @@ describe("entitlement service", () => {
     const user = await resolveEntitlementUser({ sessionToken: null });
     expect(hasEntitlement(user, "basic_drive")).toBe(true);
     expect(hasEntitlement(user, "dynamic_drive")).toBe(false);
-    expect(hasEntitlement(user, "phone_sensor")).toBe(false);
+    expect(hasEntitlement(user, "phone_sensor")).toBe(true);
   });
 
   it("grants DRIVE+ entitlements for active subscription", async () => {
@@ -106,7 +106,7 @@ describe("entitlement service", () => {
 
   it("requireEntitlement throws for denied access", async () => {
     await expect(
-      requireEntitlement({ sessionToken: null, entitlement: "phone_sensor" }),
+      requireEntitlement({ sessionToken: null, entitlement: "dynamic_drive" }),
     ).rejects.toThrow(/Entitlement required/);
   });
 

@@ -72,7 +72,8 @@ describe("three speed signals", () => {
 
   it("keeps RPM acoustically stable under ±1 and ±2 km/h GPS noise", () => {
     const sim = new PowertrainSimulator({ profileId: "gt-v8" });
-    const cruise = 90;
+    // Mid-band cruise clear of light-demand upshift edges after Road Feel V3.
+    const cruise = 75;
     for (let i = 0; i < 120; i += 1) {
       sim.tick(motion({ speedKmh: cruise, timestamp: i * 16 }), 0.016, { directThrottle: 0.14 });
     }
@@ -503,17 +504,20 @@ describe("calibration scenario acceptance", () => {
     expect(result.shiftCount).toBeGreaterThanOrEqual(2);
   });
 
-  it.each(["cruise-50", "cruise-80", "cruise-120"] as const)("%s: stable gear and RPM", (id) => {
-    const result = runPowertrainScenario(getPowertrainScenario(id)!);
-    const profile = getPowertrainProfile(result.profileId);
-    expect(validatePowertrainTrace(result, profile).ok).toBe(true);
-    // Allow initial schedule climb; judge stability on the settled tail.
-    const engaged = result.samples.filter((s) => s.gear > 0 && s.tMs > 4500);
-    const gears = new Set(engaged.map((s) => s.gear));
-    expect(gears.size).toBeLessThanOrEqual(2);
-    const rpms = engaged.map((s) => s.rpm);
-    expect(Math.max(...rpms) - Math.min(...rpms)).toBeLessThan(900);
-  });
+  it.each(["cruise-30", "cruise-50", "cruise-80", "cruise-100", "cruise-120"] as const)(
+    "%s: stable gear and RPM",
+    (id) => {
+      const result = runPowertrainScenario(getPowertrainScenario(id)!);
+      const profile = getPowertrainProfile(result.profileId);
+      expect(validatePowertrainTrace(result, profile).ok).toBe(true);
+      // Allow initial schedule climb; judge stability on the settled tail.
+      const engaged = result.samples.filter((s) => s.gear > 0 && s.tMs > 4500);
+      const gears = new Set(engaged.map((s) => s.gear));
+      expect(gears.size).toBeLessThanOrEqual(2);
+      const rpms = engaged.map((s) => s.rpm);
+      expect(Math.max(...rpms) - Math.min(...rpms)).toBeLessThan(900);
+    },
+  );
 
   it("80→120 kickdown then upshifts", () => {
     const result = runPowertrainScenario(getPowertrainScenario("highway-kickdown")!);

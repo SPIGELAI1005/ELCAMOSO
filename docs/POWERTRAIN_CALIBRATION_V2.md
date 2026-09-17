@@ -13,6 +13,7 @@ Generated from physical gear ratios, final drive, wheel circumference, and recal
 - `driverDemand` is accelerator intention; `engineLoad` may include road-load/aero. Road speed must not masquerade as pedal.
 - Kickdown queues are reconciled every tick: release, brake, or unsafe RPM clears remaining steps.
 - Diagnostics field `powertrainBackend: "legacy" | "dynamic"` is developer-only.
+- Road Feel V3: light/normal shift maps earlier for mainstream combustion; shift audibility from phase load + RPM, not fake swooshes.
 
 ## Demand bands (schedule generation)
 
@@ -20,8 +21,8 @@ Generated from physical gear ratios, final drive, wheel circumference, and recal
 |---|---|
 | 0.00–0.15 | Very light — early economy/normal shifts |
 | 0.15–0.35 | Light — comfortable road driving |
-| 0.35–0.60 | Medium — sportier gear holding |
-| 0.60–0.80 | High — strong acceleration |
+| 0.35–0.60 | Medium — progressive pull |
+| 0.60–0.80 | High — sport hold |
 | 0.80–1.00 | WOT — high-load / soft-redline behavior |
 
 ## Steady-speed driverDemand (flat-six-sport, directThrottle 0.12)
@@ -40,16 +41,16 @@ Generated from physical gear ratios, final drive, wheel circumference, and recal
 |---|---|
 | Idle RPM | 880 |
 | Redline RPM | 8000 |
-| Gear ratios | 3.15, 2.05, 1.52, 1.18, 0.96, 0.80, 0.68 |
+| Gear ratios | 3.15, 2.05, 1.52, 1.18, 0.96, 0.8, 0.68 |
 | Final drive | 3.44 |
 | Wheel circumference | 2.05 m |
-| Upshift duration | 110 ms |
-| Downshift duration | 160 ms |
+| Upshift duration | 125 ms |
+| Downshift duration | 170 ms |
 | Rev-match | yes (overshoot 0.11) |
 | Kickdown | threshold 0.82, maxSteps 2 |
 | Torque converter slip | no |
 | Shift map valid | yes |
-| Schedule RPM @10/50/100% | 3783 / 5920 / 7508 |
+| Schedule RPM @10/50/100% | 2261 / 3437 / 7396 |
 
 ### Road-speed range per gear (idle → redline)
 
@@ -67,22 +68,22 @@ Generated from physical gear ratios, final drive, wheel circumference, and recal
 
 | From gear | 10% | 25% | 50% | 75% | 100% |
 |---|---:|---:|---:|---:|---:|
-| 1→2 | 42.9 | 51.7 | 67.2 | 79.5 | 85.2 |
-| 2→3 | 66.0 | 79.4 | 103.3 | 122.1 | 131.0 |
-| 3→4 | 89.0 | 107.1 | 139.3 | 164.7 | 176.6 |
-| 4→5 | 114.6 | 137.9 | 179.4 | 212.1 | 227.5 |
-| 5→6 | 140.9 | 169.5 | 220.5 | 260.7 | 279.6 |
-| 6→7 | 169.1 | 203.5 | 264.6 | 312.9 | 335.6 |
+| 1→2 | 25.7 | 30.3 | 39.0 | 58.9 | 84.0 |
+| 2→3 | 39.4 | 46.6 | 60.0 | 90.5 | 129.0 |
+| 3→4 | 53.2 | 62.9 | 80.9 | 122.1 | 174.0 |
+| 4→5 | 68.5 | 81.0 | 104.2 | 157.2 | 224.1 |
+| 5→6 | 84.2 | 99.6 | 128.0 | 193.3 | 275.5 |
+| 6→7 | 101.0 | 119.5 | 153.6 | 231.9 | 330.6 |
 
 ### Downshift speeds by demand (km/h)
 
 | From gear | 10% | 25% | 50% | 75% | 100% |
 |---|---:|---:|---:|---:|---:|
-| 2→1 | 36.4 | 45.2 | 56.6 | 59.3 | 59.3 |
-| 3→2 | 58.7 | 69.0 | 77.2 | 77.2 | 77.2 |
-| 4→3 | 81.0 | 89.8 | 95.8 | 95.8 | 95.8 |
-| 5→4 | 105.9 | 111.4 | 113.2 | 113.2 | 113.2 |
-| 6→5 | 127.8 | 130.5 | 130.5 | 130.5 | 130.5 |
+| 2→1 | 19.2 | 23.8 | 32.5 | 52.4 | 59.3 |
+| 3→2 | 32.2 | 39.4 | 52.7 | 72.3 | 77.2 |
+| 4→3 | 45.2 | 54.9 | 72.9 | 91.8 | 95.8 |
+| 5→4 | 59.8 | 72.2 | 95.4 | 111.0 | 113.2 |
+| 6→5 | 74.7 | 90.1 | 118.5 | 130.2 | 130.5 |
 
 ## American V8 (`american-v8`)
 
@@ -90,16 +91,16 @@ Generated from physical gear ratios, final drive, wheel circumference, and recal
 |---|---|
 | Idle RPM | 680 |
 | Redline RPM | 6000 |
-| Gear ratios | 3.50, 2.20, 1.45, 1.08, 0.85 |
+| Gear ratios | 3.5, 2.2, 1.45, 1.08, 0.85 |
 | Final drive | 3.73 |
 | Wheel circumference | 2.12 m |
 | Upshift duration | 280 ms |
 | Downshift duration | 340 ms |
 | Rev-match | yes (overshoot 0.08) |
 | Kickdown | threshold 0.85, maxSteps 1 |
-| Torque converter slip | yes (lock ~52 km/h) |
+| Torque converter slip | no |
 | Shift map valid | yes |
-| Schedule RPM @10/50/100% | 2178 / 4400 / 5598 |
+| Schedule RPM @10/50/100% | 2088 / 2964 / 5526 |
 
 ### Road-speed range per gear (idle → redline)
 
@@ -115,18 +116,19 @@ Generated from physical gear ratios, final drive, wheel circumference, and recal
 
 | From gear | 10% | 25% | 50% | 75% | 100% |
 |---|---:|---:|---:|---:|---:|
-| 1→2 | 21.2 | 29.4 | 42.9 | 51.2 | 54.5 |
-| 2→3 | 33.8 | 46.8 | 68.2 | 81.4 | 86.8 |
-| 3→4 | 51.2 | 71.0 | 103.5 | 123.5 | 131.7 |
-| 4→5 | 68.8 | 95.4 | 138.9 | 165.8 | 176.8 |
+| 1→2 | 20.3 | 23.5 | 28.9 | 38.9 | 53.8 |
+| 2→3 | 32.4 | 37.4 | 45.9 | 62.0 | 85.7 |
+| 3→4 | 49.1 | 56.7 | 69.7 | 94.0 | 130.0 |
+| 4→5 | 65.9 | 76.1 | 93.6 | 126.2 | 174.5 |
 
 ### Downshift speeds by demand (km/h)
 
 | From gear | 10% | 25% | 50% | 75% | 100% |
 |---|---:|---:|---:|---:|---:|
-| 2→1 | 14.7 | 22.9 | 36.0 | 39.7 | 39.7 |
-| 3→2 | 26.5 | 39.6 | 55.1 | 57.4 | 57.4 |
-| 4→3 | 43.2 | 59.0 | 73.3 | 73.3 | 73.3 |
+| 2→1 | 13.8 | 17.0 | 22.4 | 32.4 | 39.7 |
+| 3→2 | 25.1 | 30.1 | 38.7 | 53.5 | 57.4 |
+| 4→3 | 41.1 | 48.7 | 61.7 | 71.6 | 73.3 |
+| 5→4 | 57.2 | 67.4 | 82.9 | 88.3 | 88.3 |
 
 ## Turbo Inline-6 (`turbo-inline-6`)
 
@@ -134,16 +136,16 @@ Generated from physical gear ratios, final drive, wheel circumference, and recal
 |---|---|
 | Idle RPM | 750 |
 | Redline RPM | 7000 |
-| Gear ratios | 3.20, 2.00, 1.45, 1.12, 0.92, 0.78, 0.68 |
+| Gear ratios | 3.2, 2, 1.45, 1.12, 0.92, 0.78, 0.68 |
 | Final drive | 3.15 |
 | Wheel circumference | 2.08 m |
-| Upshift duration | 130 ms |
-| Downshift duration | 180 ms |
+| Upshift duration | 145 ms |
+| Downshift duration | 195 ms |
 | Rev-match | yes (overshoot 0.1) |
 | Kickdown | threshold 0.8, maxSteps 1 |
 | Torque converter slip | no |
 | Shift map valid | yes |
-| Schedule RPM @10/50/100% | 3115 / 5320 / 6705 |
+| Schedule RPM @10/50/100% | 2053 / 3106 / 6667 |
 
 ### Road-speed range per gear (idle → redline)
 
@@ -161,22 +163,22 @@ Generated from physical gear ratios, final drive, wheel circumference, and recal
 
 | From gear | 10% | 25% | 50% | 75% | 100% |
 |---|---:|---:|---:|---:|---:|
-| 1→2 | 38.6 | 48.4 | 65.9 | 79.2 | 83.0 |
-| 2→3 | 61.7 | 77.4 | 105.4 | 126.8 | 132.8 |
-| 3→4 | 85.1 | 106.8 | 145.4 | 174.9 | 183.2 |
-| 4→5 | 110.2 | 138.2 | 188.2 | 226.4 | 237.2 |
-| 5→6 | 134.2 | 168.3 | 229.1 | 275.6 | 288.7 |
-| 6→7 | 158.2 | 198.5 | 270.2 | 325.1 | 340.5 |
+| 1→2 | 25.4 | 30.0 | 38.5 | 57.8 | 82.5 |
+| 2→3 | 40.7 | 48.0 | 61.5 | 92.5 | 132.1 |
+| 3→4 | 56.1 | 66.3 | 84.9 | 127.6 | 182.2 |
+| 4→5 | 72.6 | 85.8 | 109.9 | 165.2 | 235.8 |
+| 5→6 | 88.4 | 104.4 | 133.8 | 201.1 | 287.1 |
+| 6→7 | 104.3 | 123.2 | 157.8 | 237.2 | 338.6 |
 
 ### Downshift speeds by demand (km/h)
 
 | From gear | 10% | 25% | 50% | 75% | 100% |
 |---|---:|---:|---:|---:|---:|
-| 2→1 | 32.1 | 41.9 | 58.2 | 63.4 | 63.4 |
-| 3→2 | 54.5 | 70.1 | 84.0 | 84.2 | 84.2 |
-| 4→3 | 77.1 | 92.3 | 104.7 | 104.7 | 104.7 |
-| 5→4 | 101.5 | 113.6 | 122.3 | 122.3 | 122.3 |
-| 6→5 | 124.7 | 133.5 | 138.2 | 138.2 | 138.2 |
+| 2→1 | 18.9 | 23.5 | 32.0 | 51.3 | 63.4 |
+| 3→2 | 33.4 | 40.8 | 54.3 | 78.0 | 84.2 |
+| 4→3 | 48.1 | 58.3 | 76.9 | 99.5 | 104.7 |
+| 5→4 | 63.9 | 77.0 | 101.1 | 119.3 | 122.3 |
+| 6→5 | 78.9 | 94.9 | 124.3 | 137.5 | 138.2 |
 
 ## GT V8 (`gt-v8`)
 
@@ -184,16 +186,16 @@ Generated from physical gear ratios, final drive, wheel circumference, and recal
 |---|---|
 | Idle RPM | 900 |
 | Redline RPM | 6500 |
-| Gear ratios | 3.40, 2.15, 1.50, 1.12, 0.92, 0.78 |
+| Gear ratios | 3.4, 2.15, 1.5, 1.12, 0.92, 0.78 |
 | Final drive | 3.55 |
 | Wheel circumference | 2.06 m |
-| Upshift duration | 95 ms |
-| Downshift duration | 140 ms |
+| Upshift duration | 110 ms |
+| Downshift duration | 155 ms |
 | Rev-match | yes (overshoot 0.09) |
 | Kickdown | threshold 0.78, maxSteps 2 |
 | Torque converter slip | no |
 | Shift map valid | yes |
-| Schedule RPM @10/50/100% | 2737 / 4800 / 6123 |
+| Schedule RPM @10/50/100% | 2389 / 3316 / 6042 |
 
 ### Road-speed range per gear (idle → redline)
 
@@ -210,20 +212,21 @@ Generated from physical gear ratios, final drive, wheel circumference, and recal
 
 | From gear | 10% | 25% | 50% | 75% | 100% |
 |---|---:|---:|---:|---:|---:|
-| 1→2 | 28.0 | 35.9 | 49.2 | 58.6 | 62.7 |
-| 2→3 | 44.3 | 56.8 | 77.7 | 92.7 | 99.2 |
-| 3→4 | 63.5 | 81.4 | 111.4 | 132.9 | 142.1 |
-| 4→5 | 85.1 | 109.0 | 149.2 | 178.0 | 190.3 |
-| 5→6 | 103.6 | 132.7 | 181.7 | 216.7 | 231.7 |
+| 1→2 | 24.5 | 28.0 | 34.0 | 44.9 | 61.9 |
+| 2→3 | 38.7 | 44.2 | 53.7 | 71.0 | 97.8 |
+| 3→4 | 55.5 | 63.4 | 77.0 | 101.8 | 140.2 |
+| 4→5 | 74.3 | 84.9 | 103.1 | 136.3 | 187.8 |
+| 5→6 | 90.4 | 103.4 | 125.5 | 166.0 | 228.6 |
 
 ### Downshift speeds by demand (km/h)
 
 | From gear | 10% | 25% | 50% | 75% | 100% |
 |---|---:|---:|---:|---:|---:|
-| 2→1 | 21.5 | 29.4 | 42.6 | 46.6 | 46.6 |
-| 3→2 | 37.1 | 49.5 | 62.7 | 64.1 | 64.1 |
-| 4→3 | 55.5 | 69.7 | 82.1 | 82.1 | 82.1 |
-| 5→4 | 76.3 | 87.0 | 95.4 | 95.4 | 95.4 |
+| 2→1 | 18.0 | 21.5 | 27.5 | 38.4 | 46.6 |
+| 3→2 | 31.4 | 37.0 | 46.4 | 60.6 | 64.1 |
+| 4→3 | 47.5 | 55.4 | 69.0 | 80.1 | 82.1 |
+| 5→4 | 65.5 | 76.2 | 90.8 | 95.4 | 95.4 |
+| 6→5 | 80.9 | 93.9 | 105.6 | 107.1 | 107.1 |
 
 ## Synthetic Hyper EV (`synthetic-ev`)
 
@@ -231,7 +234,7 @@ Generated from physical gear ratios, final drive, wheel circumference, and recal
 |---|---|
 | Idle RPM | 0 |
 | Redline RPM | 12000 |
-| Gear ratios | 4.20, 2.80, 1.90, 1.35, 1.00, 0.82 |
+| Gear ratios | 4.2, 2.8, 1.9, 1.35, 1, 0.82 |
 | Final drive | 2.8 |
 | Wheel circumference | 2.04 m |
 | Upshift duration | 75 ms |
@@ -240,7 +243,7 @@ Generated from physical gear ratios, final drive, wheel circumference, and recal
 | Kickdown | threshold 0.7, maxSteps 1 |
 | Torque converter slip | no |
 | Shift map valid | yes |
-| Schedule RPM @10/50/100% | 4147 / 7500 / 11193 |
+| Schedule RPM @10/50/100% | 2369 / 4032 / 10941 |
 
 ### Road-speed range per gear (idle → redline)
 
@@ -257,20 +260,21 @@ Generated from physical gear ratios, final drive, wheel circumference, and recal
 
 | From gear | 10% | 25% | 50% | 75% | 100% |
 |---|---:|---:|---:|---:|---:|
-| 1→2 | 43.2 | 53.7 | 78.1 | 104.1 | 116.5 |
-| 2→3 | 64.7 | 80.6 | 117.1 | 156.1 | 174.7 |
-| 3→4 | 95.4 | 118.7 | 172.6 | 230.1 | 257.5 |
-| 4→5 | 134.3 | 167.1 | 242.9 | 323.8 | 362.4 |
-| 5→6 | 181.3 | 225.6 | 327.9 | 437.1 | 489.3 |
+| 1→2 | 24.7 | 30.9 | 42.0 | 67.6 | 113.9 |
+| 2→3 | 37.0 | 46.4 | 62.9 | 101.4 | 170.8 |
+| 3→4 | 54.5 | 68.3 | 92.8 | 149.4 | 251.7 |
+| 4→5 | 76.7 | 96.2 | 130.6 | 210.3 | 354.3 |
+| 5→6 | 103.6 | 129.8 | 176.3 | 283.9 | 478.3 |
 
 ### Downshift speeds by demand (km/h)
 
 | From gear | 10% | 25% | 50% | 75% | 100% |
 |---|---:|---:|---:|---:|---:|
-| 2→1 | 36.7 | 47.2 | 59.7 | 62.1 | 62.1 |
-| 3→2 | 57.5 | 73.3 | 87.9 | 88.8 | 88.8 |
-| 4→3 | 87.4 | 106.2 | 121.1 | 121.1 | 121.1 |
-| 5→4 | 125.5 | 144.7 | 158.2 | 158.2 | 158.2 |
+| 2→1 | 18.2 | 24.4 | 35.5 | 56.5 | 62.1 |
+| 3→2 | 29.7 | 39.1 | 55.7 | 82.1 | 88.8 |
+| 4→3 | 46.5 | 60.3 | 84.8 | 114.4 | 121.1 |
+| 5→4 | 68.0 | 87.4 | 121.8 | 152.4 | 158.2 |
+| 6→5 | 94.1 | 120.3 | 166.8 | 186.1 | 186.6 |
 
 ## Motorcycle Inline-4 (`motorcycle-inline-4`)
 
@@ -278,7 +282,7 @@ Generated from physical gear ratios, final drive, wheel circumference, and recal
 |---|---|
 | Idle RPM | 1200 |
 | Redline RPM | 14000 |
-| Gear ratios | 2.85, 2.05, 1.58, 1.32, 1.14, 1.00 |
+| Gear ratios | 2.85, 2.05, 1.58, 1.32, 1.14, 1 |
 | Final drive | 2.54 |
 | Wheel circumference | 1.88 m |
 | Upshift duration | 55 ms |
@@ -287,7 +291,7 @@ Generated from physical gear ratios, final drive, wheel circumference, and recal
 | Kickdown | threshold 0.72, maxSteps 2 |
 | Torque converter slip | no |
 | Shift map valid | yes |
-| Schedule RPM @10/50/100% | 7340 / 10200 / 13486 |
+| Schedule RPM @10/50/100% | 7212 / 8844 / 13382 |
 
 ### Road-speed range per gear (idle → redline)
 
@@ -304,20 +308,21 @@ Generated from physical gear ratios, final drive, wheel circumference, and recal
 
 | From gear | 10% | 25% | 50% | 75% | 100% |
 |---|---:|---:|---:|---:|---:|
-| 1→2 | 114.4 | 129.3 | 158.9 | 197.1 | 210.1 |
-| 2→3 | 159.0 | 179.8 | 221.0 | 274.0 | 292.1 |
-| 3→4 | 206.3 | 233.2 | 286.7 | 355.6 | 379.1 |
-| 4→5 | 246.9 | 279.2 | 343.2 | 425.6 | 453.7 |
-| 5→6 | 285.9 | 323.3 | 397.3 | 492.8 | 525.4 |
+| 1→2 | 112.4 | 126.3 | 137.8 | 153.1 | 208.5 |
+| 2→3 | 156.2 | 175.5 | 191.6 | 212.8 | 289.9 |
+| 3→4 | 202.7 | 227.8 | 248.6 | 276.2 | 376.1 |
+| 4→5 | 242.6 | 272.6 | 297.5 | 330.5 | 450.2 |
+| 5→6 | 281.0 | 315.7 | 344.5 | 382.7 | 521.3 |
 
 ### Downshift speeds by demand (km/h)
 
 | From gear | 10% | 25% | 50% | 75% | 100% |
 |---|---:|---:|---:|---:|---:|
-| 2→1 | 107.9 | 113.1 | 114.4 | 114.4 | 114.4 |
-| 3→2 | 143.6 | 145.0 | 145.0 | 145.0 | 145.0 |
+| 2→1 | 105.9 | 113.1 | 114.4 | 114.4 | 114.4 |
+| 3→2 | 140.8 | 145.0 | 145.0 | 145.0 | 145.0 |
 | 4→3 | 169.6 | 169.6 | 169.6 | 169.6 | 169.6 |
 | 5→4 | 191.7 | 191.7 | 191.7 | 191.7 | 191.7 |
+| 6→5 | 213.2 | 213.2 | 213.2 | 213.2 | 213.2 |
 
 ## V-Twin Cruiser (`v-twin-cruiser`)
 
@@ -325,16 +330,16 @@ Generated from physical gear ratios, final drive, wheel circumference, and recal
 |---|---|
 | Idle RPM | 900 |
 | Redline RPM | 5500 |
-| Gear ratios | 3.75, 2.48, 1.72, 1.34, 1.08, 0.90 |
+| Gear ratios | 3.75, 2.48, 1.72, 1.34, 1.08, 0.9 |
 | Final drive | 3.15 |
-| Wheel circumference | 2.00 m |
+| Wheel circumference | 2 m |
 | Upshift duration | 240 ms |
 | Downshift duration | 300 ms |
 | Rev-match | yes (overshoot 0.06) |
 | Kickdown | threshold 0.88, maxSteps 1 |
-| Torque converter slip | yes (lock ~52 km/h) |
+| Torque converter slip | no |
 | Shift map valid | yes |
-| Schedule RPM @10/50/100% | 1998 / 3700 / 4989 |
+| Schedule RPM @10/50/100% | 1934 / 2554 / 4884 |
 
 ### Road-speed range per gear (idle → redline)
 
@@ -351,20 +356,21 @@ Generated from physical gear ratios, final drive, wheel circumference, and recal
 
 | From gear | 10% | 25% | 50% | 75% | 100% |
 |---|---:|---:|---:|---:|---:|
-| 1→2 | 20.3 | 26.1 | 37.6 | 46.2 | 50.7 |
-| 2→3 | 30.7 | 39.5 | 56.8 | 69.9 | 76.6 |
-| 3→4 | 44.3 | 57.0 | 81.9 | 100.8 | 110.5 |
-| 4→5 | 56.8 | 73.1 | 105.2 | 129.4 | 141.8 |
-| 5→6 | 70.5 | 90.7 | 130.5 | 160.5 | 176.0 |
+| 1→2 | 19.6 | 22.0 | 25.9 | 34.3 | 49.6 |
+| 2→3 | 29.7 | 33.3 | 39.2 | 51.9 | 75.0 |
+| 3→4 | 42.8 | 48.0 | 56.6 | 74.8 | 108.2 |
+| 4→5 | 55.0 | 61.5 | 72.6 | 96.0 | 138.8 |
+| 5→6 | 68.2 | 76.4 | 90.1 | 119.1 | 172.3 |
 
 ### Downshift speeds by demand (km/h)
 
 | From gear | 10% | 25% | 50% | 75% | 100% |
 |---|---:|---:|---:|---:|---:|
-| 2→1 | 13.8 | 19.6 | 31.1 | 38.5 | 39.6 |
-| 3→2 | 23.4 | 32.3 | 48.8 | 54.5 | 54.5 |
-| 4→3 | 36.3 | 49.0 | 64.2 | 66.5 | 66.5 |
-| 5→4 | 48.1 | 63.8 | 78.3 | 78.3 | 78.3 |
+| 2→1 | 13.1 | 15.5 | 19.4 | 27.8 | 39.6 |
+| 3→2 | 22.5 | 26.0 | 32.0 | 44.6 | 54.5 |
+| 4→3 | 34.8 | 40.0 | 48.6 | 62.9 | 66.5 |
+| 5→4 | 46.2 | 52.8 | 63.9 | 75.8 | 78.3 |
+| 6→5 | 58.7 | 66.9 | 80.6 | 88.1 | 88.9 |
 
 ## Single-Cylinder Ag (`single-cylinder-ag`)
 
@@ -372,16 +378,16 @@ Generated from physical gear ratios, final drive, wheel circumference, and recal
 |---|---|
 | Idle RPM | 280 |
 | Redline RPM | 650 |
-| Gear ratios | 4.50, 3.15, 2.35, 1.82 |
+| Gear ratios | 4.5, 3.15, 2.35, 1.82 |
 | Final drive | 4.75 |
 | Wheel circumference | 2.25 m |
 | Upshift duration | 380 ms |
 | Downshift duration | 450 ms |
 | Rev-match | no |
 | Kickdown | threshold 0.92, maxSteps 1 |
-| Torque converter slip | yes (lock ~52 km/h) |
+| Torque converter slip | no |
 | Shift map valid | yes |
-| Schedule RPM @10/50/100% | 441 / 494 / 595 |
+| Schedule RPM @10/50/100% | 437 / 466 / 588 |
 
 ### Road-speed range per gear (idle → redline)
 
@@ -396,9 +402,9 @@ Generated from physical gear ratios, final drive, wheel circumference, and recal
 
 | From gear | 10% | 25% | 50% | 75% | 100% |
 |---|---:|---:|---:|---:|---:|
-| 1→2 | 2.8 | 2.9 | 3.1 | 3.5 | 3.8 |
-| 2→3 | 4.0 | 4.1 | 4.5 | 5.0 | 5.4 |
-| 3→4 | 5.3 | 5.5 | 6.0 | 6.8 | 7.2 |
+| 1→2 | 2.8 | 2.9 | 2.9 | 3.1 | 3.7 |
+| 2→3 | 3.9 | 4.1 | 4.2 | 4.4 | 5.3 |
+| 3→4 | 5.3 | 5.5 | 5.6 | 5.9 | 7.1 |
 
 ### Downshift speeds by demand (km/h)
 
@@ -406,4 +412,4 @@ Generated from physical gear ratios, final drive, wheel circumference, and recal
 |---|---:|---:|---:|---:|---:|
 | 2→1 | 0.0 | 0.0 | 0.0 | 0.0 | 0.0 |
 | 3→2 | 0.0 | 0.0 | 0.0 | 0.0 | 0.0 |
-
+| 4→3 | 8.0 | 8.0 | 8.0 | 8.0 | 8.0 |

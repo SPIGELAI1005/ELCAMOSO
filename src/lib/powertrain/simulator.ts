@@ -396,6 +396,9 @@ export class PowertrainSimulator {
     if (shiftState.active) {
       out.shiftDirection = shiftState.direction;
       out.shiftProgress = shiftState.progress;
+      out.shiftLoadMultiplier = loadMultiplier;
+    } else {
+      out.shiftLoadMultiplier = 1;
     }
 
     return out;

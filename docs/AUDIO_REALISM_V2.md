@@ -1,151 +1,193 @@
-# Audio Realism V2
+# Audio Realism V2.1
 
-**Status:** Implemented (procedural-first). Sample-assisted path is schema-ready; no combustion WAVs ship yet.
+**Status:** Implemented (procedural-first). Sample-assisted path is wired for dual-player crossfade when buffers are injected; no combustion WAVs ship yet.
 
-**Related:** `docs/SOUND_CHARACTER_SPEC.md`, `docs/audio-asset-requirements.md`, `docs/SOUND_NOISE_AND_FIDELITY.md`, `docs/DYNAMIC_DRIVE_ARCHITECTURE.md`
+**Related:** `docs/SOUND_CHARACTER_SPEC.md`, `docs/audio-asset-requirements.md`, `docs/SOUND_NOISE_AND_FIDELITY.md`, `docs/DYNAMIC_DRIVE_ARCHITECTURE.md`, `docs/POWERTRAIN_CALIBRATION_V2.md`
 
 ---
 
 ## Goal
 
-Combustion Sound Profiles (GT V8, American Muscle V8, Flat-Six Sport, Turbo Inline-6, Racing V10, Race Car, Rally Car) must stop reading as oscillator stacks. Realism V2 uses a **hybrid** backend:
+Combustion Sound Profiles must sound like a living mechanical powertrain — not an electronic synthesizer.
 
-1. **Procedural fallback (always available)** — continuous combustion excitation → resonant formants → restrained support harmonics.
-2. **Sample-assisted (optional)** — licensed/self-recorded loops crossfaded by RPM × load, with procedural continuity underneath.
+Powertrain V2/V3 remains authoritative for:
 
-Do **not** solve realism by EQ-ing sawtooth voices or raising broadband noise.
+speed · mechanical RPM · driver demand · engine load · gear · target gear · shift phase · overrun · regen · kickdown
 
----
+Realism V2.1 consumes those fields. It does **not** invent a parallel gearbox.
 
-## A/B mechanism (dev only)
-
-| Control | Values | Where |
-| ------- | ------ | ----- |
-| `SoundEngine.setRealismEngine` | `"current"` \| `"v2"` | Not a customer setting |
-| Debug harness | **Current Engine** / **Realism V2** | `/debug` (DEV only) |
-
-- **Current:** existing ImprovedSynth + optional Dynamic Drive synth (unchanged).
-- **V2:** for eligible combustion profiles, `HybridCombustionSynth` owns the tonal core. Same motion / powertrain trace can be replayed through both.
-
-Lifecycle preserved: environment buses, cabin EQ, master bus, limiter (`MAX_GAIN` 0.85), profile crossfade, snippets.
+Do **not** solve realism by EQ-ing sawtooth voices, raising broadband noise, or spawning hundreds of per-fire `AudioNode`s.
 
 ---
 
-## Signal flow (V2)
+## Why V1 / “Current” sounded electronic
+
+| Cause | Effect |
+| --- | --- |
+| Dominant saw / multi-oscillator stacks | Pitch-bent synth voice as RPM rises |
+| Globally pitch-shifted harmonics | Everything scales with RPM like one oscillator |
+| Continuous filtered noise beds | Hiss / whoosh instead of combustion pressure |
+| White/pink shift “swooshes” | Fake gear events |
+| Cap ~40 Hz per-stroke pulse nodes | Either too soft or too expensive if uncapped |
+| Missing semi-stationary resonances | No stable exhaust/body “place” |
+
+---
+
+## Architecture (V2.1)
 
 ```
-DriveState (+ optional VirtualPowertrainState)
+DriveState (+ VirtualPowertrainState)
   → HybridCombustionSynth.update
-       ├─ firingHz = RPM/60 × cylinders/2   (true four-stroke; no 40 Hz event-node path)
+       ├─ firingHz = RPM × cylinders / 120   (four-stroke)
        ├─ AudioWorklet excitation (or AM brown fallback)
-       │     → exhaust formants (semi-stationary) → body bus
-       │     → intake formants → beds bus
-       ├─ triangle/sine support harmonics (order-linked, not sawtooth stack) → body
-       ├─ mechanical bandpass (restrained) → accents
-       ├─ overrun / turbo (state-gated) → beds / accents
-       └─ shift: resonant impulse + RPM/load envelope (not white-noise burst)
-  → body / accents / beds → cabin EQ → master → limiter → destination
+       │     architecture / sharpness / load / irregularity
+       │     → exhaust formants (mostly stationary)
+       │     → body / structure peaking resonances (mostly stationary)
+       │     → spectral tilt (load → timbre)
+       │     → intake formants → beds
+       ├─ triangle/sine support harmonics (subordinate, order-linked)
+       ├─ mechanical bandpass (restrained)
+       ├─ overrun / turbo (state-gated, spool inertia)
+       ├─ shift: Powertrain shiftLoadMultiplier + phase; resonant engagement only
+       └─ optional sample A/B crossfade (0.85–1.18 rate) under procedural
+  → body / accents / beds → cabin EQ → MasterBus (Road Feel V3 gains) → limiter
 ```
 
-Legacy `createCombustionPulseLayer` (per-fire OscillatorNodes, 40 Hz cap) is **not** used on the V2 path.
+**Default:** `SoundEngine` realism engine is **`v2`** for eligible combustion profiles. Debug `/debug` A/B can still select **Current Engine**.
+
+Lifecycle preserved: DriveSession, profile crossfade, cabin EQ, Road Feel V3 perceptual volume / MasterBus / limiter.
 
 ---
 
-## Excitation performance
+## Combustion DSP
 
 | Mode | Mechanism |
-| ---- | --------- |
+| --- | --- |
 | Worklet | `/audio/combustion-processor.js` — one processor, impulse train at `firingHz` |
-| Fallback | Single looping brown buffer AM’d by one sine at `firingHz` |
+| Fallback | Single looping brown buffer AM’d by one sine at `firingHz` + soft shaper |
 
-No hundreds of `OscillatorNode`s per second. Worklet is prefetched in `SoundEngine.start`. Diagnostics: `getHybridCombustionDiagnostics()` → `excitationMode`, `firingHz`, gains.
+Impulse ≈ pressure event. Load raises punch + brightness inside the worklet. Architecture codes:
 
----
+| Code | Character |
+| --- | --- |
+| 0 | Even (I6 / V10 / I4) |
+| 1 | Lope (American V8) |
+| 2 | Flat overlapping (Flat-Six) |
+| 3 | Cross-plane refined (GT V8) |
+| 4 | V-twin uneven |
+| 5 | Single |
 
-## Acoustic archetypes
-
-Configured in `src/lib/sound/realism/v2/acoustic-engine.ts` and mirrored on drivetrain personality `engine.acoustic`:
-
-| Profile | Character |
-| ------- | --------- |
-| GT V8 | Refined cross-plane pulse, darker body |
-| American Muscle V8 | Stronger idle lope / uneven LF exhaust |
-| Flat-Six / Race Car | Overlapping pulse, upper-mid mechanical/intake |
-| Turbo Inline-6 / Rally | Smooth I6 + load-linked spool / lift flutter |
-| Racing V10 | Dense firing, strong high-RPM intake |
-
-Irregularity is **idle-gated** and fades under load — no random pitch wobble at cruise.
+No per-fire `OscillatorNode` / `AudioBufferSourceNode` creation.
 
 ---
 
-## Sample-bank schema
+## Resonance model
 
-See `src/lib/sound/realism/v2/sample-bank.ts`:
-
-```ts
-interface CombustionSampleEntry {
-  assetId: string;
-  personalityId: string;
-  rpmRef: number;
-  load: "idle" | "low" | "medium" | "high" | "overrun";
-  loopStart?: number;
-  loopEnd?: number;
-  gain?: number;
-}
-```
-
-- Crossfade adjacent RPM refs; playback-rate window ≈ **0.85–1.18**, then switch neighbor.
-- Register assets in `sound-assets/catalog.ts` (never `public/` for premium WAVs).
-- Empty banks today → 100% procedural.
-
-Suggested GT V8 loop set (when recorded): idle 900, low 1800/2500/3500, high 2500/3500/4500/5500, overrun — see `docs/audio-asset-requirements.md`.
+- **Exhaust formants** — band/lowpass centers from personality; slight upper-band RPM drift only
+- **Body resonances** — peaking filters nearly fixed in Hz (anti pitch-bent synth)
+- **Intake formants** — demand/load open them; close on overrun / torque cut
+- **Spectral tilt** — highshelf moves with load (timbre change at fixed RPM)
 
 ---
 
-## Load must change timbre
+## Personality model
 
-At fixed RPM, rising `driverDemand` / `engineLoad`:
+Configured in `src/lib/sound/realism/v2/acoustic-engine.ts`:
 
-- raises combustion intensity and upper formant energy
-- opens intake presence
-- keeps formant **centers** mostly stationary (anti “pitch-bent synth”)
-
-Highway cruise vs kickdown at similar speed is therefore distinguishable.
-
----
-
-## Shift / overrun / turbo
-
-| Event | V2 behaviour |
-| ----- | ------------ |
-| Upshift | Torque-cut intensity dip from shift progress; short resonant engagement impulse |
-| Rev-match downshift | Intensity flare with rev-match progress; RPM from powertrain |
-| Overrun | Intake drops; overrun bed; optional contextual pop after prior load |
-| Turbo | Spool inertia from RPM×demand; flutter only on strong lift after boost |
+| Profile | Feel |
+| --- | --- |
+| GT V8 | Dense, refined, broad-spectrum |
+| American Muscle V8 | Lower pulse, idle lope, exhaust-dominant |
+| Flat-Six Sport | Smooth, precise, strong intake development |
+| Turbo Inline-6 | Deep midrange + load-linked spool |
+| Racing V10 | Dense high-RPM intake richness |
+| Motorcycle / Big Twin | High-RPM I4 / lopey twin (secondary priority) |
 
 ---
 
-## Profiles out of scope
+## Load response
 
-Electronic, ambient, nature, playful, and EV continuous profiles keep Current Improved / classic paths. V2 button disables for non-combustion ids on `/debug`.
+At **identical RPM**, 10% vs 50% vs 90% load must differ via:
+
+combustion intensity · sharpness · spectral tilt · formant Q/energy · intake · body resonance excitation · support density
+
+Not gain alone.
 
 ---
 
-## Manual listening checklist
+## Shift integration
 
-1. GT V8 idle → 3k → 5k: same mechanical character, not a bent sawtooth.
-2. Same RPM, light vs heavy load: clearly different body/intake.
-3. Cruise 30 s: no constant hiss.
-4. Upshift: RPM fall + brief engagement, not a noise burst.
-5. Turbo I6: spool with load; flutter only after boost lift.
-6. A/B Current vs V2 on the same `/debug` scenario.
+Uses Powertrain phases + `shiftLoadMultiplier`:
+
+| Phase | Audio |
+| --- | --- |
+| torque_cut / disengage | Combustion/intake energy drops |
+| ratio_transition | RPM falls/rises from powertrain |
+| reengage | Short resonant engagement impulse |
+| settle | Load restores |
+
+Primary cue = **RPM + load interruption**, not a white-noise transient.
+
+---
+
+## Sample architecture
+
+Schema: `sample-bank.ts`. Inject decoded buffers via `HybridCombustionSynth.setDecodedSamples`.
+
+- Crossfade adjacent RPM refs within load region
+- Playback rate clamped ≈ **0.85–1.18**
+- Samples assist **under** procedural excitation (never sole source)
+- Premium assets via catalog — not dumped in `public/`
+
+Empty banks → 100% procedural.
+
+---
+
+## Performance strategy
+
+- Reuse a fixed node graph (~tens of nodes, not hundreds/sec)
+- Prefer AudioWorklet for excitation
+- Diagnostics: `getHybridCombustionDiagnostics()` → excitationMode, firingHz, shiftPhase, activeNodeEstimate, audioContextState
+- Road Feel V3 master gain chain unchanged
+
+---
+
+## Fallback
+
+1. Worklet unavailable → AM brown fallback (still pulsed, not naked saw stack)
+2. Samples missing → procedural only
+3. Non-combustion profiles → Current Improved / Dynamic Drive / classic paths
+
+Legacy `createCombustionPulseLayer` (per-fire nodes, 40 Hz cap) is **not** on the V2.1 path.
+
+---
+
+## A/B method
+
+| Control | Values | Where |
+| --- | --- | --- |
+| `SoundEngine.setRealismEngine` | `"current"` \| `"v2"` | Dev |
+| Harness | Current Engine / Realism V2 | `/debug`, `/debug/calibration` |
+
+Use the **same** prerecorded / scenario trace. Match loudness (Road Feel V3 staging + profile trim) before judging — louder must not win by default.
+
+---
+
+## Manual listening checklist (Tesla)
+
+1. GT V8 idle → 3k → 5k: same mechanical character, not a bent oscillator
+2. 3000 RPM light vs heavy load: clear intake/exhaust/body difference
+3. Upshift 1→2: unload → RPM fall → engage → pull
+4. Cruise 30 s+: no constant hiss or loop seam
+5. Turbo I6: spool with load; flutter only after boosted lift
+6. A/B Current vs V2 on `/debug` with matched volume
 
 ---
 
 ## What still needs licensed recordings
 
-- Personality-specific idle/cruise/high-load loops
-- Shift / rev-match / overrun one-shots replacing procedural impulses
+- Personality idle / cruise / high-load loops
+- Shift / rev-match / overrun one-shots
 - Turbo BOV / wastegate character samples
 
-Procedural V2 is the production fallback until those assets exist.
+Procedural V2.1 is the production path until those exist.

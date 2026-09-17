@@ -33,7 +33,7 @@ Field checklist for opening ELCAMOSO in a Tesla (or similar) in-car browser whil
 | Drive safety mode above ~5 km/h: instrument only (mark, speed, profile, Stop); nav hidden                 | ☐     |                                                       |
 | With motion character on: gear arc, rev, profile name; connection hint only if needed | ☐     | Settings → Advanced → Motion-matched sound            |
 | Split-screen (browser beside maps): gear pulses on shift; rev beside arc in landscape  | ☐     | `?cockpit=1` or safety mode                           |
-| Phone link: Tesla Start link → phone joins `/connect/{id}`                              | ☐     | Local dev or preview; same Wi‑Fi                      |
+| Phone link: **Connect phone** on `/drive` → scan QR `/pair/{token}` or enter code on `/pair` | ☐     | Free; no `?cockpit=1` required; same Wi‑Fi for local WS |
 | Dev only: peer rows, Signal + Latency test when Drive debug on                          | ☐     | Settings → Advanced → Drive debug                     |
 | Phone optional controls: Sound Profile, intensity, motion character, shift feel, master | ☐     | Collapsed panel; set while parked                     |
 | Phone control change → Tesla reflects within one relay hop                              | ☐     | Change profile or volume on phone; hear/see on Tesla    |
