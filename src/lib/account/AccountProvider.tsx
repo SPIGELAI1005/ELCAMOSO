@@ -82,6 +82,22 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     void refresh();
   }, [refresh]);
 
+  // Re-check the HttpOnly cookie when returning from Google OAuth / another tab.
+  useEffect(() => {
+    function onVisible() {
+      if (document.visibilityState === "visible") void refresh();
+    }
+    function onFocus() {
+      void refresh();
+    }
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [refresh]);
+
   const signOut = useCallback(async () => {
     try {
       await signOutAccountFn({ data: {} });

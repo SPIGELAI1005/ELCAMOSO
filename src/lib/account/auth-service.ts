@@ -17,8 +17,10 @@ import {
   consumeGoogleOAuthState,
   createGoogleOAuthState,
   exchangeGoogleAuthorizationCode,
+  mintGoogleOAuthPendingCookie,
   verifyExchangedGoogleIdToken,
 } from "@/lib/account/google-oauth";
+import { mintAccountSessionTicket, verifyAccountSessionTicket } from "@/lib/account/session-ticket";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -38,6 +40,7 @@ export interface RequestSignInResult {
 }
 
 export interface VerifyMagicLinkResult {
+  /** Signed session ticket for the HttpOnly cookie (not a raw bearer for localStorage). */
   sessionToken: string;
   userId: string;
   email: string;
@@ -47,6 +50,8 @@ export interface VerifyMagicLinkResult {
 export interface BeginGoogleSignInResult {
   available: boolean;
   authorizeUrl?: string;
+  /** Server-only: signed PKCE/state payload for the pending OAuth cookie. */
+  pendingCookie?: string;
   message?: string;
 }
 
@@ -80,7 +85,7 @@ function createSessionForEmail(email: string, now = Date.now()): VerifyMagicLink
   };
   saveAccountSession(session);
   return {
-    sessionToken,
+    sessionToken: mintAccountSessionTicket(session),
     userId,
     email: normalized,
     expiresAt: session.expiresAt,
@@ -137,10 +142,13 @@ export function beginGoogleSignIn(returnTo: string): BeginGoogleSignInResult {
       message: "Google sign-in is not configured on this server.",
     };
   }
-  const { state, codeChallenge, nonce } = createGoogleOAuthState(sanitizeReturnTo(returnTo));
+  const { state, codeChallenge, nonce, pending } = createGoogleOAuthState(
+    sanitizeReturnTo(returnTo),
+  );
   return {
     available: true,
     authorizeUrl: buildGoogleAuthorizeUrl(state, codeChallenge, nonce),
+    pendingCookie: mintGoogleOAuthPendingCookie(pending),
   };
 }
 
@@ -148,6 +156,7 @@ export async function completeGoogleSignIn(
   code: string,
   state: string,
   now = Date.now(),
+  pendingCookie?: string | null,
 ): Promise<CompleteGoogleSignInResult> {
   if (!code.trim()) {
     throw new Error("Missing Google sign-in response.");
@@ -155,7 +164,7 @@ export async function completeGoogleSignIn(
   if (!state.trim()) {
     throw new Error("Missing Google OAuth state.");
   }
-  const pending = consumeGoogleOAuthState(state, now);
+  const pending = consumeGoogleOAuthState(state, now, pendingCookie);
   if (!pending) throw new Error("Google sign-in expired. Try again.");
 
   const tokens = await exchangeGoogleAuthorizationCode(code, pending.codeVerifier);
@@ -172,6 +181,11 @@ export async function completeGoogleSignIn(
 
 export function getAccountSession(sessionToken: string, now = Date.now()): AccountSession | null {
   if (!sessionToken.trim()) return null;
+  const fromTicket = verifyAccountSessionTicket(sessionToken, now);
+  if (fromTicket) {
+    saveAccountSession(fromTicket);
+    return fromTicket;
+  }
   return readAccountSession(sessionToken, now);
 }
 
@@ -182,6 +196,8 @@ export function requireAccountSession(sessionToken: string, now = Date.now()): A
 }
 
 export function signOutAccount(sessionToken: string): void {
+  const session = getAccountSession(sessionToken);
+  if (session) deleteAccountSession(session.token);
   deleteAccountSession(sessionToken);
 }
 

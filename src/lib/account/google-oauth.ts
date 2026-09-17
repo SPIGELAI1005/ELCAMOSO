@@ -1,4 +1,4 @@
-import { createHash, randomBytes } from "node:crypto";
+import { createHash, createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 
 import { readGoogleOAuthConfig } from "@/lib/account/google-oauth-config";
 import { verifyGoogleIdToken, type GoogleIdTokenClaims } from "@/lib/account/google-id-token";
@@ -7,6 +7,7 @@ const STATE_TTL_MS = 10 * 60 * 1000;
 const GOOGLE_SCOPES = "openid email profile";
 
 export interface PendingGoogleOAuthState {
+  state: string;
   returnTo: string;
   createdAt: number;
   codeVerifier: string;
@@ -36,6 +37,25 @@ function createPkcePair(): { codeVerifier: string; codeChallenge: string } {
   return { codeVerifier, codeChallenge };
 }
 
+function oauthPendingSecret(): string {
+  const dedicated = (process.env["ELCAMOSO_ACCOUNT_SESSION_SECRET"] ?? "").trim();
+  if (dedicated.length >= 16) return dedicated;
+  const google = (process.env["GOOGLE_CLIENT_SECRET"] ?? "").trim();
+  if (google.length >= 16) return `elcamoso-oauth:${google}`;
+  return "elcamoso-dev-google-oauth-pending";
+}
+
+function signPending(payloadB64: string): string {
+  return createHmac("sha256", oauthPendingSecret()).update(payloadB64).digest("base64url");
+}
+
+function safeEqual(a: string, b: string): boolean {
+  const left = Buffer.from(a);
+  const right = Buffer.from(b);
+  if (left.length !== right.length) return false;
+  return timingSafeEqual(left, right);
+}
+
 export function resetGoogleOAuthStateForTests(): void {
   pendingStates.clear();
 }
@@ -44,30 +64,68 @@ export function createGoogleOAuthState(returnTo: string): {
   state: string;
   codeChallenge: string;
   nonce: string;
+  pending: PendingGoogleOAuthState;
 } {
   pruneStates();
   const state = randomBytes(24).toString("base64url");
   const nonce = randomBytes(24).toString("base64url");
   const { codeVerifier, codeChallenge } = createPkcePair();
-  pendingStates.set(state, {
+  const pending: PendingGoogleOAuthState = {
+    state,
     returnTo,
     createdAt: Date.now(),
     codeVerifier,
     nonce,
-  });
-  return { state, codeChallenge, nonce };
+  };
+  pendingStates.set(state, pending);
+  return { state, codeChallenge, nonce, pending };
+}
+
+/** Signed cookie payload so PKCE/state survive serverless / multi-instance. */
+export function mintGoogleOAuthPendingCookie(pending: PendingGoogleOAuthState): string {
+  const payloadB64 = Buffer.from(JSON.stringify(pending), "utf8").toString("base64url");
+  return `${payloadB64}.${signPending(payloadB64)}`;
+}
+
+export function verifyGoogleOAuthPendingCookie(
+  raw: string,
+  expectedState: string,
+  now = Date.now(),
+): PendingGoogleOAuthState | null {
+  const parts = raw.split(".");
+  if (parts.length !== 2) return null;
+  const [payloadB64, signature] = parts;
+  if (!payloadB64 || !signature) return null;
+  if (!safeEqual(signPending(payloadB64), signature)) return null;
+  try {
+    const pending = JSON.parse(
+      Buffer.from(payloadB64, "base64url").toString("utf8"),
+    ) as PendingGoogleOAuthState;
+    if (pending.state !== expectedState) return null;
+    if (now - pending.createdAt > STATE_TTL_MS) return null;
+    if (!pending.codeVerifier || !pending.nonce) return null;
+    return pending;
+  } catch {
+    return null;
+  }
 }
 
 export function consumeGoogleOAuthState(
   state: string,
   now = Date.now(),
+  cookieRaw?: string | null,
 ): PendingGoogleOAuthState | null {
   pruneStates(now);
   const row = pendingStates.get(state);
-  if (!row) return null;
-  pendingStates.delete(state);
-  if (now - row.createdAt > STATE_TTL_MS) return null;
-  return row;
+  if (row) {
+    pendingStates.delete(state);
+    if (now - row.createdAt > STATE_TTL_MS) return null;
+    return row;
+  }
+  if (cookieRaw) {
+    return verifyGoogleOAuthPendingCookie(cookieRaw, state, now);
+  }
+  return null;
 }
 
 export function buildGoogleAuthorizeUrl(

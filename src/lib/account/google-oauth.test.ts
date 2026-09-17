@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   beginGoogleSignIn,
   completeGoogleSignIn,
+  getAccountSession,
   getGoogleSignInAvailability,
 } from "@/lib/account/auth-service";
 import {
@@ -12,7 +13,10 @@ import {
 } from "@/lib/account/google-oauth-config";
 import { buildTestIdToken } from "@/lib/account/google-id-token";
 import { resetGoogleOAuthStateForTests } from "@/lib/account/google-oauth";
-import { buildAccountSessionCookieOptions } from "@/lib/account/session-cookie";
+import {
+  buildAccountSessionCookieOptions,
+  serializeCookieHeader,
+} from "@/lib/account/session-cookie";
 import { resetAccountAuthStoreForTests } from "@/lib/account/session-store";
 
 describe("Google account OAuth", () => {
@@ -24,6 +28,7 @@ describe("Google account OAuth", () => {
     process.env.GOOGLE_CLIENT_ID = "google-client";
     process.env.GOOGLE_CLIENT_SECRET = "google-secret";
     process.env.GOOGLE_REDIRECT_URI = LOCAL_GOOGLE_REDIRECT_URI;
+    process.env.ELCAMOSO_ACCOUNT_SESSION_SECRET = "test-account-session-secret";
     delete process.env.ELCAMOSO_ENV;
   });
 
@@ -33,6 +38,7 @@ describe("Google account OAuth", () => {
     delete process.env.GOOGLE_CLIENT_SECRET;
     delete process.env.GOOGLE_REDIRECT_URI;
     delete process.env.ELCAMOSO_ENV;
+    delete process.env.ELCAMOSO_ACCOUNT_SESSION_SECRET;
     Object.assign(process.env, originalEnv);
   });
 
@@ -69,6 +75,7 @@ describe("Google account OAuth", () => {
   it("builds a Google authorize URL with state, PKCE, and nonce", () => {
     const started = beginGoogleSignIn("/drive?activateTrial=1");
     expect(started.available).toBe(true);
+    expect(started.pendingCookie).toBeTruthy();
     const url = new URL(started.authorizeUrl!);
     expect(url.origin + url.pathname).toBe("https://accounts.google.com/o/oauth2/v2/auth");
     expect(url.searchParams.get("client_id")).toBe("google-client");
@@ -80,7 +87,7 @@ describe("Google account OAuth", () => {
     expect(url.searchParams.get("state")).toBeTruthy();
   });
 
-  it("completes sign-in from code + state into an account session", async () => {
+  it("completes sign-in and issues a durable signed session ticket", async () => {
     const started = beginGoogleSignIn("/settings");
     const state = new URL(started.authorizeUrl!).searchParams.get("state")!;
     const nonce = new URL(started.authorizeUrl!).searchParams.get("nonce")!;
@@ -99,9 +106,37 @@ describe("Google account OAuth", () => {
     const session = await completeGoogleSignIn("auth-code", state);
     expect(session.email).toBe("driver@gmail.com");
     expect(session.returnTo).toBe("/settings");
-    expect(session.sessionToken).toBeTruthy();
+    expect(session.sessionToken.includes(".")).toBe(true);
     expect(JSON.stringify(session)).not.toContain("ya29");
     expect(JSON.stringify(session)).not.toContain("google-secret");
+
+    // Ticket validates without relying on in-memory store.
+    resetAccountAuthStoreForTests();
+    const restored = getAccountSession(session.sessionToken);
+    expect(restored?.email).toBe("driver@gmail.com");
+    expect(restored?.userId).toBe(session.userId);
+  });
+
+  it("completes sign-in using the pending OAuth cookie when memory state is gone", async () => {
+    const started = beginGoogleSignIn("/drive");
+    const state = new URL(started.authorizeUrl!).searchParams.get("state")!;
+    const nonce = new URL(started.authorizeUrl!).searchParams.get("nonce")!;
+    const pendingCookie = started.pendingCookie!;
+    resetGoogleOAuthStateForTests();
+
+    const nowSeconds = Math.floor(Date.now() / 1000);
+    stubGoogleTokenExchange({
+      iss: "https://accounts.google.com",
+      aud: "google-client",
+      sub: "google-sub-cookie",
+      email: "cookie@gmail.com",
+      email_verified: true,
+      exp: nowSeconds + 3600,
+      nonce,
+    });
+
+    const session = await completeGoogleSignIn("auth-code", state, Date.now(), pendingCookie);
+    expect(session.email).toBe("cookie@gmail.com");
   });
 
   it("rejects missing state", async () => {
@@ -201,6 +236,10 @@ describe("Google account OAuth", () => {
       maxAge: expect.any(Number),
     });
     expect(opts.maxAge).toBeGreaterThan(0);
+    const header = serializeCookieHeader("elcamoso_account_session", "ticket.value", opts);
+    expect(header).toContain("HttpOnly");
+    expect(header).toContain("Secure");
+    expect(header).toContain("SameSite=Lax");
   });
 
   it("keeps Secure off for local development cookies", () => {

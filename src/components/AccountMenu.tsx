@@ -48,6 +48,7 @@ export function AccountMenu({ className, variant = "icon", onNavigate }: Account
   }
 
   function openAccount() {
+    if (isLoading) return;
     if (isAuthenticated) setProfileOpen(true);
     else setSignInOpen(true);
   }

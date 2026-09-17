@@ -1,16 +1,20 @@
 import { createServerFn } from "@tanstack/react-start";
-import { deleteCookie, setCookie } from "@tanstack/react-start/server";
+import { deleteCookie, getCookie, setCookie } from "@tanstack/react-start/server";
 
 import {
   ACCOUNT_SESSION_COOKIE_NAME,
+  GOOGLE_OAUTH_PENDING_COOKIE_NAME,
   buildAccountSessionCookieOptions,
+  buildGoogleOAuthPendingCookieOptions,
+  serializeClearedCookieHeader,
+  serializeCookieHeader,
 } from "@/lib/account/session-cookie";
 import { tryResolveRequestSessionToken } from "@/lib/account/session-request";
 
-function setSessionCookie(sessionToken: string, expiresAt: number): void {
+function setSessionCookie(sessionTicket: string, expiresAt: number): void {
   setCookie(
     ACCOUNT_SESSION_COOKIE_NAME,
-    sessionToken,
+    sessionTicket,
     buildAccountSessionCookieOptions(expiresAt),
   );
 }
@@ -24,8 +28,45 @@ function clearSessionCookie(): void {
   });
 }
 
+function clearGoogleOAuthPendingCookie(): void {
+  deleteCookie(GOOGLE_OAUTH_PENDING_COOKIE_NAME, {
+    path: "/",
+    httpOnly: true,
+    secure: buildGoogleOAuthPendingCookieOptions().secure,
+    sameSite: "lax",
+  });
+}
+
+export function buildSessionSetCookieHeader(sessionTicket: string, expiresAt: number): string {
+  return serializeCookieHeader(
+    ACCOUNT_SESSION_COOKIE_NAME,
+    sessionTicket,
+    buildAccountSessionCookieOptions(expiresAt),
+  );
+}
+
+export function buildGoogleOAuthPendingSetCookieHeader(pendingCookie: string): string {
+  return serializeCookieHeader(
+    GOOGLE_OAUTH_PENDING_COOKIE_NAME,
+    pendingCookie,
+    buildGoogleOAuthPendingCookieOptions(),
+  );
+}
+
+export function buildClearedGoogleOAuthPendingSetCookieHeader(): string {
+  return serializeClearedCookieHeader(GOOGLE_OAUTH_PENDING_COOKIE_NAME);
+}
+
+export function readGoogleOAuthPendingCookie(): string | null {
+  try {
+    return getCookie(GOOGLE_OAUTH_PENDING_COOKIE_NAME) ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export const getAccountSessionFn = createServerFn({ method: "POST" })
-  .inputValidator((data: { sessionToken?: string | null }) => data)
+  .inputValidator((data: { sessionToken?: string | null } = {}) => data)
   .handler(async ({ data }) => {
     const { getAccountSession } = await import("@/lib/account/auth-service");
     const token = tryResolveRequestSessionToken(data.sessionToken);
@@ -53,7 +94,6 @@ export const verifyAccountMagicLinkFn = createServerFn({ method: "POST" })
     const { verifyAccountMagicLink } = await import("@/lib/account/auth-service");
     const verified = verifyAccountMagicLink(data.token);
     setSessionCookie(verified.sessionToken, verified.expiresAt);
-    // Do not return sessionToken to the browser — cookie is the session carrier.
     return {
       userId: verified.userId,
       email: verified.email,
@@ -70,7 +110,20 @@ export const beginGoogleSignInFn = createServerFn({ method: "POST" })
   .inputValidator((data: { returnTo?: string }) => data)
   .handler(async ({ data }) => {
     const { beginGoogleSignIn } = await import("@/lib/account/auth-service");
-    return beginGoogleSignIn(data.returnTo ?? "/drive?activateTrial=1");
+    const started = beginGoogleSignIn(data.returnTo ?? "/drive?activateTrial=1");
+    if (started.available && started.pendingCookie) {
+      setCookie(
+        GOOGLE_OAUTH_PENDING_COOKIE_NAME,
+        started.pendingCookie,
+        buildGoogleOAuthPendingCookieOptions(),
+      );
+    }
+    // Never return pendingCookie / secrets to the browser.
+    return {
+      available: started.available,
+      authorizeUrl: started.authorizeUrl,
+      message: started.message,
+    };
   });
 
 export const completeGoogleSignInFn = createServerFn({ method: "POST" })
@@ -79,8 +132,14 @@ export const completeGoogleSignInFn = createServerFn({ method: "POST" })
     const { completeGoogleSignIn, toPublicGoogleSignInResult } = await import(
       "@/lib/account/auth-service"
     );
-    const result = await completeGoogleSignIn(data.code, data.state);
+    const result = await completeGoogleSignIn(
+      data.code,
+      data.state,
+      Date.now(),
+      readGoogleOAuthPendingCookie(),
+    );
     setSessionCookie(result.sessionToken, result.expiresAt);
+    clearGoogleOAuthPendingCookie();
     return toPublicGoogleSignInResult(result);
   });
 

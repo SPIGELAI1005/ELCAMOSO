@@ -37,6 +37,9 @@ When all three are set, the account sign-in dialog shows **Continue with Google*
 - ID token is validated for issuer, audience (`GOOGLE_CLIENT_ID`), expiration, and nonce (signature via Google tokeninfo).
 - Google access tokens are discarded after exchange; never stored in localStorage or returned to the client.
 - ELCAMOSO session is set as an **HttpOnly** cookie (`elcamoso_account_session`): **Secure** in production, **SameSite=Lax**, TTL aligned with the account session.
+- Cookie value is a **signed session ticket** (HMAC) so login survives server restarts / multi-instance without relying on in-memory Maps alone.
+- Google OAuth PKCE/state/nonce are also stored in a short-lived HttpOnly cookie (`elcamoso_google_oauth`) so the callback works across instances.
+- The callback redirect response includes `Set-Cookie` explicitly (a bare `Response.redirect()` would drop cookies set only on the H3 event).
 
 ## Environment separation
 
