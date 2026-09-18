@@ -1,6 +1,6 @@
 /**
  * Acoustic-engine archetypes for Realism V2.1 combustion synthesis.
- * Generic ELCAMOSO characters — not OEM recreations.
+ * Generic ELCAMOSO characters - not OEM recreations.
  */
 
 export type StrokeCycle = "four-stroke" | "two-stroke";
@@ -17,7 +17,7 @@ export type FiringOrderArchetype =
 
 export type BankConfiguration = "inline" | "v90" | "v60" | "flat" | "single";
 
-/** Worklet architecture code — keep in sync with combustion-processor.js */
+/** Worklet architecture code - keep in sync with combustion-processor.js */
 export type ArchitectureCode = 0 | 1 | 2 | 3 | 4 | 5;
 
 export interface AcousticEngineConfig {
@@ -27,7 +27,7 @@ export interface AcousticEngineConfig {
   banks: BankConfiguration;
   /** Maps to worklet `architecture` parameter. */
   architectureCode: ArchitectureCode;
-  /** Idle irregularity 0..1 — only meaningful near idle. */
+  /** Idle irregularity 0..1 - only meaningful near idle. */
   idleIrregularity: number;
   /** Exhaust pulse weight 0..1. */
   exhaustPulse: number;
@@ -45,7 +45,7 @@ export interface AcousticEngineConfig {
   exhaustFormantsHz: number[];
   /** Semi-stationary intake formant centers (Hz). */
   intakeFormantsHz: number[];
-  /** Semi-stationary engine/body resonances (Hz) — do not pitch with RPM. */
+  /** Semi-stationary engine/body resonances (Hz) - do not pitch with RPM. */
   bodyResonanceHz: number[];
   /** Supporting harmonic partial ratios (band-limited, not sawtooth-dominant). */
   supportRatios: number[];

@@ -8,6 +8,7 @@ import {
   beginTeslaUpgradeCheckoutFn,
   resolveTeslaUpgradeTokenFn,
 } from "@/lib/tesla-upgrade/server-fns";
+import { createSeoHeadFromPath } from "@/lib/seo";
 
 export const Route = createFileRoute("/upgrade/$token")({
   validateSearch: (search: Record<string, unknown>): { billing?: string } => {
@@ -15,16 +16,7 @@ export const Route = createFileRoute("/upgrade/$token")({
     return billing ? { billing } : {};
   },
   component: UpgradeTokenScreen,
-  head: ({ params }) => ({
-    meta: [
-      { title: "Drive+ · ELCAMOSO" },
-      {
-        name: "description",
-        content: "Continue with Drive+ on your phone and bring the full motion feel to your car.",
-      },
-      { property: "og:url", content: `/upgrade/${params.token}` },
-    ],
-  }),
+  head: () => createSeoHeadFromPath("/upgrade"),
 });
 
 function UpgradeTokenScreen() {
@@ -86,7 +78,7 @@ function UpgradeTokenScreen() {
         <p className="text-[11px] tracking-[0.28em] text-muted-foreground uppercase">Drive+</p>
         <h1 className="mt-4 text-3xl font-light">Already on Drive+</h1>
         <p className="mt-4 text-sm text-muted-foreground">
-          Return to your car — the full motion feel should update automatically.
+          Return to your car - the full motion feel should update automatically.
         </p>
       </main>
     );

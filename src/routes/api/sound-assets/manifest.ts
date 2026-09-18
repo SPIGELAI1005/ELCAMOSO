@@ -1,9 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import {
-  jsonResponse,
-  readAccountSessionToken,
-} from "@/lib/billing/checkout-http";
+import { jsonResponse, readAccountSessionToken } from "@/lib/billing/checkout-http";
 import {
   buildSoundAssetManifest,
   SoundAssetDeliveryUnavailableError,
@@ -13,10 +10,10 @@ import { resolveCheckoutOrigin } from "@/lib/billing/checkout-service";
 
 function parseManifestRequest(body: Record<string, unknown>): SoundAssetManifestRequest {
   const personality =
-    typeof body.personality === "string" && body.personality.trim()
-      ? body.personality.trim()
+    typeof body["personality"] === "string" && body["personality"].trim()
+      ? body["personality"].trim()
       : undefined;
-  return { personality };
+  return personality ? { personality } : {};
 }
 
 export const Route = createFileRoute("/api/sound-assets/manifest")({

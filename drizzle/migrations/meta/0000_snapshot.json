@@ -124,12 +124,8 @@
           "name": "subscriptions_user_id_users_id_fk",
           "tableFrom": "subscriptions",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -224,37 +220,22 @@
     "public.billing_interval": {
       "name": "billing_interval",
       "schema": "public",
-      "values": [
-        "month",
-        "year"
-      ]
+      "values": ["month", "year"]
     },
     "public.billing_plan": {
       "name": "billing_plan",
       "schema": "public",
-      "values": [
-        "FREE",
-        "DRIVE_PLUS"
-      ]
+      "values": ["FREE", "DRIVE_PLUS"]
     },
     "public.billing_status": {
       "name": "billing_status",
       "schema": "public",
-      "values": [
-        "free",
-        "trialing",
-        "active",
-        "past_due",
-        "paused",
-        "canceled"
-      ]
+      "values": ["free", "trialing", "active", "past_due", "paused", "canceled"]
     },
     "public.subscription_provider": {
       "name": "subscription_provider",
       "schema": "public",
-      "values": [
-        "stripe"
-      ]
+      "values": ["stripe"]
     }
   },
   "schemas": {},

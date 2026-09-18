@@ -9,18 +9,11 @@ import {
   readStoredRelayCred,
 } from "@/components/PhonePairSession";
 import { claimDriveRelayTokenFn, peekDriveRelayClaimFn } from "@/lib/drive-relay/server-fns";
+import { createSeoHeadFromPath } from "@/lib/seo";
 
 export const Route = createFileRoute("/pair_/$token")({
   component: PairTokenScreen,
-  head: () => ({
-    meta: [
-      { title: "Pair phone - ELCAMOSO" },
-      {
-        name: "description",
-        content: "Connect this phone to your ELCAMOSO drive as a motion sensor.",
-      },
-    ],
-  }),
+  head: () => createSeoHeadFromPath("/pair"),
 });
 
 function PairTokenScreen() {
@@ -91,7 +84,9 @@ function PairTokenScreen() {
     return (
       <main className="mx-auto flex min-h-screen w-full max-w-md flex-col items-center justify-center gap-4 px-6">
         <ElcamosoMark animate className="h-12 w-auto opacity-80" />
-        <p className="text-[10px] tracking-[0.28em] text-muted-foreground uppercase">Checking link</p>
+        <p className="text-[10px] tracking-[0.28em] text-muted-foreground uppercase">
+          Checking link
+        </p>
       </main>
     );
   }

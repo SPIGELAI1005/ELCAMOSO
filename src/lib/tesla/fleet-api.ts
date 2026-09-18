@@ -84,7 +84,7 @@ export async function listVehicles(linkId: string): Promise<TeslaVehicleSummary[
   return vehicles;
 }
 
-/** Read-only Fleet API usage — no commands or wake calls. */
+/** Read-only Fleet API usage - no commands or wake calls. */
 export async function refreshVehicleList(linkId: string): Promise<TeslaVehicleSummary[]> {
   await resolveUserFleetRegion(linkId);
   return listVehicles(linkId);
@@ -92,7 +92,7 @@ export async function refreshVehicleList(linkId: string): Promise<TeslaVehicleSu
 
 /**
  * Poll cached vehicle_data for motion fields (Data pricing category).
- * Use sparingly — prefer Fleet Telemetry streaming when available.
+ * Use sparingly - prefer Fleet Telemetry streaming when available.
  */
 export async function fetchVehicleDataFields(
   linkId: string,

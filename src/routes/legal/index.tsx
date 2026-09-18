@@ -1,22 +1,11 @@
+import { createSeoHeadFromPath } from "@/lib/seo";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { LegalPage, LegalSection } from "@/components/LegalPage";
 import { LEGAL_LINKS } from "@/lib/legal/operator";
 
 export const Route = createFileRoute("/legal/")({
   component: LegalIndex,
-  head: () => ({
-    meta: [
-      { title: "Legal · ELCAMOSO" },
-      {
-        name: "description",
-        content: "Impressum, privacy, cookies, terms and accessibility for ELCAMOSO.",
-      },
-      { property: "og:title", content: "Legal · ELCAMOSO" },
-      { property: "og:type", content: "website" },
-      { property: "og:url", content: "/legal" },
-    ],
-    links: [{ rel: "canonical", href: "/legal" }],
-  }),
+  head: () => createSeoHeadFromPath("/legal"),
 });
 
 function LegalIndex() {

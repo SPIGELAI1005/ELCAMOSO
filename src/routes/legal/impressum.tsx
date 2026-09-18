@@ -1,22 +1,11 @@
+import { createSeoHeadFromPath } from "@/lib/seo";
 import { createFileRoute } from "@tanstack/react-router";
 import { LegalPage, LegalSection } from "@/components/LegalPage";
 import { LEGAL_OPERATOR, operatorAddressLines } from "@/lib/legal/operator";
 
 export const Route = createFileRoute("/legal/impressum")({
   component: Impressum,
-  head: () => ({
-    meta: [
-      { title: "Impressum · ELCAMOSO" },
-      {
-        name: "description",
-        content: "Legal notice (Impressum) for ELCAMOSO pursuant to Section 5 DDG.",
-      },
-      { property: "og:title", content: "Impressum · ELCAMOSO" },
-      { property: "og:type", content: "website" },
-      { property: "og:url", content: "/legal/impressum" },
-    ],
-    links: [{ rel: "canonical", href: "/legal/impressum" }],
-  }),
+  head: () => createSeoHeadFromPath("/legal/impressum"),
 });
 
 /**

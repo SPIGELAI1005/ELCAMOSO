@@ -19,6 +19,6 @@ test.describe("Demo feel motion", () => {
     await expect
       .poll(async () => Number(await speed.textContent()), { timeout: 8000 })
       .toBeGreaterThan(0);
-    await expect(page.getByRole("button", { name: /^stop$/i })).toBeVisible();
+    await expect(page.locator("#feel").getByRole("button", { name: /^stop$/i })).toBeVisible();
   });
 });

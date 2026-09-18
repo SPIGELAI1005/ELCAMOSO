@@ -35,7 +35,7 @@ export function VehicleTelemetryBridge() {
           getSession().ingestVehicleTelemetry(result.record);
         }
       } catch {
-        /* server unavailable — fusion falls back to phone/browser */
+        /* server unavailable - fusion falls back to phone/browser */
       } finally {
         inFlight.current = false;
       }

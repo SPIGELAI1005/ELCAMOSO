@@ -21,7 +21,7 @@ export interface BillingAdminDiagnostics {
   userId: string;
   email: string | null;
   internalPlan: Plan;
-  entitlements: Entitlement[];
+  entitlements: readonly Entitlement[];
   trial: DynamicDriveTrialSnapshot | null;
   stripeCustomerId: string | null;
   stripeSubscriptionId: string | null;
@@ -41,7 +41,7 @@ export interface BillingAdminDiagnostics {
 
 async function findLatestSubscriptionForUser(userId: string): Promise<Subscription | null> {
   const repo = getSubscriptionRepository();
-  if ("findLatestByUserId" in repo && typeof repo.findLatestByUserId === "function") {
+  if (repo.findLatestByUserId) {
     return repo.findLatestByUserId(userId);
   }
   return null;
@@ -89,13 +89,13 @@ function resolveEntitlementUserForAccountId(
     plan,
     subscriptionStatus,
     trialStatus,
-    trialEntitlements,
+    ...(trialEntitlements ? { trialEntitlements } : {}),
     trialEndsAt,
     revision,
   };
 }
 
-/** Read-only billing diagnostics for an internal user — never mutates entitlements. */
+/** Read-only billing diagnostics for an internal user - never mutates entitlements. */
 export async function buildBillingAdminDiagnostics(
   userId: string,
   email: string | null = null,
@@ -121,7 +121,10 @@ export async function buildBillingAdminDiagnostics(
     stripeSubscriptionId: persisted?.providerSubscriptionId ?? null,
     localSubscriptionStatus: runtime?.status ?? "none",
     localAccessReason: local.reason,
-    currentPeriodEnd: runtime?.currentPeriodEnd?.toISOString() ?? persisted?.currentPeriodEnd?.toISOString() ?? null,
+    currentPeriodEnd:
+      runtime?.currentPeriodEnd?.toISOString() ??
+      persisted?.currentPeriodEnd?.toISOString() ??
+      null,
     cancelAtPeriodEnd: runtime?.cancelAtPeriodEnd ?? persisted?.cancelAtPeriodEnd ?? false,
     lastSubscriptionUpdate: persisted?.updatedAt?.toISOString() ?? null,
     stripeConfigured: health.stripeConfigured,

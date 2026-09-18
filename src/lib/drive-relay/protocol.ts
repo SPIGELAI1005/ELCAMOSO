@@ -1,6 +1,7 @@
 import type { RelayMessage, RelayRole } from "./types";
 import type { RelayMotionPayload } from "../motion/relay-sample";
 import { isRelayTelemetryMessage } from "../motion/relay-telemetry";
+import { resolveDriveRelayWsOrigin } from "./config";
 const ROLES = new Set<RelayRole>(["display", "phone", "telemetry"]);
 
 export function parseRelayRole(raw: string | null): RelayRole | null {
@@ -121,12 +122,17 @@ export function relayWsPath(): string {
   return "/api/drive-relay/ws";
 }
 
+/**
+ * Build the WebSocket URL for a relay peer.
+ * @param pageOrigin - typically `window.location.origin` (fallback when no dedicated host)
+ */
 export function buildRelayWsUrl(
-  origin: string,
+  pageOrigin: string,
   sessionId: string,
   role: RelayRole,
   token: string,
 ): string {
+  const origin = resolveDriveRelayWsOrigin(pageOrigin);
   const url = new URL(relayWsPath(), origin);
   url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
   url.searchParams.set("sessionId", sessionId);

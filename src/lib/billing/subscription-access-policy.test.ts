@@ -11,11 +11,7 @@ const config = { pastDueGraceMs: GRACE_MS };
 describe("subscription access policy", () => {
   it("grants Drive+ for active and trialing subscriptions", () => {
     expect(
-      hasDrivePlusSubscriptionAccess(
-        { plan: "DRIVE_PLUS", status: "active" },
-        Date.now(),
-        config,
-      ),
+      hasDrivePlusSubscriptionAccess({ plan: "DRIVE_PLUS", status: "active" }, Date.now(), config),
     ).toBe(true);
     expect(
       hasDrivePlusSubscriptionAccess(

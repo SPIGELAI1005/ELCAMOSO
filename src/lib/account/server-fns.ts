@@ -4,9 +4,7 @@ export const getAccountSessionFn = createServerFn({ method: "POST" })
   .inputValidator((data: { sessionToken?: string | null } = {}) => data)
   .handler(async ({ data }) => {
     const { getAccountSession } = await import("@/lib/account/auth-service");
-    const { tryResolveRequestSessionToken } = await import(
-      "@/lib/account/session-cookies.server"
-    );
+    const { tryResolveRequestSessionToken } = await import("@/lib/account/session-cookies.server");
     const token = tryResolveRequestSessionToken(data.sessionToken);
     if (!token) return { authenticated: false as const };
     const session = getAccountSession(token);
@@ -65,14 +63,10 @@ export const beginGoogleSignInFn = createServerFn({ method: "POST" })
 export const completeGoogleSignInFn = createServerFn({ method: "POST" })
   .inputValidator((data: { code: string; state: string }) => data)
   .handler(async ({ data }) => {
-    const { completeGoogleSignIn, toPublicGoogleSignInResult } = await import(
-      "@/lib/account/auth-service"
-    );
-    const {
-      readGoogleOAuthPendingCookie,
-      setAccountSessionCookie,
-      clearGoogleOAuthPendingCookie,
-    } = await import("@/lib/account/session-cookies.server");
+    const { completeGoogleSignIn, toPublicGoogleSignInResult } =
+      await import("@/lib/account/auth-service");
+    const { readGoogleOAuthPendingCookie, setAccountSessionCookie, clearGoogleOAuthPendingCookie } =
+      await import("@/lib/account/session-cookies.server");
     const result = await completeGoogleSignIn(
       data.code,
       data.state,
@@ -88,9 +82,8 @@ export const signOutAccountFn = createServerFn({ method: "POST" })
   .inputValidator((data: { sessionToken?: string | null } = {}) => data)
   .handler(async ({ data }) => {
     const { signOutAccount } = await import("@/lib/account/auth-service");
-    const { tryResolveRequestSessionToken, clearAccountSessionCookie } = await import(
-      "@/lib/account/session-cookies.server"
-    );
+    const { tryResolveRequestSessionToken, clearAccountSessionCookie } =
+      await import("@/lib/account/session-cookies.server");
     const token = tryResolveRequestSessionToken(data.sessionToken);
     if (token) signOutAccount(token);
     clearAccountSessionCookie();

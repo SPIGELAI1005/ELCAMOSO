@@ -1,6 +1,6 @@
 /**
  * Host for combustion excitation AudioWorklet with procedural fallback (V2.1).
- * Fallback uses one persistent noise source amplitude-modulated at firingHz —
+ * Fallback uses one persistent noise source amplitude-modulated at firingHz -
  * never spawns per-fire OscillatorNodes.
  */
 
@@ -145,7 +145,7 @@ function createWorkletExcitation(ctx: AudioContext): CombustionExcitationHandle 
   }
 }
 
-/** Synchronous factory — prefers worklet when already loaded. */
+/** Synchronous factory - prefers worklet when already loaded. */
 export function createCombustionExcitation(ctx: BaseAudioContext): CombustionExcitationHandle {
   if (workletReady && ctx instanceof AudioContext) {
     const worklet = createWorkletExcitation(ctx);

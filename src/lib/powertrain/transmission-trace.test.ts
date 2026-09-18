@@ -18,7 +18,7 @@ const profile = getPowertrainProfile("gt-v8");
 
 describe("scenario traces", () => {
   for (const scenario of POWERTRAIN_SCENARIOS) {
-    it(`${scenario.label} — no hunting or impossible shifts`, () => {
+    it(`${scenario.label} - no hunting or impossible shifts`, () => {
       const result = runPowertrainScenario(scenario);
       const p = getPowertrainProfile(result.profileId);
       const validation = validatePowertrainTrace(result, p);
@@ -29,7 +29,7 @@ describe("scenario traces", () => {
       expect(result.samples.length).toBeGreaterThan(10);
     });
 
-    it(`${scenario.label} — upshifts drop RPM from ratios`, () => {
+    it(`${scenario.label} - upshifts drop RPM from ratios`, () => {
       const result = runPowertrainScenario(scenario);
       const drops = verifyUpshiftRpmDrops(result);
       if (drops.length > 0) {
@@ -44,7 +44,7 @@ describe("cross-profile transmission traces", () => {
   const hardScenario = POWERTRAIN_SCENARIOS.find((s) => s.id === "hard-0-100")!;
 
   for (const profileId of DRIVETRAIN_PERSONALITY_IDS) {
-    it(`${profileId} — hard 0–100 passes trace validation`, () => {
+    it(`${profileId} - hard 0–100 passes trace validation`, () => {
       const p = getPowertrainProfile(profileId);
       const result = runPowertrainScenario({ ...hardScenario, profileId }, p);
       const validation = validatePowertrainTrace(result, p);

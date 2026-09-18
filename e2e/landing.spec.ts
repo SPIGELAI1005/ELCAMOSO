@@ -9,33 +9,34 @@ test.describe("Landing /", () => {
 
   test("renders brand, tagline, and Start Drive", async ({ page }) => {
     await expectAppHealthy(page);
-    await expect(page.getByRole("heading", { name: /Your EV\.\s*Your Sound\./i })).toBeVisible();
-    await expect(page.getByText(/Electric motion\. More e-motion\./i).first()).toBeVisible();
-    await expect(page.getByRole("link", { name: /start drive/i }).first()).toBeVisible();
-    await expect(page.getByRole("link", { name: /hear it/i })).toBeVisible();
+    await expect(page.getByText(/Turn motion into sound/i).first()).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: /Your EV\.\s*Your Sound\.\s*More Emotion\./i }),
+    ).toBeVisible();
+    await expect(page.getByText(/Engines\. Music\. Worlds\./i).first()).toBeVisible();
+    await expect(
+      page.getByText(/Feel the e-motion in your electrical motion\./i).first(),
+    ).toBeVisible();
+    await expect(page.getByRole("link", { name: /start drive/i })).toBeVisible();
+    await expect(page.getByRole("link", { name: /explore experiences/i })).toBeVisible();
   });
 
   test("Start Drive navigates to /drive", async ({ page }) => {
-    await page
-      .getByRole("link", { name: /start drive/i })
-      .first()
-      .click();
+    await page.getByRole("link", { name: /start drive/i }).click();
     await expect(page).toHaveURL(/\/drive/);
     await expectAppHealthy(page);
   });
 
-  test("Hear it links to demo feel section", async ({ page }) => {
-    await expect(page.getByRole("link", { name: /hear it/i })).toHaveAttribute("href", /\/demo#feel/);
-    await page.getByRole("link", { name: /hear it/i }).click();
-    await expect(page).toHaveURL(/\/demo#feel/);
-    await expect(page.getByRole("heading", { name: /Feel the Drive\./i })).toBeVisible();
-    await expect(page.getByRole("button", { name: /gas pedal/i })).toBeVisible();
+  test("Explore Experiences opens the experience family page", async ({ page }) => {
+    await page.getByRole("link", { name: /explore experiences/i }).click();
+    await expect(page).toHaveURL(/\/explore/);
+    await expect(page.getByRole("heading", { name: /Choose what motion becomes/i })).toBeVisible();
   });
 
-  test("curated sounds are present", async ({ page }) => {
-    await page.getByRole("heading", { name: /Choose how motion feels/i }).scrollIntoViewIfNeeded();
-    await expect(page.getByText("GT V8").first()).toBeVisible();
-    await page.getByRole("link", { name: /browse all sounds/i }).click();
+  test("experience families are present", async ({ page }) => {
+    await page.getByRole("heading", { name: /Choose your experience/i }).scrollIntoViewIfNeeded();
+    await expect(page.getByRole("link", { name: /Engine Feel a machine/i })).toBeVisible();
+    await page.getByRole("link", { name: /Engine Feel a machine/i }).click();
     await expect(page).toHaveURL(/\/sounds/);
   });
 

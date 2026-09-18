@@ -1,9 +1,6 @@
 import { describe, expect, it, beforeEach, afterEach } from "vitest";
 
-import {
-  DEFAULT_SIGNED_URL_TTL_MS,
-  filterSoundAssetCatalog,
-} from "@/lib/sound-assets/catalog";
+import { DEFAULT_SIGNED_URL_TTL_MS, filterSoundAssetCatalog } from "@/lib/sound-assets/catalog";
 import { buildSoundAssetManifest } from "@/lib/sound-assets/manifest-service";
 import {
   buildSignedDeliveryUrl,
@@ -113,14 +110,10 @@ describe("sound asset catalog filtering", () => {
 
   it("includes premium assets when entitled", () => {
     expect(
-      filterSoundAssetCatalog(TEST_CATALOG, { hasPremiumAccess: false }).map(
-        (asset) => asset.id,
-      ),
+      filterSoundAssetCatalog(TEST_CATALOG, { hasPremiumAccess: false }).map((asset) => asset.id),
     ).toEqual(["flat6_shift_up_01"]);
     expect(
-      filterSoundAssetCatalog(TEST_CATALOG, { hasPremiumAccess: true }).map(
-        (asset) => asset.id,
-      ),
+      filterSoundAssetCatalog(TEST_CATALOG, { hasPremiumAccess: true }).map((asset) => asset.id),
     ).toEqual(["flat6_shift_up_01", "v8_overrun_premium_01"]);
     expect(
       filterSoundAssetCatalog(TEST_CATALOG, {

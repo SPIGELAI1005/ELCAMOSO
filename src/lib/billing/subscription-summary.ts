@@ -72,7 +72,7 @@ export function buildTrialBillingState(
   return null;
 }
 
-/** Client-safe subscription display — no Stripe ids or internal billing states. */
+/** Client-safe subscription display - no Stripe ids or internal billing states. */
 export function buildSubscriptionSummary(
   subscription: UserSubscriptionRecord | null,
   canManageSubscription: boolean,
@@ -80,9 +80,7 @@ export function buildSubscriptionSummary(
   locale = "en-US",
   trialSnapshot: DynamicDriveTrialSnapshot | null = null,
 ): SubscriptionSummary {
-  const hasDrivePlus = Boolean(
-    subscription && hasDrivePlusSubscriptionAccess(subscription, now),
-  );
+  const hasDrivePlus = Boolean(subscription && hasDrivePlusSubscriptionAccess(subscription, now));
 
   if (!hasDrivePlus) {
     return {
@@ -116,9 +114,7 @@ export function buildSubscriptionSummary(
     };
   }
 
-  const isCanceling =
-    subscription!.cancelAtPeriodEnd ||
-    access.reason === "cancel_at_period_end";
+  const isCanceling = subscription!.cancelAtPeriodEnd || access.reason === "cancel_at_period_end";
 
   if (isCanceling && formattedPeriodEnd) {
     return {

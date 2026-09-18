@@ -13,7 +13,7 @@ import {
 import { cn } from "@/lib/utils";
 
 interface PlansOverviewProps {
-  /** When false, show prices and features only — no checkout or trial activation. */
+  /** When false, show prices and features only - no checkout or trial activation. */
   monetizationEnabled: boolean;
   compact?: boolean;
   returnTo?: string;
@@ -22,13 +22,7 @@ interface PlansOverviewProps {
   billingNoticeTone?: "muted" | "danger";
 }
 
-function StrikethroughPrice({
-  amount,
-  className,
-}: {
-  amount: string;
-  className?: string;
-}) {
+function StrikethroughPrice({ amount, className }: { amount: string; className?: string }) {
   return (
     <span className={cn("relative w-fit text-muted-foreground", className)}>
       {amount}
@@ -116,7 +110,7 @@ export function PlansBillingIntervalToggle({
   );
 }
 
-/** Informational Free / Drive+ pricing — checkout gated separately. */
+/** Informational Free / Drive+ pricing - checkout gated separately. */
 export function PlansOverview({
   monetizationEnabled,
   compact = false,
@@ -133,6 +127,7 @@ export function PlansOverview({
       <div className="divide-y divide-border border-y border-border">
         <div className={compact ? "py-8" : "border-b border-border py-12"}>
           <p className="text-xs tracking-[0.2em] text-muted-foreground uppercase">Free</p>
+          <p className="mt-3 text-2xl font-light">Feel it.</p>
           <PlanPrice
             listAmount={free.listAmount}
             amount={free.amount}
@@ -141,21 +136,20 @@ export function PlansOverview({
           <p className="mt-2 text-xs tracking-[0.12em] text-muted-foreground uppercase">
             Discount for early adopters
           </p>
-          <ul
-            className={`space-y-3 text-sm text-muted-foreground ${compact ? "mt-4" : "mt-8"}`}
-          >
+          <ul className={`space-y-3 text-sm text-muted-foreground ${compact ? "mt-4" : "mt-8"}`}>
             {(compact ? FREE_PLAN_FEATURES.slice(0, 2) : FREE_PLAN_FEATURES).map((feature) => (
               <li key={feature}>{feature}</li>
             ))}
           </ul>
           {!compact ? (
             <p className="mt-4 text-sm text-muted-foreground">
-              Essential Drive, core Sound Profiles, and public demos. No account required.
+              A complete first journey from motion to music. No card required.
             </p>
           ) : null}
         </div>
         <div className={compact ? "py-8" : "py-12"}>
           <p className="text-xs tracking-[0.2em] text-muted-foreground uppercase">Drive+</p>
+          <p className="mt-3 text-2xl font-light">Make every drive yours.</p>
           <PlanPrice
             listAmount={drivePlus.listAmount}
             amount={drivePlus.amount}
@@ -172,9 +166,7 @@ export function PlansOverview({
                 : `${drivePlus.equivalentMonthly} per month, billed annually`}
             </p>
           ) : null}
-          <ul
-            className={`space-y-3 text-sm text-muted-foreground ${compact ? "mt-4" : "mt-10"}`}
-          >
+          <ul className={`space-y-3 text-sm text-muted-foreground ${compact ? "mt-4" : "mt-10"}`}>
             {(compact ? DRIVE_PLUS_FEATURES.slice(0, 3) : DRIVE_PLUS_FEATURES).map((feature) => (
               <li key={feature}>{feature}</li>
             ))}

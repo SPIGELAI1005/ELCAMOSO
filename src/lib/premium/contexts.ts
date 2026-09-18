@@ -1,11 +1,8 @@
 import type { Entitlement } from "@/lib/entitlements/types";
 
-/** Product-facing upgrade contexts — benefit copy, not entitlement ids. */
+/** Product-facing upgrade contexts - benefit copy, not entitlement ids. */
 export type PremiumContext =
-  | "locked_sound"
-  | "dynamic_drive"
-  | "phone_pairing"
-  | "advanced_controls";
+  "locked_sound" | "dynamic_drive" | "phone_pairing" | "advanced_controls";
 
 export interface PremiumContextCopy {
   context: PremiumContext;
@@ -14,7 +11,7 @@ export interface PremiumContextCopy {
   title: string;
   body: string;
   ctaLabel: string;
-  /** Secondary line under CTA — reassurance, not upsell pressure. */
+  /** Secondary line under CTA - reassurance, not upsell pressure. */
   footnote?: string;
   /** Dismissible inline prompts unless access is genuinely required. */
   dismissible: boolean;
@@ -27,7 +24,7 @@ export const PREMIUM_CONTEXTS: Record<PremiumContext, PremiumContextCopy> = {
     entitlement: "all_sound_profiles",
     badge: "Drive+",
     title: "More character for the road",
-    body: "This Sound Profile follows throttle, gears, and load — not just speed. The full library is part of Drive+.",
+    body: "This Sound Profile follows throttle, gears, and load - not just speed. The full library is part of Drive+.",
     ctaLabel: "See Drive+",
     footnote: "You can still preview here. Essential Drive stays free.",
     dismissible: true,
@@ -38,7 +35,7 @@ export const PREMIUM_CONTEXTS: Record<PremiumContext, PremiumContextCopy> = {
     entitlement: "dynamic_drive",
     badge: "Drive+",
     title: "Sound that follows every gear",
-    body: "Gears, load, and transients track how you drive. Preview Dynamic Drive free — Drive+ keeps it after your preview.",
+    body: "Gears, load, and transients track how you drive. Preview Dynamic Drive free - Drive+ keeps it after your preview.",
     ctaLabel: "See Drive+",
     footnote: "Essential motion sound stays free without an account.",
     dismissible: true,
@@ -59,7 +56,7 @@ export const PREMIUM_CONTEXTS: Record<PremiumContext, PremiumContextCopy> = {
     entitlement: "advanced_controls",
     badge: "Drive+",
     title: "Tighter sync with your motion",
-    body: "Fine-tune how closely sound follows movement — especially helpful on Bluetooth headphones.",
+    body: "Fine-tune how closely sound follows movement - especially helpful on Bluetooth headphones.",
     ctaLabel: "See Drive+",
     dismissible: true,
     pricingHref: "/pricing",

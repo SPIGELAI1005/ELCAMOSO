@@ -127,7 +127,7 @@ export async function verifyGoogleIdToken(
   return assertGoogleIdTokenClaims(json, claimOpts);
 }
 
-/** @internal test helper — builds an unsigned JWT-shaped token (signature ignored when tokeninfo is mocked). */
+/** @internal test helper - builds an unsigned JWT-shaped token (signature ignored when tokeninfo is mocked). */
 export function buildTestIdToken(claims: Record<string, unknown>): string {
   const header = Buffer.from(JSON.stringify({ alg: "RS256", typ: "JWT" })).toString("base64url");
   const payload = Buffer.from(JSON.stringify(claims)).toString("base64url");

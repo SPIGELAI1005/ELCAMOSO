@@ -8,8 +8,15 @@ import {
 import { withPersonalityTransmission } from "@/lib/drive/drivetrain-resolve";
 import { computeDriveState, IDLE_STATE, type DriveState } from "@/lib/drive/model";
 import {
-  browserGpsMotionSample,
-  browserImuMotionSample,
+  AdaptiveTraceSampler,
+  getJourneyRepository,
+  shouldCaptureTrace,
+  shouldPlayLiveAudio,
+  type DriveOutputMode,
+  type JourneyReplaySource,
+  type JourneyTraceV1,
+} from "@/lib/journey-trace";
+import {
   createSensorFusion,
   markPhoneRelayLost,
   markPhoneRelayRestored,
@@ -19,6 +26,13 @@ import {
   tickSensorFusion,
   type SensorFusionState,
 } from "@/lib/motion/sensor-fusion";
+import {
+  createMotionCaptureProvider,
+  importNativeJourneys,
+  IDLE_CAPTURE_STATUS,
+  type CaptureQuality,
+  type MotionCaptureStatus,
+} from "@/lib/motion-capture";
 import {
   cancelPhoneRelayGrace,
   createRelayGraceState,
@@ -43,7 +57,6 @@ import type {
   DiagnosticsSessionMeta,
 } from "@/lib/diagnostics/types";
 import { MotionPipelineTracker, type MotionPipelineMetrics } from "@/lib/motion/pipeline-metrics";
-import { resolveGpsSpeed, type GpsPoint } from "@/lib/drive/gps-speed";
 import {
   deriveMotionState,
   IDLE_MOTION,
@@ -66,6 +79,7 @@ import {
   type DriveTrace,
   type TraceAggregates,
 } from "@/lib/drive/traces";
+import { summariseJourneyFromTrace, saveJourney, type JourneySummary } from "@/lib/journey";
 import { SoundEngine, type MeterReading } from "@/lib/sound/engine";
 import { getProfile } from "@/lib/sound/profiles";
 import { driveStateFromPowertrain } from "@/lib/powertrain/adapters/drive-state";
@@ -155,6 +169,9 @@ export interface SessionSnapshot {
   ab: { a: string; b: string; active: "a" | "b" } | null;
   cockpit: boolean;
   lastTraceId: string | null;
+  lastJourneyId: string | null;
+  /** JourneyTraceV1 id when Silent / Live+Capture recorded */
+  lastJourneyTraceId: string | null;
   lastAggregates: TraceAggregates | null;
   perf: AudioPerf;
   context: DriveContext;
@@ -162,6 +179,18 @@ export interface SessionSnapshot {
   suggestedProfileId: string | null;
   playlistTripMs: number;
   pipeline: MotionPipelineMetrics;
+  driveOutputMode: DriveOutputMode;
+  /** Browser hid the page during capture */
+  capturePausedByBrowser: boolean;
+  /** Offer "Still driving?" after long stationary */
+  suggestFinishJourney: boolean;
+  recordingElapsedMs: number;
+  recordingDistanceM: number;
+  /** Journey replay playhead (ms) when active */
+  journeyReplayPlayheadMs: number;
+  journeyReplayPaused: boolean;
+  nativeCapture: MotionCaptureStatus;
+  journeyRecovered: boolean;
 }
 
 type Listener = () => void;
@@ -189,6 +218,9 @@ export interface SessionConfig {
   dynamicDrive: boolean;
   /** Tesla Fleet Telemetry adapter (optional server bridge). */
   teslaFleetTelemetry: boolean;
+  /** live | capture | live-and-capture */
+  driveOutputMode: DriveOutputMode;
+  captureQuality: CaptureQuality;
 }
 
 const UI_MS = 80;
@@ -214,6 +246,8 @@ function configFingerprint(c: SessionConfig): string {
     activeProfileRules: c.activeProfileRules,
     dynamicDrive: c.dynamicDrive,
     teslaFleetTelemetry: c.teslaFleetTelemetry,
+    driveOutputMode: c.driveOutputMode,
+    captureQuality: c.captureQuality,
     snippets: c.snippets?.map((s) => ({
       id: s.id,
       name: s.name,
@@ -227,14 +261,13 @@ function configFingerprint(c: SessionConfig): string {
 class DriveSession {
   private engine: SoundEngine | null = null;
   private engineB: SoundEngine | null = null;
+  /** Serializes fade/close work so rapid Stop → Play cannot overlap graphs. */
+  private audioTeardown: Promise<void> = Promise.resolve();
   private listeners = new Set<Listener>();
   private raf: number | null = null;
   private lastTick = 0;
   private lastUi = 0;
-  private watchId: number | null = null;
-  private motionHandler: ((e: DeviceMotionEvent) => void) | null = null;
   private gpsAt = 0;
-  private gpsPoint: GpsPoint | null = null;
   private hideTimer: ReturnType<typeof setTimeout> | null = null;
   private wakeReleaseHandler: (() => void) | null = null;
   private speed = 0;
@@ -246,17 +279,38 @@ class DriveSession {
   private hasImu = false;
   private demo: DemoControls = { ...DEMO_DEFAULTS };
   private auditionKmh = 60;
+  /** Optional full DriveState override for Symphony / experience demos (audition only). */
+  private auditionDriveOverride: DriveState | null = null;
   private ducking = false;
   private cockpit = false;
   private ab: SessionSnapshot["ab"] = null;
   private replay: DriveTrace | null = null;
   private replayIndex = 0;
+  private journeyReplay: JourneyReplaySource | null = null;
+  private journeyTrace: JourneyTraceV1 | null = null;
+  private journeyReplayPaused = false;
+  private journeyAbProfileB: string | null = null;
+  private journeyAbSourceB: JourneyReplaySource | null = null;
   private driveStartedAt = 0;
   private recorder = new TraceRecorder();
   private wake: WakeLockSentinel | null = null;
   private lastRuleId: string | null = null;
   private lastTraceId: string | null = null;
+  private lastJourneyId: string | null = null;
+  private lastJourneyTraceId: string | null = null;
+  private lastJourney: JourneySummary | null = null;
   private lastAggregates: TraceAggregates | null = null;
+  private journeySampler: AdaptiveTraceSampler | null = null;
+  private motionCaptureProvider = createMotionCaptureProvider();
+  private nativeCapture: MotionCaptureStatus = {
+    ...IDLE_CAPTURE_STATUS,
+    backgroundCapable: this.motionCaptureProvider.ownsJourneyPersistence,
+  };
+  private journeyRecovered = false;
+  private captureStatusReadAt = 0;
+  private capturePausedByBrowser = false;
+  private suggestFinishJourney = false;
+  private recordingDistanceM = 0;
   private underruns = 0;
   private lastAudioTime = 0;
   private perf: AudioPerf = IDLE_PERF;
@@ -284,6 +338,8 @@ class DriveSession {
     activeProfileRules: [],
     dynamicDrive: false,
     teslaFleetTelemetry: false,
+    driveOutputMode: "live",
+    captureQuality: "balanced",
   };
   private vehicleTelemetryProvider: VehicleTelemetryProvider | null = null;
   private vehicleTelemetryUnsub: (() => void) | null = null;
@@ -308,7 +364,7 @@ class DriveSession {
   /** AudioContext created/resumed during pointerdown; handed to the next begin(). */
   private gestureAudioContext: AudioContext | null = null;
 
-  /** Dynamic Drive powertrain sim — also used for Demo (simulated gears at realistic speeds). */
+  /** Dynamic Drive powertrain sim - also used for Demo (simulated gears at realistic speeds). */
   private powertrainSimActive(profile: ReturnType<typeof getProfile>): boolean {
     return shouldUseDynamicPowertrainFromSessionConfig({
       supportsVirtualTransmission: supportsDynamicDrive(profile),
@@ -320,7 +376,7 @@ class DriveSession {
   /**
    * Call synchronously from a user-activation handler (pointerdown / click)
    * before any await. Browsers block AudioContext.resume() once the gesture
-   * stack unwinds — Home “Hold to accelerate” must prime audio here.
+   * stack unwinds - Home “Hold to accelerate” must prime audio here.
    */
   primeAudioFromUserGesture(): void {
     if (typeof window === "undefined") return;
@@ -373,16 +429,26 @@ class DriveSession {
       ab: this.ab,
       cockpit: this.cockpit,
       lastTraceId: this.lastTraceId,
+      lastJourneyId: this.lastJourneyId,
+      lastJourneyTraceId: this.lastJourneyTraceId,
       lastAggregates: this.lastAggregates,
       perf: this.perf,
       context: this.context,
       rulesHeld: this.rulesHeld,
       suggestedProfileId: this.suggestedProfileId,
-      playlistTripMs:
-        this.kind === "drive" && this.playlistTripStartedAt
-          ? Date.now() - this.playlistTripStartedAt
-          : 0,
+      playlistTripMs: this.playlistTripStartedAt
+        ? Math.max(0, Date.now() - this.playlistTripStartedAt)
+        : 0,
       pipeline: this.pipeline.snapshot(Date.now(), this.lastVehicleMotion.fallbackTier),
+      driveOutputMode: this.config.driveOutputMode,
+      capturePausedByBrowser: this.capturePausedByBrowser,
+      suggestFinishJourney: this.suggestFinishJourney,
+      recordingElapsedMs: this.driveStartedAt ? Math.max(0, Date.now() - this.driveStartedAt) : 0,
+      recordingDistanceM: this.recordingDistanceM,
+      journeyReplayPlayheadMs: this.journeyReplay?.getPlayheadMs() ?? 0,
+      journeyReplayPaused: this.journeyReplayPaused,
+      nativeCapture: this.nativeCapture,
+      journeyRecovered: this.journeyRecovered,
     };
   }
 
@@ -421,7 +487,7 @@ class DriveSession {
     return () => this.listeners.delete(fn);
   }
 
-  /** Quantized drive/powertrain fields — no analyser or pipeline reads. */
+  /** Quantized drive/powertrain fields - no analyser or pipeline reads. */
   private computeCoreUiFingerprint(): string {
     const s = this.state;
     const pt = s.powertrain;
@@ -542,7 +608,7 @@ class DriveSession {
       this.ruleLatched.clear();
       this.suggestedProfileId = null;
     }
-    if (merged.environmentId !== prevEnv) {
+    if (merged.environmentId !== prevEnv && merged.environmentId) {
       this.engine?.setEnvironment(merged.environmentId);
     }
     if (next.mix) this.engine?.setMix(next.mix);
@@ -617,12 +683,19 @@ class DriveSession {
 
   setAuditionKmh(kmh: number) {
     this.auditionKmh = Math.max(0, Math.min(180, kmh));
+    this.auditionDriveOverride = null;
     this.emit();
   }
 
+  /** Scripted DriveState while auditioning (Symphony demo). Cleared on stop. */
+  setAuditionDriveOverride(state: DriveState | null) {
+    this.auditionDriveOverride = state;
+  }
+
   async startDrive(opts?: { demoMotion?: boolean }) {
+    const playAudio = shouldPlayLiveAudio(this.config.driveOutputMode);
     try {
-      await this.begin("drive", { signature: true });
+      await this.begin("drive", { signature: playAudio, audio: playAudio });
     } catch {
       this.emit();
       return;
@@ -637,13 +710,86 @@ class DriveSession {
       this.ruleLatched.clear();
       this.baseMix = normalizeMix(this.config.mix ?? DEFAULT_LAYER_MIX);
       this.recorder.start(this.config.profileId);
+      this.capturePausedByBrowser = false;
+      this.suggestFinishJourney = false;
+      this.recordingDistanceM = 0;
+      this.lastJourneyTraceId = null;
+      this.journeyRecovered = false;
+      this.journeySampler = null;
+      const journeyId = `jt-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const nativeOwnsTrace =
+        shouldCaptureTrace(this.config.driveOutputMode) &&
+        this.motionCaptureProvider.ownsJourneyPersistence;
+      if (shouldCaptureTrace(this.config.driveOutputMode) && !nativeOwnsTrace) {
+        this.journeySampler = new AdaptiveTraceSampler({
+          journeyId,
+          startedAt: this.driveStartedAt,
+          outputMode: this.config.driveOutputMode,
+          captureProfileId: this.config.profileId,
+          onChunk: (chunkIndex, samples) => {
+            void getJourneyRepository().appendChunk({
+              journeyId,
+              chunkIndex,
+              samples,
+              events: [],
+              gaps: [],
+              writtenAt: Date.now(),
+            });
+          },
+        });
+        void getJourneyRepository()
+          .createJourney({
+            version: 1,
+            journeyId,
+            startedAt: this.driveStartedAt,
+            endedAt: null,
+            durationMs: 0,
+            outputMode: this.config.driveOutputMode,
+            captureProfileId: this.config.profileId,
+            status: "recording",
+            samples: [],
+            semanticEvents: [],
+            gaps: [],
+            summary: {
+              sampleCount: 0,
+              durationMs: 0,
+              distanceM: 0,
+              meanSpeedKmh: 0,
+              maxSpeedKmh: 0,
+              movingShare: 0,
+              gapCount: 0,
+              gapMs: 0,
+              primarySource: "none",
+              endedUnexpectedly: false,
+              browserPaused: false,
+            },
+          })
+          .catch(() => undefined);
+      }
       resetSensorFusion(this.sensorFusion);
       this.pipeline.reset();
       cancelPhoneRelayGrace(this.relayGrace);
       if (this.debugDriveDiagnostics) this.diagnosticsRecorder.clear();
       this.sensorFusion.options.sensitivity = this.config.motionSensitivity;
       this.sensorFusion.options.noiseFloor = this.config.motionNoiseFloor;
-      if (!opts?.demoMotion) await this.attachSensors();
+      if (!opts?.demoMotion) {
+        await this.motionCaptureProvider.start(
+          {
+            journeyId,
+            startedAt: this.driveStartedAt,
+            outputMode: this.config.driveOutputMode,
+            captureProfileId: this.config.profileId,
+            quality: this.config.captureQuality,
+            persistJourney: shouldCaptureTrace(this.config.driveOutputMode),
+          },
+          (sample, receivedAt) => {
+            this.gpsAt = receivedAt;
+            if (typeof sample.accelerationLongitudinal === "number") this.hasImu = true;
+            pushMotionSample(this.sensorFusion, sample, receivedAt);
+          },
+        );
+        this.nativeCapture = await this.motionCaptureProvider.getStatus();
+      }
       this.syncVehicleTelemetryProvider();
       this.status = "running";
       this.kind = "drive";
@@ -712,12 +858,168 @@ class DriveSession {
       await this.begin("replay", { signature: false });
       this.replay = trace;
       this.replayIndex = 0;
+      this.journeyReplay = null;
+      this.journeyTrace = null;
+      this.journeyReplayPaused = false;
       this.status = "running";
       this.kind = "replay";
       this.lastTick = performance.now();
       this.loop();
       this.emit();
     } catch {
+      this.emit();
+    }
+  }
+
+  /**
+   * Replay a JourneyTrace through SoundEngine with optional Engine/Symphony/World/Fusion profile.
+   */
+  async startJourneyReplay(
+    trace: JourneyTraceV1,
+    source: JourneyReplaySource,
+    opts?: { profileId?: string; seed?: number },
+  ) {
+    const profileId = opts?.profileId ?? source.profileId ?? this.config.profileId;
+    this.syncConfig({ profileId });
+    try {
+      await this.begin("replay", {
+        signature: false,
+        audio: true,
+        ...(opts?.seed !== undefined ? { seed: opts.seed } : {}),
+      });
+      this.replay = null;
+      this.replayIndex = 0;
+      this.journeyTrace = trace;
+      this.journeyReplay = source;
+      this.journeyReplayPaused = false;
+      this.journeyAbProfileB = null;
+      this.journeyAbSourceB = null;
+      this.status = "running";
+      this.kind = "replay";
+      this.lastTick = performance.now();
+      this.loop();
+      this.emit();
+    } catch {
+      this.emit();
+    }
+  }
+
+  /** Switch experience mid-replay; preserves playhead. Tears down prior audio nodes. */
+  async switchJourneyInterpretation(profileId: string, seed?: number) {
+    if (!this.journeyReplay || !this.journeyTrace) return;
+    const ms = this.journeyReplay.getPlayheadMs();
+    const wasPaused = this.journeyReplayPaused;
+    this.syncConfig({ profileId });
+    this.journeyReplay.setInterpretation(profileId);
+    this.journeyReplay.seekTo(ms);
+    // Rebuild SoundEngine so nodes don't leak across interpretations
+    await this.begin("replay", {
+      signature: false,
+      audio: true,
+      ...(seed !== undefined ? { seed } : {}),
+    });
+    this.kind = "replay";
+    this.status = wasPaused ? "suspended" : "running";
+    this.journeyReplayPaused = wasPaused;
+    this.ab = null;
+    this.journeyAbSourceB = null;
+    this.journeyAbProfileB = null;
+    if (!wasPaused) {
+      this.lastTick = performance.now();
+      if (this.raf === null) this.loop();
+    }
+    this.emit();
+  }
+
+  pauseJourneyReplay() {
+    if ((this.kind !== "replay" && this.kind !== "ab") || !this.journeyReplay) return;
+    this.journeyReplayPaused = true;
+    void Promise.all([this.engine?.fadeAndSuspend(), this.engineB?.fadeAndSuspend()]);
+    this.status = "suspended";
+    this.emit();
+  }
+
+  resumeJourneyReplay() {
+    if ((this.kind !== "replay" && this.kind !== "ab") || !this.journeyReplay) return;
+    this.journeyReplayPaused = false;
+    void Promise.all([this.engine?.resumeFromIdle(), this.engineB?.resumeFromIdle()]);
+    this.status = "running";
+    if (this.raf === null) {
+      this.lastTick = performance.now();
+      this.loop();
+    }
+    this.emit();
+  }
+
+  seekJourneyReplay(ms: number) {
+    this.journeyReplay?.seekTo(ms);
+    this.journeyAbSourceB?.seekTo(ms);
+    this.emit();
+  }
+
+  restartJourneyReplay() {
+    this.journeyReplay?.reset();
+    this.journeyAbSourceB?.reset();
+    this.journeyReplayPaused = false;
+    if (this.status === "suspended") void this.resumeJourneyReplay();
+    this.emit();
+  }
+
+  setJourneyReplayRate(rate: number) {
+    if (!this.journeyReplay) return;
+    const r = Math.max(0.25, Math.min(4, rate));
+    this.journeyReplay.rate = r;
+    if (this.journeyAbSourceB) this.journeyAbSourceB.rate = r;
+    this.emit();
+  }
+
+  getJourneyReplayPlayheadMs() {
+    return this.journeyReplay?.getPlayheadMs() ?? 0;
+  }
+
+  /**
+   * DEV: A/B same journey - two personalities, flip with flipAb().
+   */
+  async startJourneyAb(
+    trace: JourneyTraceV1,
+    sourceA: JourneyReplaySource,
+    sourceB: JourneyReplaySource,
+    profileA: string,
+    profileB: string,
+    seed?: number,
+  ) {
+    this.syncConfig({ profileId: profileA });
+    try {
+      this.ab = { a: profileA, b: profileB, active: "a" };
+      await this.begin("ab", {
+        signature: false,
+        audio: true,
+        ...(seed !== undefined ? { seed } : {}),
+      });
+      this.engineB = new SoundEngine();
+      await this.engineB.start(getProfile(profileB), {
+        signature: false,
+        environmentId: this.config.environmentId,
+        mix: this.config.mix,
+        ...(seed !== undefined ? { seed } : {}),
+      });
+      this.engineB.setVolume(0.0001);
+      this.journeyTrace = trace;
+      this.journeyReplay = sourceA;
+      this.journeyAbSourceB = sourceB;
+      this.journeyAbProfileB = profileB;
+      this.journeyReplayPaused = false;
+      this.replay = null;
+      this.status = "running";
+      this.kind = "ab";
+      this.lastTick = performance.now();
+      this.loop();
+      this.emit();
+    } catch (error) {
+      reportAudioError(error);
+      this.status = "error";
+      this.error = "Audio unavailable";
+      this.kind = "idle";
       this.emit();
     }
   }
@@ -774,8 +1076,41 @@ class DriveSession {
     this.emit();
   }
 
-  stop() {
-    this.detachSensors();
+  getSymphonyDiagnostics() {
+    return this.engine?.getSymphonyDiagnostics() ?? null;
+  }
+
+  getSymphonyEnergy() {
+    return this.engine?.getSymphonyEnergy() ?? null;
+  }
+
+  getFusionDiagnostics() {
+    return this.engine?.getFusionDiagnostics() ?? null;
+  }
+
+  setFusionMix(mix: number) {
+    this.engine?.setFusionMix(mix);
+  }
+
+  setFusionHarmonicResonance(depth: number) {
+    this.engine?.setFusionHarmonicResonance(depth);
+  }
+
+  getWorldDiagnostics() {
+    return this.engine?.getWorldDiagnostics() ?? null;
+  }
+
+  getLastJourney(): JourneySummary | null {
+    return this.lastJourney;
+  }
+
+  async stop() {
+    let nativeTrace: JourneyTraceV1 | null = null;
+    try {
+      nativeTrace = await this.motionCaptureProvider.stop();
+    } catch {
+      // A persisted partial trace will be recovered by syncNativeJourneys().
+    }
     this.detachIdle();
     void this.releaseWake();
     if (this.raf !== null) cancelAnimationFrame(this.raf);
@@ -785,19 +1120,71 @@ class DriveSession {
       this.lastTraceId = trace.id;
       this.lastAggregates = trace.aggregates;
       void saveTrace(trace);
+      try {
+        const journey = summariseJourneyFromTrace(trace);
+        this.lastJourneyId = journey.id;
+        this.lastJourney = journey;
+        void saveJourney(journey).catch(() => undefined);
+      } catch {
+        this.lastJourneyId = null;
+        this.lastJourney = null;
+      }
     }
-    void this.engine?.stop();
-    void this.engineB?.stop();
+    if (this.kind === "drive" && this.journeySampler) {
+      try {
+        const jt = this.journeySampler.finalize();
+        this.lastJourneyTraceId = jt.journeyId;
+        this.recordingDistanceM = jt.summary.distanceM;
+        void getJourneyRepository()
+          .finalizeJourney(jt)
+          .catch(() => undefined);
+      } catch {
+        this.lastJourneyTraceId = null;
+      }
+    }
+    if (nativeTrace) {
+      try {
+        await getJourneyRepository().finalizeJourney(nativeTrace);
+        await this.motionCaptureProvider.acknowledgeJourneys([nativeTrace.journeyId]);
+        this.lastJourneyTraceId = nativeTrace.journeyId;
+        this.recordingDistanceM = nativeTrace.summary.distanceM;
+      } catch {
+        this.lastJourneyTraceId = null;
+      }
+    }
+    this.journeySampler = null;
+    this.capturePausedByBrowser = false;
+    this.nativeCapture = {
+      ...IDLE_CAPTURE_STATUS,
+      backgroundCapable: this.motionCaptureProvider.ownsJourneyPersistence,
+    };
+    this.suggestFinishJourney = false;
+    const stoppingEngine = this.engine;
+    const stoppingEngineB = this.engineB;
     this.engine = null;
     this.engineB = null;
+    if (stoppingEngine || stoppingEngineB) {
+      this.audioTeardown = this.audioTeardown.then(async () => {
+        await Promise.all([
+          stoppingEngine?.stop().catch(() => undefined),
+          stoppingEngineB?.stop().catch(() => undefined),
+        ]);
+      });
+    }
     this.kind = "idle";
     this.status = "idle";
     this.state = IDLE_STATE;
     this.motion = IDLE_MOTION;
     this.speed = 0;
     this.hasImu = false;
+    this.auditionDriveOverride = null;
     this.ab = null;
     this.replay = null;
+    this.journeyReplay = null;
+    this.journeyTrace = null;
+    this.journeyReplayPaused = false;
+    this.journeyAbSourceB = null;
+    this.journeyAbProfileB = null;
     this.ducking = false;
     this.underruns = 0;
     this.lastAudioTime = 0;
@@ -824,7 +1211,31 @@ class DriveSession {
     this.emit();
   }
 
-  private async begin(kind: SessionKind, opts: { signature: boolean }) {
+  async syncNativeJourneys() {
+    if (!this.motionCaptureProvider.ownsJourneyPersistence) return;
+    try {
+      this.nativeCapture = await this.motionCaptureProvider.getStatus();
+      const result = await importNativeJourneys(this.motionCaptureProvider);
+      const newest = result.importedIds.at(-1);
+      if (newest) this.lastJourneyTraceId = newest;
+      this.journeyRecovered = result.recoveredIds.length > 0;
+      this.emit();
+    } catch {
+      // Native bridge can be unavailable during a transient WebView resume.
+    }
+  }
+
+  /** User dismissed "Still driving?" and continues capture. */
+  continueCapture() {
+    this.suggestFinishJourney = false;
+    this.journeySampler?.clearStationarySuggestion();
+    this.emit();
+  }
+
+  private async begin(
+    kind: SessionKind,
+    opts: { signature: boolean; audio?: boolean; seed?: number },
+  ) {
     await this.stopSoft();
     this.error = null;
     this.status = "starting";
@@ -832,6 +1243,12 @@ class DriveSession {
     this.underruns = 0;
     this.lastAudioTime = 0;
     this.emit();
+    const wantAudio = opts.audio !== false;
+    if (!wantAudio) {
+      // Silent Capture: motion only - no AudioContext / SoundEngine.
+      this.engine = null;
+      return;
+    }
     try {
       const profile = getProfile(this.config.profileId);
       const engine = new SoundEngine();
@@ -842,6 +1259,7 @@ class DriveSession {
         environmentId: this.config.environmentId,
         mix: this.config.mix,
         snippets: this.config.snippets,
+        ...(opts.seed !== undefined ? { seed: opts.seed } : {}),
         ...(primedContext ? { context: primedContext } : {}),
       });
       engine.setCabinEq(this.config.cabinEq);
@@ -861,9 +1279,18 @@ class DriveSession {
 
   /** Tear down audio; await close so the next begin() does not stack contexts. */
   private async stopSoft() {
+    await this.audioTeardown;
     if (this.raf !== null) cancelAnimationFrame(this.raf);
     this.raf = null;
-    this.detachSensors();
+    try {
+      const nativeTrace = await this.motionCaptureProvider.stop();
+      if (nativeTrace) {
+        await getJourneyRepository().finalizeJourney(nativeTrace);
+        await this.motionCaptureProvider.acknowledgeJourneys([nativeTrace.journeyId]);
+      }
+    } catch {
+      this.motionCaptureProvider.dispose();
+    }
     this.releaseVehicleTelemetryProvider();
     const eng = this.engine;
     const engB = this.engineB;
@@ -883,7 +1310,23 @@ class DriveSession {
     this.lastTick = now;
     const profile = getProfile(this.config.profileId);
 
-    if (this.kind === "replay" && this.replay) {
+    if ((this.kind === "replay" || this.kind === "ab") && this.journeyReplay) {
+      if (this.journeyReplayPaused || this.status === "suspended") {
+        this.raf = requestAnimationFrame(this.loop);
+        return;
+      }
+      const sample = this.journeyReplay.next(dt);
+      if (!sample) {
+        this.stop();
+        return;
+      }
+      this.noteMotion(sample, dt);
+      this.tickAudio(sample, dt);
+      if (this.kind === "ab" && this.journeyAbSourceB && this.engineB) {
+        const b = this.journeyAbSourceB.next(dt);
+        if (b) this.engineB.update(b);
+      }
+    } else if (this.kind === "replay" && this.replay) {
       this.replayIndex += 1;
       const sample = this.replay.samples[this.replayIndex];
       if (!sample) {
@@ -909,13 +1352,19 @@ class DriveSession {
         this.speed = demoTick.speedMs;
         acceleration = demoTick.accelerationMs2;
       } else if (this.kind === "audition" || this.kind === "ab") {
-        const target = this.auditionKmh / 3.6;
-        const rate = target > this.speed ? 2.6 : 3.4;
-        const delta = target - this.speed;
-        const step = Math.sign(delta) * Math.min(Math.abs(delta), rate * dt);
-        const prev = this.speed;
-        this.speed = Math.max(0, prev + step);
-        acceleration = (this.speed - prev) / dt;
+        if (this.kind === "audition" && this.auditionDriveOverride) {
+          const o = this.auditionDriveOverride;
+          this.speed = o.speed;
+          acceleration = o.acceleration;
+        } else {
+          const target = this.auditionKmh / 3.6;
+          const rate = target > this.speed ? 2.6 : 3.4;
+          const delta = target - this.speed;
+          const step = Math.sign(delta) * Math.min(Math.abs(delta), rate * dt);
+          const prev = this.speed;
+          this.speed = Math.max(0, prev + step);
+          acceleration = (this.speed - prev) / dt;
+        }
       }
 
       const next = this.computeNextDriveState({
@@ -926,6 +1375,16 @@ class DriveSession {
         now,
         ...(this.kind === "drive" ? { vehicleMotion: driveVehicleMotion } : {}),
       });
+      if (this.kind === "audition" && this.auditionDriveOverride) {
+        const o = this.auditionDriveOverride;
+        next.throttle = o.throttle;
+        next.regen = o.regen;
+        next.load = o.load;
+        next.jerk = o.jerk;
+        next.speedNormalized = o.speedNormalized;
+        next.accelerationNormalized = o.accelerationNormalized;
+        next.timestamp = now;
+      }
       if (this.kind === "demo") {
         applyDemoDriveOverrides(next, {
           demo: this.demo,
@@ -942,6 +1401,24 @@ class DriveSession {
       this.noteMotion(next, dt);
       this.tickAudio(audioState, dt);
       if (this.kind === "drive") this.recorder.push(next);
+      if (this.kind === "drive" && this.journeySampler) {
+        this.journeySampler.pushMotion(this.lastVehicleMotion, dt);
+        this.recordingDistanceM = this.journeySampler.getDistanceM();
+        if (this.journeySampler.shouldSuggestFinish()) {
+          this.suggestFinishJourney = true;
+        }
+      }
+      if (
+        this.kind === "drive" &&
+        this.motionCaptureProvider.ownsJourneyPersistence &&
+        now - this.captureStatusReadAt > 1000
+      ) {
+        this.captureStatusReadAt = now;
+        void this.motionCaptureProvider.getStatus().then((status) => {
+          this.nativeCapture = status;
+          this.recordingDistanceM = status.distanceM;
+        });
+      }
       if (this.kind === "drive" && this.debugDriveDiagnostics) {
         this.recordDriveDiagnostics(next);
       }
@@ -1084,10 +1561,13 @@ class DriveSession {
   }
 
   private tickAudio(state: DriveState, wallDt: number) {
+    if (!this.engine) return;
     this.pipeline.noteAudio(performance.now());
     const started = performance.now();
     this.engine?.update(state);
-    this.engineB?.update(state);
+    // Journey A/B advances B from its own replay source below. Feeding it A
+    // here as well would schedule two contradictory frames per animation tick.
+    if (!this.journeyAbSourceB) this.engineB?.update(state);
     const updateMs = performance.now() - started;
     const lat = this.engine?.getPerf() ?? { baseLatencyMs: 0, outputLatencyMs: 0, currentTime: 0 };
     if (this.lastAudioTime > 0 && lat.currentTime > 0) {
@@ -1117,94 +1597,6 @@ class DriveSession {
     if (lat.currentTime > 0) this.lastAudioTime = lat.currentTime;
   }
 
-  private ingestGpsPosition(pos: GeolocationPosition) {
-    const atMs = performance.now();
-    const resolved = resolveGpsSpeed({
-      reportedSpeed: pos.coords.speed,
-      latitude: pos.coords.latitude,
-      longitude: pos.coords.longitude,
-      atMs,
-      previous: this.gpsPoint,
-      accuracyM: pos.coords.accuracy,
-    });
-    this.gpsPoint = resolved.point;
-    // Prefer reported or delta samples. Skip "none" so fusion keeps the last
-    // good fix instead of treating a null-speed browser fix as fresh zero.
-    if (resolved.source !== "none") {
-      this.gpsAt = atMs;
-      pushMotionSample(
-        this.sensorFusion,
-        browserGpsMotionSample({
-          speedMs: resolved.speed,
-          accuracyM: Number.isFinite(pos.coords.accuracy) ? pos.coords.accuracy : null,
-          timestamp: pos.timestamp || Date.now(),
-        }),
-        atMs,
-      );
-    }
-  }
-
-  private async attachSensors() {
-    if (typeof navigator === "undefined" || !navigator.geolocation) {
-      throw new Error("no-geo");
-    }
-    this.gpsPoint = null;
-    const DM = window.DeviceMotionEvent as typeof DeviceMotionEvent & {
-      requestPermission?: () => Promise<PermissionState>;
-    };
-    if (typeof DM?.requestPermission === "function") {
-      try {
-        await DM.requestPermission();
-      } catch {
-        /* IMU stays optional */
-      }
-    }
-    await new Promise<void>((resolve, reject) => {
-      let settled = false;
-      this.watchId = navigator.geolocation.watchPosition(
-        (pos) => {
-          this.ingestGpsPosition(pos);
-          if (!settled) {
-            settled = true;
-            resolve();
-          }
-        },
-        (err) => {
-          if (!settled) {
-            settled = true;
-            reject(err);
-          }
-        },
-        { enableHighAccuracy: true, maximumAge: 1000, timeout: 15000 },
-      );
-    });
-    this.motionHandler = (event: DeviceMotionEvent) => {
-      const y = event.accelerationIncludingGravity?.y ?? event.acceleration?.y;
-      if (typeof y === "number") {
-        const at = performance.now();
-        this.hasImu = true;
-        pushMotionSample(
-          this.sensorFusion,
-          browserImuMotionSample({ accelMs2: y, timestamp: Date.now() }),
-          at,
-        );
-      }
-    };
-    window.addEventListener("devicemotion", this.motionHandler);
-  }
-
-  private detachSensors() {
-    if (this.watchId !== null && typeof navigator !== "undefined") {
-      navigator.geolocation.clearWatch(this.watchId);
-      this.watchId = null;
-    }
-    if (this.motionHandler) {
-      window.removeEventListener("devicemotion", this.motionHandler);
-      this.motionHandler = null;
-    }
-    this.gpsPoint = null;
-  }
-
   private clearHideTimer() {
     if (this.hideTimer !== null) {
       clearTimeout(this.hideTimer);
@@ -1228,23 +1620,38 @@ class DriveSession {
 
   private onPageHide = () => {
     this.clearHideTimer();
+    if (this.kind === "drive" && this.journeySampler) {
+      this.capturePausedByBrowser = true;
+      this.journeySampler.markBrowserPaused("browser_suspend");
+      this.emit();
+    }
     void this.suspend();
   };
 
   private onPageShow = () => {
     this.clearHideTimer();
+    if (this.kind === "drive" && this.journeySampler) {
+      this.journeySampler.markBrowserResumed();
+      // Keep flag true so UI can disclose the gap - do not clear silently.
+    }
     void this.resume();
     if (this.kind === "drive") void this.requestWake();
+    void this.syncNativeJourneys();
   };
 
   private onVisibility = () => {
     if (document.hidden) {
-      // Drive: grace so a quick shade / multitask peek does not kill audio.
       if (this.kind === "drive" && this.status === "running") {
         this.clearHideTimer();
         this.hideTimer = setTimeout(() => {
           this.hideTimer = null;
-          if (document.hidden) void this.suspend();
+          if (document.hidden) {
+            if (this.journeySampler) {
+              this.capturePausedByBrowser = true;
+              this.journeySampler.markBrowserPaused("visibility");
+            }
+            void this.suspend();
+          }
         }, DRIVE_HIDE_GRACE_MS);
         return;
       }
@@ -1252,19 +1659,38 @@ class DriveSession {
       return;
     }
     this.clearHideTimer();
+    if (this.kind === "drive" && this.journeySampler && this.capturePausedByBrowser) {
+      this.journeySampler.markBrowserResumed();
+    }
     void this.resume();
     if (this.kind === "drive") void this.requestWake();
+    void this.syncNativeJourneys();
   };
 
   async suspend() {
-    if (this.status !== "running" || !this.engine) return;
+    if (this.status !== "running") return;
+    if (!this.engine) {
+      // Silent capture: mark gap but keep the rAF loop when possible.
+      this.status = "suspended";
+      this.emit();
+      return;
+    }
     await this.engine.fadeAndSuspend();
     this.status = "suspended";
     this.emit();
   }
 
   async resume() {
-    if (this.status !== "suspended" || !this.engine) return;
+    if (this.status !== "suspended") return;
+    if (!this.engine) {
+      this.status = "running";
+      if (this.raf === null && this.kind === "drive") {
+        this.lastTick = performance.now();
+        this.loop();
+      }
+      this.emit();
+      return;
+    }
     await this.engine.resumeFromIdle();
     this.status = "running";
     this.ducking = false;
@@ -1345,7 +1771,7 @@ class DriveSession {
     this.fuseMotionOnIngest(receivedAt);
   }
 
-  /** Fuse immediately when relay samples arrive — do not wait for the next animation frame. */
+  /** Fuse immediately when relay samples arrive - do not wait for the next animation frame. */
   private fuseMotionOnIngest(now: number) {
     if (this.kind !== "drive" || this.status !== "running") return;
     const dt = Math.min(
@@ -1362,7 +1788,7 @@ class DriveSession {
     this.speed = vehicleMotion.speedKmh / 3.6;
   }
 
-  /** Phone relay peer dropped — wait for reconnect before suspending phone tier. */
+  /** Phone relay peer dropped - wait for reconnect before suspending phone tier. */
   onPhoneRelayPeerLost() {
     schedulePhoneRelayGrace(this.relayGrace, () => {
       markPhoneRelayLost(this.sensorFusion);

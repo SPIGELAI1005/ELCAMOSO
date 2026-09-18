@@ -3,9 +3,7 @@ import { getDynamicDriveTrialService } from "@/lib/dynamic-drive-trial/service";
 import { getAccountSession } from "@/lib/account/auth-service";
 import { hasDrivePlusSubscriptionAccess } from "@/lib/billing/subscription-access-policy";
 import { getSubscriptionForUser } from "@/lib/billing/subscription-store";
-import {
-  TRIAL_DRIVE_PLUS_ENTITLEMENTS,
-} from "@/lib/entitlements/plans";
+import { TRIAL_DRIVE_PLUS_ENTITLEMENTS } from "@/lib/entitlements/plans";
 import { buildEntitlementSnapshot } from "@/lib/entitlements/resolve";
 import type {
   Entitlement,
@@ -70,7 +68,10 @@ export async function resolveEntitlementUser(input: {
         revision += 1;
       }
 
-      const trialSnapshot = await getDynamicDriveTrialService().getStatus(session.userId, new Date(now));
+      const trialSnapshot = await getDynamicDriveTrialService().getStatus(
+        session.userId,
+        new Date(now),
+      );
       if (trialGrantsDrivePlusEntitlements(trialSnapshot)) {
         trialStatus = "active";
         trialEntitlements = [...TRIAL_DRIVE_PLUS_ENTITLEMENTS];
@@ -87,7 +88,7 @@ export async function resolveEntitlementUser(input: {
     plan,
     subscriptionStatus,
     trialStatus,
-    trialEntitlements,
+    ...(trialEntitlements ? { trialEntitlements } : {}),
     trialEndsAt,
     revision,
   };
@@ -117,8 +118,8 @@ export async function requireEntitlement(input: {
   now?: number;
 }): Promise<EntitlementUser> {
   const user = await resolveEntitlementUser({
-    sessionToken: input.sessionToken,
-    now: input.now,
+    ...(input.sessionToken !== undefined ? { sessionToken: input.sessionToken } : {}),
+    ...(input.now !== undefined ? { now: input.now } : {}),
   });
   const snapshot = buildEntitlementSnapshot(user, input.now ?? Date.now());
   if (!snapshot.entitlements.includes(input.entitlement)) {

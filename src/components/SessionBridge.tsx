@@ -4,10 +4,7 @@ import { useSessionSelector, useSessionStore } from "@/lib/store/session-store";
 import { useSettings } from "@/lib/drive/useSettings";
 import { getProfileGain, getTuning } from "@/lib/drive/settings";
 import { useFeatureAccess } from "@/lib/entitlements/selectors";
-import {
-  beginLiveDriveAccess,
-  endLiveDriveAccess,
-} from "@/lib/entitlements/live-drive-access";
+import { beginLiveDriveAccess, endLiveDriveAccess } from "@/lib/entitlements/live-drive-access";
 import { useEntitlements } from "@/lib/entitlements/useEntitlements";
 import { isLiveSessionStatus } from "@/lib/ui/chrome";
 
@@ -32,8 +29,7 @@ export function SessionBridge() {
   const lastSessionProfileIdRef = useRef(sessionUi.profileId);
 
   useEffect(() => {
-    const isLiveDrive =
-      sessionSnap.kind === "drive" && isLiveSessionStatus(sessionSnap.status);
+    const isLiveDrive = sessionSnap.kind === "drive" && isLiveSessionStatus(sessionSnap.status);
     if (isLiveDrive && !wasLiveDriveRef.current) {
       beginLiveDriveAccess(entitlements);
     }
@@ -65,6 +61,8 @@ export function SessionBridge() {
       activeProfileRules: activeCustom?.rules ?? [],
       dynamicDrive,
       teslaFleetTelemetry: settings.teslaFleetTelemetry,
+      driveOutputMode: settings.driveOutputMode,
+      captureQuality: settings.captureQuality,
     });
   }, [settings, activeCustom, access.advancedControls, access.dynamicDrive]);
 

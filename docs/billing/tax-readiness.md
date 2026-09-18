@@ -18,12 +18,12 @@ This repo prepares **Stripe Checkout parameters** that can be turned on via envi
 
 ## Design principles
 
-| Principle | Implementation |
-| --------- | -------------- |
-| No invented tax rates | No percentages or country tables in code |
-| No registration assumptions | No DE/EU VAT ID logic in entitlements or checkout |
-| Configurable by environment | Env flags; all off in dev by default |
-| Stripe as calculator | When enabled, Stripe Tax / Checkout collect and calculate |
+| Principle                   | Implementation                                                          |
+| --------------------------- | ----------------------------------------------------------------------- |
+| No invented tax rates       | No percentages or country tables in code                                |
+| No registration assumptions | No DE/EU VAT ID logic in entitlements or checkout                       |
+| Configurable by environment | Env flags; all off in dev by default                                    |
+| Stripe as calculator        | When enabled, Stripe Tax / Checkout collect and calculate               |
 | Billing authority unchanged | Webhooks still provision entitlements; tax does not affect access logic |
 
 ---
@@ -32,12 +32,12 @@ This repo prepares **Stripe Checkout parameters** that can be turned on via envi
 
 All variables support optional `_STAGING` / `_PRODUCTION` suffixes (same pattern as `STRIPE_SECRET_KEY`).
 
-| Variable | Default | Effect |
-| -------- | ------- | ------ |
-| `STRIPE_CHECKOUT_AUTOMATIC_TAX` | off | Sets Checkout `automatic_tax.enabled=true` when `true` |
-| `STRIPE_CHECKOUT_BILLING_ADDRESS_COLLECTION` | unset | `auto` or `required` → `billing_address_collection` |
-| `STRIPE_CHECKOUT_TAX_ID_COLLECTION` | off | Sets `tax_id_collection.enabled=true` when `true` (B2B VAT ID, etc.) |
-| `STRIPE_CHECKOUT_CUSTOMER_UPDATE` | auto when tax on | `auto` / `off` — persist name/address on Customer from Checkout |
+| Variable                                     | Default          | Effect                                                               |
+| -------------------------------------------- | ---------------- | -------------------------------------------------------------------- |
+| `STRIPE_CHECKOUT_AUTOMATIC_TAX`              | off              | Sets Checkout `automatic_tax.enabled=true` when `true`               |
+| `STRIPE_CHECKOUT_BILLING_ADDRESS_COLLECTION` | unset            | `auto` or `required` → `billing_address_collection`                  |
+| `STRIPE_CHECKOUT_TAX_ID_COLLECTION`          | off              | Sets `tax_id_collection.enabled=true` when `true` (B2B VAT ID, etc.) |
+| `STRIPE_CHECKOUT_CUSTOMER_UPDATE`            | auto when tax on | `auto` / `off` — persist name/address on Customer from Checkout      |
 
 ### Example (staging — only after Stripe Tax is configured in Dashboard)
 

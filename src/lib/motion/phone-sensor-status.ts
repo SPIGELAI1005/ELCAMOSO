@@ -96,7 +96,7 @@ export function phoneSensorNeedsAttention(sensor: PhoneSensorStatusSnapshot): bo
   return phoneSensorAttentionMessage(sensor) !== null;
 }
 
-/** One-line product copy when the phone link needs attention — no sensor grid. */
+/** One-line product copy when the phone link needs attention - no sensor grid. */
 export function phoneSensorAttentionMessage(sensor: PhoneSensorStatusSnapshot): string | null {
   if (sensor.gps === "denied" || sensor.motion === "denied") {
     return "Allow location and motion so the car can follow the road.";

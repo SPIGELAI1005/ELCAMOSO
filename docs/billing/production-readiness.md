@@ -4,10 +4,10 @@ Checklist before setting `MONETIZATION_ENABLED=1` in production.
 
 ## Feature flag
 
-| Variable | Default | Effect |
-|----------|---------|--------|
-| `MONETIZATION_ENABLED` | off | When `0` / unset: no checkout, upgrades, trials, or purchase UX. FREE ELCAMOSO works normally. |
-| Stripe env vars | — | Required for billing when flag is on. Webhooks still process if Stripe is configured (existing subscribers). |
+| Variable               | Default | Effect                                                                                                       |
+| ---------------------- | ------- | ------------------------------------------------------------------------------------------------------------ |
+| `MONETIZATION_ENABLED` | off     | When `0` / unset: no checkout, upgrades, trials, or purchase UX. FREE ELCAMOSO works normally.               |
+| Stripe env vars        | —       | Required for billing when flag is on. Webhooks still process if Stripe is configured (existing subscribers). |
 
 ```env
 # Keep false until every item below is verified
@@ -69,12 +69,12 @@ npm run test:e2e -- e2e/tesla-purchase.spec.ts e2e/routes-smoke.spec.ts
 
 ## Stripe live / test separation
 
-| Check | How to verify |
-|-------|----------------|
-| Test keys never in production deploy | Production env uses `sk_live_…` / live Price ids only |
-| Live webhook secret separate | Dashboard → Developers → Webhooks → signing secret for **live** endpoint |
-| Price ids match Dashboard | `STRIPE_PRICE_DRIVE_PLUS_*` match live recurring Prices (EUR amounts align with `plan-display.ts`) |
-| Test mode smoke first | Full flow on test keys with `MONETIZATION_ENABLED=1` on staging |
+| Check                                | How to verify                                                                                      |
+| ------------------------------------ | -------------------------------------------------------------------------------------------------- |
+| Test keys never in production deploy | Production env uses `sk_live_…` / live Price ids only                                              |
+| Live webhook secret separate         | Dashboard → Developers → Webhooks → signing secret for **live** endpoint                           |
+| Price ids match Dashboard            | `STRIPE_PRICE_DRIVE_PLUS_*` match live recurring Prices (EUR amounts align with `plan-display.ts`) |
+| Test mode smoke first                | Full flow on test keys with `MONETIZATION_ENABLED=1` on staging                                    |
 
 Display amounts in UI (`€25` / year, `€3` / month) must match Stripe Price configuration.
 
@@ -82,11 +82,11 @@ Display amounts in UI (`€25` / year, `€3` / month) must match Stripe Price c
 
 ## Webhook endpoint
 
-| Item | Value |
-|------|--------|
-| Route | `POST /api/stripe/webhook` |
-| Body | Raw UTF-8 (no JSON middleware) |
-| Header | `Stripe-Signature` verified server-side |
+| Item   | Value                                                                                             |
+| ------ | ------------------------------------------------------------------------------------------------- |
+| Route  | `POST /api/stripe/webhook`                                                                        |
+| Body   | Raw UTF-8 (no JSON middleware)                                                                    |
+| Header | `Stripe-Signature` verified server-side                                                           |
 | Events | `checkout.session.completed`, `customer.subscription.*`, `invoice.paid`, `invoice.payment_failed` |
 
 Stripe Dashboard (live): point webhook to `https://your-production-domain.com/api/stripe/webhook`.
@@ -106,12 +106,12 @@ Checkout builds:
 
 Verify return paths:
 
-| Flow | returnPath |
-|------|------------|
-| Pricing | `/pricing` |
-| Settings plan | `/settings?workspace=plan` |
-| Tesla upgrade | `/upgrade/{token}` |
-| Trial complete | `/drive` |
+| Flow           | returnPath                 |
+| -------------- | -------------------------- |
+| Pricing        | `/pricing`                 |
+| Settings plan  | `/settings?workspace=plan` |
+| Tesla upgrade  | `/upgrade/{token}`         |
+| Trial complete | `/drive`                   |
 
 ---
 
@@ -136,13 +136,13 @@ Verify return paths:
 
 ## Legal and disclosures
 
-| Page | Path | Verify |
-|------|------|--------|
-| Terms | `/legal/terms` | Drive+ section: subscription, trial, cancellation, refunds |
-| Privacy | `/legal/privacy` | Payment processor data processing |
-| Impressum | `/legal/impressum` | Operator contact current |
-| Cookies | `/legal/cookies` | Consent flow linked from banner |
-| Legal index | `/legal` | All links resolve |
+| Page        | Path               | Verify                                                     |
+| ----------- | ------------------ | ---------------------------------------------------------- |
+| Terms       | `/legal/terms`     | Drive+ section: subscription, trial, cancellation, refunds |
+| Privacy     | `/legal/privacy`   | Payment processor data processing                          |
+| Impressum   | `/legal/impressum` | Operator contact current                                   |
+| Cookies     | `/legal/cookies`   | Consent flow linked from banner                            |
+| Legal index | `/legal`           | All links resolve                                          |
 
 Trial disclosure (in-app): **30 minutes · up to 3 drives · no card required · 14-day window** — shown in trial offer before activation.
 

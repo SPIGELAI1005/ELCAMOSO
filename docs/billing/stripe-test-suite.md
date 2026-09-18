@@ -6,21 +6,21 @@ ELCAMOSO billing tests use **Stripe test mode** (`sk_test_*` keys). Local entitl
 
 `src/lib/billing/stripe/lifecycle.test.ts`
 
-| Scenario | Test |
-|----------|------|
-| New monthly subscription | `checkout.session.completed` → Drive+ active |
-| New annual subscription | Yearly price + interval `year` |
-| Duplicate checkout prevention | Active subscriber → portal, no new Checkout |
-| Successful payment | `invoice.paid` → active |
-| Failed payment | `invoice.payment_failed` → `past_due` with grace |
-| Renewal | `invoice.paid` with advanced period end |
-| Cancel at period end | `cancel_at_period_end: true` → Drive+ retained |
-| Immediate cancellation | `customer.subscription.deleted` → FREE |
-| Payment method update | `subscription.updated` (active) → entitlements unchanged |
-| Customer portal | `createStripePortalSession` happy path |
-| Webhook replay | Duplicate event id → idempotent |
-| Webhook out-of-order | Cancel pending then renewal; delete after active |
-| Subscription expiration | Canceled + past period → FREE |
+| Scenario                      | Test                                                     |
+| ----------------------------- | -------------------------------------------------------- |
+| New monthly subscription      | `checkout.session.completed` → Drive+ active             |
+| New annual subscription       | Yearly price + interval `year`                           |
+| Duplicate checkout prevention | Active subscriber → portal, no new Checkout              |
+| Successful payment            | `invoice.paid` → active                                  |
+| Failed payment                | `invoice.payment_failed` → `past_due` with grace         |
+| Renewal                       | `invoice.paid` with advanced period end                  |
+| Cancel at period end          | `cancel_at_period_end: true` → Drive+ retained           |
+| Immediate cancellation        | `customer.subscription.deleted` → FREE                   |
+| Payment method update         | `subscription.updated` (active) → entitlements unchanged |
+| Customer portal               | `createStripePortalSession` happy path                   |
+| Webhook replay                | Duplicate event id → idempotent                          |
+| Webhook out-of-order          | Cancel pending then renewal; delete after active         |
+| Subscription expiration       | Canceled + past period → FREE                            |
 
 Shared fixtures: `src/lib/billing/stripe/test-fixtures.ts`
 
@@ -30,12 +30,12 @@ npm test -- --run src/lib/billing/stripe/lifecycle.test.ts
 
 ## Related unit tests
 
-| File | Coverage |
-|------|----------|
-| `checkout-service.test.ts` | Checkout params, customer reuse, portal redirect |
-| `webhook-processor.test.ts` | Signature, idempotency, paused/resumed |
-| `resilience/failure-resilience.test.ts` | Stripe down, DB down, delayed webhooks |
-| `subscription-access-policy.test.ts` | Grace, cancel-at-period-end policy |
+| File                                    | Coverage                                         |
+| --------------------------------------- | ------------------------------------------------ |
+| `checkout-service.test.ts`              | Checkout params, customer reuse, portal redirect |
+| `webhook-processor.test.ts`             | Signature, idempotency, paused/resumed           |
+| `resilience/failure-resilience.test.ts` | Stripe down, DB down, delayed webhooks           |
+| `subscription-access-policy.test.ts`    | Grace, cancel-at-period-end policy               |
 
 ## Live integration (optional)
 
@@ -48,9 +48,9 @@ STRIPE_PRICE_DRIVE_PLUS_MONTHLY=price_…
 STRIPE_PRICE_DRIVE_PLUS_YEARLY=price_…
 ```
 
-| File | What it runs |
-|------|--------------|
-| `checkout.integration.test.ts` | Creates real Checkout Sessions |
+| File                            | What it runs                   |
+| ------------------------------- | ------------------------------ |
+| `checkout.integration.test.ts`  | Creates real Checkout Sessions |
 | `lifecycle.integration.test.ts` | Stripe Test Clocks (see below) |
 
 ```bash

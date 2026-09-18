@@ -8,7 +8,7 @@ import {
   getDrivePlusYearlyDisplay,
 } from "@/lib/billing/plan-display";
 
-/** Client-safe billing catalog — no Stripe secrets or Price ids. */
+/** Client-safe billing catalog - no Stripe secrets or Price ids. */
 export interface BillingPublicPlan {
   id: string;
   label: string;
@@ -39,11 +39,9 @@ export function getBillingPublicConfig(): BillingPublicConfig {
       id: plan.id,
       label: plan.label,
       interval: plan.interval,
-      plan: plan.plan,
+      plan: "DRIVE_PLUS" as const,
       displayPrice:
-        plan.id === DRIVE_PLUS_PRICING.monthly.commercialPlanId
-          ? monthly.amount
-          : yearly.amount,
+        plan.id === DRIVE_PLUS_PRICING.monthly.commercialPlanId ? monthly.amount : yearly.amount,
       displayCadence: plan.interval === "month" ? "month" : "year",
     })),
   };

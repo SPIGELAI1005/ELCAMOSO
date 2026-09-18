@@ -77,7 +77,7 @@ export class DynamicDriveSessionService {
     const created = createDynamicDriveSession({
       userId: input.userId,
       driveSessionId: input.driveSessionId,
-      relaySessionId: input.relaySessionId,
+      ...(input.relaySessionId !== undefined ? { relaySessionId: input.relaySessionId } : {}),
       now,
     });
 
@@ -120,7 +120,10 @@ export class DynamicDriveSessionService {
       return { snapshot: await this.getSnapshot(input.userId, now) };
     }
 
-    if (!isWithinDynamicDriveSessionEndGrace(session, now) && isDynamicDriveSessionStale(session, now)) {
+    if (
+      !isWithinDynamicDriveSessionEndGrace(session, now) &&
+      isDynamicDriveSessionStale(session, now)
+    ) {
       endDynamicDriveSession(session, now);
       return { snapshot: await this.getSnapshot(input.userId, now) };
     }

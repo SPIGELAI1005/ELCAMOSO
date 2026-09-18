@@ -17,14 +17,14 @@ In local dev builds:
 
 ## Live sections
 
-| Section | Fields |
-| ------- | ------ |
-| **Motion** | Browser GPS, phone GPS (speed, accuracy, age), acceleration raw/filtered, Tesla telemetry |
-| **Fusion** | Chosen speed/acceleration, confidence, primary source, fallback tier |
-| **Powertrain** | Throttle, load, gear, RPM, shift state |
-| **Audio** | Active layers, transients (gain, playback rate, Hz), master output |
-| **Network** | Phone/vehicle latency, packet rates, packet loss, reconnect count |
-| **Pipeline** | Stage latencies (sensor → audio), fusion/audio Hz |
+| Section        | Fields                                                                                    |
+| -------------- | ----------------------------------------------------------------------------------------- |
+| **Motion**     | Browser GPS, phone GPS (speed, accuracy, age), acceleration raw/filtered, Tesla telemetry |
+| **Fusion**     | Chosen speed/acceleration, confidence, primary source, fallback tier                      |
+| **Powertrain** | Throttle, load, gear, RPM, shift state                                                    |
+| **Audio**      | Active layers, transients (gain, playback rate, Hz), master output                        |
+| **Network**    | Phone/vehicle latency, packet rates, packet loss, reconnect count                         |
+| **Pipeline**   | Stage latencies (sensor → audio), fusion/audio Hz                                         |
 
 ## JSON export
 
@@ -34,15 +34,15 @@ In local dev builds:
 
 ## Key files
 
-| File | Role |
-| ---- | ---- |
-| `src/lib/diagnostics/types.ts` | Frame + export types |
-| `src/lib/diagnostics/collect.ts` | Snapshot collector |
-| `src/lib/diagnostics/export.ts` | Sanitize + download |
-| `src/lib/diagnostics/recorder.ts` | 2 Hz ring buffer |
-| `src/lib/diagnostics/debug-mode.ts` | Explicit debug gate |
-| `src/components/DriveDiagnosticsPanel.tsx` | Live UI |
-| `src/lib/drive/session.ts` | Recorder + export API |
+| File                                       | Role                  |
+| ------------------------------------------ | --------------------- |
+| `src/lib/diagnostics/types.ts`             | Frame + export types  |
+| `src/lib/diagnostics/collect.ts`           | Snapshot collector    |
+| `src/lib/diagnostics/export.ts`            | Sanitize + download   |
+| `src/lib/diagnostics/recorder.ts`          | 2 Hz ring buffer      |
+| `src/lib/diagnostics/debug-mode.ts`        | Explicit debug gate   |
+| `src/components/DriveDiagnosticsPanel.tsx` | Live UI               |
+| `src/lib/drive/session.ts`                 | Recorder + export API |
 
 ## Tests
 

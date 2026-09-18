@@ -1,22 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { createSeoHeadFromPath } from "@/lib/seo";
 import { LegalNote, LegalPage, LegalSection } from "@/components/LegalPage";
 import { LEGAL_OPERATOR } from "@/lib/legal/operator";
 
 export const Route = createFileRoute("/legal/privacy")({
   component: Privacy,
-  head: () => ({
-    meta: [
-      { title: "Privacy Policy · ELCAMOSO" },
-      {
-        name: "description",
-        content: "How ELCAMOSO processes personal data under GDPR and similar US privacy laws.",
-      },
-      { property: "og:title", content: "Privacy Policy · ELCAMOSO" },
-      { property: "og:type", content: "website" },
-      { property: "og:url", content: "/legal/privacy" },
-    ],
-    links: [{ rel: "canonical", href: "/legal/privacy" }],
-  }),
+  head: () => createSeoHeadFromPath("/legal/privacy"),
 });
 
 function Privacy() {
@@ -92,7 +81,7 @@ function Privacy() {
         <p>
           <strong className="font-normal text-foreground">Drive+ billing (optional).</strong> If you
           purchase Drive+, payment is processed by our payment provider (currently Stripe). We
-          receive subscription status, customer reference ids, and billing email — not full card
+          receive subscription status, customer reference ids, and billing email - not full card
           numbers. See{" "}
           <Link to="/legal/terms" className="text-foreground underline-offset-2 hover:underline">
             Terms of Use

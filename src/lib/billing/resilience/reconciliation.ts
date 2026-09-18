@@ -55,16 +55,16 @@ export async function getBillingHealthSnapshot(userId: string): Promise<BillingH
 async function findLatestSubscriptionForUser(userId: string): Promise<Subscription | null> {
   const repo = getSubscriptionRepository();
   if ("findLatestByUserId" in repo && typeof repo.findLatestByUserId === "function") {
-    return (repo as { findLatestByUserId: (id: string) => Promise<Subscription | null> }).findLatestByUserId(
-      userId,
-    );
+    return (
+      repo as { findLatestByUserId: (id: string) => Promise<Subscription | null> }
+    ).findLatestByUserId(userId);
   }
   return null;
 }
 
-export async function listFailedWebhookEvents(limit = 20): Promise<
-  Array<{ stripeEventId: string; eventType: string; errorMessage?: string }>
-> {
+export async function listFailedWebhookEvents(
+  limit = 20,
+): Promise<Array<{ stripeEventId: string; eventType: string; errorMessage?: string }>> {
   const store = getWebhookEventStore();
   if ("listFailed" in store && typeof store.listFailed === "function") {
     return store.listFailed(limit);
@@ -72,7 +72,7 @@ export async function listFailedWebhookEvents(limit = 20): Promise<
   return [];
 }
 
-/** Explicit Stripe pull — never called from entitlement gates. */
+/** Explicit Stripe pull - never called from entitlement gates. */
 export async function reconcileUserBillingFromStripe(
   userId: string,
 ): Promise<ReconcileBillingResult> {

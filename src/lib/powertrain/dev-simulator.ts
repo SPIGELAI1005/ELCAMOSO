@@ -4,7 +4,7 @@ import { IDLE_VEHICLE_MOTION } from "@/lib/motion/types";
 const clamp = (v: number, min: number, max: number) => Math.min(max, Math.max(min, v));
 const clamp01 = (v: number) => clamp(v, 0, 1);
 
-/** Developer simulator controls — not connected to real sensors. */
+/** Developer simulator controls - not connected to real sensors. */
 export interface SimulatorControls {
   speedKmh: number;
   accelerationMs2: number;

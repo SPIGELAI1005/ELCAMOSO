@@ -8,12 +8,12 @@
 
 ## Executive summary
 
-| Question | Answer |
-| -------- | ------ |
-| Are premium audio files in a public static directory today? | **No.** `public/` contains PWA assets only (manifest, service worker, icons). |
-| Are there `.wav` / `.mp3` / `.ogg` files in the repo? | **No.** |
-| How does Drive+ sound gating work today? | **Client entitlement** on profile IDs (`profile-access-config.ts`, `EntitlementEnforcer`). All 47 built-in profiles are **procedural Web Audio** in the JS bundle. |
-| Is server-side asset delivery implemented? | **Foundation only:** signed manifest + delivery routes. Catalog is empty until recorded samples ship. |
+| Question                                                    | Answer                                                                                                                                                             |
+| ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Are premium audio files in a public static directory today? | **No.** `public/` contains PWA assets only (manifest, service worker, icons).                                                                                      |
+| Are there `.wav` / `.mp3` / `.ogg` files in the repo?       | **No.**                                                                                                                                                            |
+| How does Drive+ sound gating work today?                    | **Client entitlement** on profile IDs (`profile-access-config.ts`, `EntitlementEnforcer`). All 47 built-in profiles are **procedural Web Audio** in the JS bundle. |
+| Is server-side asset delivery implemented?                  | **Foundation only:** signed manifest + delivery routes. Catalog is empty until recorded samples ship.                                                              |
 
 **Conclusion:** There is nothing to move out of `public/` today. When WAV/hybrid assets are added, they must **not** be placed in `public/`. Use the entitlement-gated manifest flow below.
 
@@ -74,11 +74,11 @@ FREE sample assets (if any) may use the same signing flow or remain on a public 
 
 ### Production storage
 
-| Env | Purpose |
-| --- | ------- |
-| `SOUND_ASSET_SIGNING_SECRET` | HMAC secret for signed URLs (required when catalog non-empty) |
-| `SOUND_ASSETS_STORAGE_ROOT` | Local directory for dev/single-node file serve |
-| `SOUND_ASSETS_CDN_BASE_URL` | Optional. When set, delivery redirects to `{CDN}/{path}?…` instead of reading from disk |
+| Env                          | Purpose                                                                                 |
+| ---------------------------- | --------------------------------------------------------------------------------------- |
+| `SOUND_ASSET_SIGNING_SECRET` | HMAC secret for signed URLs (required when catalog non-empty)                           |
+| `SOUND_ASSETS_STORAGE_ROOT`  | Local directory for dev/single-node file serve                                          |
+| `SOUND_ASSETS_CDN_BASE_URL`  | Optional. When set, delivery redirects to `{CDN}/{path}?…` instead of reading from disk |
 
 For object storage (R2, S3), prefer **CDN-signed URLs** at the edge. The manifest service can be extended to call provider APIs; the entitlement gate stays the same.
 
@@ -98,13 +98,13 @@ For object storage (R2, S3), prefer **CDN-signed URLs** at the edge. The manifes
 
 Browser-delivered audio **cannot be made impossible to copy**.
 
-| Threat | Mitigation | Residual risk |
-| ------ | ---------- | ------------- |
-| DevTools → save URL | Short TTL + per-session manifest | Determined user can capture during window |
-| Screen/audio capture | None (out of scope) | Always possible |
-| Shared signed URL | Expiry + optional IP binding later | Link works until expiry |
-| Offline cache after cancel | Periodic manifest refresh; stale cache OK for session | User keeps buffers until cleared |
-| Procedural profile reverse-engineering | Not targeted | Code visible in bundle |
+| Threat                                 | Mitigation                                            | Residual risk                             |
+| -------------------------------------- | ----------------------------------------------------- | ----------------------------------------- |
+| DevTools → save URL                    | Short TTL + per-session manifest                      | Determined user can capture during window |
+| Screen/audio capture                   | None (out of scope)                                   | Always possible                           |
+| Shared signed URL                      | Expiry + optional IP binding later                    | Link works until expiry                   |
+| Offline cache after cancel             | Periodic manifest refresh; stale cache OK for session | User keeps buffers until cleared          |
+| Procedural profile reverse-engineering | Not targeted                                          | Code visible in bundle                    |
 
 **Goal:** Raise the effort bar for casual redistribution and tie bulk downloads to an active subscription — not forensic DRM.
 
@@ -112,15 +112,15 @@ Browser-delivered audio **cannot be made impossible to copy**.
 
 ## Implementation map
 
-| File | Role |
-| ---- | ---- |
-| `src/lib/sound-assets/types.ts` | Manifest and catalog types |
-| `src/lib/sound-assets/catalog.ts` | Asset registry (`tier`, paths) — empty until WAVs land |
-| `src/lib/sound-assets/signing.ts` | HMAC sign/verify |
-| `src/lib/sound-assets/manifest-service.ts` | Entitlement filter + URL minting |
-| `src/routes/api/sound-assets/manifest.ts` | Authenticated manifest endpoint |
-| `src/routes/api/sound-assets/delivery.ts` | Signed file delivery (whole file) |
-| `src/lib/sound-assets/client-loader.ts` | Browser prefetch + decode helper |
+| File                                       | Role                                                   |
+| ------------------------------------------ | ------------------------------------------------------ |
+| `src/lib/sound-assets/types.ts`            | Manifest and catalog types                             |
+| `src/lib/sound-assets/catalog.ts`          | Asset registry (`tier`, paths) — empty until WAVs land |
+| `src/lib/sound-assets/signing.ts`          | HMAC sign/verify                                       |
+| `src/lib/sound-assets/manifest-service.ts` | Entitlement filter + URL minting                       |
+| `src/routes/api/sound-assets/manifest.ts`  | Authenticated manifest endpoint                        |
+| `src/routes/api/sound-assets/delivery.ts`  | Signed file delivery (whole file)                      |
+| `src/lib/sound-assets/client-loader.ts`    | Browser prefetch + decode helper                       |
 
 When adding assets: register in `catalog.ts`, place files under `SOUND_ASSETS_STORAGE_ROOT` (never `public/`), wire `sampleMap` in the engine per `audio-asset-requirements.md`.
 

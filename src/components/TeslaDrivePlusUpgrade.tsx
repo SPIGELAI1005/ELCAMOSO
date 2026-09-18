@@ -19,7 +19,7 @@ interface TeslaDrivePlusUpgradeProps {
   className?: string;
 }
 
-/** In-car Drive+ purchase — QR to phone, no card entry on Tesla browser. */
+/** In-car Drive+ purchase - QR to phone, no card entry on Tesla browser. */
 export function TeslaDrivePlusUpgrade({
   open,
   onClose,
@@ -171,7 +171,7 @@ export function TeslaDrivePlusUpgrade({
             )}
             <p className="mt-5 text-sm text-muted-foreground">Scan with your phone.</p>
             <p className="mt-2 text-xs text-muted-foreground">
-              Payment stays on your phone — not in the car browser.
+              Payment stays on your phone - not in the car browser.
             </p>
           </div>
 

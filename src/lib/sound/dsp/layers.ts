@@ -2248,7 +2248,7 @@ export function createUfoLayer(
   ctx: BaseAudioContext,
   opts: LayerBaseOpts & { baseHz?: number },
 ): LayerHandle {
-  // Theremin “2′” register — high enough to read as classic sci-fi, not a pad.
+  // Theremin “2′” register - high enough to read as classic sci-fi, not a pad.
   const register = opts.baseHz ?? 740;
   const bus = ctx.createGain();
 
@@ -2266,7 +2266,7 @@ export function createUfoLayer(
   const twinG = ctx.createGain();
   twinG.gain.value = 0.0001;
 
-  // Gentle air around the tone — never a noise bed
+  // Gentle air around the tone - never a noise bed
   const air = createLoopingNoise(ctx, "pink", 0.85);
   const airHp = ctx.createBiquadFilter();
   airHp.type = "highpass";
@@ -2358,7 +2358,7 @@ export function createUfoLayer(
       // Always some presence so idle hover still reads as UFO.
       const energy = 0.42 + demand * 0.75;
 
-      // Phrase engine — continuous glissando is the theremin identity.
+      // Phrase engine - continuous glissando is the theremin identity.
       if (t >= nextPhrase && t >= phraseUntil) {
         schedulePhrase(t, demand, m.speedSlow);
       }
@@ -2374,7 +2374,7 @@ export function createUfoLayer(
       }
       glide.hz = melodic;
 
-      // Fast vibrato — hallmark of classic sci-fi theremin (depth grows with load).
+      // Fast vibrato - hallmark of classic sci-fi theremin (depth grows with load).
       vibPhase += m.dt * (5.2 + demand * 2.4);
       const vibHz = (18 + demand * 55) * Math.sin(vibPhase * Math.PI * 2);
       // Tiny hand jitter

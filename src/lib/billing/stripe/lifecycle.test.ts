@@ -143,7 +143,9 @@ describe("stripe subscription lifecycle (test mode)", () => {
         }),
       );
 
-      await dispatchStripeWebhookEvent(buildInvoiceEvent("invoice.paid", STRIPE_TEST_SUBSCRIPTION_ID, "evt_paid_1"));
+      await dispatchStripeWebhookEvent(
+        buildInvoiceEvent("invoice.paid", STRIPE_TEST_SUBSCRIPTION_ID, "evt_paid_1"),
+      );
 
       assertLocalEntitlements(STRIPE_TEST_USER_ID, {
         plan: "DRIVE_PLUS",
@@ -182,7 +184,9 @@ describe("stripe subscription lifecycle (test mode)", () => {
         }),
       );
 
-      await dispatchStripeWebhookEvent(buildInvoiceEvent("invoice.paid", STRIPE_TEST_SUBSCRIPTION_ID, "evt_renewal"));
+      await dispatchStripeWebhookEvent(
+        buildInvoiceEvent("invoice.paid", STRIPE_TEST_SUBSCRIPTION_ID, "evt_renewal"),
+      );
 
       const record = (await import("@/lib/billing/subscription-store")).getSubscriptionForUser(
         STRIPE_TEST_USER_ID,

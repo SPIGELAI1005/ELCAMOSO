@@ -33,16 +33,16 @@ export const users = pgTable(
     id: uuid("id").primaryKey().defaultRandom(),
     email: text("email"),
     stripeCustomerId: text("stripe_customer_id"),
-    createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
-      .notNull()
-      .defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" })
       .notNull()
       .defaultNow()
       .$onUpdate(() => new Date()),
   },
   (table) => [
-    uniqueIndex("users_email_unique").on(table.email).where(sql`${table.email} is not null`),
+    uniqueIndex("users_email_unique")
+      .on(table.email)
+      .where(sql`${table.email} is not null`),
     uniqueIndex("users_stripe_customer_id_unique")
       .on(table.stripeCustomerId)
       .where(sql`${table.stripeCustomerId} is not null`),
@@ -71,9 +71,7 @@ export const subscriptions = pgTable(
       mode: "date",
     }),
     cancelAtPeriodEnd: boolean("cancel_at_period_end").notNull().default(false),
-    createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
-      .notNull()
-      .defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" })
       .notNull()
       .defaultNow()
@@ -93,7 +91,7 @@ export const stripeWebhookEventStatusEnum = pgEnum("stripe_webhook_event_status"
   "failed",
 ]);
 
-/** Idempotent Stripe webhook event ledger — no payment payload stored. */
+/** Idempotent Stripe webhook event ledger - no payment payload stored. */
 export const stripeWebhookEvents = pgTable(
   "stripe_webhook_events",
   {
@@ -103,13 +101,9 @@ export const stripeWebhookEvents = pgTable(
     status: stripeWebhookEventStatusEnum("status").notNull().default("processing"),
     errorMessage: text("error_message"),
     processedAt: timestamp("processed_at", { withTimezone: true, mode: "date" }),
-    createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
-      .notNull()
-      .defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
   },
-  (table) => [
-    uniqueIndex("stripe_webhook_events_stripe_event_id_unique").on(table.stripeEventId),
-  ],
+  (table) => [uniqueIndex("stripe_webhook_events_stripe_event_id_unique").on(table.stripeEventId)],
 );
 
 export const dynamicDriveTrialStatusEnum = pgEnum("dynamic_drive_trial_status", [
@@ -139,9 +133,7 @@ export const dynamicDriveTrials = pgTable(
     allocatedSessions: integer("allocated_sessions").notNull().default(3),
     usedSessions: integer("used_sessions").notNull().default(0),
     status: dynamicDriveTrialStatusEnum("status").notNull().default("available"),
-    createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
-      .notNull()
-      .defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" })
       .notNull()
       .defaultNow()
@@ -167,9 +159,7 @@ export const dynamicDriveTrialSessions = pgTable(
     endedAt: timestamp("ended_at", { withTimezone: true, mode: "date" }),
     creditedSeconds: integer("credited_seconds").notNull().default(0),
     status: dynamicDriveTrialSessionStatusEnum("status").notNull().default("active"),
-    createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
-      .notNull()
-      .defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" })
       .notNull()
       .defaultNow()

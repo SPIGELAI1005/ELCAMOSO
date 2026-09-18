@@ -15,7 +15,7 @@ interface TrialRemainingProps {
   compact?: boolean;
 }
 
-/** Shows Dynamic Drive preview time left — calm, not countdown pressure. */
+/** Shows Dynamic Drive preview time left - calm, not countdown pressure. */
 export function TrialRemaining({ className = "", compact = false }: TrialRemainingProps) {
   const { session, isAuthenticated } = useAccount();
   const [snapshot, setSnapshot] = useState<DynamicDriveTrialSnapshot | null>(null);

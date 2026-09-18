@@ -1,11 +1,5 @@
-/** Normalized billing lifecycle — provider-agnostic, no card data. */
-export type BillingStatus =
-  | "free"
-  | "trialing"
-  | "active"
-  | "past_due"
-  | "paused"
-  | "canceled";
+/** Normalized billing lifecycle - provider-agnostic, no card data. */
+export type BillingStatus = "free" | "trialing" | "active" | "past_due" | "paused" | "canceled";
 
 export const BILLING_STATUSES: readonly BillingStatus[] = [
   "free",
@@ -24,7 +18,7 @@ export type BillingInterval = "month" | "year";
 
 export const BILLING_INTERVALS: readonly BillingInterval[] = ["month", "year"] as const;
 
-/** Whether billing still shows an active Stripe subscription (checkout guard — not access policy). */
+/** Whether billing still shows an active Stripe subscription (checkout guard - not access policy). */
 export function isPaidBillingStatus(status: BillingStatus): boolean {
   return status === "trialing" || status === "active" || status === "past_due";
 }

@@ -34,21 +34,21 @@ The server **relays** in memory only; it does not persist raw location or sample
 
 ## UI
 
-| Surface | Component |
-| ------- | --------- |
+| Surface       | Component                                        |
+| ------------- | ------------------------------------------------ |
 | Tesla display | `DriveSessionPanel` + `RelayRemoteControlBridge` |
-| Phone | `/pair`, `/pair/$token`, `PhonePairSession` |
-| Legacy | `/connect/$sessionId` |
+| Phone         | `/pair`, `/pair/$token`, `PhonePairSession`      |
+| Legacy        | `/connect/$sessionId`                            |
 
 ## Server
 
-| Piece | Path |
-| ----- | ---- |
-| Motion gate | `src/lib/drive-relay/config.ts` |
-| Session store (TTL, claim) | `src/lib/drive-relay/store.ts` |
-| WebSocket hub | `src/lib/drive-relay/hub.ts` |
-| REST create/join/claim | `src/lib/drive-relay/server-fns.ts` |
-| Client hook | `src/lib/drive-relay/client.ts` |
+| Piece                      | Path                                |
+| -------------------------- | ----------------------------------- |
+| Motion gate                | `src/lib/drive-relay/config.ts`     |
+| Session store (TTL, claim) | `src/lib/drive-relay/store.ts`      |
+| WebSocket hub              | `src/lib/drive-relay/hub.ts`        |
+| REST create/join/claim     | `src/lib/drive-relay/server-fns.ts` |
+| Client hook                | `src/lib/drive-relay/client.ts`     |
 
 WebSocket endpoint: `/api/drive-relay/ws?sessionId=…&role=display|phone&token=…`
 
@@ -64,4 +64,7 @@ npm run dev
 
 ## Production note
 
-Vercel serverless does not keep long-lived WebSockets. For production Tesla↔phone relay, host the WS hub on a process that supports sticky connections (or a dedicated WS service). HTTP create/claim/join still work; live motion needs WS.
+**Probed 2026-09-17:** `https://www.elcamoso.com/api/drive-relay/ws` → HTTP **404**.
+Vercel serverless does not keep long-lived WebSockets. Deploy the dedicated host and set `VITE_DRIVE_RELAY_PUBLIC_ORIGIN` — see **[DRIVE_RELAY_DEPLOYMENT.md](./DRIVE_RELAY_DEPLOYMENT.md)** and **[PRODUCTION_RELEASE_CHECKLIST.md](./PRODUCTION_RELEASE_CHECKLIST.md)**.
+
+HTTP create/claim/join on the app must proxy to the same relay process (`DRIVE_RELAY_INTERNAL_URL`) so peers share the session store.

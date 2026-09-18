@@ -62,7 +62,8 @@ export function computeDynamicLayerWeights(
 
   // Deeper mid-shift duck so torque cut / ratio change reads as load drop, not noise.
   const shiftDuck = pt.shifting
-    ? 1 - 0.28 * Math.sin(Math.PI * clamp(pt.shiftProgress ?? 0)) * (2 - (pt.shiftLoadMultiplier ?? 1))
+    ? 1 -
+      0.28 * Math.sin(Math.PI * clamp(pt.shiftProgress ?? 0)) * (2 - (pt.shiftLoadMultiplier ?? 1))
     : 1;
 
   const steadySum = idle + low + mid + high + redlineW || 1;
@@ -88,7 +89,8 @@ export function computeDynamicLayerWeights(
             ? 1
             : Math.sin(Math.PI * clamp(p, 0, 1)) * 0.65;
     if (pt.shiftDirection === "up") upshiftTransient = phaseBell * t.upshiftStrength * 0.72;
-    else if (pt.shiftDirection === "down") downshiftTransient = phaseBell * t.downshiftStrength * 0.65;
+    else if (pt.shiftDirection === "down")
+      downshiftTransient = phaseBell * t.downshiftStrength * 0.65;
   }
   if (pt.revMatchActive && powertrain.transmission.shift.revMatchEnabled) {
     revMatchTransient = Math.max(

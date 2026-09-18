@@ -36,6 +36,7 @@ export async function gotoPath(page: Page, path: string) {
   await page.goto(path);
   await dismissCookieBanner(page);
   await expect(page.locator("#app-root")).toBeVisible();
+  await expect(page.locator("#app-root")).toHaveAttribute("data-hydrated", "true");
 }
 
 /** Assert the page did not fall into the root error boundary. */

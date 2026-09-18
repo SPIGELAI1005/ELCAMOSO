@@ -86,7 +86,7 @@ export function touchDynamicDriveSession(
     ...session,
     lastHeartbeatAt: now,
     relaySessionId:
-      relaySessionId === undefined ? session.relaySessionId : relaySessionId ?? null,
+      relaySessionId === undefined ? session.relaySessionId : (relaySessionId ?? null),
   };
   indexSession(next);
   return next;

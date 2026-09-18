@@ -32,9 +32,7 @@ export function applyResolvedAccess<T extends ProfileAccessFields>(profile: T): 
   return profile.access === access ? profile : { ...profile, access };
 }
 
-export function applyResolvedAccessToProfiles<T extends ProfileAccessFields>(
-  profiles: T[],
-): T[] {
+export function applyResolvedAccessToProfiles<T extends ProfileAccessFields>(profiles: T[]): T[] {
   const byId = new Map(profiles.map((p) => [p.id, p]));
   const resolveBase = (baseId: string) => byId.get(baseId);
   return profiles.map((p) => {

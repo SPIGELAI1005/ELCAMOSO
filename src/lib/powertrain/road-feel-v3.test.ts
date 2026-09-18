@@ -55,7 +55,8 @@ describe("Road Feel V3 shift map targets", () => {
   it("keeps personality differentiation under light demand", () => {
     const am = resolveShiftMap(getPowertrainProfile("american-v8")).upshiftSpeedKmh[0]![1]!;
     const fs = resolveShiftMap(getPowertrainProfile("flat-six-sport")).upshiftSpeedKmh[0]![1]!;
-    const moto = resolveShiftMap(getPowertrainProfile("motorcycle-inline-4")).upshiftSpeedKmh[0]![1]!;
+    const moto = resolveShiftMap(getPowertrainProfile("motorcycle-inline-4"))
+      .upshiftSpeedKmh[0]![1]!;
     expect(am).toBeLessThan(fs);
     expect(moto).toBeGreaterThan(fs * 2);
   });

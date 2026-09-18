@@ -1,5 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { buildRelayWsUrl, parseRelayMessage } from "@/lib/drive-relay/protocol";
+import {
+  createBrowserWebSocketTransport,
+  type DriveRelayTransport,
+} from "@/lib/drive-relay/transport";
 import type {
   RelayConnectionState,
   RelayMessage,
@@ -56,7 +60,7 @@ export function useDriveRelay({
   const [lastAction, setLastAction] = useState<RelayMessage | null>(null);
   const [roundTripMs, setRoundTripMs] = useState<number | null>(null);
 
-  const wsRef = useRef<WebSocket | null>(null);
+  const transportRef = useRef<DriveRelayTransport | null>(null);
   const seqRef = useRef(0);
   const reconnectRef = useRef<number | null>(null);
   const heartbeatRef = useRef<number | null>(null);
@@ -95,16 +99,16 @@ export function useDriveRelay({
 
   const disconnect = useCallback(() => {
     clearTimers();
-    wsRef.current?.close(1000, "client-disconnect");
-    wsRef.current = null;
+    transportRef.current?.close(1000, "client-disconnect");
+    transportRef.current = null;
     setStatus("disconnected");
   }, [clearTimers]);
 
   const handleMessage = useCallback(
-    (event: MessageEvent<string>) => {
+    (raw: string) => {
       let parsed: unknown;
       try {
-        parsed = JSON.parse(event.data);
+        parsed = JSON.parse(raw);
       } catch {
         return;
       }
@@ -137,17 +141,13 @@ export function useDriveRelay({
       }
 
       if (msg.type === "latency-ping" && msg.from !== role) {
-        const ws = wsRef.current;
-        if (!ws || ws.readyState !== WebSocket.OPEN) return;
-        ws.send(
-          JSON.stringify({
-            type: "latency-pong",
-            id: msg.id,
-            from: role,
-            sentAt: msg.sentAt,
-            receivedAt: Date.now(),
-          } satisfies RelayMessage),
-        );
+        transportRef.current?.send({
+          type: "latency-pong",
+          id: msg.id,
+          from: role,
+          sentAt: msg.sentAt,
+          receivedAt: Date.now(),
+        } satisfies RelayMessage);
         return;
       }
 
@@ -165,43 +165,38 @@ export function useDriveRelay({
   const connect = useCallback(() => {
     if (!enabledRef.current || !sessionId || !token) return;
     clearTimers();
-    if (wsRef.current) {
-      wsRef.current.close(1000, "reconnect");
-      wsRef.current = null;
-    }
+    transportRef.current?.close(1000, "reconnect");
 
     setStatus("connecting");
     const url = buildRelayWsUrl(window.location.origin, sessionId, role, token);
-    const ws = new WebSocket(url);
-    wsRef.current = ws;
+    const transport = createBrowserWebSocketTransport();
+    transportRef.current = transport;
 
-    ws.addEventListener("open", () => {
-      setStatus("connected");
-      heartbeatRef.current = window.setInterval(() => {
-        if (ws.readyState !== WebSocket.OPEN) return;
-        ws.send(JSON.stringify({ type: "heartbeat", at: Date.now() }));
-      }, HEARTBEAT_MS);
-    });
-
-    ws.addEventListener("message", handleMessage);
-
-    ws.addEventListener("close", (ev) => {
-      clearTimers();
-      wsRef.current = null;
-      if (!enabledRef.current) {
-        setStatus("disconnected");
-        return;
-      }
-      if (ev.code === 1008 || ev.code === 4401) {
-        setStatus("expired");
-        return;
-      }
-      setStatus("reconnecting");
-      reconnectRef.current = window.setTimeout(() => connect(), RECONNECT_BASE_MS);
-    });
-
-    ws.addEventListener("error", () => {
-      setStatus("error");
+    transport.connect(url, {
+      onOpen: () => {
+        setStatus("connected");
+        heartbeatRef.current = window.setInterval(() => {
+          transport.send({ type: "heartbeat", at: Date.now() });
+        }, HEARTBEAT_MS);
+      },
+      onMessage: handleMessage,
+      onClose: (code) => {
+        clearTimers();
+        transportRef.current = null;
+        if (!enabledRef.current) {
+          setStatus("disconnected");
+          return;
+        }
+        if (code === 1008 || code === 4401) {
+          setStatus("expired");
+          return;
+        }
+        setStatus("reconnecting");
+        reconnectRef.current = window.setTimeout(() => connect(), RECONNECT_BASE_MS);
+      },
+      onError: () => {
+        setStatus("error");
+      },
     });
   }, [clearTimers, handleMessage, role, sessionId, token]);
 
@@ -216,8 +211,8 @@ export function useDriveRelay({
 
   const sendAction = useCallback(
     (kind: string, payload?: unknown) => {
-      const ws = wsRef.current;
-      if (!ws || ws.readyState !== WebSocket.OPEN) return;
+      const transport = transportRef.current;
+      if (!transport || transport.state !== "open") return;
       const message: RelayMessage = {
         type: "action",
         id: crypto.randomUUID(),
@@ -226,43 +221,39 @@ export function useDriveRelay({
         at: Date.now(),
         ...(payload !== undefined ? { payload } : {}),
       };
-      ws.send(JSON.stringify(message));
+      transport.send(message);
     },
     [role],
   );
 
   const sendMotion = useCallback(
     (sample: MotionSample) => {
-      const ws = wsRef.current;
-      if (!ws || ws.readyState !== WebSocket.OPEN || role !== "phone") return;
+      const transport = transportRef.current;
+      if (!transport || transport.state !== "open" || role !== "phone") return;
       seqRef.current += 1;
-      ws.send(
-        JSON.stringify({
-          type: "motion",
-          from: "phone",
-          at: Date.now(),
-          seq: seqRef.current,
-          sample: toRelayMotionPayload(sample),
-        } satisfies RelayMotionMessage),
-      );
+      transport.send({
+        type: "motion",
+        from: "phone",
+        at: Date.now(),
+        seq: seqRef.current,
+        sample: toRelayMotionPayload(sample),
+      } satisfies RelayMotionMessage);
     },
     [role],
   );
 
   const runLatencyTest = useCallback(() => {
-    const ws = wsRef.current;
-    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+    const transport = transportRef.current;
+    if (!transport || transport.state !== "open") return;
     const id = crypto.randomUUID();
     pendingLatencyRef.current.set(id, Date.now());
     setRoundTripMs(null);
-    ws.send(
-      JSON.stringify({
-        type: "latency-ping",
-        id,
-        from: role,
-        sentAt: Date.now(),
-      } satisfies RelayMessage),
-    );
+    transport.send({
+      type: "latency-ping",
+      id,
+      from: role,
+      sentAt: Date.now(),
+    } satisfies RelayMessage);
   }, [role]);
 
   return {

@@ -140,7 +140,9 @@ describe("Google account OAuth", () => {
   });
 
   it("rejects missing state", async () => {
-    await expect(completeGoogleSignIn("auth-code", "")).rejects.toThrow(/Missing Google OAuth state/i);
+    await expect(completeGoogleSignIn("auth-code", "")).rejects.toThrow(
+      /Missing Google OAuth state/i,
+    );
   });
 
   it("rejects invalid state", async () => {
@@ -161,7 +163,9 @@ describe("Google account OAuth", () => {
         ),
       ),
     );
-    await expect(completeGoogleSignIn("bad-code", state)).rejects.toThrow(/Bad authorization code/i);
+    await expect(completeGoogleSignIn("bad-code", state)).rejects.toThrow(
+      /Bad authorization code/i,
+    );
   });
 
   it("rejects invalid ID tokens", async () => {

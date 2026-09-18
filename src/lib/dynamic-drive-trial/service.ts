@@ -1,8 +1,6 @@
 import { randomUUID } from "node:crypto";
 
-import {
-  DYNAMIC_DRIVE_SESSION_STALE_MS,
-} from "@/lib/dynamic-drive-session/config";
+import { DYNAMIC_DRIVE_SESSION_STALE_MS } from "@/lib/dynamic-drive-session/config";
 import { hasDrivePlusSubscriptionAccess } from "@/lib/billing/subscription-access-policy";
 import { getSubscriptionForUser } from "@/lib/billing/subscription-store";
 
@@ -31,8 +29,7 @@ import type {
   StartTrialSessionResult,
 } from "@/lib/dynamic-drive-trial/types";
 
-const UUID_RE =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export class DynamicDriveTrialSessionConflictError extends Error {
   constructor(message = "Dynamic Drive is active on another device.") {
@@ -91,7 +88,11 @@ async function applyCredit(
   dynamicDriveEnabled: boolean,
   now: Date,
   allowEndGrace: boolean,
-): Promise<{ trial: DynamicDriveTrialRecord; session: DynamicDriveTrialSessionRecord; credited: number }> {
+): Promise<{
+  trial: DynamicDriveTrialRecord;
+  session: DynamicDriveTrialSessionRecord;
+  credited: number;
+}> {
   const remaining = remainingTrialSeconds(trial);
   const credited = creditElapsedSeconds({
     lastCreditedAt: session.lastCreditedAt,
@@ -130,7 +131,11 @@ async function finalizeSession(
   session: DynamicDriveTrialSessionRecord,
   dynamicDriveEnabled: boolean,
   now: Date,
-): Promise<{ trial: DynamicDriveTrialRecord; session: DynamicDriveTrialSessionRecord; credited: number }> {
+): Promise<{
+  trial: DynamicDriveTrialRecord;
+  session: DynamicDriveTrialSessionRecord;
+  credited: number;
+}> {
   const credited = await applyCredit(trial, session, dynamicDriveEnabled, now, true);
   const endedSession: DynamicDriveTrialSessionRecord = {
     ...credited.session,
@@ -156,14 +161,14 @@ async function finalizeSession(
 export class DynamicDriveTrialService {
   constructor(private readonly repo: DynamicDriveTrialRepository) {}
 
-  /** Paid Drive+ subscribers never consume trial balance — convert once and skip credits. */
+  /** Paid Drive+ subscribers never consume trial balance - convert once and skip credits. */
   private async maybeConvertPaidSubscriber(
     userId: string,
     now: Date,
   ): Promise<DynamicDriveTrialSnapshot | null> {
     if (!userHasPaidDrivePlus(userId, now)) return null;
 
-    let trial = await loadTrial(this.repo, userId, now);
+    const trial = await loadTrial(this.repo, userId, now);
     if (trial.status !== "converted") {
       return this.completeTrial(userId, now);
     }
@@ -179,11 +184,13 @@ export class DynamicDriveTrialService {
     const hasActive = activeDriveSessionId != null;
     const status = effectiveTrialStatus(trial, now, hasActive);
     const synced =
-      status !== trial.status ? await this.repo.saveTrial({ ...trial, status, updatedAt: now }) : trial;
+      status !== trial.status
+        ? await this.repo.saveTrial({ ...trial, status, updatedAt: now })
+        : trial;
     return toTrialSnapshot(synced, now, activeDriveSessionId);
   }
 
-  /** Explicit preview activation — starts the 14-day trial window. */
+  /** Explicit preview activation - starts the 14-day trial window. */
   async startPreview(userId?: string, now = new Date()): Promise<DynamicDriveTrialSnapshot> {
     const resolvedUserId = await this.repo.ensureUser(userId);
     if (!isTrialUserId(resolvedUserId)) throw new Error("Invalid user id");
@@ -339,7 +346,7 @@ export class DynamicDriveTrialService {
   ): Promise<EndTrialSessionResult> {
     if (!isTrialUserId(userId)) throw new Error("Invalid user id");
 
-    let trial = await loadTrial(this.repo, userId, now);
+    const trial = await loadTrial(this.repo, userId, now);
     const session = await this.repo.getSessionByDriveSessionId(trial.id, driveSessionId);
     if (!session || session.status !== "active") {
       return {

@@ -20,7 +20,9 @@ function writeStore(store: Record<string, number[]>): void {
   sessionStorage.setItem(STORAGE_KEY, JSON.stringify(store));
 }
 
-export function readTrialMilestonesForDrive(driveSessionId = readClientDriveSessionId()): Set<number> {
+export function readTrialMilestonesForDrive(
+  driveSessionId = readClientDriveSessionId(),
+): Set<number> {
   const store = readStore();
   return new Set(store[driveSessionId] ?? []);
 }

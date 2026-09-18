@@ -2,7 +2,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { saveAccountSession } from "@/lib/account/session-store";
 import { beginDrivePlusCheckout } from "@/lib/billing/checkout-service";
-import { setSubscriptionForUser, resetSubscriptionStoreForTests } from "@/lib/billing/subscription-store";
+import {
+  setSubscriptionForUser,
+  resetSubscriptionStoreForTests,
+} from "@/lib/billing/subscription-store";
 import { resetStripeClientForTests } from "@/lib/billing/stripe/client";
 import {
   memoryUserBillingRepository,

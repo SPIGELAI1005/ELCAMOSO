@@ -32,7 +32,11 @@ export const Route = createFileRoute("/api/stripe/webhook")({
             headers: { "content-type": "application/json" },
           });
         } catch (error) {
-          logStripeWebhookError("handler failed", { eventId: event.id, eventType: event.type }, error);
+          logStripeWebhookError(
+            "handler failed",
+            { eventId: event.id, eventType: event.type },
+            error,
+          );
           return new Response("Webhook handler failed", { status: 500 });
         }
       },

@@ -314,7 +314,7 @@ const baseStrategies: ProfileStrategy[] = [
     id: "ufo",
     build(ctx, buses) {
       return [
-        // Theremin is the whole character — keep beds/accents from masking it.
+        // Theremin is the whole character - keep beds/accents from masking it.
         createUfoLayer(ctx, {
           id: "theremin",
           destination: buses.body,

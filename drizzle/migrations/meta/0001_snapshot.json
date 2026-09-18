@@ -115,12 +115,8 @@
           "name": "dynamic_drive_trial_sessions_trial_id_dynamic_drive_trials_id_fk",
           "tableFrom": "dynamic_drive_trial_sessions",
           "tableTo": "dynamic_drive_trials",
-          "columnsFrom": [
-            "trial_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["trial_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -128,12 +124,8 @@
           "name": "dynamic_drive_trial_sessions_user_id_users_id_fk",
           "tableFrom": "dynamic_drive_trial_sessions",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -246,12 +238,8 @@
           "name": "dynamic_drive_trials_user_id_users_id_fk",
           "tableFrom": "dynamic_drive_trials",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -382,12 +370,8 @@
           "name": "subscriptions_user_id_users_id_fk",
           "tableFrom": "subscriptions",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -482,56 +466,32 @@
     "public.billing_interval": {
       "name": "billing_interval",
       "schema": "public",
-      "values": [
-        "month",
-        "year"
-      ]
+      "values": ["month", "year"]
     },
     "public.billing_plan": {
       "name": "billing_plan",
       "schema": "public",
-      "values": [
-        "FREE",
-        "DRIVE_PLUS"
-      ]
+      "values": ["FREE", "DRIVE_PLUS"]
     },
     "public.billing_status": {
       "name": "billing_status",
       "schema": "public",
-      "values": [
-        "free",
-        "trialing",
-        "active",
-        "past_due",
-        "paused",
-        "canceled"
-      ]
+      "values": ["free", "trialing", "active", "past_due", "paused", "canceled"]
     },
     "public.dynamic_drive_trial_session_status": {
       "name": "dynamic_drive_trial_session_status",
       "schema": "public",
-      "values": [
-        "active",
-        "ended"
-      ]
+      "values": ["active", "ended"]
     },
     "public.dynamic_drive_trial_status": {
       "name": "dynamic_drive_trial_status",
       "schema": "public",
-      "values": [
-        "available",
-        "active",
-        "exhausted",
-        "expired",
-        "converted"
-      ]
+      "values": ["available", "active", "exhausted", "expired", "converted"]
     },
     "public.subscription_provider": {
       "name": "subscription_provider",
       "schema": "public",
-      "values": [
-        "stripe"
-      ]
+      "values": ["stripe"]
     }
   },
   "schemas": {},

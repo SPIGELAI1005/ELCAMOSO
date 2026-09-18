@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { createSeoHeadFromPath } from "@/lib/seo";
 import { ElcamosoMark } from "@/components/ElcamosoLogo";
 import { useSettings } from "@/lib/drive/useSettings";
 import { useReducedMotion } from "@/lib/drive/useReducedMotion";
@@ -7,24 +8,7 @@ import { trackEvent } from "@/lib/telemetry/analytics";
 
 export const Route = createFileRoute("/calibrate")({
   component: Calibrate,
-  head: () => ({
-    meta: [
-      { title: "Calibrate motion · ELCAMOSO" },
-      {
-        name: "description",
-        content:
-          "A quick calibration that tunes motion sensitivity so the O ))) mark and your sound react correctly on your device.",
-      },
-      { property: "og:title", content: "Calibrate motion · ELCAMOSO" },
-      {
-        property: "og:description",
-        content: "Tune motion sensitivity in a few seconds so your sound reacts correctly.",
-      },
-      { property: "og:type", content: "website" },
-      { property: "og:url", content: "/calibrate" },
-    ],
-    links: [{ rel: "canonical", href: "/calibrate" }],
-  }),
+  head: () => createSeoHeadFromPath("/calibrate"),
 });
 
 type Phase = "intro" | "measuring" | "done" | "unsupported";

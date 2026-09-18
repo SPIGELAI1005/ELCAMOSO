@@ -22,7 +22,7 @@ describe("updateOverrun", () => {
     expect(r.overrun).toBe(true);
   });
 
-  it("respects cooldown — no repeated pop spam", () => {
+  it("respects cooldown - no repeated pop spam", () => {
     const first = updateOverrun({
       throttle: 0.05,
       previousThrottle: 0.75,

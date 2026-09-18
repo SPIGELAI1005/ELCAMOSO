@@ -1,40 +1,19 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { createSeoHeadFromPath } from "@/lib/seo";
 import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 
 import { DrivePlusCheckoutButton } from "@/components/DrivePlusCheckoutButton";
-import {
-  PlansBillingIntervalToggle,
-  PlansOverview,
-} from "@/components/LandingPlansSection";
+import { PlansBillingIntervalToggle, PlansOverview } from "@/components/LandingPlansSection";
 import { getBillingPublicConfigFn } from "@/lib/billing/public-config-server-fn";
 import type { BillingDisplayInterval } from "@/lib/billing/plan-display";
-import {
-  getDrivePlusMonthlyDisplay,
-  getDrivePlusYearlyDisplay,
-} from "@/lib/billing/plan-display";
+import { getDrivePlusMonthlyDisplay, getDrivePlusYearlyDisplay } from "@/lib/billing/plan-display";
 import { useEntitlements } from "@/lib/entitlements/useEntitlements";
 import { trackMonetizationEvent } from "@/lib/telemetry/monetization-analytics";
 
 export const Route = createFileRoute("/pricing")({
   component: Pricing,
-  head: () => ({
-    meta: [
-      { title: "Plans · ELCAMOSO" },
-      {
-        name: "description",
-        content: "Start free with essential motion sound, or add Drive+ for the full ELCAMOSO experience.",
-      },
-      { property: "og:title", content: "Plans · ELCAMOSO" },
-      {
-        property: "og:description",
-        content: "Your EV. Your Sound. More Emotion. Free tier and Drive+.",
-      },
-      { property: "og:type", content: "website" },
-      { property: "og:url", content: "/pricing" },
-    ],
-    links: [{ rel: "canonical", href: "/pricing" }],
-  }),
+  head: () => createSeoHeadFromPath("/pricing"),
 });
 
 function OpenDriveLink() {
@@ -54,9 +33,7 @@ function PricingFooterNotes({ showCancel = true }: { showCancel?: boolean }) {
       {showCancel ? <p className="text-sm text-muted-foreground">Cancel anytime.</p> : null}
       <p
         className={
-          showCancel
-            ? "mt-2 text-sm text-muted-foreground"
-            : "text-sm text-muted-foreground"
+          showCancel ? "mt-2 text-sm text-muted-foreground" : "text-sm text-muted-foreground"
         }
       >
         Essential ELCAMOSO stays free.
@@ -98,11 +75,9 @@ function Pricing() {
             <PlansBillingIntervalToggle value={interval} onChange={setInterval} />
           </div>
           <h1 className="mt-8 text-4xl leading-[1.06] font-light tracking-tight sm:text-5xl">
-            Your EV.
+            Feel it.
             <br />
-            Your Sound.
-            <br />
-            More Emotion.
+            Make every drive yours.
           </h1>
           <p className="mt-6 max-w-md text-sm leading-relaxed text-muted-foreground">
             Start with essential motion sound. Drive+ adds the full feel when billing opens.
@@ -130,11 +105,9 @@ function Pricing() {
           <PlansBillingIntervalToggle value={interval} onChange={setInterval} />
         </div>
         <h1 className="mt-8 text-4xl leading-[1.06] font-light tracking-tight sm:text-5xl">
-          Your EV.
+          Feel it.
           <br />
-          Your Sound.
-          <br />
-          More Emotion.
+          Make every drive yours.
         </h1>
         <p className="mt-6 max-w-md text-sm leading-relaxed text-muted-foreground">
           Start with essential motion sound. Add Drive+ when you want the full feel.

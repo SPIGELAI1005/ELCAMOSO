@@ -8,7 +8,9 @@ import type { DynamicDriveTrialSnapshot } from "@/lib/dynamic-drive-trial/types"
 
 const NOW = Date.parse("2026-08-15T12:00:00.000Z");
 
-const trialSnapshot = (overrides: Partial<DynamicDriveTrialSnapshot>): DynamicDriveTrialSnapshot => ({
+const trialSnapshot = (
+  overrides: Partial<DynamicDriveTrialSnapshot>,
+): DynamicDriveTrialSnapshot => ({
   userId: "user_1",
   status: "available",
   startedAt: null,
@@ -121,9 +123,7 @@ describe("buildSubscriptionSummary", () => {
 
 describe("buildTrialBillingState", () => {
   it("shows preview availability on Free", () => {
-    expect(
-      buildTrialBillingState(trialSnapshot({ status: "available" }), false),
-    ).toEqual({
+    expect(buildTrialBillingState(trialSnapshot({ status: "available" }), false)).toEqual({
       label: "Dynamic Drive preview",
       detail: "30 min · up to 3 drives · no card",
     });

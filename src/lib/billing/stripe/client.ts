@@ -18,7 +18,7 @@ export function getStripeClient(): Stripe {
   return stripeClient;
 }
 
-/** Reset cached client — tests only. */
+/** Reset cached client - tests only. */
 export function resetStripeClientForTests(): void {
   stripeClient = null;
 }

@@ -27,7 +27,11 @@ export const postgresUserBillingRepository: UserBillingRepository = {
 
   async setStripeCustomerId(userId, stripeCustomerId, email = null) {
     const db = getDb();
-    const [existing] = await db.select({ id: users.id }).from(users).where(eq(users.id, userId)).limit(1);
+    const [existing] = await db
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
 
     if (existing) {
       await db

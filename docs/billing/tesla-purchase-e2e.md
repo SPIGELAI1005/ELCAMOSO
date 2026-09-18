@@ -10,13 +10,13 @@ Full path: **FREE user on Tesla browser** → Dynamic Drive preview → upgrade 
 
 ## Preconditions
 
-| Item | Requirement |
-|------|-------------|
-| Tesla browser | `/drive?cockpit=1` (cockpit / safety layout) |
-| Account | Signed in on Tesla (session token available) |
-| Billing | Stripe test mode configured (`STRIPE_SECRET_KEY`, price IDs, webhook secret) |
-| Phone relay | Optional but recommended — display peer on Tesla, phone peer linked for motion |
-| Trial | User has not consumed preview (`available` or `active` trial) |
+| Item          | Requirement                                                                    |
+| ------------- | ------------------------------------------------------------------------------ |
+| Tesla browser | `/drive?cockpit=1` (cockpit / safety layout)                                   |
+| Account       | Signed in on Tesla (session token available)                                   |
+| Billing       | Stripe test mode configured (`STRIPE_SECRET_KEY`, price IDs, webhook secret)   |
+| Phone relay   | Optional but recommended — display peer on Tesla, phone peer linked for motion |
+| Trial         | User has not consumed preview (`available` or `active` trial)                  |
 
 ---
 
@@ -128,69 +128,69 @@ Each row: **what happens**, **user-visible behavior**, **recovery**, **test cove
 
 ### Upgrade token (QR link)
 
-| Failure | System behavior | User sees | Recovery | Test |
-|---------|-----------------|-----------|----------|------|
-| Token expired (>15 min) | `resolveTeslaUpgradeToken` → `valid: false`, `expired: true` | Phone: **Link expired** — scan fresh QR from car | Generate new QR on Tesla | `expired upgrade token` |
-| Unknown / garbage token | No record | Phone: **Link expired** | Scan valid QR | Playwright invalid token |
-| Token already completed | `valid: false`, `status: completed` | Phone: **Already unlocked** | Return to car; polling/relay should show unlock | — |
-| Token already used (race) | `bindUserToTeslaUpgradeToken` throws | Checkout error | New QR from Tesla | — |
-| Server restart | In-memory token store cleared | Phone: **Link expired** | New QR from Tesla | Documented limitation |
-| Multi-instance deploy | Token minted on instance A, phone hits B | **Link expired** | Sticky sessions or shared token store (future) | Documented limitation |
+| Failure                   | System behavior                                              | User sees                                        | Recovery                                        | Test                     |
+| ------------------------- | ------------------------------------------------------------ | ------------------------------------------------ | ----------------------------------------------- | ------------------------ |
+| Token expired (>15 min)   | `resolveTeslaUpgradeToken` → `valid: false`, `expired: true` | Phone: **Link expired** — scan fresh QR from car | Generate new QR on Tesla                        | `expired upgrade token`  |
+| Unknown / garbage token   | No record                                                    | Phone: **Link expired**                          | Scan valid QR                                   | Playwright invalid token |
+| Token already completed   | `valid: false`, `status: completed`                          | Phone: **Already unlocked**                      | Return to car; polling/relay should show unlock | —                        |
+| Token already used (race) | `bindUserToTeslaUpgradeToken` throws                         | Checkout error                                   | New QR from Tesla                               | —                        |
+| Server restart            | In-memory token store cleared                                | Phone: **Link expired**                          | New QR from Tesla                               | Documented limitation    |
+| Multi-instance deploy     | Token minted on instance A, phone hits B                     | **Link expired**                                 | Sticky sessions or shared token store (future)  | Documented limitation    |
 
 ### Account binding (phone)
 
-| Failure | System behavior | User sees | Recovery | Test |
-|---------|-----------------|-----------|----------|------|
-| Not signed in | `beginTeslaUpgradeCheckoutFn` throws | Sign-in dialog | Sign in, retry | — |
-| Wrong account | Bind rejects mismatched `userId` | Error: same account as car | Sign in with car account | `wrong account on phone` |
-| Car session anonymous | Token created with `userId: null`; phone bind sets user | Works if phone account intended | Sign in before checkout | — |
+| Failure               | System behavior                                         | User sees                       | Recovery                 | Test                     |
+| --------------------- | ------------------------------------------------------- | ------------------------------- | ------------------------ | ------------------------ |
+| Not signed in         | `beginTeslaUpgradeCheckoutFn` throws                    | Sign-in dialog                  | Sign in, retry           | —                        |
+| Wrong account         | Bind rejects mismatched `userId`                        | Error: same account as car      | Sign in with car account | `wrong account on phone` |
+| Car session anonymous | Token created with `userId: null`; phone bind sets user | Works if phone account intended | Sign in before checkout  | —                        |
 
 ### Billing / Stripe checkout
 
-| Failure | System behavior | User sees | Recovery | Test |
-|---------|-----------------|-----------|----------|------|
-| Stripe not configured | `createTeslaUpgradeTokenFn` throws; resolve shows `billingAvailable: false` | Tesla: **Could not start phone checkout**; phone: billing unavailable | Enable Stripe env | — |
-| Already Drive+ | `beginDrivePlusCheckout` → portal, not duplicate sub | Redirect to **Manage subscription** | Use existing plan | `already Drive+` |
-| Invalid checkout origin | `sanitizeOrigin` throws | Checkout error | Valid HTTPS origin | — |
-| Checkout create fails | Stripe API error wrapped | **Checkout unavailable** | Retry; check Stripe dashboard | Stripe lifecycle suite |
-| User abandons checkout | No webhook; token stays `pending` | Stripe cancel page | Scan QR again (same or new token) | — |
-| Payment fails (card declined) | No `checkout.session.completed` | Stripe failure UI | Fix payment method, retry | Stripe lifecycle suite |
-| Duplicate checkout session | Second webhook idempotent | Single subscription | Safe ignore | Stripe lifecycle suite |
+| Failure                       | System behavior                                                             | User sees                                                             | Recovery                          | Test                   |
+| ----------------------------- | --------------------------------------------------------------------------- | --------------------------------------------------------------------- | --------------------------------- | ---------------------- |
+| Stripe not configured         | `createTeslaUpgradeTokenFn` throws; resolve shows `billingAvailable: false` | Tesla: **Could not start phone checkout**; phone: billing unavailable | Enable Stripe env                 | —                      |
+| Already Drive+                | `beginDrivePlusCheckout` → portal, not duplicate sub                        | Redirect to **Manage subscription**                                   | Use existing plan                 | `already Drive+`       |
+| Invalid checkout origin       | `sanitizeOrigin` throws                                                     | Checkout error                                                        | Valid HTTPS origin                | —                      |
+| Checkout create fails         | Stripe API error wrapped                                                    | **Checkout unavailable**                                              | Retry; check Stripe dashboard     | Stripe lifecycle suite |
+| User abandons checkout        | No webhook; token stays `pending`                                           | Stripe cancel page                                                    | Scan QR again (same or new token) | —                      |
+| Payment fails (card declined) | No `checkout.session.completed`                                             | Stripe failure UI                                                     | Fix payment method, retry         | Stripe lifecycle suite |
+| Duplicate checkout session    | Second webhook idempotent                                                   | Single subscription                                                   | Safe ignore                       | Stripe lifecycle suite |
 
 ### Webhook / entitlements
 
-| Failure | System behavior | User sees | Recovery | Test |
-|---------|-----------------|-----------|----------|------|
-| Webhook delayed | Plan stays FREE until event processed | Car still preview; phone may show success after Stripe | Wait; car polls every 2.5 s | `webhook delayed` |
-| Webhook signature invalid | Event rejected | No unlock | Fix `STRIPE_WEBHOOK_SECRET` | Stripe lifecycle suite |
-| Webhook DB write fails | Local subscription may lag; resilience paths | Car may stay preview briefly | Reconcile admin tool / webhook replay | `failure-resilience` suite |
-| Payment OK but entitlement lag | Polling fallback on Tesla | QR overlay pending → unlock within ~2.5 s | Automatic poll `getEntitlementsFn` | TeslaDrivePlusUpgrade |
-| Trial exhausted before webhook | Preview ends; Drive+ still applies after webhook | Brief essential mode then Drive+ | Complete payment quickly | trial lifecycle suite |
+| Failure                        | System behavior                                  | User sees                                              | Recovery                              | Test                       |
+| ------------------------------ | ------------------------------------------------ | ------------------------------------------------------ | ------------------------------------- | -------------------------- |
+| Webhook delayed                | Plan stays FREE until event processed            | Car still preview; phone may show success after Stripe | Wait; car polls every 2.5 s           | `webhook delayed`          |
+| Webhook signature invalid      | Event rejected                                   | No unlock                                              | Fix `STRIPE_WEBHOOK_SECRET`           | Stripe lifecycle suite     |
+| Webhook DB write fails         | Local subscription may lag; resilience paths     | Car may stay preview briefly                           | Reconcile admin tool / webhook replay | `failure-resilience` suite |
+| Payment OK but entitlement lag | Polling fallback on Tesla                        | QR overlay pending → unlock within ~2.5 s              | Automatic poll `getEntitlementsFn`    | TeslaDrivePlusUpgrade      |
+| Trial exhausted before webhook | Preview ends; Drive+ still applies after webhook | Brief essential mode then Drive+                       | Complete payment quickly              | trial lifecycle suite      |
 
 ### Relay / realtime unlock
 
-| Failure | System behavior | User sees | Recovery | Test |
-|---------|-----------------|-----------|----------|------|
-| Relay not connected | `pushEntitlementUpdateToDisplay` → false | No instant WS unlock | 2.5 s entitlement polling on car | `relay disconnected` |
-| No relay session on token | Token completes; no WS push | Polling only | Still unlocks via poll | `payment succeeds but no relay` |
-| Display peer disconnected | Push fails | Polling fallback | Reconnect relay or wait for poll | `relay disconnected` |
-| Phone-only relay (no display) | Push fails — no display peer | Polling fallback | Ensure Tesla tab connected as display | `relay disconnected` |
-| User closes upgrade overlay early | Event listener removed | Drive continues; poll still runs if reopened | Reopen upgrade or wait for plan poll | — |
+| Failure                           | System behavior                          | User sees                                    | Recovery                              | Test                            |
+| --------------------------------- | ---------------------------------------- | -------------------------------------------- | ------------------------------------- | ------------------------------- |
+| Relay not connected               | `pushEntitlementUpdateToDisplay` → false | No instant WS unlock                         | 2.5 s entitlement polling on car      | `relay disconnected`            |
+| No relay session on token         | Token completes; no WS push              | Polling only                                 | Still unlocks via poll                | `payment succeeds but no relay` |
+| Display peer disconnected         | Push fails                               | Polling fallback                             | Reconnect relay or wait for poll      | `relay disconnected`            |
+| Phone-only relay (no display)     | Push fails — no display peer             | Polling fallback                             | Ensure Tesla tab connected as display | `relay disconnected`            |
+| User closes upgrade overlay early | Event listener removed                   | Drive continues; poll still runs if reopened | Reopen upgrade or wait for plan poll  | —                               |
 
 ### Drive session continuity
 
-| Failure | System behavior | User sees | Recovery | Test |
-|---------|-----------------|-----------|----------|------|
-| Page reload during checkout | New token may be needed; session resumes by `driveSessionId` | QR may stale | Rescan if expired | trial lifecycle `page reload` |
-| Second browser tab | Session conflict rules | Second tab blocked or conflict UI | Single cockpit tab | trial `double browser` |
-| Trial heartbeat loss | Credit capped at 45 s gap | Slower trial burn | Keep tab visible | trial `heartbeat lost` |
+| Failure                     | System behavior                                              | User sees                         | Recovery           | Test                          |
+| --------------------------- | ------------------------------------------------------------ | --------------------------------- | ------------------ | ----------------------------- |
+| Page reload during checkout | New token may be needed; session resumes by `driveSessionId` | QR may stale                      | Rescan if expired  | trial lifecycle `page reload` |
+| Second browser tab          | Session conflict rules                                       | Second tab blocked or conflict UI | Single cockpit tab | trial `double browser`        |
+| Trial heartbeat loss        | Credit capped at 45 s gap                                    | Slower trial burn                 | Keep tab visible   | trial `heartbeat lost`        |
 
 ### Operational / admin
 
-| Failure | System behavior | User sees | Recovery | Test |
-|---------|-----------------|-----------|----------|------|
-| Stripe ↔ local drift | `resolveEntitlementUser` uses local store | Wrong plan until reconcile | `/debug/billing` re-sync (dev) | admin diagnostics |
-| Past due subscription | Grace period rules (`DRIVE_PLUS_PAST_DUE_GRACE_DAYS`) | May lose premium after grace | Update payment in portal | Stripe lifecycle suite |
+| Failure               | System behavior                                       | User sees                    | Recovery                       | Test                   |
+| --------------------- | ----------------------------------------------------- | ---------------------------- | ------------------------------ | ---------------------- |
+| Stripe ↔ local drift  | `resolveEntitlementUser` uses local store             | Wrong plan until reconcile   | `/debug/billing` re-sync (dev) | admin diagnostics      |
+| Past due subscription | Grace period rules (`DRIVE_PLUS_PAST_DUE_GRACE_DAYS`) | May lose premium after grace | Update payment in portal       | Stripe lifecycle suite |
 
 ---
 
@@ -234,14 +234,14 @@ Tesla (display)                    Phone                         Server
 
 **Key modules**
 
-| Module | Role |
-|--------|------|
-| `src/components/TeslaDrivePlusUpgrade.tsx` | QR overlay, unlock phases |
-| `src/routes/upgrade.$token.tsx` | Phone landing + checkout CTA |
-| `src/lib/tesla-upgrade/store.ts` | Token TTL, bind, complete |
-| `src/lib/tesla-upgrade/notify.ts` | Post-webhook relay push |
-| `src/lib/drive-relay/store.ts` | `pushEntitlementUpdateToDisplay` |
-| `src/lib/billing/stripe/subscription-sync.ts` | Webhook → subscription + notify |
+| Module                                        | Role                             |
+| --------------------------------------------- | -------------------------------- |
+| `src/components/TeslaDrivePlusUpgrade.tsx`    | QR overlay, unlock phases        |
+| `src/routes/upgrade.$token.tsx`               | Phone landing + checkout CTA     |
+| `src/lib/tesla-upgrade/store.ts`              | Token TTL, bind, complete        |
+| `src/lib/tesla-upgrade/notify.ts`             | Post-webhook relay push          |
+| `src/lib/drive-relay/store.ts`                | `pushEntitlementUpdateToDisplay` |
+| `src/lib/billing/stripe/subscription-sync.ts` | Webhook → subscription + notify  |
 
 **Known limitations (v1)**
 

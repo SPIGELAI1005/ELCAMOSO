@@ -9,7 +9,7 @@ let sqlClient: postgres.Sql | null = null;
 let dbInstance: Db | null = null;
 
 /** Server-only Postgres client. Requires DATABASE_URL. */
-export function getDb(connectionString = process.env.DATABASE_URL): Db {
+export function getDb(connectionString = process.env["DATABASE_URL"]): Db {
   if (!connectionString) {
     throw new Error("DATABASE_URL is required for database access");
   }

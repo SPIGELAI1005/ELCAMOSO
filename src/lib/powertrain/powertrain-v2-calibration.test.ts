@@ -58,7 +58,7 @@ describe("three speed signals", () => {
     expect(base.diagnostics?.mechanicalSpeedKmh).toBeCloseTo(80, 0);
     expect(base.diagnostics?.shiftDecisionSpeedKmh).toBeCloseTo(80, 0);
 
-    // Step to 100 — display jumps; mechanical and decision trail
+    // Step to 100 - display jumps; mechanical and decision trail
     const step = sim.tick(motion({ speedKmh: 100, timestamp: 10_016 }), 0.016, {
       directThrottle: 0.15,
     });
@@ -171,7 +171,7 @@ describe("steady-speed driverDemand", () => {
   const profile = getPowertrainProfile("flat-six-sport");
 
   function steadyDemand(speedKmh: number) {
-    let state = createDriverDemandState();
+    const state = createDriverDemandState();
     let last = updateDriverDemand({
       motion: motion({
         speedKmh,
@@ -207,7 +207,7 @@ describe("steady-speed driverDemand", () => {
     const r = steadyDemand(speed);
     expect(r.driverDemand).toBeLessThan(0.28);
     expect(r.driverDemand).toBeGreaterThan(0.05);
-    // Road speed must not masquerade as pedal — demand stays near the directThrottle.
+    // Road speed must not masquerade as pedal - demand stays near the directThrottle.
     expect(Math.abs(r.driverDemand - 0.12)).toBeLessThan(0.1);
     expect(roadLoadEstimate(speed)).toBeLessThan(0.15);
     // engineLoad may rise with speed (aero) while demand stays modest
@@ -217,7 +217,7 @@ describe("steady-speed driverDemand", () => {
   });
 
   it("responds clearly from 100 km/h cruise to accel and lift", () => {
-    let state = createDriverDemandState();
+    const state = createDriverDemandState();
     let cruise = updateDriverDemand({
       motion: motion({ speedKmh: 100, accelerationFiltered: 0, accelerationMs2: 0 }),
       profile,

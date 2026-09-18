@@ -17,8 +17,13 @@ export function creditElapsedSeconds(opts: {
   /** End-of-session allows a small grace beyond the last heartbeat. */
   allowEndGrace?: boolean;
 }): number {
-  const { lastCreditedAt, now, dynamicDriveEnabled, remainingSeconds, allowEndGrace = false } =
-    opts;
+  const {
+    lastCreditedAt,
+    now,
+    dynamicDriveEnabled,
+    remainingSeconds,
+    allowEndGrace = false,
+  } = opts;
   if (!dynamicDriveEnabled || remainingSeconds <= 0) return 0;
 
   const rawMs = now.getTime() - lastCreditedAt.getTime();

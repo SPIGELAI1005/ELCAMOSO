@@ -1,8 +1,6 @@
 import { randomUUID } from "node:crypto";
 
-import {
-  DYNAMIC_DRIVE_SESSION_STALE_MS,
-} from "@/lib/dynamic-drive-session/config";
+import { DYNAMIC_DRIVE_SESSION_STALE_MS } from "@/lib/dynamic-drive-session/config";
 
 import { beforeEach, describe, expect, it } from "vitest";
 
@@ -151,12 +149,7 @@ describe("DynamicDriveTrialService", () => {
     const driveSessionId = randomUUID();
     await service.startDriveSession(userId, driveSessionId, BASE);
 
-    const beat = await service.heartbeat(
-      userId,
-      driveSessionId,
-      true,
-      advanceMs(10 * 60_000),
-    );
+    const beat = await service.heartbeat(userId, driveSessionId, true, advanceMs(10 * 60_000));
     expect(beat.creditedSeconds).toBe(Math.floor(DYNAMIC_DRIVE_TRIAL_MAX_CREDIT_GAP_MS / 1000));
   });
 

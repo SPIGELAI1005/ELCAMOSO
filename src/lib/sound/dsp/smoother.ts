@@ -40,7 +40,7 @@ export function targetParam(param: AudioParam, value: number, time: number, tau 
   param.setTargetAtTime(safe, time, Math.max(0.005, tau));
 }
 
-/** Fade layer gain to near-silence when inactive — avoids stacked idle hiss. */
+/** Fade layer gain to near-silence when inactive - avoids stacked idle hiss. */
 export function targetLayerGain(param: AudioParam, value: number, time: number, tau = 0.05) {
   const silent = 0.00001;
   const floor = 0.0001;

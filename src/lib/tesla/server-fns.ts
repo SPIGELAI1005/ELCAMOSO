@@ -13,11 +13,7 @@ export interface PullVehicleTelemetryResponse {
 
 function serializeTelemetryRecord(
   record: NonNullable<
-    Awaited<
-      ReturnType<
-        typeof import("@/lib/tesla/telemetry-bridge").pullVehicleTelemetryRecord
-      >
-    >
+    Awaited<ReturnType<typeof import("@/lib/tesla/telemetry-bridge").pullVehicleTelemetryRecord>>
   >,
 ): PullVehicleTelemetryResponse["record"] {
   const fields: Record<string, string | number | boolean | null> = {};

@@ -23,9 +23,7 @@ export const createTeslaUpgradeTokenFn = createServerFn({ method: "POST" })
       throw new Error("Billing is not available");
     }
     const { getAccountSession } = await import("@/lib/account/auth-service");
-    const { tryResolveRequestSessionToken } = await import(
-      "@/lib/account/session-cookies.server"
-    );
+    const { tryResolveRequestSessionToken } = await import("@/lib/account/session-cookies.server");
     const token = tryResolveRequestSessionToken(data.sessionToken);
     const session = token ? getAccountSession(token) : null;
     const created = createTeslaUpgradeToken({
@@ -63,18 +61,12 @@ export const resolveTeslaUpgradeTokenFn = createServerFn({ method: "POST" })
 
 export const beginTeslaUpgradeCheckoutFn = createServerFn({ method: "POST" })
   .inputValidator(
-    (data: {
-      token: string;
-      sessionToken?: string | null;
-      origin: string;
-      returnPath?: string;
-    }) => data,
+    (data: { token: string; sessionToken?: string | null; origin: string; returnPath?: string }) =>
+      data,
   )
   .handler(async ({ data }) => {
     const { getAccountSession } = await import("@/lib/account/auth-service");
-    const { tryResolveRequestSessionToken } = await import(
-      "@/lib/account/session-cookies.server"
-    );
+    const { tryResolveRequestSessionToken } = await import("@/lib/account/session-cookies.server");
     const token = tryResolveRequestSessionToken(data.sessionToken);
     const session = token ? getAccountSession(token) : null;
     if (!session) throw new Error("Sign in required");

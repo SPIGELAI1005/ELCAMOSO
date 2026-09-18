@@ -1,22 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { createSeoHeadFromPath } from "@/lib/seo";
 import { LegalNote, LegalPage, LegalSection } from "@/components/LegalPage";
 import { LEGAL_OPERATOR } from "@/lib/legal/operator";
 
 export const Route = createFileRoute("/legal/terms")({
   component: Terms,
-  head: () => ({
-    meta: [
-      { title: "Terms of Use · ELCAMOSO" },
-      {
-        name: "description",
-        content: "Terms of use for the ELCAMOSO web application.",
-      },
-      { property: "og:title", content: "Terms of Use · ELCAMOSO" },
-      { property: "og:type", content: "website" },
-      { property: "og:url", content: "/legal/terms" },
-    ],
-    links: [{ rel: "canonical", href: "/legal/terms" }],
-  }),
+  head: () => createSeoHeadFromPath("/legal/terms"),
 });
 
 function Terms() {
@@ -99,10 +88,10 @@ function Terms() {
           before activation.
         </p>
         <p>
-          EU/EEA consumers may have a 14-day withdrawal right for distance contracts where applicable
-          law grants it. If you expressly request immediate access to digital content during that
-          period, you may lose the withdrawal right once delivery begins — as explained at checkout
-          where required.
+          EU/EEA consumers may have a 14-day withdrawal right for distance contracts where
+          applicable law grants it. If you expressly request immediate access to digital content
+          during that period, you may lose the withdrawal right once delivery begins - as explained
+          at checkout where required.
         </p>
         <p>
           Cancel anytime before renewal to avoid the next billing period. We do not prorate partial
@@ -113,7 +102,8 @@ function Terms() {
           >
             {o.email}
           </a>
-          . Payment processing is handled by our payment provider; we do not store full card numbers.
+          . Payment processing is handled by our payment provider; we do not store full card
+          numbers.
         </p>
       </LegalSection>
 

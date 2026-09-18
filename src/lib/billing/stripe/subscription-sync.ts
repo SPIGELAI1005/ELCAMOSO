@@ -33,7 +33,7 @@ export async function resolveUserIdForStripeCustomer(
   metadata?: Stripe.Metadata | null,
 ): Promise<string | null> {
   const fromCustomer = await getUserBillingRepository().getUserIdByStripeCustomerId(customerId);
-  const fromMetadata = metadata?.userId;
+  const fromMetadata = metadata?.["userId"];
   const metadataUserId =
     typeof fromMetadata === "string" && fromMetadata.trim() ? fromMetadata.trim() : null;
 
@@ -54,7 +54,7 @@ export async function resolveUserIdForStripeSubscription(
     return resolveUserIdForStripeCustomer(customerId, subscription.metadata);
   }
 
-  const fromMeta = subscription.metadata?.userId;
+  const fromMeta = subscription.metadata?.["userId"];
   if (typeof fromMeta === "string" && fromMeta.trim()) {
     return fromMeta.trim();
   }
@@ -72,7 +72,7 @@ async function maybeCompleteDynamicDriveTrial(userId: string, status: string): P
   }
 }
 
-/** Persists normalized subscription state and provisions entitlements — webhook authority. */
+/** Persists normalized subscription state and provisions entitlements - webhook authority. */
 export async function syncStripeSubscriptionRecord(subscription: Stripe.Subscription) {
   const priceId = subscription.items.data[0]?.price?.id ?? "";
   if (!isKnownDrivePlusStripePrice(priceId)) {
@@ -100,13 +100,15 @@ export async function syncStripeSubscriptionRecord(subscription: Stripe.Subscrip
   );
   if (!persisted) {
     logStripeWebhookInfo("entitlements provisioned without durable persistence", {
-      userId,
-      providerSubscriptionId: normalized.providerSubscriptionId,
+      eventId: normalized.providerSubscriptionId,
+      eventType: "subscription.sync",
+      detail: "entitlements provisioned without durable persistence",
     });
   }
   if (hasDrivePlusSubscriptionAccess(saved)) {
+    const upgradeToken = subscription.metadata?.["upgradeToken"];
     notifyTeslaUpgradeEntitlementGranted(userId, {
-      upgradeToken: subscription.metadata?.upgradeToken,
+      ...(upgradeToken ? { upgradeToken } : {}),
     });
   }
   await maybeCompleteDynamicDriveTrial(userId, saved.status);
@@ -126,13 +128,9 @@ export async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Se
 
   const customerId = stripeCustomerId(session.customer);
   const userId =
-    (customerId
-      ? await resolveUserIdForStripeCustomer(customerId, session.metadata)
-      : null) ??
-    (typeof session.metadata?.userId === "string" ? session.metadata.userId.trim() : null) ??
-    (typeof session.client_reference_id === "string"
-      ? session.client_reference_id.trim()
-      : null);
+    (customerId ? await resolveUserIdForStripeCustomer(customerId, session.metadata) : null) ??
+    (typeof session.metadata?.["userId"] === "string" ? session.metadata["userId"].trim() : null) ??
+    (typeof session.client_reference_id === "string" ? session.client_reference_id.trim() : null);
 
   if (!userId) {
     throw new StripeWebhookProcessingError("Unable to resolve user for checkout session");
@@ -148,8 +146,9 @@ export async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Se
   }
 
   const saved = await syncStripeSubscriptionById(subscriptionId);
+  const upgradeToken = session.metadata?.["upgradeToken"];
   notifyTeslaUpgradeEntitlementGranted(userId, {
-    upgradeToken: session.metadata?.upgradeToken,
+    ...(upgradeToken ? { upgradeToken } : {}),
   });
   const monetizationMeta = monetizationMetaFromStripeMetadata(session.metadata ?? undefined);
   recordServerMonetizationEvent("checkout_completed", monetizationMeta);
@@ -169,26 +168,27 @@ export async function handleSubscriptionDeleted(subscription: Stripe.Subscriptio
     normalized.providerSubscriptionId,
   );
   const { subscription: saved } = await persistAndProvisionSubscription(normalized, existing);
+  const interval =
+    subscription.metadata?.["interval"] === "monthly" ||
+    subscription.metadata?.["interval"] === "yearly"
+      ? subscription.metadata["interval"]
+      : undefined;
   recordServerMonetizationEvent("subscription_canceled", {
-    source: subscription.metadata?.source ?? "billing",
+    source: subscription.metadata?.["source"] ?? "billing",
     plan: "drive_plus",
-    interval:
-      subscription.metadata?.interval === "monthly" ||
-      subscription.metadata?.interval === "yearly"
-        ? subscription.metadata.interval
-        : undefined,
+    ...(interval ? { interval } : {}),
   });
   return saved;
 }
 
 export async function handleInvoicePaid(invoice: Stripe.Invoice) {
-  const subscriptionId = stripeSubscriptionId(invoice.subscription);
+  const subscriptionId = stripeSubscriptionId(invoice.parent?.subscription_details?.subscription);
   if (!subscriptionId) return { skipped: true as const, reason: "no_subscription" };
   return syncStripeSubscriptionById(subscriptionId);
 }
 
 export async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
-  const subscriptionId = stripeSubscriptionId(invoice.subscription);
+  const subscriptionId = stripeSubscriptionId(invoice.parent?.subscription_details?.subscription);
   if (!subscriptionId) return { skipped: true as const, reason: "no_subscription" };
   return syncStripeSubscriptionById(subscriptionId);
 }

@@ -32,8 +32,16 @@ describe("SoundEngine profile switch", () => {
       expect(() => engine.setProfile(getProfile(id), true)).not.toThrow();
       expect(() => engine.update({ ...IDLE_STATE, load: 0.4, throttle: 0.3 })).not.toThrow();
       expect(() => engine.getMeter()).not.toThrow();
+      expect(engine.getResourceDiagnostics().strategyCount).toBeLessThanOrEqual(1);
     }
 
     await engine.stop();
+    expect(engine.getResourceDiagnostics()).toEqual({
+      contextActive: false,
+      oscillatorVoices: 0,
+      textureVoices: 0,
+      snippetVoices: 0,
+      strategyCount: 0,
+    });
   });
 });

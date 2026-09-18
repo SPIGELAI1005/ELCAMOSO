@@ -24,7 +24,7 @@ export function rpmFromSpeedAndGear(
   return clamp(raw, floor, profile.engine.redlineRpm);
 }
 
-/** Inverse of rpmFromSpeedAndGear — road speed for a locked ratio at the given RPM. */
+/** Inverse of rpmFromSpeedAndGear - road speed for a locked ratio at the given RPM. */
 export function speedKmhFromRpmAndGear(
   rpm: number,
   gear: number,
@@ -41,7 +41,7 @@ export function speedKmhFromRpmAndGear(
 export interface RpmTrackContext {
   speedKmh: number;
   gear: number;
-  /** Driver demand 0..1 — used only for launch / converter slip. */
+  /** Driver demand 0..1 - used only for launch / converter slip. */
   driverDemand: number;
   /** True while a shift is active (slip handled by shift controller). */
   shifting?: boolean;
@@ -51,7 +51,7 @@ export interface RpmTrackContext {
 
 /**
  * RPM between shifts. Once locked above launch speed, RPM tracks mechanical
- * wheel×ratio×finalDrive only — no generic load-dependent slip across the
+ * wheel×ratio×finalDrive only - no generic load-dependent slip across the
  * idle-to-redline span.
  */
 export function rpmTrackTarget(
@@ -86,7 +86,7 @@ export function rpmTrackTargetEx(ctx: RpmTrackContext, profile: PowertrainProfil
     return rpmAtCreep(speedKmh, gear, driverDemand, profile);
   }
 
-  // Locked mechanical coupling — deterministic at fixed speed/gear.
+  // Locked mechanical coupling - deterministic at fixed speed/gear.
   let target = mechanical;
 
   const tc = slip?.torqueConverter;
@@ -98,7 +98,7 @@ export function rpmTrackTargetEx(ctx: RpmTrackContext, profile: PowertrainProfil
   return clamp(target, idle * 0.9, profile.engine.redlineRpm);
 }
 
-/** RPM at very low speed in gear — idle + optional launch slip from throttle. */
+/** RPM at very low speed in gear - idle + optional launch slip from throttle. */
 export function rpmAtCreep(
   speedKmh: number,
   gear: number,

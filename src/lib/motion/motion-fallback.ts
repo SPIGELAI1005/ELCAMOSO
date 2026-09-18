@@ -242,7 +242,7 @@ export interface FallbackAccelInput {
   dt: number;
 }
 
-/** Hold then decay longitudinal accel when IMU drops — avoids audio collapse. */
+/** Hold then decay longitudinal accel when IMU drops - avoids audio collapse. */
 export function resolveFallbackAccel(input: FallbackAccelInput): number {
   const { tier, imuAccelMs2, currentAccelMs2, holdAccelMs2, dt } = input;
   const dtSafe = Math.min(0.25, Math.max(0.001, dt));

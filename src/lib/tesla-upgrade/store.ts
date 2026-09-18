@@ -7,7 +7,7 @@ import type {
   TeslaUpgradeTokenStatus,
 } from "@/lib/tesla-upgrade/types";
 
-/** Short-lived QR upgrade tokens — non-guessable, single-use. */
+/** Short-lived QR upgrade tokens - non-guessable, single-use. */
 export const TESLA_UPGRADE_TOKEN_TTL_MS = 15 * 60 * 1000;
 
 const tokens = new Map<string, TeslaUpgradeTokenRecord>();
@@ -82,7 +82,10 @@ export function resolveTeslaUpgradeToken(token: string): ResolveTeslaUpgradeToke
   };
 }
 
-export function bindUserToTeslaUpgradeToken(token: string, userId: string): TeslaUpgradeTokenRecord {
+export function bindUserToTeslaUpgradeToken(
+  token: string,
+  userId: string,
+): TeslaUpgradeTokenRecord {
   const record = getTeslaUpgradeToken(token);
   if (!record) throw new Error("Upgrade link expired or invalid");
   if (record.status !== "pending") throw new Error("Upgrade link already used");

@@ -87,18 +87,23 @@ function BillingAdminDiagnosticsPage() {
   return (
     <main className="min-h-screen bg-background text-foreground">
       <div className="mx-auto w-full max-w-3xl px-6 pt-16 pb-28 sm:px-10">
-        <p className="text-[11px] tracking-[0.28em] text-muted-foreground uppercase">Dev admin only</p>
+        <p className="text-[11px] tracking-[0.28em] text-muted-foreground uppercase">
+          Dev admin only
+        </p>
         <h1 className="mt-3 text-3xl font-light">Billing diagnostics</h1>
         <p className="mt-3 text-sm text-muted-foreground">
-          Read-only lookup by internal user id or email. Re-sync pulls subscription state from Stripe
-          — never arbitrary entitlement edits.
+          Read-only lookup by internal user id or email. Re-sync pulls subscription state from
+          Stripe - never arbitrary entitlement edits.
         </p>
         <p className="mt-2 text-sm text-muted-foreground">
           <Link to="/debug" className="underline underline-offset-4 hover:text-foreground">
             Sound debug
           </Link>
           {" · "}
-          <Link to="/debug/diagnostics" className="underline underline-offset-4 hover:text-foreground">
+          <Link
+            to="/debug/diagnostics"
+            className="underline underline-offset-4 hover:text-foreground"
+          >
             Drive diagnostics
           </Link>
         </p>
@@ -149,7 +154,9 @@ function BillingAdminDiagnosticsPage() {
         ) : null}
 
         {resyncMessage ? (
-          <p className="mt-6 border border-border p-4 text-sm text-muted-foreground">{resyncMessage}</p>
+          <p className="mt-6 border border-border p-4 text-sm text-muted-foreground">
+            {resyncMessage}
+          </p>
         ) : null}
 
         {diagnostics ? (
@@ -174,7 +181,9 @@ function BillingAdminDiagnosticsPage() {
               {busy === "resync" ? "Re-syncing…" : "Re-sync from Stripe"}
             </button>
             {!diagnostics.stripeConfigured ? (
-              <p className="text-xs text-muted-foreground">Stripe is not configured on this server.</p>
+              <p className="text-xs text-muted-foreground">
+                Stripe is not configured on this server.
+              </p>
             ) : null}
           </section>
         ) : null}
@@ -186,9 +195,9 @@ function BillingAdminDiagnosticsPage() {
 function DiagnosticsGrid({ diagnostics }: { diagnostics: BillingAdminDiagnostics }) {
   const rows: Array<{ label: string; value: string }> = [
     { label: "User id", value: diagnostics.userId },
-    { label: "Email", value: diagnostics.email ?? "—" },
+    { label: "Email", value: diagnostics.email ?? "-" },
     { label: "Internal plan", value: diagnostics.internalPlan },
-    { label: "Entitlements", value: diagnostics.entitlements.join(", ") || "—" },
+    { label: "Entitlements", value: diagnostics.entitlements.join(", ") || "-" },
     {
       label: "Trial status",
       value: diagnostics.trial?.status ?? "none",
@@ -197,18 +206,18 @@ function DiagnosticsGrid({ diagnostics }: { diagnostics: BillingAdminDiagnostics
       label: "Trial remaining",
       value: diagnostics.trial
         ? `${diagnostics.trial.remainingSeconds}s · ${diagnostics.trial.remainingSessions} sessions`
-        : "—",
+        : "-",
     },
-    { label: "Stripe customer id", value: diagnostics.stripeCustomerId ?? "—" },
-    { label: "Stripe subscription id", value: diagnostics.stripeSubscriptionId ?? "—" },
+    { label: "Stripe customer id", value: diagnostics.stripeCustomerId ?? "-" },
+    { label: "Stripe subscription id", value: diagnostics.stripeSubscriptionId ?? "-" },
     { label: "Local subscription status", value: diagnostics.localSubscriptionStatus },
     { label: "Local access reason", value: diagnostics.localAccessReason },
-    { label: "Current period end", value: diagnostics.currentPeriodEnd ?? "—" },
+    { label: "Current period end", value: diagnostics.currentPeriodEnd ?? "-" },
     {
       label: "Cancel at period end",
       value: diagnostics.cancelAtPeriodEnd ? "yes" : "no",
     },
-    { label: "Last subscription update", value: diagnostics.lastSubscriptionUpdate ?? "—" },
+    { label: "Last subscription update", value: diagnostics.lastSubscriptionUpdate ?? "-" },
     { label: "Failed webhooks (recent)", value: String(diagnostics.failedWebhookCount) },
   ];
 

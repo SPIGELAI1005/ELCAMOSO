@@ -1,4 +1,4 @@
-/** Safe webhook logging — never log card data or raw payloads. */
+/** Safe webhook logging - never log card data or raw payloads. */
 export function logStripeWebhookInfo(
   message: string,
   context: { eventId: string; eventType: string; detail?: string },

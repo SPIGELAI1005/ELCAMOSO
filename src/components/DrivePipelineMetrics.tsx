@@ -1,7 +1,7 @@
 import type { MotionPipelineMetrics } from "@/lib/motion/pipeline-metrics";
 
 function fmtMs(value: number | null): string {
-  if (value === null || !Number.isFinite(value)) return "—";
+  if (value === null || !Number.isFinite(value)) return "-";
   return `${Math.round(value)} ms`;
 }
 
@@ -53,7 +53,7 @@ export function DrivePipelineMetrics({ metrics, className = "" }: DrivePipelineM
       </div>
 
       <div className="mt-4 space-y-2">
-        <MetricRow label="Fallback tier" value={metrics.fallbackTier ?? "—"} />
+        <MetricRow label="Fallback tier" value={metrics.fallbackTier ?? "-"} />
         <MetricRow label="Sensor sampling" value={fmtMs(latencies.sensorSamplingMs)} />
         <MetricRow label="Phone → server" value={fmtMs(latencies.phoneToServerMs)} />
         <MetricRow label="Server → Tesla" value={fmtMs(latencies.serverToDisplayMs)} />

@@ -1,8 +1,5 @@
 import { resolveDeployEnv, type ElcamosoDeployEnv } from "@/lib/tesla/config";
-import {
-  stripePriceEnvKeyForPlan,
-  type CommercialPlanId,
-} from "@/lib/billing/stripe/plans";
+import { stripePriceEnvKeyForPlan, type CommercialPlanId } from "@/lib/billing/stripe/plans";
 
 function readEnv(name: string): string | undefined {
   const value = process.env[name];
@@ -37,10 +34,8 @@ export function readStripeConfig(deploy = resolveDeployEnv()): StripeConfig {
   const secretKey = readScopedEnv("STRIPE_SECRET_KEY", deploy) ?? "";
   const webhookSecret = readScopedEnv("STRIPE_WEBHOOK_SECRET", deploy) ?? "";
   const prices: StripePriceConfig = {
-    drive_plus_monthly:
-      readScopedEnv(stripePriceEnvKeyForPlan("drive_plus_monthly"), deploy) ?? "",
-    drive_plus_yearly:
-      readScopedEnv(stripePriceEnvKeyForPlan("drive_plus_yearly"), deploy) ?? "",
+    drive_plus_monthly: readScopedEnv(stripePriceEnvKeyForPlan("drive_plus_monthly"), deploy) ?? "",
+    drive_plus_yearly: readScopedEnv(stripePriceEnvKeyForPlan("drive_plus_yearly"), deploy) ?? "",
   };
 
   const configured = Boolean(
@@ -56,7 +51,7 @@ export function readStripeConfig(deploy = resolveDeployEnv()): StripeConfig {
   };
 }
 
-/** Resolve a Stripe Price id from an internal commercial plan id — server-only. */
+/** Resolve a Stripe Price id from an internal commercial plan id - server-only. */
 export function resolveStripePriceId(
   commercialPlanId: CommercialPlanId,
   config: StripeConfig = readStripeConfig(),

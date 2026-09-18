@@ -41,7 +41,7 @@ export function AccountUserIcon({ className }: AccountUserIconProps) {
     >
       {/* Head as O */}
       <circle cx="9.5" cy="7.5" r="4.1" stroke="currentColor" strokeWidth="1.6" />
-      {/* ))) waves — same idle radiate pulse as the brand mark */}
+      {/* ))) waves - same idle radiate pulse as the brand mark */}
       {WAVES.map((wave, i) => (
         <path
           key={wave.d}

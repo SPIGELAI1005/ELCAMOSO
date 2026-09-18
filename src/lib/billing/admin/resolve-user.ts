@@ -4,8 +4,7 @@ import { resolveUserIdForEmail } from "@/lib/account/session-store";
 import { getDb } from "@/lib/db/client";
 import { users } from "@/lib/db/schema";
 
-const UUID_RE =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export interface ResolvedInternalUser {
   userId: string;
@@ -18,7 +17,7 @@ function isUuid(value: string): boolean {
 }
 
 async function resolveEmailFromPostgres(userId: string): Promise<string | null> {
-  if (!process.env.DATABASE_URL) return null;
+  if (!process.env["DATABASE_URL"]) return null;
   try {
     const db = getDb();
     const [row] = await db
@@ -33,7 +32,7 @@ async function resolveEmailFromPostgres(userId: string): Promise<string | null> 
 }
 
 async function resolveUserIdFromPostgresEmail(email: string): Promise<string | null> {
-  if (!process.env.DATABASE_URL) return null;
+  if (!process.env["DATABASE_URL"]) return null;
   try {
     const db = getDb();
     const [row] = await db
@@ -47,7 +46,7 @@ async function resolveUserIdFromPostgresEmail(email: string): Promise<string | n
   }
 }
 
-/** Resolve an internal user id from UUID or email — admin lookup only. */
+/** Resolve an internal user id from UUID or email - admin lookup only. */
 export async function resolveInternalUserLookup(query: string): Promise<ResolvedInternalUser> {
   const trimmed = query.trim();
   if (!trimmed) {
@@ -56,8 +55,7 @@ export async function resolveInternalUserLookup(query: string): Promise<Resolved
 
   if (trimmed.includes("@")) {
     const email = trimmed.toLowerCase();
-    const userId =
-      resolveUserIdForEmail(email) ?? (await resolveUserIdFromPostgresEmail(email));
+    const userId = resolveUserIdForEmail(email) ?? (await resolveUserIdFromPostgresEmail(email));
     if (!userId) {
       throw new Error("No user found for that email");
     }

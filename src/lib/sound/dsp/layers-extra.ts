@@ -310,7 +310,7 @@ export function createDeepBassPulseLayer(ctx: BaseAudioContext, opts: LayerBaseO
     sub.start(at);
     sub.stop(at + dur + 0.05);
 
-    // Phone / cabin presence (100–170 Hz) — this is what makes the pulse audible
+    // Phone / cabin presence (100–170 Hz) - this is what makes the pulse audible
     const mid = ctx.createOscillator();
     const midLp = ctx.createBiquadFilter();
     const midG = ctx.createGain();

@@ -18,12 +18,20 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate:dev": "node scripts/migrate-dev.mjs",
     "db:studio": "drizzle-kit studio",
-    "billing:diagnostics": "npx tsx scripts/billing-diagnostics.ts"
+    "billing:diagnostics": "npx tsx scripts/billing-diagnostics.ts",
+    "relay:dev": "npx tsx services/drive-relay/server.ts",
+    "seo:check": "npx tsx scripts/seo-check.mjs",
+    "native:sync": "cap sync",
+    "native:ios": "cap open ios",
+    "native:android": "cap open android"
   },
   "overrides": {
     "rolldown": "1.2.1"
   },
   "dependencies": {
+    "@capacitor/android": "^8.5.2",
+    "@capacitor/core": "^8.5.2",
+    "@capacitor/ios": "^8.5.2",
     "@hookform/resolvers": "^5.2.2",
     "@radix-ui/react-accordion": "^1.2.12",
     "@radix-ui/react-alert-dialog": "^1.1.15",
@@ -51,6 +59,7 @@
     "@radix-ui/react-toggle": "^1.1.10",
     "@radix-ui/react-toggle-group": "^1.1.11",
     "@radix-ui/react-tooltip": "^1.2.8",
+    "@resvg/resvg-wasm": "^2.4.1",
     "@tailwindcss/vite": "^4.2.1",
     "@tanstack/react-query": "^5.101.1",
     "@tanstack/react-router": "1.170.18",
@@ -74,6 +83,7 @@
     "react-hook-form": "^7.71.2",
     "react-resizable-panels": "^4.6.5",
     "recharts": "^2.15.4",
+    "satori": "^0.33.3",
     "sonner": "^2.0.7",
     "stripe": "^22.6.0",
     "tailwind-merge": "^3.5.0",
@@ -84,6 +94,7 @@
     "zod": "^3.24.2"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.5.2",
     "@electric-sql/pglite": "^0.5.8",
     "@eslint/js": "^9.32.0",
     "@lovable.dev/vite-tanstack-config": "^2.15.0",

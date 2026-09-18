@@ -1,4 +1,4 @@
-/** Human-friendly trial time — minutes only, no anxiety-inducing seconds ticker. */
+/** Human-friendly trial time - minutes only, no anxiety-inducing seconds ticker. */
 export function formatTrialRemainingMinutes(remainingSeconds: number): string {
   if (remainingSeconds <= 0) return "0 min remaining";
   const mins = Math.max(1, Math.ceil(remainingSeconds / 60));
@@ -9,7 +9,7 @@ export const TRIAL_UPGRADE_MILESTONES_MIN = [10, 5, 1] as const;
 
 export type TrialUpgradeMilestone = (typeof TRIAL_UPGRADE_MILESTONES_MIN)[number];
 
-/** Next milestone to surface once — lowest unacknowledged threshold the user has reached. */
+/** Next milestone to surface once - lowest unacknowledged threshold the user has reached. */
 export function resolveTrialUpgradeMilestone(
   remainingSeconds: number,
   acknowledged: ReadonlySet<number>,
@@ -32,8 +32,4 @@ export function trialUpgradeMilestoneMessage(milestone: TrialUpgradeMilestone): 
   }
 }
 
-export const TRIAL_OFFER_POINTS = [
-  "30 minutes",
-  "Up to 3 drives",
-  "No card required",
-] as const;
+export const TRIAL_OFFER_POINTS = ["30 minutes", "Up to 3 drives", "No card required"] as const;

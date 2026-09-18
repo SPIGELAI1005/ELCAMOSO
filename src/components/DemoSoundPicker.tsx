@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   PROFILE_CATEGORIES,
   allProfiles,
@@ -26,10 +26,16 @@ export function DemoSoundPicker({
   const [category, setCategory] = useState<ProfileCategory | "Favourites">(
     () => current?.category ?? "Classic",
   );
-
-  useEffect(() => {
+  const categoryTouched = useRef(false);
+  useLayoutEffect(() => {
+    if (categoryTouched.current) return;
     if (current?.category) setCategory(current.category);
   }, [settings.profileId, current?.category]);
+
+  const selectCategory = (next: ProfileCategory | "Favourites") => {
+    categoryTouched.current = true;
+    setCategory(next);
+  };
 
   const categories = useMemo(() => {
     const cats: Array<ProfileCategory | "Favourites"> = ["Favourites"];
@@ -73,7 +79,8 @@ export function DemoSoundPicker({
               type="button"
               role="tab"
               aria-selected={active}
-              onClick={() => setCategory(cat)}
+              onPointerDown={() => selectCategory(cat)}
+              onClick={() => selectCategory(cat)}
               className={`h-8 shrink-0 rounded-full border px-3.5 text-[10px] tracking-[0.16em] uppercase transition-colors ${
                 active
                   ? "border-foreground text-foreground"

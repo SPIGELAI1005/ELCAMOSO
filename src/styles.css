@@ -240,7 +240,7 @@
   filter: drop-shadow(0 0 10px oklch(1 0 0 / 12%));
 }
 
-/** Dynamic Drive cockpit cluster — gear hero, rev arc, minimal metadata. */
+/** Dynamic Drive cockpit cluster - gear hero, rev arc, minimal metadata. */
 .dd-instrument__cluster {
   grid-template-columns: 1fr;
 }

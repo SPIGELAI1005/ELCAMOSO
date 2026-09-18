@@ -49,9 +49,7 @@ describe("commercial plan mapping", () => {
   });
 
   it("maps internal plans to server env keys", () => {
-    expect(stripePriceEnvKeyForPlan("drive_plus_monthly")).toBe(
-      "STRIPE_PRICE_DRIVE_PLUS_MONTHLY",
-    );
+    expect(stripePriceEnvKeyForPlan("drive_plus_monthly")).toBe("STRIPE_PRICE_DRIVE_PLUS_MONTHLY");
     expect(stripePriceEnvKeyForPlan("drive_plus_yearly")).toBe("STRIPE_PRICE_DRIVE_PLUS_YEARLY");
   });
 

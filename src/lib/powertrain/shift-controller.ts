@@ -5,7 +5,7 @@ const clamp = (v: number, min: number, max: number) => Math.min(max, Math.max(mi
 
 export type ShiftDirection = "up" | "down";
 
-/** Mechanical shift phases — normalized progress still drives timing. */
+/** Mechanical shift phases - normalized progress still drives timing. */
 export type ShiftPhase =
   "idle" | "request" | "torque_cut" | "disengage" | "ratio_transition" | "reengage" | "settle";
 
@@ -87,7 +87,7 @@ export function beginShift(
   currentRpm: number,
   profile: PowertrainProfile,
 ): ShiftControllerState {
-  // Adjacent gears only — multi-step plans are queued by the simulator.
+  // Adjacent gears only - multi-step plans are queued by the simulator.
   if (Math.abs(toGear - fromGear) !== 1) {
     return createShiftControllerState();
   }

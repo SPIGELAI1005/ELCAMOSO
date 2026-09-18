@@ -8,12 +8,12 @@ export class BillingAdminAccessDeniedError extends Error {
 }
 
 export function isBillingAdminConfigured(): boolean {
-  const secret = process.env.ELCAMOSO_BILLING_ADMIN_SECRET?.trim();
+  const secret = process.env["ELCAMOSO_BILLING_ADMIN_SECRET"]?.trim();
   return Boolean(secret);
 }
 
 function readConfiguredSecret(): string {
-  const secret = process.env.ELCAMOSO_BILLING_ADMIN_SECRET?.trim();
+  const secret = process.env["ELCAMOSO_BILLING_ADMIN_SECRET"]?.trim();
   if (!secret) {
     throw new BillingAdminAccessDeniedError("Billing admin is not configured");
   }
@@ -27,7 +27,7 @@ function secretsMatch(provided: string, expected: string): boolean {
   return timingSafeEqual(a, b);
 }
 
-/** Server-only guard — required for all admin billing diagnostics and reconciliation. */
+/** Server-only guard - required for all admin billing diagnostics and reconciliation. */
 export function assertBillingAdminAccess(providedSecret: string | null | undefined): void {
   const expected = readConfiguredSecret();
   const provided = providedSecret?.trim() ?? "";

@@ -28,7 +28,7 @@ export interface MotionSample {
   vehicleOperatingState?: string;
 }
 
-/** Fused vehicle motion — input to the virtual powertrain. */
+/** Fused vehicle motion - input to the virtual powertrain. */
 export interface VehicleMotionState {
   timestamp: number;
 

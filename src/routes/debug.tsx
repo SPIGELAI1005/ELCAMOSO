@@ -174,6 +174,12 @@ function DebugHarness() {
         >
           Billing admin diagnostics →
         </Link>
+        <Link
+          to="/debug/symphony-assets"
+          className="mt-2 inline-block text-[11px] tracking-[0.2em] text-muted-foreground uppercase hover:text-foreground"
+        >
+          Symphony asset governance →
+        </Link>
 
         <section className="mt-10 space-y-6 border border-border p-6">
           <label className="block text-sm">
@@ -235,7 +241,7 @@ function DebugHarness() {
             </div>
             <p className="mt-2 text-[11px] text-muted-foreground">
               {v2Eligible
-                ? "Same motion trace — match volume before judging. Realism V2.1 is default for combustion."
+                ? "Same motion trace - match volume before judging. Realism V2.1 is default for combustion."
                 : "Realism V2 applies to combustion profiles (GT V8, Flat-Six, etc.)."}
             </p>
           </div>
@@ -345,7 +351,7 @@ function DebugHarness() {
           <section className="mt-8 border border-border p-6">
             <h2 className="text-base">Dynamic Drive layers</h2>
             <p className="mt-2 text-xs text-muted-foreground">
-              Crossfade gains and fundamental Hz per band — not a single playbackRate mapping.
+              Crossfade gains and fundamental Hz per band - not a single playbackRate mapping.
             </p>
             <DynamicDriveLayerPanel layers={dynamicLayers} className="mt-4" />
           </section>

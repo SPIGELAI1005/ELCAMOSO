@@ -19,7 +19,9 @@ function printUsage(): void {
 Requires ELCAMOSO_BILLING_ADMIN_SECRET in the environment.`);
 }
 
-function printDiagnostics(diagnostics: Awaited<ReturnType<typeof buildBillingAdminDiagnostics>>): void {
+function printDiagnostics(
+  diagnostics: Awaited<ReturnType<typeof buildBillingAdminDiagnostics>>,
+): void {
   console.log(JSON.stringify(diagnostics, null, 2));
 }
 

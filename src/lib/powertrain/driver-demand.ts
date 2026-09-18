@@ -26,7 +26,7 @@ function smoothToward(current: number, target: number, dt: number, tau: number):
  */
 export function roadLoadEstimate(speedKmh: number): number {
   const v = Math.max(0, speedKmh);
-  // ~0.04 at 50, ~0.07 at 100, ~0.10 at 140 — never the primary demand signal.
+  // ~0.04 at 50, ~0.07 at 100, ~0.10 at 140 - never the primary demand signal.
   return clamp01((v / 160) * 0.08 + (v / 220) ** 2 * 0.06);
 }
 
@@ -90,7 +90,7 @@ export function updateDriverDemand(input: DriverDemandInput): DriverDemandResult
     // Prefer explicit pedal; blend a little motion so lifts still feel alive.
     target = clamp01(input.directThrottle * 0.92 + fromMotion * 0.08);
   } else {
-    // Fusion inferredThrottle may still embed old speed bias — prefer accel path.
+    // Fusion inferredThrottle may still embed old speed bias - prefer accel path.
     // Do NOT fold road-load into driverDemand (that belongs in engineLoad only).
     const inferred = clamp01(motion.inferredThrottle);
     const blend = profile.throttle.directWeight;

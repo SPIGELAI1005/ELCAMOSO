@@ -5,14 +5,8 @@ import {
   SOUND_ASSET_CATALOG,
   SOUND_ASSET_MANIFEST_VERSION,
 } from "@/lib/sound-assets/catalog";
-import {
-  buildSignedDeliveryUrl,
-  getSoundAssetSigningSecret,
-} from "@/lib/sound-assets/signing";
-import type {
-  SoundAssetManifest,
-  SoundAssetManifestRequest,
-} from "@/lib/sound-assets/types";
+import { buildSignedDeliveryUrl, getSoundAssetSigningSecret } from "@/lib/sound-assets/signing";
+import type { SoundAssetManifest, SoundAssetManifestRequest } from "@/lib/sound-assets/types";
 import { hasEntitlement } from "@/lib/entitlements/resolve";
 import { resolveEntitlementUser } from "@/lib/entitlements/service";
 
@@ -54,7 +48,7 @@ export async function buildSoundAssetManifest(input: {
   const hasPremiumAccess = hasEntitlement(user, "all_sound_profiles", now);
   const eligible = filterSoundAssetCatalog(SOUND_ASSET_CATALOG, {
     hasPremiumAccess,
-    personality: input.request?.personality,
+    ...(input.request?.personality ? { personality: input.request.personality } : {}),
   });
 
   const assets = eligible.map((asset) => ({

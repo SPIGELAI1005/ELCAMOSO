@@ -10,7 +10,7 @@
 
 **Tagline:** "Your EV. Your Sound. More Emotion."
 
-**Brand Positioning:** A premium digital automotive product that gives electric vehicles a configurable sound personality. It is not a fake-engine website, a racing soundboard, or a generic EV utility. The emotional core is the perceived synchronization between movement and sound. Position around the phrase: **"Sound in motion."**
+**Brand Positioning:** A premium digital automotive product that turns electric-car motion into sound, either live in the cabin or later from a privately captured journey. It is not a fake-engine website, a racing soundboard, a generic EV utility, or a product that requires constant cabin noise. The emotional core is the perceived synchronization between movement and sound. Position around the phrases **"Turn motion into sound"** and **"Hear it now. Or hear it later."**
 
 **Visual Identity:**
 
@@ -25,7 +25,7 @@
 
 ## 2. Core Value Proposition
 
-Electric vehicles are silent. ELCAMOSO restores the emotional, tactile feedback of motion by generating a configurable soundscape that responds to real-time driving dynamics: speed, throttle, acceleration, regen, and (where available) RPM/gear. The sound is not just an overlay; it is a real-time reflection of the driver's input and the vehicle's state.
+Electric vehicles are silent. ELCAMOSO can add emotional, tactile feedback in real time, or preserve the quiet and transform a recorded journey into sound after arrival. Speed, throttle, acceleration, regen, and (where available) RPM/gear shape the result. The experience is not just an overlay; it is a reflection of the driver's movement and the vehicle's state.
 
 The product prioritizes:
 
@@ -34,6 +34,7 @@ The product prioritizes:
 3. **Safety:** Audio levels are controlled, predictable, and never startling.
 4. **Privacy:** Motion data is processed locally. "Your drive stays yours."
 5. **Premium feel:** Minimal, calm, expensive UI.
+6. **Choice of listening moment:** Live sound is optional. Silent Capture makes ELCAMOSO useful as a creative journey recorder for quiet-cabin drivers, road-trippers, music lovers, and creators.
 
 ---
 
@@ -136,6 +137,27 @@ Each profile has:
   - GPS (geolocation) for speed.
   - DeviceMotion (accelerometer) for acceleration and regen feel.
   - Manual sliders in demo mode.
+
+### 4.3.1 Silent Capture & Journey Trace
+
+- Drive modes: **Live Sound**, **Silent Capture**, **Live + Capture** (“Drive first. Hear it later.”).
+- Silent Capture records a privacy-safe **JourneyTraceV1** (motion only — no route/GPS persistence) without starting ELCAMOSO audio.
+- After the drive, the same trace can be reinterpreted with Engine / Symphony / World / Fusion / Drive Song.
+- Web capture may pause when the browser hides the page; gaps are marked, never invented.
+- Details: `docs/SILENT_CAPTURE.md`, `docs/JOURNEY_TRACE.md`.
+
+### 4.3.2 Journey Replay & Remix
+
+- `/journeys/$journeyId` is the premium **HEAR THIS DRIVE** player for a real `JourneyTraceV1`.
+- **REPLAY DRIVE** reproduces the original journey at its original duration. It is distinct from **DRIVE SONG**, which condenses the journey into a 2–3 minute composition.
+- The player shows the Journey date/duration, Motion Signature with playhead, speed, and—when meaningful—virtual gear and RPM.
+- A Journey can be heard as **Engine**, **Symphony**, **World**, or **Fusion** without creating another Journey.
+- Engine replay always reruns the selected personality's `PowertrainSimulator` from personality-independent motion. Never reuse recorded or previously interpreted gear/RPM values from another profile.
+- Switching interpretation may preserve the playhead. The previous audio graph must be fully stopped before the replacement graph starts.
+- **REMIX DRIVE** saves a `JourneyInterpretationV1` (user-facing name: **Remix**) containing experience, family, and deterministic seed; it does not copy the trace.
+- **CREATE DRIVE SONG** is available from Silent Capture and Live+Capture traces. The JourneyTrace is adapted into the existing privacy-safe Journey Composer while retaining the same Journey id.
+- Same Journey + same seed must produce the same Symphony arrangement decisions.
+- Development builds may expose **A/B SAME DRIVE**: two Engine personalities at the same Journey time index, with only the selected graph audible.
 
 ### 4.4 O ))) Animation
 
@@ -400,34 +422,42 @@ interface SoundLayer {
 
 Primary navigation is minimal. Main routes:
 
-| Route                  | Purpose                                                                                                   |
-| ---------------------- | --------------------------------------------------------------------------------------------------------- |
-| `/`                    | Landing / hero with [Start Drive]                                                                         |
-| `/onboarding`          | 3-step first-time setup                                                                                   |
-| `/drive`               | Active driving interface; optional Free phone QR pairing (sensor source)                                  |
-| `/demo`                | Pedals + P R N D, guided character tour, no sensors                                                       |
-| `/sounds`              | Browse, Find a sound → Listen, audition, select profiles                                                  |
-| `/studio`              | Sound shaping, mixer, environments, snippets, AI prompt-to-sound, audio monitor, share link               |
-| `/garage`              | Collection, favorites, playlists, snippets, share                                                         |
-| `/share`               | Audition a shared Studio personality from a link                                                          |
-| `/calibrate`           | Motion sensitivity calibration with live test                                                             |
-| `/settings`            | Master volume, per-profile gain, haptics, reduced motion, usage insights, reset onboarding, export/import |
-| `/pricing`             | FREE vs Drive+ plans, emotional positioning, Stripe Checkout entry                                        |
-| `/upgrade/$token`      | Phone-side Tesla Drive+ checkout (QR destination); auth + Stripe, no card entry in car browser              |
-| `/pair`                | Phone manual pairing code entry (motion sensor only; sound stays in car)                                  |
-| `/pair/$token`         | Phone QR claim (opaque short-lived token → session join secret)                                           |
-| `/connect/$sessionId`  | Legacy phone join path (still supported)                                                                  |
-| `/auth/account/callback` | Email magic-link verification; sets HttpOnly account session cookie                                     |
-| `/auth/account/google/callback` | Google OAuth Authorization Code callback (server GET exchange + cookie); never expose client secret |
-| `/about`               | Product about                                                                                             |
-| `/legal`               | Legal hub                                                                                                 |
-| `/legal/impressum`     | German Impressum (TMG)                                                                                    |
-| `/legal/privacy`       | Privacy / Datenschutzerklärung (GDPR + US)                                                                |
-| `/legal/cookies`       | Cookie notice + consent reset                                                                             |
-| `/legal/terms`         | Terms of use                                                                                              |
-| `/legal/accessibility` | Accessibility statement                                                                                   |
-| `/debug` (dev-only)    | Diagnostics panel; Original/Improved/Realism V2 A/B                                                       |
-| `/debug/calibration` (dev-only) | Road-test calibration lab: capture/replay traces, Current vs V2, Dynamic vs Legacy               |
+| Route                               | Purpose                                                                                                   |
+| ----------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `/`                                 | Landing / hero with [Start Drive]                                                                         |
+| `/onboarding`                       | 3-step first-time setup                                                                                   |
+| `/drive`                            | Active driving interface; optional Free phone QR pairing (sensor source)                                  |
+| `/explore`                          | Motion Experiences discovery (Engine / Symphony / Worlds / Fusion)                                        |
+| `/demo`                             | Pedals + P R N D, guided character tour, no sensors                                                       |
+| `/sounds`                           | Engine / Sound Profile catalogue (preserved deep links)                                                   |
+| `/symphony`                         | Drive Symphony — Listen demo + pack picker (V1 engine)                                                    |
+| `/worlds`                           | Worlds engine — Space Drive / Cyber City / Storm Run (+ Listen)                                           |
+| `/fusion`                           | Fusion mixer — Machine + Music presets, mix, Start Fusion Drive                                           |
+| `/studio`                           | Studio 2.0: Sound · Symphony · Fusion modes; Experience Presets → Garage; describe→params (no telemetry)  |
+| `/garage`                           | Collection, favorites, Experiences (Studio presets), Journeys                                             |
+| `/journeys`                         | Local Journey library + Drive Songs                                                                       |
+| `/journeys/$journeyId`              | Journey Replay/Remix player + distinct Drive Song creation/player, Drive DNA, share / delete              |
+| `/share`                            | Audition a shared Studio personality from a link                                                          |
+| `/share/drive/$shareId`             | Shared Drive Song preview (no route / GPS)                                                                |
+| `/calibrate`                        | Motion sensitivity calibration with live test                                                             |
+| `/settings`                         | Master volume, per-profile gain, haptics, reduced motion, usage insights, reset onboarding, export/import |
+| `/pricing`                          | FREE vs Drive+ plans, emotional positioning, Stripe Checkout entry                                        |
+| `/upgrade/$token`                   | Phone-side Tesla Drive+ checkout (QR destination); auth + Stripe, no card entry in car browser            |
+| `/pair`                             | Phone manual pairing code entry (motion sensor only; sound stays in car)                                  |
+| `/pair/$token`                      | Phone QR claim (opaque short-lived token → session join secret)                                           |
+| `/connect/$sessionId`               | Legacy phone join path (still supported)                                                                  |
+| `/auth/account/callback`            | Email magic-link verification; sets HttpOnly account session cookie                                       |
+| `/auth/account/google/callback`     | Google OAuth Authorization Code callback (server GET exchange + cookie); never expose client secret       |
+| `/about`                            | Product about                                                                                             |
+| `/legal`                            | Legal hub                                                                                                 |
+| `/legal/impressum`                  | German Impressum (TMG)                                                                                    |
+| `/legal/privacy`                    | Privacy / Datenschutzerklärung (GDPR + US)                                                                |
+| `/legal/cookies`                    | Cookie notice + consent reset                                                                             |
+| `/legal/terms`                      | Terms of use                                                                                              |
+| `/legal/accessibility`              | Accessibility statement                                                                                   |
+| `/debug` (dev-only)                 | Diagnostics panel; Original/Improved/Realism V2 A/B                                                       |
+| `/debug/symphony-assets` (dev-only) | Pack BPM/bars/license audit; missing WAV placeholders; misaligned BPM/bars                                |
+| `/debug/calibration` (dev-only)     | Road-test calibration lab: capture/replay traces, Current vs V2, Dynamic vs Legacy                        |
 
 Site footer (`SiteFooter`) and cookie consent bar (`CookieConsent`) render from the root layout. Operator details live in `src/lib/legal/operator.ts` (replace PLACEHOLDERs before public DE/EU launch).
 
@@ -493,6 +523,38 @@ Root layout (`__root.tsx`) renders `<Outlet />` and global providers/Toaster. No
 - **PWA:** `public/manifest.webmanifest` plus `public/sw.js` (shell precache). Drive traces are not cached by the worker.
 
 ---
+
+### 9.1 Native Companion and Background Journey Capture
+
+- ELCAMOSO stays web-first. Capacitor 8 containers wrap the existing React/TanStack application; native UI must not fork the product.
+- Motion acquisition is behind `MotionCaptureProvider`: web is foreground/best-effort, iOS uses supported Core Location background updates, and Android uses a user-started location foreground service.
+- Native Silent Capture and Live + Capture continue through ordinary backgrounding/screen lock, persist privacy-safe chunks in app-private storage, and import complete or partial `JourneyTraceV1` records into the existing IndexedDB repository by stable `journeyId`.
+- The foreground user action and privacy explanation must precede native permission prompts. The UI offers **Balanced (recommended)** and **High detail** quality modes and shows active duration, quality, sample count, and **Stop & Create Journey** on return.
+- iOS: automotive activity, visible background-location indicator, Always authorization, `location` background mode only. Never use silent audio to extend capture.
+- Android: `location` foreground-service type, ongoing notification **“ELCAMOSO is capturing this drive”**, and a notification Stop action. Do not start the service from the background. Do not request background location for the normal visible-start flow.
+- Latitude/longitude may exist only in the current native/browser location callback and previous in-memory fix used for derivation. Never persist coordinates, routes, destinations, or polylines.
+- Native capture may use location-derived motion at reduced detail when continuous IMU is unavailable. Missing intervals are explicit gaps; they are never synthesized.
+- Interrupted native captures recover as incomplete journeys with gaps and the user-facing message **“Journey recovered.”** Native completed files are retained until idempotent web import acknowledgement.
+- Native architecture, exact IDE steps, platform permissions, limitations, and physical-device matrices live in `docs/NATIVE_COMPANION.md`, `docs/BACKGROUND_CAPTURE_IOS.md`, and `docs/BACKGROUND_CAPTURE_ANDROID.md`.
+
+### 9.2 Capability packaging and production controls
+
+- Product access is capability-based. `FREE` preserves every legacy grant and adds the minimum
+  creative loop: essential Engine, one Symphony experience when approved assets exist, Worlds
+  sampler, Drive DNA, local Journey history, basic Drive Song, basic sharing, and phone pairing.
+- `DRIVE_PLUS` grants the complete catalog, Fusion, full Journey history, remixes, Drive Reel,
+  advanced Studio, premium presets, and future Experience Drops. Existing subscription records are
+  never rewritten merely because packaging changes.
+- Every Symphony stem requires a per-asset record containing asset id, pack, instrument,
+  variation, BPM, key, bars, version, copyright owner, license, source, and commercial-use status.
+  Production additionally requires an approved source, asset path, 48 kHz analysis, aligned
+  duration, and peak/RMS values. Development synthesis must fail closed in production.
+- Web Audio experiences must own and dispose every source, filter, gain, and modulation node.
+  The unified lifecycle harness must report zero connected nodes and zero running sources after an
+  interpretation is disposed.
+- `docs/REQUIREMENTS_TRACEABILITY.md` is the release mapping from each specification item to code,
+  automated evidence, a manual gate, or an external dependency. It must be updated with product or
+  architecture changes.
 
 ## 10. Implementation Rules
 
@@ -565,4 +627,4 @@ When editing this codebase, remember:
 
 ---
 
-_Last updated: 2026-08-20 (Motion context, trigger rules, timed playlists, Studio A/B, takes, latency match)_
+_Last updated: 2026-09-18 (Journey Replay, capability packaging, relay security, audio lifecycle, and production asset gates)_

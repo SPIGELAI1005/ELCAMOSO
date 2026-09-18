@@ -50,8 +50,8 @@ describe("tesla upgrade tokens", () => {
   });
 
   it("pushEntitlementUpdateToDisplay returns false without a connected display", () => {
-    expect(
-      pushEntitlementUpdateToDisplay("missing", { plan: "DRIVE_PLUS", revision: 1 }),
-    ).toBe(false);
+    expect(pushEntitlementUpdateToDisplay("missing", { plan: "DRIVE_PLUS", revision: 1 })).toBe(
+      false,
+    );
   });
 });

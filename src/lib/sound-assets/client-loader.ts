@@ -10,15 +10,13 @@ export async function fetchSoundAssetManifest(input: {
     "content-type": "application/json",
   };
   if (input.sessionToken) {
-    headers.authorization = `Bearer ${input.sessionToken}`;
+    headers["authorization"] = `Bearer ${input.sessionToken}`;
   }
 
   const response = await fetch(MANIFEST_ENDPOINT, {
     method: "POST",
     headers,
-    body: JSON.stringify(
-      input.personality ? { personality: input.personality } : {},
-    ),
+    body: JSON.stringify(input.personality ? { personality: input.personality } : {}),
   });
 
   if (!response.ok) {

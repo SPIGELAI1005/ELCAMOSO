@@ -12,7 +12,7 @@ interface DynamicDriveTrialOfferProps {
   source?: string;
 }
 
-/** Pre-trial CTA — brief terms, no card required. */
+/** Pre-trial CTA - brief terms, no card required. */
 export function DynamicDriveTrialOffer({
   className = "",
   returnTo,
@@ -39,11 +39,15 @@ export function DynamicDriveTrialOffer({
         <div>
           <p className="text-sm font-light text-foreground">Dynamic Drive preview</p>
           <p className="mt-2 text-sm text-muted-foreground">
-            Motion-matched gears and response — free with a saved account.
+            Motion-matched gears and response - free with a saved account.
           </p>
         </div>
       ) : null}
-      <TryDynamicDriveButton returnTo={returnTo} label="Try Dynamic Drive" source={source} />
+      <TryDynamicDriveButton
+        {...(returnTo ? { returnTo } : {})}
+        label="Try Dynamic Drive"
+        source={source}
+      />
       <ul className="space-y-1 text-sm text-muted-foreground">
         {TRIAL_OFFER_POINTS.map((point) => (
           <li key={point}>{point}</li>

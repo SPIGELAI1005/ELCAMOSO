@@ -5,7 +5,7 @@ import {
 } from "@/lib/billing/subscription-access-config";
 import type { Plan } from "@/lib/entitlements/types";
 
-/** Inputs for subscription access evaluation — no payment instrument data. */
+/** Inputs for subscription access evaluation - no payment instrument data. */
 export interface SubscriptionAccessInput {
   plan: Plan;
   status: BillingStatus;
@@ -59,7 +59,11 @@ export function evaluateSubscriptionAccess(
   }
 
   if (input.status === "trialing") {
-    return { hasDrivePlusAccess: true, reason: "trialing", effectiveUntil: input.currentPeriodEnd ?? null };
+    return {
+      hasDrivePlusAccess: true,
+      reason: "trialing",
+      effectiveUntil: input.currentPeriodEnd ?? null,
+    };
   }
 
   if (input.status === "past_due") {

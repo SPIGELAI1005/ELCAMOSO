@@ -30,7 +30,11 @@ export function applyStripeTestEnv(): void {
 export function buildStripeSubscription(
   overrides: Partial<Stripe.Subscription> = {},
 ): Stripe.Subscription {
-  return {
+  const legacyPeriod = overrides as Partial<Stripe.Subscription> & {
+    current_period_start?: number;
+    current_period_end?: number;
+  };
+  const subscription = {
     id: STRIPE_TEST_SUBSCRIPTION_ID,
     object: "subscription",
     customer: STRIPE_TEST_CUSTOMER_ID,
@@ -57,6 +61,13 @@ export function buildStripeSubscription(
     },
     ...overrides,
   } as Stripe.Subscription;
+  subscription.items.data = subscription.items.data.map((item) => ({
+    ...item,
+    current_period_start:
+      item.current_period_start ?? legacyPeriod.current_period_start ?? 1_700_000_000,
+    current_period_end: item.current_period_end ?? legacyPeriod.current_period_end ?? 1_700_086_400,
+  }));
+  return subscription;
 }
 
 export function buildYearlyStripeSubscription(
@@ -132,8 +143,12 @@ export function buildInvoiceEvent(
       object: {
         id: `in_${type}`,
         object: "invoice",
-        subscription: subscriptionId,
-      } as Stripe.Invoice,
+        parent: {
+          type: "subscription_details",
+          quote_details: null,
+          subscription_details: { subscription: subscriptionId, metadata: null },
+        },
+      } as unknown as Stripe.Invoice,
     },
   } as Stripe.Event;
 }
@@ -219,7 +234,9 @@ export function assertLocalEntitlements(
       },
       now,
     );
-    expect(snapshot.entitlements).toEqual(expect.arrayContaining(["basic_drive", "basic_sound_profiles"]));
+    expect(snapshot.entitlements).toEqual(
+      expect.arrayContaining(["basic_drive", "basic_sound_profiles"]),
+    );
     expect(snapshot.entitlements).not.toContain("dynamic_drive");
   }
 }

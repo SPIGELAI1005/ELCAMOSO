@@ -37,7 +37,7 @@ export function resolveIntervalFromStripePrice(priceId: string): BillingInterval
 }
 
 export function resolvePlanFromMetadata(metadata: Stripe.Metadata | null | undefined): Plan | null {
-  const raw = metadata?.elcamosoPlan?.toUpperCase();
+  const raw = metadata?.["elcamosoPlan"]?.toUpperCase();
   if (raw === "DRIVE_PLUS") return "DRIVE_PLUS";
   return null;
 }
@@ -55,7 +55,7 @@ export function isKnownDrivePlusStripePrice(priceId: string): boolean {
 export function resolveIntervalFromMetadata(
   metadata: Stripe.Metadata | null | undefined,
 ): BillingInterval | null {
-  const raw = metadata?.billingInterval;
+  const raw = metadata?.["billingInterval"];
   if (typeof raw !== "string") return null;
   if (raw === "monthly") return "month";
   if (raw === "yearly") return "year";
@@ -83,6 +83,7 @@ export function normalizeStripeSubscription(
   userId: string,
 ): UpsertSubscriptionInput {
   const priceId = subscription.items.data[0]?.price?.id ?? "";
+  const primaryItem = subscription.items.data[0];
   const interval =
     resolveIntervalFromStripePrice(priceId) ??
     resolveIntervalFromMetadata(subscription.metadata) ??
@@ -103,11 +104,11 @@ export function normalizeStripeSubscription(
     plan,
     interval,
     status: normalizeStripeSubscriptionStatus(subscription.status),
-    currentPeriodStart: subscription.current_period_start
-      ? new Date(subscription.current_period_start * 1000)
+    currentPeriodStart: primaryItem?.current_period_start
+      ? new Date(primaryItem.current_period_start * 1000)
       : null,
-    currentPeriodEnd: subscription.current_period_end
-      ? new Date(subscription.current_period_end * 1000)
+    currentPeriodEnd: primaryItem?.current_period_end
+      ? new Date(primaryItem.current_period_end * 1000)
       : null,
     cancelAtPeriodEnd: subscription.cancel_at_period_end,
   };

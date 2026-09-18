@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createSeoHeadFromPath } from "@/lib/seo";
 import { ElcamosoMark } from "@/components/ElcamosoLogo";
 import { BrandLoader } from "@/components/BrandLoader";
 import { useSettings } from "@/lib/drive/useSettings";
@@ -14,6 +15,8 @@ import { driveSecondaryReadout } from "@/lib/drive/drive-display";
 import { supportsDynamicDrive } from "@/lib/drive/drivetrain-resolve";
 import { DynamicDriveInstrument } from "@/components/DynamicDriveInstrument";
 import { DriveSessionPanel } from "@/components/DriveSessionPanel";
+import { ExperiencePicker } from "@/components/experiences/ExperiencePicker";
+import { experienceForProfileId } from "@/lib/experiences";
 import { useMonetizationEnabled } from "@/lib/billing/use-billing-public-config";
 import {
   DynamicDriveTrialComplete,
@@ -30,6 +33,12 @@ import { IDLE_MOTION } from "@/lib/drive/motion-energy";
 import { formatSpeed, t } from "@/lib/i18n";
 import { driveCoachFn } from "@/lib/cloud/server-fns";
 import { getProfile, type SoundProfile } from "@/lib/sound/profiles";
+import { PostDriveExperience } from "@/components/journey/PostDriveExperience";
+import { DriveModePicker } from "@/components/drive/DriveModePicker";
+import { SilentCaptureHud } from "@/components/drive/SilentCaptureHud";
+import { PostSilentCaptureExperience } from "@/components/drive/PostSilentCaptureExperience";
+import { IncompleteJourneyRecovery } from "@/components/drive/IncompleteJourneyRecovery";
+import { shouldCaptureTrace, shouldPlayLiveAudio } from "@/lib/journey-trace";
 
 const TeslaDrivePlusUpgrade = lazy(() =>
   import("@/components/TeslaDrivePlusUpgrade").then((m) => ({
@@ -71,23 +80,7 @@ export const Route = createFileRoute("/drive")({
     return out;
   },
   component: DriveScreen,
-  head: () => ({
-    meta: [
-      { title: "Drive - ELCAMOSO" },
-      {
-        name: "description",
-        content: "Start a drive and let your sound profile follow the movement of your EV.",
-      },
-      { property: "og:title", content: "Drive - ELCAMOSO" },
-      {
-        property: "og:description",
-        content: "Start a drive and let your sound profile follow the movement of your EV.",
-      },
-      { property: "og:type", content: "website" },
-      { property: "og:url", content: "/drive" },
-    ],
-    links: [{ rel: "canonical", href: "/drive" }],
-  }),
+  head: () => createSeoHeadFromPath("/drive"),
 });
 
 function DriveScreen() {
@@ -112,8 +105,17 @@ function DriveScreen() {
   });
   const [showSafety, setShowSafety] = useState(false);
   const [showIntense, setShowIntense] = useState(false);
+  const [showCapturePermission, setShowCapturePermission] = useState(false);
   const [coach, setCoach] = useState<string | null>(null);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [postDriveJourneyId, setPostDriveJourneyId] = useState<string | null>(null);
+  const [postCaptureTraceId, setPostCaptureTraceId] = useState<string | null>(null);
+  const [captureHadBrowserPause, setCaptureHadBrowserPause] = useState(false);
   const monetizationEnabled = useMonetizationEnabled();
+  const selectedExperience = experienceForProfileId(settings.profileId);
+  const isSilentCapture =
+    status === "driving" && !shouldPlayLiveAudio(sessionSnap.driveOutputMode ?? "live");
+  const resumedNativeCapture = status === "idle" && sessionSnap.nativeCapture.active;
 
   useEffect(() => {
     if (monetizationEnabled && upgrade === "drive-plus" && plan !== "DRIVE_PLUS") {
@@ -130,7 +132,14 @@ function DriveScreen() {
 
   useEffect(() => {
     getSession().setCockpit(Boolean(cockpit));
+    void getSession().syncNativeJourneys();
   }, [cockpit]);
+
+  useEffect(() => {
+    if (!sessionSnap.nativeCapture.active) return;
+    const timer = window.setInterval(() => void getSession().syncNativeJourneys(), 1000);
+    return () => window.clearInterval(timer);
+  }, [sessionSnap.nativeCapture.active]);
 
   const debugDriveActive = isDriveDebugModeActive(settings, Boolean(debug));
   const roadTestHudActive = debugDriveActive || (settings.devPanel && Boolean(roadTest));
@@ -151,6 +160,14 @@ function DriveScreen() {
       return;
     }
     if (
+      shouldCaptureTrace(settings.driveOutputMode) &&
+      sessionSnap.nativeCapture.backgroundCapable
+    ) {
+      setShowCapturePermission(true);
+      return;
+    }
+    if (
+      shouldPlayLiveAudio(settings.driveOutputMode) &&
       needsIntenseConfirm(profile, settings.volume, getProfileGain(settings, settings.profileId))
     ) {
       setShowIntense(true);
@@ -183,10 +200,20 @@ function DriveScreen() {
     if (status === "idle") handleStartRef.current();
   }, [activateTrial, autostart, cockpit, debug, loaded, navigate, status, upgrade]);
 
-  const handleStop = () => {
-    stop();
-    const aggregates = getSession().snapshot().lastAggregates;
-    if (aggregates) {
+  const handleStop = async () => {
+    const before = getSession().snapshot();
+    const hadCapture = shouldCaptureTrace(before.driveOutputMode ?? "live");
+    const paused = before.capturePausedByBrowser;
+    await stop();
+    const snap = getSession().snapshot();
+    const aggregates = snap.lastAggregates;
+    if (hadCapture && snap.lastJourneyTraceId) {
+      setCaptureHadBrowserPause(paused);
+      setPostCaptureTraceId(snap.lastJourneyTraceId);
+    } else if (snap.lastJourneyId) {
+      setPostDriveJourneyId(snap.lastJourneyId);
+    }
+    if (aggregates && shouldPlayLiveAudio(before.driveOutputMode ?? "live")) {
       void driveCoachFn({ data: { aggregates } }).then((result) => {
         setCoach(`${result.summary} ${result.suggestion}`);
       });
@@ -202,7 +229,9 @@ function DriveScreen() {
       driveCount: settings.driveCount + 1,
     });
     setShowSafety(false);
-    void start();
+    if (shouldCaptureTrace(settings.driveOutputMode) && sessionSnap.nativeCapture.backgroundCapable)
+      setShowCapturePermission(true);
+    else void start();
   };
 
   const speed = formatSpeed(state.speed, settings.units, settings.language);
@@ -213,8 +242,39 @@ function DriveScreen() {
 
   return (
     <main className="flex min-h-screen flex-col px-6 pt-6 pb-10 sm:px-10">
+      {status === "idle" && !sessionSnap.nativeCapture.active ? (
+        <IncompleteJourneyRecovery />
+      ) : null}
+      {status === "idle" && sessionSnap.journeyRecovered ? (
+        <p className="mx-auto mb-4 w-full max-w-md border border-foreground/20 px-4 py-3 text-center text-sm">
+          Journey recovered.
+        </p>
+      ) : null}
+      {postCaptureTraceId ? (
+        <PostSilentCaptureExperience
+          journeyTraceId={postCaptureTraceId}
+          capturePausedByBrowser={captureHadBrowserPause}
+          onDismiss={() => setPostCaptureTraceId(null)}
+        />
+      ) : null}
+      {postDriveJourneyId ? (
+        <PostDriveExperience
+          journeyId={postDriveJourneyId}
+          onDismiss={() => setPostDriveJourneyId(null)}
+        />
+      ) : null}
       {showSafety ? (
         <Safety onAccept={acknowledge} onCancel={() => setShowSafety(false)} />
+      ) : showCapturePermission ? (
+        <CapturePermission
+          quality={settings.captureQuality}
+          onQualityChange={(captureQuality) => update({ captureQuality })}
+          onAccept={() => {
+            setShowCapturePermission(false);
+            beginDrive();
+          }}
+          onCancel={() => setShowCapturePermission(false)}
+        />
       ) : showIntense ? (
         <div className="mx-auto flex max-w-sm flex-1 flex-col items-center justify-center gap-8 text-center">
           <p className="text-xl font-light">{t(settings.language, "intense.confirm")}</p>
@@ -232,6 +292,21 @@ function DriveScreen() {
             Cancel
           </button>
         </div>
+      ) : resumedNativeCapture ? (
+        <SilentCaptureHud
+          elapsedMs={sessionSnap.nativeCapture.durationMs}
+          distanceM={sessionSnap.nativeCapture.distanceM}
+          sensorLabel="Phone sensor"
+          sensorConnected
+          capturePausedByBrowser={false}
+          suggestFinish={false}
+          backgroundCapable
+          quality={sessionSnap.nativeCapture.quality}
+          sampleCount={sessionSnap.nativeCapture.sampleCount}
+          onStop={() => void handleStop()}
+          onContinue={() => undefined}
+          onFinishSuggested={() => void handleStop()}
+        />
       ) : status === "error" ? (
         <ErrorState message={error} onRetry={() => void start()} />
       ) : status === "starting" ? (
@@ -239,38 +314,63 @@ function DriveScreen() {
           <BrandLoader label="Preparing your drive" />
         </div>
       ) : status === "driving" ? (
-        <Driving
-          kmh={speed.value}
-          unit={speed.unit}
-          motionEnergy={motion.motionEnergy}
-          throttle={state.throttle}
-          regen={state.regen}
-          waveResponse={liveProfile.voice.waveResponse}
-          reducedMotion={reducedMotion}
-          secondary={secondary}
-          profile={liveProfile}
-          dynamicDriveActive={settings.dynamicDrive}
-          traits={liveProfile.traits}
-          safetyMode={safetyMode}
-          productStatus={sessionSnap.productStatus}
-          rulesHeld={sessionSnap.rulesHeld}
-          suggestedProfileId={sessionSnap.suggestedProfileId}
-          autoRulesMode={settings.autoRulesMode}
-          driveState={state}
-          onHold={() => getSession().setRulesHeld(!sessionSnap.rulesHeld)}
-          onAcceptSuggestion={() => getSession().acceptSuggestion()}
-          onDismissSuggestion={() => getSession().dismissSuggestion()}
-          onStop={handleStop}
-          showPairing
-          showDebugDiagnostics={debugDriveActive}
-          showRoadTestHud={roadTestHudActive}
-          devMode={debugDriveActive}
-          pipelineMetrics={sessionSnap.pipeline}
-          showTeslaUpgrade={Boolean(cockpit) && showTeslaUpgrade}
-          onCloseTeslaUpgrade={() => setShowTeslaUpgrade(false)}
-          relaySessionId={relaySessionId}
-          onRelaySessionChange={setRelaySessionId}
-        />
+        isSilentCapture ? (
+          <SilentCaptureHud
+            elapsedMs={
+              sessionSnap.nativeCapture.backgroundCapable && sessionSnap.nativeCapture.active
+                ? sessionSnap.nativeCapture.durationMs
+                : (sessionSnap.recordingElapsedMs ?? 0)
+            }
+            distanceM={sessionSnap.recordingDistanceM ?? 0}
+            sensorLabel={
+              sessionSnap.productStatus === "vehicle-connected" ? "Vehicle" : "Phone sensor"
+            }
+            sensorConnected={
+              sessionSnap.productStatus !== "weak-signal" && sessionSnap.productStatus !== "idle"
+            }
+            capturePausedByBrowser={Boolean(sessionSnap.capturePausedByBrowser)}
+            suggestFinish={Boolean(sessionSnap.suggestFinishJourney)}
+            backgroundCapable={sessionSnap.nativeCapture.backgroundCapable}
+            quality={sessionSnap.nativeCapture.quality}
+            sampleCount={sessionSnap.nativeCapture.sampleCount}
+            onStop={() => void handleStop()}
+            onContinue={() => getSession().continueCapture()}
+            onFinishSuggested={() => void handleStop()}
+          />
+        ) : (
+          <Driving
+            kmh={speed.value}
+            unit={speed.unit}
+            motionEnergy={motion.motionEnergy}
+            throttle={state.throttle}
+            regen={state.regen}
+            waveResponse={liveProfile.voice.waveResponse}
+            reducedMotion={reducedMotion}
+            secondary={secondary}
+            profile={liveProfile}
+            dynamicDriveActive={settings.dynamicDrive}
+            traits={liveProfile.traits}
+            safetyMode={safetyMode}
+            productStatus={sessionSnap.productStatus}
+            rulesHeld={sessionSnap.rulesHeld}
+            suggestedProfileId={sessionSnap.suggestedProfileId}
+            autoRulesMode={settings.autoRulesMode}
+            driveState={state}
+            onHold={() => getSession().setRulesHeld(!sessionSnap.rulesHeld)}
+            onAcceptSuggestion={() => getSession().acceptSuggestion()}
+            onDismissSuggestion={() => getSession().dismissSuggestion()}
+            onStop={handleStop}
+            showPairing
+            showDebugDiagnostics={debugDriveActive}
+            showRoadTestHud={roadTestHudActive}
+            devMode={debugDriveActive}
+            pipelineMetrics={sessionSnap.pipeline}
+            showTeslaUpgrade={Boolean(cockpit) && showTeslaUpgrade}
+            onCloseTeslaUpgrade={() => setShowTeslaUpgrade(false)}
+            relaySessionId={relaySessionId}
+            onRelaySessionChange={setRelaySessionId}
+          />
+        )
       ) : (
         <div className="flex flex-1 flex-col items-center justify-center gap-10 text-center">
           {storageWarning ? (
@@ -291,14 +391,40 @@ function DriveScreen() {
             className="h-14 w-auto"
           />
           <div>
-            <p className="text-2xl font-light">{profile.name}</p>
-            <p className="mt-3 text-sm text-muted-foreground">{profile.traits.join(" · ")}</p>
+            <p className="text-[10px] tracking-[0.28em] text-muted-foreground uppercase">
+              Selected experience
+            </p>
+            <button
+              type="button"
+              onClick={() => setPickerOpen(true)}
+              className="mt-2 text-2xl font-light hover:opacity-80"
+            >
+              {selectedExperience.name}
+            </button>
+            <p className="mt-3 text-sm text-muted-foreground">
+              {selectedExperience.tagline || profile.traits.join(" · ")}
+            </p>
+            <button
+              type="button"
+              onClick={() => setPickerOpen(true)}
+              className="mt-4 text-[10px] tracking-[0.22em] text-muted-foreground uppercase hover:text-foreground"
+            >
+              Change experience
+            </button>
+          </div>
+          <div className="w-full max-w-md">
+            <DriveModePicker
+              value={settings.driveOutputMode}
+              onChange={(driveOutputMode) => update({ driveOutputMode })}
+            />
           </div>
           <button
             onClick={handleStart}
             className="h-16 min-h-11 rounded-full bg-primary px-12 text-sm tracking-[0.22em] text-primary-foreground uppercase transition-opacity hover:opacity-90"
           >
-            {t(settings.language, "drive.start")}
+            {settings.driveOutputMode === "capture"
+              ? "Start silent capture"
+              : t(settings.language, "drive.start")}
           </button>
           {coach ? <p className="max-w-sm text-sm text-muted-foreground">{coach}</p> : null}
           {!safetyMode ? (
@@ -326,6 +452,7 @@ function DriveScreen() {
             </Suspense>
           ) : null}
           <DynamicDriveTrialComplete className="mt-6 w-full max-w-lg" />
+          <ExperiencePicker open={pickerOpen} onClose={() => setPickerOpen(false)} />
         </div>
       )}
     </main>
@@ -573,6 +700,80 @@ function Safety({ onAccept, onCancel }: { onAccept: () => void; onCancel: () => 
           className="h-14 rounded-full bg-primary text-sm tracking-[0.22em] text-primary-foreground uppercase"
         >
           I understand
+        </button>
+        <button
+          onClick={onCancel}
+          className="text-xs tracking-[0.24em] text-muted-foreground uppercase"
+        >
+          Not now
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function CapturePermission({
+  quality,
+  onQualityChange,
+  onAccept,
+  onCancel,
+}: {
+  quality: "balanced" | "high-detail";
+  onQualityChange: (quality: "balanced" | "high-detail") => void;
+  onAccept: () => void;
+  onCancel: () => void;
+}) {
+  return (
+    <div className="mx-auto flex max-w-sm flex-1 flex-col items-center justify-center gap-7 text-center">
+      <ElcamosoMark className="h-10 w-auto" />
+      <h1 className="text-xl font-light">Allow background drive capture?</h1>
+      <p className="text-sm leading-relaxed text-muted-foreground">
+        Allow ELCAMOSO to record motion during a drive even when your screen is locked.
+        <br />
+        <br />
+        Your route is not saved.
+        <br />
+        Motion data stays on your device unless you choose to share something.
+      </p>
+      <fieldset className="w-full text-left">
+        <legend className="mb-3 text-[10px] tracking-[0.22em] text-muted-foreground uppercase">
+          Capture quality
+        </legend>
+        <label className="flex cursor-pointer items-start gap-3 border border-foreground/30 p-4">
+          <input
+            type="radio"
+            name="capture-quality"
+            checked={quality === "balanced"}
+            onChange={() => onQualityChange("balanced")}
+          />
+          <span>
+            <span className="block text-sm">Balanced · Recommended</span>
+            <span className="text-xs text-muted-foreground">
+              Reliable motion with lower battery use.
+            </span>
+          </span>
+        </label>
+        <label className="mt-2 flex cursor-pointer items-start gap-3 border border-foreground/20 p-4">
+          <input
+            type="radio"
+            name="capture-quality"
+            checked={quality === "high-detail"}
+            onChange={() => onQualityChange("high-detail")}
+          />
+          <span>
+            <span className="block text-sm">High detail</span>
+            <span className="text-xs text-muted-foreground">
+              More frequent location updates and higher battery use.
+            </span>
+          </span>
+        </label>
+      </fieldset>
+      <div className="flex w-full flex-col gap-3">
+        <button
+          onClick={onAccept}
+          className="h-14 rounded-full bg-primary text-sm tracking-[0.22em] text-primary-foreground uppercase"
+        >
+          Continue
         </button>
         <button
           onClick={onCancel}

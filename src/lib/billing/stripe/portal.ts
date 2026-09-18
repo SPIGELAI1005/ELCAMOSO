@@ -26,7 +26,7 @@ function sanitizeReturnPath(returnPath: string): string {
   return path;
 }
 
-/** Creates a Stripe Customer Portal session — server-only. */
+/** Creates a Stripe Customer Portal session - server-only. */
 export async function createStripePortalSession(
   input: CreatePortalSessionInput,
 ): Promise<CreatePortalSessionResult> {
@@ -38,12 +38,14 @@ export async function createStripePortalSession(
   const origin = sanitizeOrigin(input.origin, input.trustedHost);
   const returnPath = sanitizeReturnPath(input.returnPath ?? "/settings");
 
-  const session = await stripe.billingPortal.sessions.create({
-    customer: input.stripeCustomerId,
-    return_url: `${origin}${returnPath}`,
-  }).catch((error) => {
-    throw wrapStripeBillingError(error);
-  });
+  const session = await stripe.billingPortal.sessions
+    .create({
+      customer: input.stripeCustomerId,
+      return_url: `${origin}${returnPath}`,
+    })
+    .catch((error) => {
+      throw wrapStripeBillingError(error);
+    });
 
   return { url: session.url };
 }

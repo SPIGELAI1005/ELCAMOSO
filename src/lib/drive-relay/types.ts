@@ -13,7 +13,8 @@ export interface RelayPeerFlags {
 
 export interface DriveRelaySessionRecord {
   id: string;
-  joinSecret: string;
+  /** Role-bound credentials. Never return the complete set to a client. */
+  roleSecrets: Record<RelayRole, string>;
   pairingCode: string;
   /** Opaque one-time QR claim token (not the long-lived join secret). */
   claimToken: string;
@@ -35,13 +36,13 @@ export interface CreateDriveRelaySessionResult {
   pairingCode: string;
   /** Display-side WebSocket credential (Tesla). */
   joinSecret: string;
-  /** Short-lived QR / claim URL token — single-use for phone claim. */
+  /** Short-lived QR / claim URL token - single-use for phone claim. */
   claimToken: string;
   claimExpiresAt: number;
   expiresAt: number;
   /** Path for QR: `/pair/{claimToken}` */
   pairPath: string;
-  /** @deprecated Prefer pairPath — kept for older clients. */
+  /** @deprecated Prefer pairPath - kept for older clients. */
   connectPath: string;
 }
 
@@ -52,12 +53,19 @@ export type RelayMessage =
   | { type: "latency-ping"; id: string; from: RelayRole; sentAt: number }
   | { type: "latency-pong"; id: string; from: RelayRole; sentAt: number; receivedAt: number }
   | { type: "error"; code: string; message: string }
-  | { type: "entitlement-update"; plan: "DRIVE_PLUS" | "FREE"; revision: number; at: number; upgradeToken?: string }
+  | {
+      type: "entitlement-update";
+      plan: "DRIVE_PLUS" | "FREE";
+      revision: number;
+      at: number;
+      upgradeToken?: string;
+    }
   | RelayMotionMessage
   | RelayTelemetryMessage;
 
 export interface RelayUpgradeContext {
   sessionId: string;
   role: RelayRole;
-  joinSecret: string;
+  /** The credential has already been verified for `role`. */
+  credential: string;
 }

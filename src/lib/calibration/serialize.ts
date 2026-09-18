@@ -138,7 +138,7 @@ export function parseCalibrationTrace(raw: unknown): CalibrationTrace {
   if (!raw || typeof raw !== "object") throw new Error("Not a calibration trace.");
   const o = raw as Record<string, unknown>;
   if (o["kind"] !== CALIBRATION_TRACE_KIND) {
-    throw new Error("Wrong file kind — expected elcamoso.calibration.trace.");
+    throw new Error("Wrong file kind - expected elcamoso.calibration.trace.");
   }
   const version = Number(o["version"] ?? 0);
   if (version !== CALIBRATION_TRACE_VERSION) {

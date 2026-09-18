@@ -16,6 +16,7 @@ import { phoneSensorAttentionMessage } from "@/lib/motion/phone-sensor-status";
 import { usePhoneSensorClient } from "@/lib/motion/phone-sensor-client";
 
 import { useSettings } from "@/lib/drive/useSettings";
+import { createSeoHeadFromPath } from "@/lib/seo";
 
 export const Route = createFileRoute("/connect/$sessionId")({
   validateSearch: (search: Record<string, unknown>): { token?: string } => {
@@ -25,15 +26,7 @@ export const Route = createFileRoute("/connect/$sessionId")({
 
   component: ConnectSessionScreen,
 
-  head: ({ params }) => ({
-    meta: [
-      { title: `Connect - ${params.sessionId} - ELCAMOSO` },
-      {
-        name: "description",
-        content: "Link your phone to ELCAMOSO in your car.",
-      },
-    ],
-  }),
+  head: () => createSeoHeadFromPath("/connect"),
 });
 
 function ConnectSessionScreen() {

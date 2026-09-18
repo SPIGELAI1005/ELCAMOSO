@@ -1,12 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  DYNAMIC_DRIVE_TRIAL_MAX_CREDIT_GAP_MS,
-} from "@/lib/dynamic-drive-trial/config";
-import {
-  creditElapsedSeconds,
-  effectiveTrialStatus,
-} from "@/lib/dynamic-drive-trial/credit";
+import { DYNAMIC_DRIVE_TRIAL_MAX_CREDIT_GAP_MS } from "@/lib/dynamic-drive-trial/config";
+import { creditElapsedSeconds, effectiveTrialStatus } from "@/lib/dynamic-drive-trial/credit";
 import type { DynamicDriveTrialRecord } from "@/lib/dynamic-drive-trial/types";
 
 function trial(overrides: Partial<DynamicDriveTrialRecord> = {}): DynamicDriveTrialRecord {

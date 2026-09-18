@@ -1,36 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { createSeoHeadFromPath } from "@/lib/seo";
 import { ElcamosoMark } from "@/components/ElcamosoLogo";
 
 export const Route = createFileRoute("/about")({
   component: About,
-  head: () => ({
-    meta: [
-      { title: "About - ELCAMOSO" },
-      {
-        name: "description",
-        content:
-          "The story behind ELCAMOSO: motion-responsive sound for electric driving, born from four years behind the wheel and a love of both EV performance and the emotion of the drive.",
-      },
-      { property: "og:title", content: "About - ELCAMOSO" },
-      {
-        property: "og:description",
-        content:
-          "Motion-responsive sound for electric cars. Your EV. Your Sound. More Emotion.",
-      },
-      { property: "og:type", content: "website" },
-      { property: "og:url", content: "/about" },
-    ],
-    links: [{ rel: "canonical", href: "/about" }],
-  }),
+  head: () => createSeoHeadFromPath("/about"),
 });
 
-function AboutFieldClip({
-  src,
-  label,
-}: {
-  src: string;
-  label: string;
-}) {
+function AboutFieldClip({ src, label }: { src: string; label: string }) {
   return (
     <figure className="space-y-3">
       <div className="overflow-hidden rounded-2xl border border-border bg-[#0A0A0A]">
@@ -61,10 +38,56 @@ function About() {
             Your EV. Your Sound. More Emotion.
           </h1>
           <p className="mt-6 text-base leading-relaxed text-muted-foreground">
-            ELCAMOSO turns the way you move into sound that feels locked to the drive: responsive,
-            personal, and built for people who love cars and the future they are already living in.
+            ELCAMOSO turns the way you move into sound, live in the cabin or later from a recorded
+            journey. It is for people who love responsive sound, and for people who love the quiet
+            just as much.
           </p>
         </header>
+
+        <section className="mt-16 border-t border-border pt-16">
+          <p className="text-[10px] tracking-[0.28em] text-muted-foreground uppercase">
+            Sound when you want it
+          </p>
+          <h2 className="mt-3 text-2xl font-light">Hear it now. Or hear it later.</h2>
+          <div className="mt-8 space-y-6 text-sm leading-relaxed text-muted-foreground">
+            <p>
+              Some drives call for sound in the moment. Choose an Engine, Symphony, World, or Fusion
+              experience and ELCAMOSO responds as the road unfolds. Acceleration builds energy,
+              cruising finds a rhythm, and regeneration releases it.
+            </p>
+            <p>
+              Other drives are better in silence. Silent Capture lets the cabin stay calm while
+              ELCAMOSO records a private motion trace on your device. No route is needed. When you
+              arrive, the journey is ready to be heard in a completely different form.
+            </p>
+          </div>
+
+          <div className="mt-10 border border-border/70 bg-surface-1/20 p-6 sm:p-8">
+            <p className="text-[10px] tracking-[0.26em] text-muted-foreground uppercase">
+              Imagine the journey
+            </p>
+            <p className="mt-4 text-lg font-light leading-relaxed">
+              Munich to Garmisch. The whole drive in complete silence.
+            </p>
+            <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
+              At the hotel, ELCAMOSO says: Your drive is ready. Choose Symphony and hear your own
+              acceleration, mountain-road rhythm, open cruising, and regen become an orchestral
+              journey. The road already composed it. You decide when to listen.
+            </p>
+          </div>
+
+          <div className="mt-10 space-y-6 text-sm leading-relaxed text-muted-foreground">
+            <p>
+              This makes ELCAMOSO both a live driving experience and a creative journey recorder. It
+              does not require constant sound in the cabin. Silence is not the absence of the
+              product. It can be the beginning of the creation.
+            </p>
+            <p>
+              It is made for EV enthusiasts, quiet-cabin drivers, commuters, road-trippers, music
+              lovers, and curious creators who want to discover what their own movement sounds like.
+            </p>
+          </div>
+        </section>
 
         <section className="mt-16 border-t border-border pt-16">
           <h2 className="text-2xl font-light">Where it started</h2>
@@ -83,8 +106,9 @@ function About() {
             </p>
             <p>
               That gap is why ELCAMOSO exists. Not to pretend an EV is something it is not, but to
-              give back a layer of feeling: sound that follows speed, acceleration, and regen the way
-              a great engine once did, without giving up what makes electric driving worth choosing.
+              give back a layer of feeling: sound that follows speed, acceleration, and regen the
+              way a great engine once did, without giving up what makes electric driving worth
+              choosing.
             </p>
           </div>
         </section>
@@ -100,9 +124,10 @@ function About() {
             <p>
               Much of that work was tuned against the speakers and cabin of a Tesla, because that is
               the car I know best. But ELCAMOSO is not a Tesla app. It is for anyone driving an
-              electric car who still feels like a driver: pioneers of the format who want performance
-              and technology, and who sometimes want the road to sound the way a petrol engine once
-              made it feel.
+              electric car who still feels like a driver: pioneers of the format who want
+              performance and technology. It is also for people who prefer silence while moving,
+              then want to return to the journey as music, atmosphere, or a new engine personality
+              after they arrive.
             </p>
             <p>
               The goal was always the same: recreate that connection as faithfully as possible, then
@@ -117,11 +142,11 @@ function About() {
             <div className="grid gap-8 sm:grid-cols-2">
               <AboutFieldClip
                 src="/about/field-capture-1.mp4"
-                label="On the road — capture and listen"
+                label="On the road: capture and listen"
               />
               <AboutFieldClip
                 src="/about/field-capture-2.mp4"
-                label="Field recording — tuning to motion"
+                label="Field recording: tuning to motion"
               />
             </div>
           </div>
@@ -130,8 +155,9 @@ function About() {
         <section className="mt-16 border-t border-border pt-16">
           <h2 className="text-2xl font-light">Motion becomes sound.</h2>
           <p className="mt-6 max-w-lg text-sm leading-relaxed text-muted-foreground">
-            ELCAMOSO does not play a fixed track. It reads how you move and shapes sound in real
-            time, so throttle, speed, and regen stay tied to what you hear.
+            ELCAMOSO does not play a fixed track. Live, it reads how you move and shapes sound in
+            real time. In Journey Replay, the recorded motion becomes the timeline, so speed,
+            acceleration, cruising, and regen remain tied to what you hear.
           </p>
           <div className="mt-12 flex flex-col items-center gap-6 text-center text-sm tracking-[0.2em] text-muted-foreground uppercase">
             <p>Speed</p>
@@ -147,11 +173,11 @@ function About() {
             <div className="grid gap-8 sm:grid-cols-2">
               <AboutFieldClip
                 src="/about/tesla-motion-1.mp4"
-                label="In the cabin — motion to sound"
+                label="In the cabin: motion to sound"
               />
               <AboutFieldClip
                 src="/about/tesla-motion-2.mp4"
-                label="On the road — sound follows drive"
+                label="On the road: sound follows drive"
               />
             </div>
           </div>
@@ -166,8 +192,13 @@ function About() {
               and manufacturer-inspired EV signatures all share the same motion model.
             </p>
             <p>
-              Your drive stays yours. Motion data is processed on your device. ELCAMOSO does not need
-              to store your route to make sound react to the way you move.
+              A recorded journey can be replayed at its real duration through different experiences
+              without creating a second journey. When you want a shorter piece, Drive Song condenses
+              its character into a composition made for listening and sharing.
+            </p>
+            <p>
+              Your drive stays yours. Motion data is processed on your device. ELCAMOSO does not
+              need to store your route to make sound react to the way you move.
             </p>
           </div>
         </section>

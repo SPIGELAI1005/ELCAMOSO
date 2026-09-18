@@ -1,4 +1,4 @@
-/** Public connection status returned to the client — never includes tokens. */
+/** Public connection status returned to the client - never includes tokens. */
 export interface TeslaConnectionStatus {
   available: boolean;
   linked: boolean;
@@ -8,7 +8,7 @@ export interface TeslaConnectionStatus {
   vehicles: TeslaVehicleSummary[];
   linkedAt: number | null;
   virtualKeyUrl: string | null;
-  /** Tesla account consent management (scope revoke) — no secrets. */
+  /** Tesla account consent management (scope revoke) - no secrets. */
   consentRevokeUrl?: string | null;
   message?: string;
 }

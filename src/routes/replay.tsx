@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { createSeoHeadFromPath } from "@/lib/seo";
 import { listTraces, getTrace, type DriveTrace } from "@/lib/drive/traces";
 import { getSession } from "@/lib/drive/session";
 import { useSessionStore } from "@/lib/store/session-store";
@@ -10,23 +11,7 @@ import { driveCoachFn } from "@/lib/cloud/server-fns";
 
 export const Route = createFileRoute("/replay")({
   component: Replay,
-  head: () => ({
-    meta: [
-      { title: "Replay - ELCAMOSO" },
-      {
-        name: "description",
-        content: "Replay a recorded drive through any Sound Profile. Traces stay on this device.",
-      },
-      { property: "og:title", content: "Replay - ELCAMOSO" },
-      {
-        property: "og:description",
-        content: "Replay a recorded drive through any Sound Profile.",
-      },
-      { property: "og:type", content: "website" },
-      { property: "og:url", content: "/replay" },
-    ],
-    links: [{ rel: "canonical", href: "/replay" }],
-  }),
+  head: () => createSeoHeadFromPath("/replay"),
 });
 
 function Replay() {

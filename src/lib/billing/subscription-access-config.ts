@@ -7,7 +7,7 @@ export interface SubscriptionAccessPolicyConfig {
 const DEFAULT_PAST_DUE_GRACE_DAYS = 7;
 
 function readPastDueGraceDays(): number {
-  const raw = process.env.DRIVE_PLUS_PAST_DUE_GRACE_DAYS;
+  const raw = process.env["DRIVE_PLUS_PAST_DUE_GRACE_DAYS"];
   if (!raw) return DEFAULT_PAST_DUE_GRACE_DAYS;
   const parsed = Number.parseInt(raw, 10);
   if (!Number.isFinite(parsed) || parsed < 0) return DEFAULT_PAST_DUE_GRACE_DAYS;

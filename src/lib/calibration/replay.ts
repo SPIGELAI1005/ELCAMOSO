@@ -8,7 +8,7 @@ import { getProfile } from "@/lib/sound/profiles";
 import { seedAudioRandom } from "@/lib/sound/rng";
 
 export interface CalibrationReplayOptions {
-  /** Sound profile id — selects powertrain personality. */
+  /** Sound profile id - selects powertrain personality. */
   profileId: string;
   /** Fixed dt when re-simulating (seconds). */
   dt?: number;
@@ -63,7 +63,7 @@ export function replayCalibrationTrace(
   const outSamples: CalibrationTraceSample[] = [];
 
   if (!resim) {
-    // Passthrough recorded states — useful for audio A/B without re-shifting.
+    // Passthrough recorded states - useful for audio A/B without re-shifting.
     return {
       input: trace,
       output: buildCalibrationTrace(

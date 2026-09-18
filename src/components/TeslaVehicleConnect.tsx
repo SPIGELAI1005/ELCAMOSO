@@ -169,7 +169,7 @@ export function TeslaVehicleConnect({ flash, flashMessage }: TeslaVehicleConnect
     <BlockShell title="Connect Vehicle">
       <p className="mt-2 text-sm text-muted-foreground">
         Optional. Authorize read-only vehicle data for motion-linked sound. Set up while parked.
-        Tokens stay on the server — never in this browser.
+        Tokens stay on the server - never in this browser.
       </p>
 
       {flash ? (

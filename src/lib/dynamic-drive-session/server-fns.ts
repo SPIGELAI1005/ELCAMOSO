@@ -1,9 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 
 async function resolveUserId(sessionToken?: string | null): Promise<string> {
-  const { tryResolveRequestSessionToken } = await import(
-    "@/lib/account/session-cookies.server"
-  );
+  const { tryResolveRequestSessionToken } = await import("@/lib/account/session-cookies.server");
   const { resolveAuthenticatedUserId } = await import("@/lib/account/resolve-authenticated-user");
   return resolveAuthenticatedUserId(tryResolveRequestSessionToken(sessionToken));
 }

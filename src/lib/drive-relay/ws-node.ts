@@ -9,6 +9,7 @@ import {
   validateRelayUpgrade,
   type RelayPeerLike,
 } from "./hub";
+import { RELAY_MAX_MESSAGE_BYTES } from "./config";
 import type { RelayUpgradeContext } from "./types";
 
 function peerHandle(peer: Peer): RelayPeerLike {
@@ -17,6 +18,7 @@ function peerHandle(peer: Peer): RelayPeerLike {
     id: peer.id,
     context,
     send: (data: unknown) => peer.send(data),
+    close: (code?: number, reason?: string) => peer.close(code, reason),
   };
 }
 
@@ -45,6 +47,15 @@ export const relayWsAdapter = nodeAdapter({
     message(peer, message: Message) {
       let payload: unknown;
       try {
+        // Prefer JSON parse; reject oversized string payloads when available
+        const asText =
+          typeof (message as { text?: () => string }).text === "function"
+            ? (message as { text: () => string }).text()
+            : null;
+        if (typeof asText === "string" && asText.length > RELAY_MAX_MESSAGE_BYTES) {
+          peer.send({ type: "error", code: "message-too-large", message: "Payload exceeds limit" });
+          return;
+        }
         payload = message.json();
       } catch {
         return;

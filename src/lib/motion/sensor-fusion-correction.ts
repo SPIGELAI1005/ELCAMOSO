@@ -110,7 +110,7 @@ export function fuseSpeedLayers(input: SpeedFusionInput): SpeedFusionResult {
     const leadFactor = error < 0 ? 0.38 : 1;
     const step = Math.sign(error) * Math.min(Math.abs(error), maxStep) * leadFactor;
     filteredMs = Math.max(0, filteredMs + step);
-    // Let anchor follow a leading fast layer only — never drag it below the target baseline.
+    // Let anchor follow a leading fast layer only - never drag it below the target baseline.
     if (input.phoneImuAccelMs2 !== null && input.phoneImuAccelMs2 > 0.08 && filteredMs > anchorMs) {
       const tau = correctionTau(input.telemetryAgeMs, input.conflictGapMs, input.reconnectBlend);
       anchorMs = lowPassToward(anchorMs, filteredMs, dt, tau * 1.15);

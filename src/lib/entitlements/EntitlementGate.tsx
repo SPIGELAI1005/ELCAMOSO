@@ -9,7 +9,7 @@ interface EntitlementGateProps {
   fallback?: ReactNode;
 }
 
-/** Declarative feature gate — never compares plans directly. */
+/** Declarative feature gate - never compares plans directly. */
 export function EntitlementGate({ entitlement, children, fallback = null }: EntitlementGateProps) {
   const allowed = useEntitlement(entitlement);
   if (!allowed) return fallback;

@@ -3,7 +3,7 @@
 Living document for product context, recent architecture decisions, and a dated changelog.
 Canonical product rules still live in `elcamoso-comprehensive-spec.md`. Update **both** when direction or architecture changes.
 
-**Last updated:** 2026-09-17
+**Last updated:** 2026-09-18
 
 ---
 
@@ -22,6 +22,8 @@ Canonical product rules still live in `elcamoso-comprehensive-spec.md`. Update *
 | UI language             | Sound Profile, Drive Mode, Motion (never oscillator / LFO / VST in UI)           |
 | Privacy                 | Motion data on-device unless user explicitly opts into cloud                     |
 
+**Product positioning:** ELCAMOSO is both a live motion-sound experience and a silence-first creative journey recorder. Core language: **“Hear it now. Or hear it later.”** Live sound is optional; a quiet drive can become Engine, Symphony, World, Fusion, or a condensed Drive Song after arrival.
+
 ### Stack
 
 - TanStack Start + React 19 + Vite
@@ -33,7 +35,16 @@ Canonical product rules still live in `elcamoso-comprehensive-spec.md`. Update *
 
 ### Routes
 
-`/`, `/onboarding`, `/drive`, `/demo`, `/sounds`, `/studio`, `/garage`, `/calibrate`, `/settings`, `/about`, `/pricing`, `/legal` (+ impressum, privacy, cookies, terms, accessibility), `/auth/account/callback` (magic link), `/auth/account/google/callback` (Google OAuth, server GET), `/upgrade/$token`, `/pair`, `/pair/$token` (Tesla↔phone QR claim), `/connect/$sessionId` (legacy join), `/debug` (dev-only; includes `/debug/calibration` road-test lab, `/debug` Realism V2 A/B)
+`/`, `/onboarding`, `/drive`, `/explore`, `/demo`, `/sounds`, `/symphony`, `/worlds`, `/fusion`, `/studio`, `/garage`, `/journeys`, `/journeys/$journeyId` (Replay/Remix + separate Drive Song), `/calibrate`, `/settings`, `/about`, `/pricing`, `/legal` (+ impressum, privacy, cookies, terms, accessibility), `/auth/account/callback` (magic link), `/auth/account/google/callback` (Google OAuth, server GET), `/upgrade/$token`, `/pair`, `/pair/$token` (Tesla↔phone QR claim), `/connect/$sessionId` (legacy join), `/share/drive/$shareId` (Drive Song share, noindex + OG), `/api/og` + `/api/og/drive-song/$shareId` (social cards), `/debug` (dev-only; includes `/debug/og` social card preview, `/debug/calibration` road-test lab, `/debug` Realism V2 A/B)
+
+### SEO / Social cards
+
+- Central SEO: `src/lib/seo/*` — canonical always `https://www.elcamoso.com`
+- Social cards: `src/lib/og/*` via Satori + resvg-wasm. Docs: `docs/SOCIAL_CARD_SYSTEM.md`, `docs/SEO.md`
+- **Motion Signature:** `src/lib/motion-signature/` + `MotionSignature` component — deterministic energy-derived visual fingerprint for Drive Song / Journey / future Garage & Reel
+- **Silent Capture:** `driveOutputMode` + `src/lib/journey-trace/` — record motion without audio; replay/reinterpret later. Docs: `docs/SILENT_CAPTURE.md`, `docs/JOURNEY_TRACE.md`
+- **Native Companion:** Capacitor 8.5.2 iOS/Android shells + `src/lib/motion-capture/` provider boundary. Native capture persists coordinate-free chunks across lock/background and imports/deduplicates into JourneyTrace. Docs: `docs/NATIVE_COMPANION.md`.
+- Static fallbacks: `public/og/*.png` · fonts: `assets/fonts/Outfit-*.ttf`
 
 ### Account / auth (current)
 
@@ -110,6 +121,10 @@ Canonical product rules still live in `elcamoso-comprehensive-spec.md`. Update *
 
 - GPS: prefer `coords.speed`; if null, derive m/s from lat/lon deltas (`src/lib/drive/gps-speed.ts`) then fuse via `src/lib/motion/sensor-fusion.ts`.
 - Phone relay: `/drive` Connect phone → QR `/pair/{token}` → WebSocket `motion` → `DriveSession.ingestPhoneRelayMotion()`. Free includes `phone_sensor`. Docs: `docs/PHONE_PAIRING.md`.
+- **Drive Symphony V1:** `src/lib/symphony/` — Drive Energy, fixed-BPM clock, quantized stems; profiles `symphony-cinematic-rock`, `symphony-motion-orchestra`, `symphony-neon-run`. Docs: `docs/DRIVE_SYMPHONY.md`.
+- **Fusion V1:** `src/lib/fusion/` — Machine + Music mixer, harmonic resonance; presets Road Anthem / Mechanical Symphony / Midnight Boost / Future Pulse. Docs: `docs/FUSION_AUDIO.md`.
+- **Worlds V1:** `src/lib/worlds/` — Space Drive, Cyber City, Storm Run reactive soundscapes. Docs: `docs/WORLDS_ENGINE.md`.
+- **Journey Composer V1:** `src/lib/journey/` — Drive DNA, condensed Drive Song, local journeys + privacy-first share. Docs: `docs/JOURNEY_COMPOSER.md`.
 - Dynamic Drive: `PowertrainSimulator` + `DynamicDriveSynth` when `settings.dynamicDrive` and profile support it. See `docs/DYNAMIC_DRIVE_ARCHITECTURE.md`.
 - Wake lock: requested for **all** live Drive (not only Cockpit); re-acquired on visibility resume / pageshow / wake `release`.
 - Visibility: Drive uses ~2.8 s hide grace before audio suspend (notification shade); pagehide still suspends immediately.
@@ -117,29 +132,29 @@ Canonical product rules still live in `elcamoso-comprehensive-spec.md`. Update *
 
 ### Key files
 
-| Area                         | Path                                                 |
-| ---------------------------- | ---------------------------------------------------- |
-| Spec                         | `elcamoso-comprehensive-spec.md`                     |
-| Profiles                     | `src/lib/sound/profiles.ts`, `profiles-expansion.ts` |
-| Realism                      | `src/lib/sound/realism/*`                            |
-| Realism V2                   | `src/lib/sound/realism/v2/`, `docs/AUDIO_REALISM_V2.md` |
-| Calibration lab              | `src/lib/calibration/`, `docs/ROAD_TEST_CALIBRATION.md` |
-| Powertrain V2 notes          | `docs/POWERTRAIN_CALIBRATION_V2.md`                  |
-| Account / Google OAuth       | `src/lib/account/*`, `docs/account-google-oauth.md`  |
-| Session                      | `src/lib/drive/session.ts`                           |
-| GPS speed                    | `src/lib/drive/gps-speed.ts`                         |
-| Sensor fusion                | `src/lib/motion/sensor-fusion.ts`                    |
-| Dynamic Drive architecture   | `docs/DYNAMIC_DRIVE_ARCHITECTURE.md`                 |
-| Sound character + engagement | `docs/SOUND_CHARACTER_SPEC.md`                       |
-| Audio sample requirements    | `docs/audio-asset-requirements.md`                   |
-| Audition hook                | `src/lib/drive/useAudition.ts`                       |
+| Area                         | Path                                                                                |
+| ---------------------------- | ----------------------------------------------------------------------------------- |
+| Spec                         | `elcamoso-comprehensive-spec.md`                                                    |
+| Profiles                     | `src/lib/sound/profiles.ts`, `profiles-expansion.ts`                                |
+| Realism                      | `src/lib/sound/realism/*`                                                           |
+| Realism V2                   | `src/lib/sound/realism/v2/`, `docs/AUDIO_REALISM_V2.md`                             |
+| Calibration lab              | `src/lib/calibration/`, `docs/ROAD_TEST_CALIBRATION.md`                             |
+| Powertrain V2 notes          | `docs/POWERTRAIN_CALIBRATION_V2.md`                                                 |
+| Account / Google OAuth       | `src/lib/account/*`, `docs/account-google-oauth.md`                                 |
+| Session                      | `src/lib/drive/session.ts`                                                          |
+| GPS speed                    | `src/lib/drive/gps-speed.ts`                                                        |
+| Sensor fusion                | `src/lib/motion/sensor-fusion.ts`                                                   |
+| Dynamic Drive architecture   | `docs/DYNAMIC_DRIVE_ARCHITECTURE.md`                                                |
+| Sound character + engagement | `docs/SOUND_CHARACTER_SPEC.md`                                                      |
+| Audio sample requirements    | `docs/audio-asset-requirements.md`                                                  |
+| Audition hook                | `src/lib/drive/useAudition.ts`                                                      |
 | Landing                      | `src/routes/index.tsx`, `src/components/LandingHero.tsx`, `LandingPlansSection.tsx` |
-| Pricing                      | `src/routes/pricing.tsx`, `src/lib/billing/plan-display.ts`                          |
-| About                        | `src/routes/about.tsx`, `public/about/field-capture-*.mp4`                           |
-| Sounds UI                    | `src/routes/sounds.tsx`                              |
-| Legal operator               | `src/lib/legal/operator.ts`                          |
-| Tesla smoke test             | `docs/TESLA_BROWSER_SMOKE_TEST.md`                   |
-| Agent notes                  | `AGENTS.md`                                          |
+| Pricing                      | `src/routes/pricing.tsx`, `src/lib/billing/plan-display.ts`                         |
+| About                        | `src/routes/about.tsx`, `public/about/field-capture-*.mp4`                          |
+| Sounds UI                    | `src/routes/sounds.tsx`                                                             |
+| Legal operator               | `src/lib/legal/operator.ts`                                                         |
+| Tesla smoke test             | `docs/TESLA_BROWSER_SMOKE_TEST.md`                                                  |
+| Agent notes                  | `AGENTS.md`                                                                         |
 
 ### Open / known follow-ups
 
@@ -165,6 +180,117 @@ Canonical product rules still live in `elcamoso-comprehensive-spec.md`. Update *
 ---
 
 ## Changelog
+
+### 2026-09-18 (Release hardening and traceability)
+
+- Relay credentials are bound to display/phone/telemetry roles; duplicate or unauthenticated peers
+  close before attachment and cannot relay messages. Actor throttling covers rotating pairing codes.
+- Typecheck and lint are clean. Full Vitest gate: 692 passed, 6 skipped. SEO and production build
+  gates pass locally.
+- Packaging is capability-based and additive: legacy Free grants remain, while the Free creative
+  loop and Drive+ full capabilities have explicit entitlement IDs and selection gates.
+- Studio preset sharing now uses a versioned, bounded, allowlisted UTF-8 payload. Invalid links fail
+  closed and Symphony instruments always retain a viable arrangement.
+- Added a Web Audio lifecycle harness with node/source counts and fixed World layer disposal.
+- Added enforceable per-stem Symphony manifests. Current development synthesis is blocked from
+  production until approved original, commissioned, or licensed stems are supplied.
+- Added `docs/REQUIREMENTS_TRACEABILITY.md` with implementation, automated, manual, and external
+  mappings. Live deployment remains blocked by Vercel login/project linkage; the existing public
+  deployment is stale and relay DNS is absent.
+- Start Drive is again a semantic navigation link with synchronous audio priming. Browser tests
+  now wait for an explicit client hydration marker before interacting, and the Demo engine-category
+  switch passes on desktop as well as mobile.
+
+### 2026-09-18 (Live or later product positioning)
+
+- Homepage message now states: **“Hear your drive live, or turn the journey into sound when you arrive.”**
+- Added a live-versus-Silent-Capture explanation and clarified full Journey Replay versus condensed Drive Song.
+- About story now positions ELCAMOSO for EV enthusiasts, quiet-cabin drivers, commuters, road-trippers, music lovers, and creators, including the Munich-to-Garmisch journey scenario.
+- Removed the em dash character from application and native-shell source text; use ordinary punctuation instead.
+
+### 2026-09-18 (Native Companion foundation)
+
+- Added Capacitor 8.5.2 core/CLI/iOS/Android projects without replacing TanStack Start or changing the Vercel build.
+- Central `MotionCaptureProvider` boundary: web foreground best-effort vs native background-capable capture; no scattered platform checks.
+- iOS Core Location automotive background capture with explicit Always permission, visible indicator, location-only background mode, chunked app-private storage, and interrupted-journey recovery.
+- Android location foreground service with Android 12+ visible-start compliance, Android 14+ service-type permission, persistent **“ELCAMOSO is capturing this drive”** notification, Stop action, chunked storage, and recovery.
+- Drive consent/quality/status UX, idempotent native JourneyTrace import, exact “Journey recovered.” feedback, and native privacy/deduplication tests.
+- Setup, store considerations, limitations, and physical-device matrices documented in `docs/NATIVE_COMPANION.md` plus platform guides.
+
+### 2026-09-18 (Journey Replay & Remix — Hear This Drive)
+
+- `/journeys/$journeyId` now presents real-time **REPLAY DRIVE** separately from the condensed **DRIVE SONG** product.
+- Premium Journey Player: Motion Signature playhead, speed / virtual gear / RPM, seek/restart/stop, optional parked position, Engine / Symphony / World / Fusion switching.
+- Engine choices rerun their own PowertrainSimulator from immutable JourneyTrace motion; no cross-profile gear/RPM reuse.
+- **REMIX DRIVE** persists `JourneyInterpretationV1` with a deterministic seed and never creates a second Journey.
+- Silent Capture can feed the existing Journey Composer directly; the Drive Song summary retains the JourneyTrace id.
+- Stable seed now reaches Symphony, World, and Fusion audio construction. Dev **A/B SAME DRIVE** advances both personalities at the same trace index.
+- Regression coverage: engine RPM/gear divergence, deterministic seek/restart/peek, same-seed Symphony arrangement, and audio graph cleanup diagnostics.
+
+### 2026-09-17 (Silent Capture & Journey Trace V1)
+
+- Drive modes: LIVE SOUND / SILENT CAPTURE / LIVE + CAPTURE (`driveOutputMode`).
+- `JourneyTraceV1` + adaptive sampler + IndexedDB `JourneyRepository`; no lat/lon.
+- Silent Capture skips SoundEngine; post-drive “YOUR DRIVE IS READY” + Motion Signature.
+- `JourneyReplaySource` for reinterpretation (Engine powertrain re-sim against raw motion).
+- Docs: `docs/SILENT_CAPTURE.md`, `docs/JOURNEY_TRACE.md`.
+
+### 2026-09-17 (Social card / Open Graph visual system)
+
+- Central `src/lib/og/*` templates (brand, engine, symphony, world, fusion, drive-song, journey, pricing).
+- Dynamic PNG via Satori + resvg-wasm: `/api/og`, `/api/og/drive-song/$shareId`; static fallbacks in `public/og/`.
+- Privacy: `PublicDriveShareMetadata` only; Outfit fonts in `assets/fonts/`; DEV preview `/debug/og`.
+- Docs: `docs/SOCIAL_CARD_SYSTEM.md`. SEO `og:image` resolves to absolute dynamic URLs with static fallback.
+- **Motion Signature** (`src/lib/motion-signature/`): deterministic ribbon fingerprint from seed + energy samples; Drive Song card hero visual; reusable UI component.
+
+### 2026-09-17 (Professional SEO platform)
+
+- Central `src/lib/seo/` — metadata builder, route index policy, JSON-LD, OG images, sitemap.
+- `public/robots.txt` + `/sitemap.xml`; preview `noindex`; apex→www in `vercel.json`.
+- Docs: `docs/SEO.md`. Script: `npm run seo:check`.
+
+### 2026-09-17 (Production readiness gate — relay + assets + safety)
+
+- Prod probe: `www.elcamoso.com/api/drive-relay/ws` → **404** (Vercel cannot host long-lived WS).
+- `DriveRelayTransport` + `VITE_DRIVE_RELAY_PUBLIC_ORIGIN`; dedicated `services/drive-relay` + remote session proxy.
+- Symphony `pack-loader` (lazy/preload/progress/cache); “Music couldn't load.” UI; Studio/Explore driving gate.
+- Docs: `PRODUCTION_RELEASE_CHECKLIST.md`, `DRIVE_RELAY_DEPLOYMENT.md`, `BROWSER_SUPPORT_MATRIX.md`, `PRODUCTION_ROAD_TEST.md`.
+
+### 2026-09-17 (Studio 2.0 — Sound / Symphony / Fusion)
+
+- Studio modes Sound · Symphony · Fusion; six arrangement dials; instrument focus; demo traces + A/B.
+- Experience Presets saved to Garage; describe→params (no telemetry). Dev `/debug/symphony-assets`.
+- Docs: `docs/STUDIO_SYMPHONY.md`, `docs/MUSIC_ASSET_GOVERNANCE.md`.
+
+### 2026-09-17 (Journey Composer — Drive DNA + Drive Song)
+
+- Privacy-first `JourneySummary` (no GPS/route) in IndexedDB; post-drive “YOUR DRIVE HAS A SOUND.”
+- Drive DNA (Energy / Flow / Rhythm / Variation / Regen) + JourneyComposer (~2–3 min WAV via OfflineAudioContext).
+- Routes: `/journeys`, `/journeys/$journeyId`, `/share/drive/$shareId`. Flags `DRIVE_SONG_ENABLED` / `DRIVE_REEL_ENABLED` default on.
+- Docs: `docs/JOURNEY_COMPOSER.md`, `docs/DRIVE_DNA.md`, `docs/DRIVE_SHARING_PRIVACY.md`.
+
+### 2026-09-17 (Fusion + Worlds Experience Engine V1)
+
+- Fusion: `FusionSynth` + perceptual Machine/Music mixer + optional Harmonic Resonance; four presets; Garage-saved blends.
+- Worlds: reactive World State Engine for Space Drive, Cyber City, Storm Run (procedural layers; soft thunder cooldown).
+- Neon Run Symphony pack (128 BPM) for Fusion Midnight Boost / Future Pulse.
+- Flags `FUSION_ENABLED` / `WORLDS_ENGINE_ENABLED` default on. Docs: `docs/FUSION_AUDIO.md`, `docs/WORLDS_ENGINE.md`.
+
+### 2026-09-17 (Drive Symphony Engine V1)
+
+- Musical pipeline: Drive Energy → semantic events → quantized arrangement → stem mixer → master bus.
+- Packs: Cinematic Rock (112 BPM), Motion Orchestra (96 BPM); procedural placeholder stems.
+- Wired via `SymphonySynth` in `SoundEngine` (single AudioContext). `/symphony` Listen demo + `/debug/symphony`.
+- Docs: `docs/DRIVE_SYMPHONY.md`, `docs/SYMPHONY_AUDIO_ASSETS.md`. Flag `SYMPHONY_ENABLED` default on.
+
+### 2026-09-17 (Motion Experiences platform foundation)
+
+- Product taxonomy: Experience = Engine / Symphony / World / Fusion (`src/lib/experiences/`).
+- Nav: Drive · Explore · Studio · Garage; `/sounds` preserved.
+- Routes: `/explore`, `/symphony`, `/worlds`, `/fusion`; landing repositioned to “Turn motion into sound.”
+- Drive parked picker; Garage tabs Sounds / Experiences / Songs / Journeys.
+- Flags: `SYMPHONY_ENABLED`, `FUSION_ENABLED`, `DRIVE_SONG_ENABLED`, `DRIVE_REEL_ENABLED` (default off).
+- Docs: `docs/MOTION_EXPERIENCES_ARCHITECTURE.md`.
 
 ### 2026-09-17 (Tesla ↔ phone QR pairing — Free)
 
@@ -218,7 +344,7 @@ Canonical product rules still live in `elcamoso-comprehensive-spec.md`. Update *
 
 ### 2026-08-30 (Landing, About, pricing UX)
 
-- **Hero:** Supporting line → *Feel the e-motion in your electrical motion.*; phased mark/MOSO animation aligned with header idle pulse; **Read About** link row-aligned with **Electric Car Motion Sound** (**About** in red).
+- **Hero:** Supporting line → _Feel the e-motion in your electrical motion._; phased mark/MOSO animation aligned with header idle pulse; **Read About** link row-aligned with **Electric Car Motion Sound** (**About** in red).
 - **Home:** Removed duplicate bottom tagline + **Start Drive** block; removed redundant legal links under privacy section; **Plans** section with monthly/yearly toggle, early-adopter strikethrough (Free ~~€1.14~~ → €0; Drive+ 14% off), red “Special offer for early adopters” + red billing-disabled notice.
 - **About (`/about`):** Founder story (EV + petrol rental contrast, field recording); **Motion becomes sound.** section moved from home; two field clips (`public/about/field-capture-1.mp4`, `field-capture-2.mp4`).
 - **Pricing (`/pricing`):** Same plan toggle/discount math; red billing notice; **Open Drive** CTA with consistent footer offset.

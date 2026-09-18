@@ -4,16 +4,16 @@ One-shot procedural accents layered on top of continuous RPM bands. The transien
 
 ## Transient kinds
 
-| Kind | Layer | Typical trigger |
-|------|-------|-------------------|
-| Upshift | `dd-upshift` | Shift-up started under load |
-| Rev-match | `dd-rev-match` | Rev-match flare on meaningful downshift |
-| Downshift | `dd-downshift` | Shift-down started under load |
-| Overrun | `dd-overrun` | Lift-off overrun with prior throttle |
-| Exhaust pop | `dd-exhaust-pop` | NA lift-off after hard throttle (subtle) |
-| Turbo flutter | `dd-turbo-flutter` | Turbo profiles: partial throttle under boost |
-| Wastegate | `dd-wastegate` | Turbo profiles: throttle opening under load |
-| Drivetrain thump | `dd-drivetrain-thump` | Late phase of loaded downshift |
+| Kind             | Layer                 | Typical trigger                              |
+| ---------------- | --------------------- | -------------------------------------------- |
+| Upshift          | `dd-upshift`          | Shift-up started under load                  |
+| Rev-match        | `dd-rev-match`        | Rev-match flare on meaningful downshift      |
+| Downshift        | `dd-downshift`        | Shift-down started under load                |
+| Overrun          | `dd-overrun`          | Lift-off overrun with prior throttle         |
+| Exhaust pop      | `dd-exhaust-pop`      | NA lift-off after hard throttle (subtle)     |
+| Turbo flutter    | `dd-turbo-flutter`    | Turbo profiles: partial throttle under boost |
+| Wastegate        | `dd-wastegate`        | Turbo profiles: throttle opening under load  |
+| Drivetrain thump | `dd-drivetrain-thump` | Late phase of loaded downshift               |
 
 ## Scheduler controls
 

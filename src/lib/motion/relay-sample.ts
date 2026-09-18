@@ -1,6 +1,6 @@
 import type { MotionSample, SensorSource } from "@/lib/motion/types";
 
-/** Motion fields safe to relay — no raw latitude/longitude. */
+/** Motion fields safe to relay - no raw latitude/longitude. */
 export type RelayMotionPayload = Omit<MotionSample, "latitude" | "longitude">;
 
 export interface RelayMotionMessage {

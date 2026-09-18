@@ -49,7 +49,7 @@ export function clearStoredRelayCred() {
   sessionStorage.removeItem(RELAY_CRED_KEY);
 }
 
-/** Phone UI after claim or code entry — sensors only; sound stays on the car. */
+/** Phone UI after claim or code entry - sensors only; sound stays on the car. */
 export function PhonePairSession({
   sessionId,
   joinSecret,
@@ -167,13 +167,14 @@ export function PhonePairSession({
           <ElcamosoMark animate className="mx-auto h-14 w-auto" />
           <h1 className="mt-6 text-2xl font-light">Connected to car</h1>
           <p className="mx-auto mt-3 max-w-xs text-sm text-muted-foreground">
-            Keep this screen open. Sound plays in the car — this phone is the motion sensor.
+            Keep this screen open. Sound plays in the car - this phone is the motion sensor.
           </p>
         </div>
 
         <ul className="space-y-2 text-sm text-muted-foreground">
           <li>
-            Motion {motionActive ? <span className="text-foreground">active</span> : <span>waiting</span>}
+            Motion{" "}
+            {motionActive ? <span className="text-foreground">active</span> : <span>waiting</span>}
           </li>
           <li>
             GPS {gpsActive ? <span className="text-foreground">active</span> : <span>waiting</span>}

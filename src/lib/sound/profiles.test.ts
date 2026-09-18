@@ -51,8 +51,8 @@ const EXPECTED_NEW_IDS = [
 ];
 
 describe("built-in sound profiles", () => {
-  it("has 47 built-in profiles", () => {
-    expect(SOUND_PROFILES).toHaveLength(47);
+  it("has 57 built-in profiles (47 engines/worlds + 3 Symphony + 3 World engine + 4 Fusion)", () => {
+    expect(SOUND_PROFILES).toHaveLength(57);
     expect(EXPANSION_PROFILES).toHaveLength(25);
   });
 
@@ -109,10 +109,13 @@ describe("built-in sound profiles", () => {
     }
   });
 
-  it("has an improved strategy for every built-in profile", () => {
+  it("has an improved strategy for every classic built-in profile", () => {
     const ids = listStrategyIds();
     expect(ids.length).toBeGreaterThanOrEqual(47);
     for (const p of SOUND_PROFILES) {
+      if (p.id.startsWith("symphony-")) continue;
+      if (p.id.startsWith("fusion-")) continue;
+      if (p.id.startsWith("world-")) continue;
       expect(getStrategy(p.id), `missing strategy for ${p.id}`).not.toBeNull();
       expect(familyForProfile(p)).toBeTruthy();
     }

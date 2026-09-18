@@ -1,9 +1,8 @@
-const LOCALHOST_ORIGIN_RE =
-  /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/i;
+const LOCALHOST_ORIGIN_RE = /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/i;
 
 /** Comma-separated absolute origins, e.g. https://app.elcamoso.com,http://localhost:5173 */
 export function readAllowedCheckoutOrigins(): string[] {
-  const raw = process.env.ELCAMOSO_ALLOWED_ORIGINS?.trim();
+  const raw = process.env["ELCAMOSO_ALLOWED_ORIGINS"]?.trim();
   if (!raw) return [];
   return raw
     .split(",")
@@ -20,14 +19,11 @@ export function sanitizeCheckoutOrigin(origin: string): string {
 }
 
 function isProductionDeploy(): boolean {
-  return (process.env.ELCAMOSO_ENV ?? process.env.NODE_ENV ?? "development") === "production";
+  return (process.env["ELCAMOSO_ENV"] ?? process.env["NODE_ENV"] ?? "development") === "production";
 }
 
 /** Reject checkout/portal redirect origins outside deploy allowlist or trusted host. */
-export function assertAllowedCheckoutOrigin(
-  origin: string,
-  trustedHost?: string | null,
-): string {
+export function assertAllowedCheckoutOrigin(origin: string, trustedHost?: string | null): string {
   const sanitized = sanitizeCheckoutOrigin(origin);
   const allowlist = readAllowedCheckoutOrigins();
 

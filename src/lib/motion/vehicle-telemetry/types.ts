@@ -1,6 +1,6 @@
 import type { MotionSample } from "@/lib/motion/types";
 
-/** Provider lifecycle — Dynamic Drive must run without any of these. */
+/** Provider lifecycle - Dynamic Drive must run without any of these. */
 export type VehicleTelemetryStatus = "disabled" | "idle" | "connecting" | "connected" | "error";
 
 export interface VehicleTelemetryStatusSnapshot {
@@ -45,7 +45,7 @@ export type TeslaFleetMotionField =
 
 /**
  * Normalized record from a Fleet Telemetry server bridge.
- * Values must come from Tesla protobuf payloads — never synthesized client-side.
+ * Values must come from Tesla protobuf payloads - never synthesized client-side.
  */
 export interface TeslaFleetTelemetryRecord {
   /** Epoch ms when the server received or decoded the payload. */

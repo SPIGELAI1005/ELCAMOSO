@@ -25,10 +25,10 @@ interface VehicleTelemetryProvider {
 }
 ```
 
-| Implementation              | File                                                       | When active                          |
-| --------------------------- | ---------------------------------------------------------- | ------------------------------------ |
-| `NullVehicleTelemetryProvider` | `vehicle-telemetry/null-provider.ts`                    | Default — flag off or unknown kind   |
-| `TeslaFleetTelemetryProvider`  | `vehicle-telemetry/tesla-fleet-provider.ts`             | `teslaFleetTelemetry === true`       |
+| Implementation                 | File                                        | When active                        |
+| ------------------------------ | ------------------------------------------- | ---------------------------------- |
+| `NullVehicleTelemetryProvider` | `vehicle-telemetry/null-provider.ts`        | Default — flag off or unknown kind |
+| `TeslaFleetTelemetryProvider`  | `vehicle-telemetry/tesla-fleet-provider.ts` | `teslaFleetTelemetry === true`     |
 
 Factory: `createVehicleTelemetryProvider({ enabled, kind })` in `create-provider.ts`.
 
@@ -368,8 +368,8 @@ Source: [Billing and limits](https://developer.tesla.com/docs/fleet-api/billing-
 
 Example list prices ([developer.tesla.com](https://developer.tesla.com/) homepage, verify in billing portal):
 
-| Category          | Rate (USD)              |
-| ----------------- | ----------------------- |
+| Category          | Rate (USD)               |
+| ----------------- | ------------------------ |
 | Streaming signals | **150,000** signals / $1 |
 | Commands          | **1,000** requests / $1  |
 | Data (poll)       | **500** requests / $1    |

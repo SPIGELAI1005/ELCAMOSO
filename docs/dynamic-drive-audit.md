@@ -12,10 +12,10 @@
 
 ELCAMOSO has **two layers**:
 
-| Layer | What it means |
-|-------|----------------|
-| **Production default** | What most users get today: `dynamicDrive: false`, browser GPS/IMU, legacy `computeDriveState`, **ImprovedSynth** audio |
-| **Codebase capability** | Additive modules already present behind flags and cockpit routes — **not the default path** |
+| Layer                   | What it means                                                                                                          |
+| ----------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| **Production default**  | What most users get today: `dynamicDrive: false`, browser GPS/IMU, legacy `computeDriveState`, **ImprovedSynth** audio |
+| **Codebase capability** | Additive modules already present behind flags and cockpit routes — **not the default path**                            |
 
 This audit describes **both**, then recommends the **smallest-risk way to enable** phone sessions, fusion, virtual powertrain, dynamic sound, and Fleet Telemetry **without rewriting** the working Drive spine.
 
@@ -42,13 +42,13 @@ This audit describes **both**, then recommends the **smallest-risk way to enable
 
 ### Data sources (UI)
 
-| Element | Source |
-|---------|--------|
-| Speed | `DriveState.speed` → `formatSpeed` |
-| O ))) intensity | `MotionState.motionEnergy` |
-| RPM / gear (text) | `driveSecondaryReadout()` when `drivetrainMode === "virtual-transmission"` |
-| Product status | `driveProductLabel(DriveProductStatus)` — Sound Active, GPS Only, Weak Signal, Vehicle linked, etc. |
-| Pairing | `DriveSessionPanel` + relay client state |
+| Element           | Source                                                                                              |
+| ----------------- | --------------------------------------------------------------------------------------------------- |
+| Speed             | `DriveState.speed` → `formatSpeed`                                                                  |
+| O ))) intensity   | `MotionState.motionEnergy`                                                                          |
+| RPM / gear (text) | `driveSecondaryReadout()` when `drivetrainMode === "virtual-transmission"`                          |
+| Product status    | `driveProductLabel(DriveProductStatus)` — Sound Active, GPS Only, Weak Signal, Vehicle linked, etc. |
+| Pairing           | `DriveSessionPanel` + relay client state                                                            |
 
 ### Gaps vs target UX
 
@@ -77,10 +77,10 @@ DriveSession.loop (rAF ~60 Hz)
 
 ### Alternate paths (flag / debug gated)
 
-| Path | Gate | Module |
-|------|------|--------|
+| Path              | Gate                                            | Module                                 |
+| ----------------- | ----------------------------------------------- | -------------------------------------- |
 | **Dynamic Drive** | `dynamicDrive && supportsDynamicDrive(profile)` | `src/lib/sound/dynamic-drive/synth.ts` |
-| **Original** | `/debug` A/B | Inline oscillators in `engine.ts` |
+| **Original**      | `/debug` A/B                                    | Inline oscillators in `engine.ts`      |
 
 ### Bus structure (shared)
 
@@ -92,14 +92,14 @@ DriveSession.loop (rAF ~60 Hz)
 
 ### Reuse vs refactor (audio)
 
-| Module | Verdict |
-|--------|---------|
-| `SoundEngine` lifecycle (start/stop/suspend/crossfade/listenProfile) | **Reuse** — do not fork |
-| Master bus, limiter, cabin EQ, ducking | **Reuse** |
-| `ImprovedSynth` + strategy registry | **Reuse** — default production path |
-| `DynamicDriveSynth` | **Reuse when enabling** — already built; add sample loader later |
-| Monolithic `engine.update` | **Do not refactor** — extend via backend selection |
-| Original oscillator path | **Keep** — Legacy / debug only |
+| Module                                                               | Verdict                                                          |
+| -------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| `SoundEngine` lifecycle (start/stop/suspend/crossfade/listenProfile) | **Reuse** — do not fork                                          |
+| Master bus, limiter, cabin EQ, ducking                               | **Reuse**                                                        |
+| `ImprovedSynth` + strategy registry                                  | **Reuse** — default production path                              |
+| `DynamicDriveSynth`                                                  | **Reuse when enabling** — already built; add sample loader later |
+| Monolithic `engine.update`                                           | **Do not refactor** — extend via backend selection               |
+| Original oscillator path                                             | **Keep** — Legacy / debug only                                   |
 
 ---
 
@@ -142,12 +142,12 @@ Gear picked by highest ratio keeping RPM < 85% redline — **instant**, no hyste
 
 ### Reuse vs refactor (Web Audio)
 
-| Module | Verdict |
-|--------|---------|
-| `smoother.ts`, `master-bus.ts` | **Reuse** |
-| `motion.ts` / `MotionFrame` | **Extend** — already feeds ImprovedSynth; maps powertrain when Dynamic on |
-| `layers.ts` factory pattern | **Reuse** for non-Dynamic profiles |
-| Single-loop playbackRate as primary RPM model | **Bypass** when Dynamic Drive enabled — bands already implemented |
+| Module                                        | Verdict                                                                   |
+| --------------------------------------------- | ------------------------------------------------------------------------- |
+| `smoother.ts`, `master-bus.ts`                | **Reuse**                                                                 |
+| `motion.ts` / `MotionFrame`                   | **Extend** — already feeds ImprovedSynth; maps powertrain when Dynamic on |
+| `layers.ts` factory pattern                   | **Reuse** for non-Dynamic profiles                                        |
+| Single-loop playbackRate as primary RPM model | **Bypass** when Dynamic Drive enabled — bands already implemented         |
 
 ---
 
@@ -193,12 +193,12 @@ navigator.geolocation.watchPosition
 
 ### Reuse vs refactor (inputs)
 
-| Module | Verdict |
-|--------|---------|
-| `gps-speed.ts` | **Reuse verbatim** |
-| `sensor-fusion.ts` | **Reuse** — already multi-source; extend for telemetry priority |
-| `session.attachSensors` / `ingestGpsPosition` | **Reuse** — extract to provider interface only if testing demands it |
-| Single-axis display IMU | **Extend** on phone client — orientation/mount calibration still partial |
+| Module                                        | Verdict                                                                  |
+| --------------------------------------------- | ------------------------------------------------------------------------ |
+| `gps-speed.ts`                                | **Reuse verbatim**                                                       |
+| `sensor-fusion.ts`                            | **Reuse** — already multi-source; extend for telemetry priority          |
+| `session.attachSensors` / `ingestGpsPosition` | **Reuse** — extract to provider interface only if testing demands it     |
+| Single-axis display IMU                       | **Extend** on phone client — orientation/mount calibration still partial |
 
 ---
 
@@ -206,12 +206,12 @@ navigator.geolocation.watchPosition
 
 ### Layers
 
-| Layer | Mechanism | Rate |
-|-------|-----------|------|
-| **Drive runtime** | Singleton `DriveSession` | rAF ~60 Hz |
-| **React UI** | `useSyncExternalStore` + fingerprint dedupe | ~**80 ms** throttle |
-| **Settings** | `useSettings` + `localStorage` + `sanitizeSettings` | On write |
-| **Config → session** | `SessionBridge.syncConfig()` content fingerprint | On settings change |
+| Layer                | Mechanism                                           | Rate                |
+| -------------------- | --------------------------------------------------- | ------------------- |
+| **Drive runtime**    | Singleton `DriveSession`                            | rAF ~60 Hz          |
+| **React UI**         | `useSyncExternalStore` + fingerprint dedupe         | ~**80 ms** throttle |
+| **Settings**         | `useSettings` + `localStorage` + `sanitizeSettings` | On write            |
+| **Config → session** | `SessionBridge.syncConfig()` content fingerprint    | On settings change  |
 
 ### Key types
 
@@ -226,13 +226,13 @@ Initialized in router; **not** used for drive loop or realtime motion.
 
 ### Reuse vs refactor (state)
 
-| Module | Verdict |
-|--------|---------|
+| Module                              | Verdict                                                  |
+| ----------------------------------- | -------------------------------------------------------- |
 | `DriveSession` singleton + rAF loop | **Reuse** — inject steps, do not split without milestone |
-| `session-store.ts` 80 ms throttle | **Reuse** |
-| `SessionBridge` fingerprint sync | **Reuse** |
-| `DriveState` shape | **Reuse** as audio + UI contract |
-| High-frequency state in React | **Avoid** — current pattern is correct |
+| `session-store.ts` 80 ms throttle   | **Reuse**                                                |
+| `SessionBridge` fingerprint sync    | **Reuse**                                                |
+| `DriveState` shape                  | **Reuse** as audio + UI contract                         |
+| High-frequency state in React       | **Avoid** — current pattern is correct                   |
 
 ---
 
@@ -264,12 +264,12 @@ interface SoundProfile {
 
 ### Reuse vs refactor (profiles)
 
-| Module | Verdict |
-|--------|---------|
-| Catalogue, categories, Garage customs | **Reuse** |
-| `drivetrainPersonalityId` + personality registry | **Reuse** — source of truth for virtual transmission |
-| `SoundProfile` type | **Extend** with optional asset fields — no breaking change |
-| Hard-coded strategy maps | **Extend** — do not rewrite |
+| Module                                           | Verdict                                                    |
+| ------------------------------------------------ | ---------------------------------------------------------- |
+| Catalogue, categories, Garage customs            | **Reuse**                                                  |
+| `drivetrainPersonalityId` + personality registry | **Reuse** — source of truth for virtual transmission       |
+| `SoundProfile` type                              | **Extend** with optional asset fields — no breaking change |
+| Hard-coded strategy maps                         | **Extend** — do not rewrite                                |
 
 ---
 
@@ -280,24 +280,24 @@ interface SoundProfile {
 - **TanStack Start** + **Nitro** on **Vercel** (`vite.config.ts` preset `vercel`).
 - **No database** — server state in **in-memory `Map`** stores.
 
-| Store | File | Contents |
-|-------|------|----------|
-| Cloud sync | `cloud/store.ts` | Settings partials by `accountId` |
-| Drive relay | `drive-relay/store.ts` | Ephemeral sessions, peers, TTL 30 min |
-| Telemetry ingest | `telemetry/store.ts` | ~80 analytics batch ring buffer |
-| Share codes | `telemetry/store.ts` | Studio personality by 6-char code |
-| Tesla link tokens | `tesla/link-store.ts` | Encrypted refresh tokens (in-memory) |
+| Store             | File                   | Contents                              |
+| ----------------- | ---------------------- | ------------------------------------- |
+| Cloud sync        | `cloud/store.ts`       | Settings partials by `accountId`      |
+| Drive relay       | `drive-relay/store.ts` | Ephemeral sessions, peers, TTL 30 min |
+| Telemetry ingest  | `telemetry/store.ts`   | ~80 analytics batch ring buffer       |
+| Share codes       | `telemetry/store.ts`   | Studio personality by 6-char code     |
+| Tesla link tokens | `tesla/link-store.ts`  | Encrypted refresh tokens (in-memory)  |
 
 **Server restart wipes** ephemeral server state (relay sessions, tokens, cloud docs).
 
 ### Reuse vs refactor (backend)
 
-| Module | Verdict |
-|--------|---------|
-| `createServerFn` pattern | **Reuse** for any new REST endpoints |
-| In-memory relay store | **Reuse for dev/staging** — **extend** with Redis/KV before production scale |
-| `cloud/store.ts` | **Do not use** for drive relay motion |
-| `server.ts` error wrapper | **Reuse** |
+| Module                    | Verdict                                                                      |
+| ------------------------- | ---------------------------------------------------------------------------- |
+| `createServerFn` pattern  | **Reuse** for any new REST endpoints                                         |
+| In-memory relay store     | **Reuse for dev/staging** — **extend** with Redis/KV before production scale |
+| `cloud/store.ts`          | **Do not use** for drive relay motion                                        |
+| `server.ts` error wrapper | **Reuse**                                                                    |
 
 ---
 
@@ -305,12 +305,12 @@ interface SoundProfile {
 
 ### Server functions
 
-| Module | Key functions |
-|--------|----------------|
-| `cloud/server-fns.ts` | sync/load garage, findSound, promptToSound, driveCoach, ingestTelemetry, share |
-| `drive-relay/server-fns.ts` | create/join/get relay session |
-| `tesla/server-fns.ts` | OAuth start/callback, link status |
-| `tesla/telemetry-ingest.ts` | Forward Fleet records to display session |
+| Module                      | Key functions                                                                  |
+| --------------------------- | ------------------------------------------------------------------------------ |
+| `cloud/server-fns.ts`       | sync/load garage, findSound, promptToSound, driveCoach, ingestTelemetry, share |
+| `drive-relay/server-fns.ts` | create/join/get relay session                                                  |
+| `tesla/server-fns.ts`       | OAuth start/callback, link status                                              |
+| `tesla/telemetry-ingest.ts` | Forward Fleet records to display session                                       |
 
 ### External
 
@@ -320,10 +320,10 @@ interface SoundProfile {
 
 ### Reuse vs refactor (APIs)
 
-| Module | Verdict |
-|--------|---------|
-| `ingestTelemetryFn` | **Extend** — add drive/relay event names |
-| Relay server fns | **Reuse** |
+| Module                   | Verdict                                           |
+| ------------------------ | ------------------------------------------------- |
+| `ingestTelemetryFn`      | **Extend** — add drive/relay event names          |
+| Relay server fns         | **Reuse**                                         |
 | New endpoints for motion | **Avoid** — use WebSocket relay, not REST polling |
 
 ---
@@ -332,14 +332,14 @@ interface SoundProfile {
 
 ### Current state: **implemented**
 
-| Piece | Path |
-|-------|------|
-| WebSocket endpoint | `/api/drive-relay/ws` via `crossws` + `drive-relay/ws-node.ts` |
-| Dev plugin | `drive-relay/vite-ws-plugin.ts` |
-| Protocol | `drive-relay/protocol.ts` — motion, heartbeat, remote control, latency |
-| Client hook | `drive-relay/client.ts` — `useDriveRelay` |
-| Session store | `drive-relay/store.ts` — TTL, pairing code, join secret, peer attach |
-| Rate limits | Motion ~22/s, telemetry ~12/s (`hub.ts`) |
+| Piece              | Path                                                                   |
+| ------------------ | ---------------------------------------------------------------------- |
+| WebSocket endpoint | `/api/drive-relay/ws` via `crossws` + `drive-relay/ws-node.ts`         |
+| Dev plugin         | `drive-relay/vite-ws-plugin.ts`                                        |
+| Protocol           | `drive-relay/protocol.ts` — motion, heartbeat, remote control, latency |
+| Client hook        | `drive-relay/client.ts` — `useDriveRelay`                              |
+| Session store      | `drive-relay/store.ts` — TTL, pairing code, join secret, peer attach   |
+| Rate limits        | Motion ~22/s, telemetry ~12/s (`hub.ts`)                               |
 
 **Roles:** `display` (Tesla), `phone` (sensor), `telemetry` (Fleet bridge).
 
@@ -347,11 +347,11 @@ interface SoundProfile {
 
 ### Reuse vs refactor (realtime)
 
-| Module | Verdict |
-|--------|---------|
-| Entire `drive-relay/` package | **Reuse** — validate Tesla WS in smoke test only |
-| SSE fallback | **Add only if** smoke test proves WS blocked — not default |
-| Raw sensor persistence | **Do not add** |
+| Module                        | Verdict                                                    |
+| ----------------------------- | ---------------------------------------------------------- |
+| Entire `drive-relay/` package | **Reuse** — validate Tesla WS in smoke test only           |
+| SSE fallback                  | **Add only if** smoke test proves WS blocked — not default |
+| Raw sensor persistence        | **Do not add**                                             |
 
 ---
 
@@ -359,21 +359,21 @@ interface SoundProfile {
 
 **No user accounts** for Drive.
 
-| Mechanism | Purpose |
-|-----------|---------|
-| Relay pairing | Opaque claim token in QR (`/pair/{token}`) + 6-digit code; `joinSecret` only after claim (see `docs/PHONE_PAIRING.md`) |
-| Anonymous cloud | Client `cloudAccountId` (`local-{timestamp}`) |
-| Analytics | `elcamoso.installId` in localStorage |
-| Tesla Fleet | OAuth (server-side tokens, AES-256-GCM) |
-| CSRF | `createCsrfMiddleware` on server functions (`start.ts`) |
+| Mechanism       | Purpose                                                                                                                |
+| --------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| Relay pairing   | Opaque claim token in QR (`/pair/{token}`) + 6-digit code; `joinSecret` only after claim (see `docs/PHONE_PAIRING.md`) |
+| Anonymous cloud | Client `cloudAccountId` (`local-{timestamp}`)                                                                          |
+| Analytics       | `elcamoso.installId` in localStorage                                                                                   |
+| Tesla Fleet     | OAuth (server-side tokens, AES-256-GCM)                                                                                |
+| CSRF            | `createCsrfMiddleware` on server functions (`start.ts`)                                                                |
 
 ### Reuse vs refactor (auth)
 
-| Module | Verdict |
-|--------|---------|
-| Anonymous session philosophy | **Reuse** |
-| Join secret + TTL | **Reuse** — optional one-time tokens later |
-| User login for pairing | **Not required** for v1 |
+| Module                       | Verdict                                    |
+| ---------------------------- | ------------------------------------------ |
+| Anonymous session philosophy | **Reuse**                                  |
+| Join secret + TTL            | **Reuse** — optional one-time tokens later |
+| User login for pairing       | **Not required** for v1                    |
 
 ---
 
@@ -381,60 +381,60 @@ interface SoundProfile {
 
 Documented: `docs/TESLA_BROWSER_SMOKE_TEST.md`. **No Tesla UA sniffing.**
 
-| Concern | Implementation |
-|---------|----------------|
-| Null `coords.speed` | Delta haversine in `gps-speed.ts` |
-| GPS lag / drops | Fusion hold/decay; skip `"none"` fixes |
-| Tab hide | 2.8 s grace before audio suspend |
-| Profile switch crash | In-place `listenProfile` + tests |
-| Safety UX | Nav hidden > ~5 km/h |
-| Background audio | Silent loop + Media Session |
-| Service worker | Prod only; dev unregistered |
-| WebSocket relay | Supported; phone recommended for Enhanced motion |
+| Concern              | Implementation                                   |
+| -------------------- | ------------------------------------------------ |
+| Null `coords.speed`  | Delta haversine in `gps-speed.ts`                |
+| GPS lag / drops      | Fusion hold/decay; skip `"none"` fixes           |
+| Tab hide             | 2.8 s grace before audio suspend                 |
+| Profile switch crash | In-place `listenProfile` + tests                 |
+| Safety UX            | Nav hidden > ~5 km/h                             |
+| Background audio     | Silent loop + Media Session                      |
+| Service worker       | Prod only; dev unregistered                      |
+| WebSocket relay      | Supported; phone recommended for Enhanced motion |
 
 **Audio authority:** display tab plays sound; phone tab is sensor-only by product design.
 
 ### Reuse vs refactor (Tesla)
 
-| Module | Verdict |
-|--------|---------|
-| GPS delta, suspend grace, wake lock, listenProfile | **Reuse** — critical; do not regress |
-| Tesla-specific code branches | **Avoid** unless smoke test proves divergence |
-| Cockpit pairing UX | **Reuse** `DriveSessionPanel` |
+| Module                                             | Verdict                                       |
+| -------------------------------------------------- | --------------------------------------------- |
+| GPS delta, suspend grace, wake lock, listenProfile | **Reuse** — critical; do not regress          |
+| Tesla-specific code branches                       | **Avoid** unless smoke test proves divergence |
+| Cockpit pairing UX                                 | **Reuse** `DriveSessionPanel`                 |
 
 ---
 
 ## 12. Mobile browser accommodations
 
-| Concern | Implementation |
-|---------|----------------|
-| Mobile-first layout | Tailwind portrait, bottom nav |
-| iOS motion permission | Onboarding, calibrate, `/connect` |
-| Phone sensor app | **`/connect/{sessionId}`** — minimal UI |
-| Haptics | Optional `useHaptics` |
-| Reduced motion | `useReducedMotion` |
-| PWA install | `InstallPrompt` |
-| Calibration | `/calibrate` — sensitivity + noise floor |
+| Concern               | Implementation                           |
+| --------------------- | ---------------------------------------- |
+| Mobile-first layout   | Tailwind portrait, bottom nav            |
+| iOS motion permission | Onboarding, calibrate, `/connect`        |
+| Phone sensor app      | **`/connect/{sessionId}`** — minimal UI  |
+| Haptics               | Optional `useHaptics`                    |
+| Reduced motion        | `useReducedMotion`                       |
+| PWA install           | `InstallPrompt`                          |
+| Calibration           | `/calibrate` — sensitivity + noise floor |
 
 **Gap:** full mount-orientation calibration on phone vs spec.
 
 ### Reuse vs refactor (mobile)
 
-| Module | Verdict |
-|--------|---------|
-| `/calibrate` patterns | **Reuse** on connect flow |
-| `/connect` route | **Reuse** — extend calibration copy only |
-| Full app on phone for Drive audio | **Avoid** — keep sensor role |
+| Module                            | Verdict                                  |
+| --------------------------------- | ---------------------------------------- |
+| `/calibrate` patterns             | **Reuse** on connect flow                |
+| `/connect` route                  | **Reuse** — extend calibration copy only |
+| Full app on phone for Drive audio | **Avoid** — keep sensor role             |
 
 ---
 
 ## 13. PWA / service worker
 
-| Asset | Role |
-|-------|------|
-| `public/manifest.webmanifest` | Standalone, black theme |
-| `public/sw.js` | Shell cache `elcamoso-shell-v6` |
-| `SessionBridge` | Registers SW **production only**; unregisters in dev |
+| Asset                         | Role                                                 |
+| ----------------------------- | ---------------------------------------------------- |
+| `public/manifest.webmanifest` | Standalone, black theme                              |
+| `public/sw.js`                | Shell cache `elcamoso-shell-v6`                      |
+| `SessionBridge`               | Registers SW **production only**; unregisters in dev |
 
 **SW:** network-first HTML; cache-first static shell. Skips Vite dev paths.
 
@@ -442,31 +442,31 @@ Documented: `docs/TESLA_BROWSER_SMOKE_TEST.md`. **No Tesla UA sniffing.**
 
 ### Reuse vs refactor (PWA)
 
-| Module | Verdict |
-|--------|---------|
-| SW + manifest | **Reuse unchanged** |
+| Module         | Verdict                               |
+| -------------- | ------------------------------------- |
+| SW + manifest  | **Reuse unchanged**                   |
 | Dev SW disable | **Keep** — required for HMR stability |
 
 ---
 
 ## 14. Deployment
 
-| Item | Detail |
-|------|--------|
-| Host | **Vercel** |
-| Build | `npm run build` → `.vercel/output/` |
-| Config | `vercel.json` — `framework: "tanstack-start"` |
-| SSR | `src/server.ts` |
-| Local dev | Port **5173**, WS plugin for relay |
-| Env | `.env.example` — OpenAI, Tesla OAuth, encryption key |
+| Item      | Detail                                               |
+| --------- | ---------------------------------------------------- |
+| Host      | **Vercel**                                           |
+| Build     | `npm run build` → `.vercel/output/`                  |
+| Config    | `vercel.json` — `framework: "tanstack-start"`        |
+| SSR       | `src/server.ts`                                      |
+| Local dev | Port **5173**, WS plugin for relay                   |
+| Env       | `.env.example` — OpenAI, Tesla OAuth, encryption key |
 
 ### Reuse vs refactor (deploy)
 
-| Module | Verdict |
-|--------|---------|
-| TanStack Start + Vercel | **Reuse** |
-| WS on Vercel | **Validate** in preview — architecture assumes it works |
-| Persistent relay | **Extend** infra when leaving in-memory store |
+| Module                  | Verdict                                                 |
+| ----------------------- | ------------------------------------------------------- |
+| TanStack Start + Vercel | **Reuse**                                               |
+| WS on Vercel            | **Validate** in preview — architecture assumes it works |
+| Persistent relay        | **Extend** infra when leaving in-memory store           |
 
 ---
 
@@ -474,13 +474,13 @@ Documented: `docs/TESLA_BROWSER_SMOKE_TEST.md`. **No Tesla UA sniffing.**
 
 ### Client
 
-| Store | Key | Contents | Motion/GPS? |
-|-------|-----|----------|-------------|
-| localStorage | settings blob | `ElcamosoSettings` | No |
-| localStorage | `elcamoso.installId` | Anonymous id | No |
-| localStorage | `elcamoso.telemetry.queue` | Analytics (opt-in) | No |
-| localStorage | `elcamoso.crashes` | Truncated errors | No |
-| IndexedDB | `elcamoso-traces` | DriveState samples, aggregates | **No lat/lon** |
+| Store        | Key                        | Contents                       | Motion/GPS?    |
+| ------------ | -------------------------- | ------------------------------ | -------------- |
+| localStorage | settings blob              | `ElcamosoSettings`             | No             |
+| localStorage | `elcamoso.installId`       | Anonymous id                   | No             |
+| localStorage | `elcamoso.telemetry.queue` | Analytics (opt-in)             | No             |
+| localStorage | `elcamoso.crashes`         | Truncated errors               | No             |
+| IndexedDB    | `elcamoso-traces`          | DriveState samples, aggregates | **No lat/lon** |
 
 Settings migration: **`sanitizeSettings`** in `settings.ts`.
 
@@ -490,10 +490,10 @@ In-memory only (see Backend). Relay sessions lost on deploy/restart.
 
 ### Reuse vs refactor (persistence)
 
-| Module | Verdict |
-|--------|---------|
-| Settings + sanitize | **Reuse** |
-| Trace recorder | **Reuse** — never log raw phone streams |
+| Module              | Verdict                                          |
+| ------------------- | ------------------------------------------------ |
+| Settings + sanitize | **Reuse**                                        |
+| Trace recorder      | **Reuse** — never log raw phone streams          |
 | Relay session store | **Extend** to Redis/KV for production durability |
 
 ---
@@ -515,11 +515,11 @@ No events for: drive session start, phone paired/disconnected, dynamic drive ena
 
 ### Reuse vs refactor (analytics)
 
-| Module | Verdict |
-|--------|---------|
-| `trackEvent` + opt-in queue | **Reuse** |
-| `ingestTelemetryFn` | **Extend** event name union |
-| Location in analytics | **Do not add** |
+| Module                      | Verdict                     |
+| --------------------------- | --------------------------- |
+| `trackEvent` + opt-in queue | **Reuse**                   |
+| `ingestTelemetryFn`         | **Extend** event name union |
+| Location in analytics       | **Do not add**              |
 
 ---
 
@@ -553,74 +553,74 @@ No events for: drive session start, phone paired/disconnected, dynamic drive ena
 
 ### Phone ↔ Tesla shared sessions
 
-| Status | **Implemented** — `drive-relay/` + `DriveSessionPanel` + `/pair` + `/pair/$token` (legacy `/connect/$sessionId`). Free `phone_sensor`. |
-|--------|---|
-| **Reuse** | `store.ts`, `protocol.ts`, `client.ts`, `server-fns.ts`, claim tokens + QR UX |
-| **Refactor** | None required for v1 |
-| **Extend** | Redis/KV session store for deploy survival; dedicated production WS host (Vercel HTTP-only) |
+| Status       | **Implemented** — `drive-relay/` + `DriveSessionPanel` + `/pair` + `/pair/$token` (legacy `/connect/$sessionId`). Free `phone_sensor`. |
+| ------------ | -------------------------------------------------------------------------------------------------------------------------------------- |
+| **Reuse**    | `store.ts`, `protocol.ts`, `client.ts`, `server-fns.ts`, claim tokens + QR UX                                                          |
+| **Refactor** | None required for v1                                                                                                                   |
+| **Extend**   | Redis/KV session store for deploy survival; dedicated production WS host (Vercel HTTP-only)                                            |
 
 ### Phone sensors
 
-| Status | **Implemented** — `phone-sensor-client.ts`, relay motion @ ~15 Hz, no coords on wire |
-|--------|---|
-| **Reuse** | `/pair` routes + legacy `/connect`, permission patterns from onboarding/calibrate, `PhonePairSession` |
-| **Refactor** | None |
-| **Extend** | Mount-orientation / longitudinal accel projection; richer calibration copy |
+| Status       | **Implemented** — `phone-sensor-client.ts`, relay motion @ ~15 Hz, no coords on wire                  |
+| ------------ | ----------------------------------------------------------------------------------------------------- |
+| **Reuse**    | `/pair` routes + legacy `/connect`, permission patterns from onboarding/calibrate, `PhonePairSession` |
+| **Refactor** | None                                                                                                  |
+| **Extend**   | Mount-orientation / longitudinal accel projection; richer calibration copy                            |
 
 ### Sensor fusion
 
-| Status | **Implemented** — `sensor-fusion.ts` always runs in Drive loop |
-|--------|---|
-| **Reuse** | Priority stack (telemetry → phone → browser → hold → decay), `sensor-fusion-correction.ts`, `motion-fallback.ts`, reconnect blend |
-| **Refactor** | **Do not** replace — extend sources only |
-| **Extend** | Tune confidence thresholds from Tesla field data |
+| Status       | **Implemented** — `sensor-fusion.ts` always runs in Drive loop                                                                    |
+| ------------ | --------------------------------------------------------------------------------------------------------------------------------- |
+| **Reuse**    | Priority stack (telemetry → phone → browser → hold → decay), `sensor-fusion-correction.ts`, `motion-fallback.ts`, reconnect blend |
+| **Refactor** | **Do not** replace — extend sources only                                                                                          |
+| **Extend**   | Tune confidence thresholds from Tesla field data                                                                                  |
 
 ### Virtual RPM / gears
 
-| Status | **Implemented** — `PowertrainSimulator` when `dynamicDrive && supportsDynamicDrive` |
-|--------|---|
-| **Reuse** | `simulator.ts`, `shift-controller.ts`, `rpm-model.ts`, `drivetrain-personalities.ts`, `driveStateFromPowertrain` adapter |
-| **Refactor** | **Do not extend** `computeDriveState` gear logic — keep as Legacy |
-| **Extend** | Per-profile tuning from field tests; default rollout plan only after smoke pass |
+| Status       | **Implemented** — `PowertrainSimulator` when `dynamicDrive && supportsDynamicDrive`                                      |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------ |
+| **Reuse**    | `simulator.ts`, `shift-controller.ts`, `rpm-model.ts`, `drivetrain-personalities.ts`, `driveStateFromPowertrain` adapter |
+| **Refactor** | **Do not extend** `computeDriveState` gear logic — keep as Legacy                                                        |
+| **Extend**   | Per-profile tuning from field tests; default rollout plan only after smoke pass                                          |
 
 ### Dynamic sound
 
-| Status | **Implemented (procedural)** — `DynamicDriveSynth` + transient scheduler |
-|--------|---|
-| **Reuse** | `SoundEngine` backend switch, master bus, smoother, personality variant pools |
-| **Refactor** | **Do not** merge into ImprovedSynth — parallel backend is correct |
-| **Extend** | Optional WAV loader with procedural fallback (`audio-asset-requirements.md`) |
+| Status       | **Implemented (procedural)** — `DynamicDriveSynth` + transient scheduler      |
+| ------------ | ----------------------------------------------------------------------------- |
+| **Reuse**    | `SoundEngine` backend switch, master bus, smoother, personality variant pools |
+| **Refactor** | **Do not** merge into ImprovedSynth — parallel backend is correct             |
+| **Extend**   | Optional WAV loader with procedural fallback (`audio-asset-requirements.md`)  |
 
 ### Future Tesla Fleet Telemetry
 
-| Status | **Adapter stub** — OAuth, ingest, `map-tesla-signals.ts`, relay `telemetry` role |
-|--------|---|
-| **Reuse** | `VehicleTelemetryProvider` interface, fusion ingress as `vehicle-telemetry` source |
-| **Refactor** | None |
-| **Extend** | Server-side polling/bridge; enable `teslaFleetTelemetry` flag after validation |
-| **Do not** | Fake telemetry in browser; bypass fusion |
+| Status       | **Adapter stub** — OAuth, ingest, `map-tesla-signals.ts`, relay `telemetry` role   |
+| ------------ | ---------------------------------------------------------------------------------- |
+| **Reuse**    | `VehicleTelemetryProvider` interface, fusion ingress as `vehicle-telemetry` source |
+| **Refactor** | None                                                                               |
+| **Extend**   | Server-side polling/bridge; enable `teslaFleetTelemetry` flag after validation     |
+| **Do not**   | Fake telemetry in browser; bypass fusion                                           |
 
 ---
 
 ## Module reuse vs refactor matrix (summary)
 
-| Module | Action | Risk if wrong |
-|--------|--------|---------------|
-| `session.ts` rAF loop | **Reuse** orchestrator | High — Tesla stability |
-| `sensor-fusion.ts` | **Reuse / extend** | Medium |
-| `gps-speed.ts` | **Reuse verbatim** | Low |
-| `computeDriveState` | **Keep Legacy** — bypass when Dynamic on | Medium |
-| `PowertrainSimulator` | **Reuse** when enabling | Low |
-| `SoundEngine` shell | **Reuse** | High |
-| `ImprovedSynth` | **Reuse** as default | Medium |
-| `DynamicDriveSynth` | **Reuse** when enabling | Medium |
-| `drive-relay/*` | **Reuse** | Medium — validate WS in-car |
-| `profiles.ts` + personalities | **Extend** | Low |
-| `settings.ts` | **Extend** flags | Low |
-| `drive.tsx` + cockpit components | **Reuse** | Low |
-| `cloud/store.ts` for relay | **Do not use** | — |
-| Monolithic engine refactor | **Avoid** | High |
-| Auth for pairing | **Not needed** | — |
+| Module                           | Action                                   | Risk if wrong               |
+| -------------------------------- | ---------------------------------------- | --------------------------- |
+| `session.ts` rAF loop            | **Reuse** orchestrator                   | High — Tesla stability      |
+| `sensor-fusion.ts`               | **Reuse / extend**                       | Medium                      |
+| `gps-speed.ts`                   | **Reuse verbatim**                       | Low                         |
+| `computeDriveState`              | **Keep Legacy** — bypass when Dynamic on | Medium                      |
+| `PowertrainSimulator`            | **Reuse** when enabling                  | Low                         |
+| `SoundEngine` shell              | **Reuse**                                | High                        |
+| `ImprovedSynth`                  | **Reuse** as default                     | Medium                      |
+| `DynamicDriveSynth`              | **Reuse** when enabling                  | Medium                      |
+| `drive-relay/*`                  | **Reuse**                                | Medium — validate WS in-car |
+| `profiles.ts` + personalities    | **Extend**                               | Low                         |
+| `settings.ts`                    | **Extend** flags                         | Low                         |
+| `drive.tsx` + cockpit components | **Reuse**                                | Low                         |
+| `cloud/store.ts` for relay       | **Do not use**                           | —                           |
+| Monolithic engine refactor       | **Avoid**                                | High                        |
+| Auth for pairing                 | **Not needed**                           | —                           |
 
 ---
 
@@ -640,23 +640,23 @@ No events for: drive session start, phone paired/disconnected, dynamic drive ena
 
 ## Key file index
 
-| Area | Path |
-|------|------|
-| Drive UI | `src/routes/drive.tsx`, `DynamicDriveInstrument.tsx`, `DriveSessionPanel.tsx` |
-| Session | `src/lib/drive/session.ts` |
-| Legacy drivetrain | `src/lib/drive/model.ts` (`computeDriveState`) |
-| Fusion | `src/lib/motion/sensor-fusion.ts` |
-| Powertrain | `src/lib/powertrain/simulator.ts` |
-| Personalities | `src/lib/drive/drivetrain-personalities.ts` |
-| Dynamic audio | `src/lib/sound/dynamic-drive/synth.ts` |
-| Engine | `src/lib/sound/engine.ts` |
-| Improved audio | `src/lib/sound/realism/improved-synth.ts` |
-| Profiles | `src/lib/sound/profiles.ts` |
-| Relay | `src/lib/drive-relay/` |
-| Settings | `src/lib/drive/settings.ts` |
-| Tesla | `src/lib/tesla/`, `src/lib/motion/vehicle-telemetry/` |
-| PWA | `public/sw.js`, `SessionBridge.tsx` |
-| Analytics | `src/lib/telemetry/analytics.ts` |
+| Area              | Path                                                                          |
+| ----------------- | ----------------------------------------------------------------------------- |
+| Drive UI          | `src/routes/drive.tsx`, `DynamicDriveInstrument.tsx`, `DriveSessionPanel.tsx` |
+| Session           | `src/lib/drive/session.ts`                                                    |
+| Legacy drivetrain | `src/lib/drive/model.ts` (`computeDriveState`)                                |
+| Fusion            | `src/lib/motion/sensor-fusion.ts`                                             |
+| Powertrain        | `src/lib/powertrain/simulator.ts`                                             |
+| Personalities     | `src/lib/drive/drivetrain-personalities.ts`                                   |
+| Dynamic audio     | `src/lib/sound/dynamic-drive/synth.ts`                                        |
+| Engine            | `src/lib/sound/engine.ts`                                                     |
+| Improved audio    | `src/lib/sound/realism/improved-synth.ts`                                     |
+| Profiles          | `src/lib/sound/profiles.ts`                                                   |
+| Relay             | `src/lib/drive-relay/`                                                        |
+| Settings          | `src/lib/drive/settings.ts`                                                   |
+| Tesla             | `src/lib/tesla/`, `src/lib/motion/vehicle-telemetry/`                         |
+| PWA               | `public/sw.js`, `SessionBridge.tsx`                                           |
+| Analytics         | `src/lib/telemetry/analytics.ts`                                              |
 
 ---
 

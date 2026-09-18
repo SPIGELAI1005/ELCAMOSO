@@ -1,5 +1,5 @@
 /**
- * Realism V2.1 unit coverage — firing math, load/shift behaviour, sample helpers.
+ * Realism V2.1 unit coverage - firing math, load/shift behaviour, sample helpers.
  */
 import { describe, expect, it } from "vitest";
 import {

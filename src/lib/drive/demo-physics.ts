@@ -75,8 +75,7 @@ export function applyDemoDriveOverrides(
       next.load = Math.max(next.load, Math.min(1, throttle * 0.98));
       const tx = profile.transmission;
       if (profile.drivetrainMode !== "continuous" && tx) {
-        const revRpm =
-          tx.idleRpm + throttle * (tx.redlineRpm - tx.idleRpm) * 0.96;
+        const revRpm = tx.idleRpm + throttle * (tx.redlineRpm - tx.idleRpm) * 0.96;
         next.rpm = Math.max(next.rpm, Math.min(tx.redlineRpm, revRpm));
       }
     } else if (sel === "P") {

@@ -8,7 +8,7 @@ import { buildCalibrationTrace, sampleFromLive } from "@/lib/calibration/seriali
 import type { DriveState } from "@/lib/drive/model";
 import type { VehicleMotionState } from "@/lib/motion/types";
 
-const DEFAULT_INTERVAL_MS = 50; // 20 Hz — outside audio rAF critical path when polled
+const DEFAULT_INTERVAL_MS = 50; // 20 Hz - outside audio rAF critical path when polled
 const MAX_SAMPLES = 36_000; // ~30 min @ 20 Hz
 
 /**
@@ -66,7 +66,7 @@ export class CalibrationRecorder {
 
   /**
    * Append a sample if the interval has elapsed.
-   * Safe to call from rAF — work is O(1) push, no stringify.
+   * Safe to call from rAF - work is O(1) push, no stringify.
    */
   tick(motion: VehicleMotionState, drive: DriveState, opts?: { braking?: number }) {
     if (!this.recording) return;

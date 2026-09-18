@@ -4,7 +4,10 @@
  */
 import { writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { DRIVETRAIN_PERSONALITY_IDS, getDrivetrainPersonality } from "../src/lib/drive/drivetrain-personalities";
+import {
+  DRIVETRAIN_PERSONALITY_IDS,
+  getDrivetrainPersonality,
+} from "../src/lib/drive/drivetrain-personalities";
 import { getPowertrainProfile } from "../src/lib/powertrain/profiles";
 import {
   calibrationUpshiftTable,
@@ -14,7 +17,11 @@ import {
   validateShiftMap,
 } from "../src/lib/powertrain/shift-map";
 import { speedKmhFromRpmAndGear } from "../src/lib/powertrain/rpm-model";
-import { createDriverDemandState, roadLoadEstimate, updateDriverDemand } from "../src/lib/powertrain/driver-demand";
+import {
+  createDriverDemandState,
+  roadLoadEstimate,
+  updateDriverDemand,
+} from "../src/lib/powertrain/driver-demand";
 import type { VehicleMotionState } from "../src/lib/motion/types";
 
 function motion(partial: Partial<VehicleMotionState> = {}): VehicleMotionState {
@@ -47,18 +54,30 @@ w("# Powertrain Calibration V2");
 w();
 w("ELCAMOSO virtual drivetrain personalities — not representations of trademarked vehicles.");
 w();
-w("Generated from physical gear ratios, final drive, wheel circumference, and recalibrated demand RPM curves.");
+w(
+  "Generated from physical gear ratios, final drive, wheel circumference, and recalibrated demand RPM curves.",
+);
 w();
 w("## Architecture notes");
 w();
-w("- Dynamic Drive (`PowertrainSimulator`) is canonical for virtual-transmission profiles when `(settings.dynamicDrive ∧ entitlement) ∨ demo`.");
+w(
+  "- Dynamic Drive (`PowertrainSimulator`) is canonical for virtual-transmission profiles when `(settings.dynamicDrive ∧ entitlement) ∨ demo`.",
+);
 w("- Continuous profiles never use `PowertrainSimulator`, including in demo.");
-w("- Three speed signals: `displaySpeedKmh` (UI, unfiltered fused), `mechanicalSpeedKmh` (~160 ms τ for RPM), `shiftDecisionSpeedKmh` (~550 ms τ for gear schedule).");
+w(
+  "- Three speed signals: `displaySpeedKmh` (UI, unfiltered fused), `mechanicalSpeedKmh` (~160 ms τ for RPM), `shiftDecisionSpeedKmh` (~550 ms τ for gear schedule).",
+);
 w("- RPM uses `mechanicalSpeedKmh` only. Gear selection uses `shiftDecisionSpeedKmh` only.");
-w("- `driverDemand` is accelerator intention; `engineLoad` may include road-load/aero. Road speed must not masquerade as pedal.");
-w("- Kickdown queues are reconciled every tick: release, brake, or unsafe RPM clears remaining steps.");
-w("- Diagnostics field `powertrainBackend: \"legacy\" | \"dynamic\"` is developer-only.");
-w("- Road Feel V3: light/normal shift maps earlier for mainstream combustion; shift audibility from phase load + RPM, not fake swooshes.");
+w(
+  "- `driverDemand` is accelerator intention; `engineLoad` may include road-load/aero. Road speed must not masquerade as pedal.",
+);
+w(
+  "- Kickdown queues are reconciled every tick: release, brake, or unsafe RPM clears remaining steps.",
+);
+w('- Diagnostics field `powertrainBackend: "legacy" | "dynamic"` is developer-only.');
+w(
+  "- Road Feel V3: light/normal shift maps earlier for mainstream combustion; shift audibility from phase load + RPM, not fake swooshes.",
+);
 w();
 w("## Demand bands (schedule generation)");
 w();
@@ -78,9 +97,14 @@ w();
   w("| Speed km/h | driverDemand | engineLoad | roadLoadEstimate |");
   w("|---:|---:|---:|---:|");
   for (const speed of [30, 50, 80, 100, 130]) {
-    let state = createDriverDemandState();
+    const state = createDriverDemandState();
     let last = updateDriverDemand({
-      motion: motion({ speedKmh: speed, accelerationMs2: 0, accelerationFiltered: 0, inferredThrottle: 0 }),
+      motion: motion({
+        speedKmh: speed,
+        accelerationMs2: 0,
+        accelerationFiltered: 0,
+        inferredThrottle: 0,
+      }),
       profile,
       rpmNormalized: 0.35,
       dt: 0.05,
@@ -89,7 +113,12 @@ w();
     });
     for (let i = 0; i < 40; i += 1) {
       last = updateDriverDemand({
-        motion: motion({ speedKmh: speed, accelerationMs2: 0, accelerationFiltered: 0, inferredThrottle: 0 }),
+        motion: motion({
+          speedKmh: speed,
+          accelerationMs2: 0,
+          accelerationFiltered: 0,
+          inferredThrottle: 0,
+        }),
         profile,
         rpmNormalized: 0.35,
         dt: 0.05,
@@ -97,7 +126,9 @@ w();
         directThrottle: 0.12,
       });
     }
-    w(`| ${speed} | ${fmt(last.driverDemand, 3)} | ${fmt(last.engineLoad, 3)} | ${fmt(roadLoadEstimate(speed), 3)} |`);
+    w(
+      `| ${speed} | ${fmt(last.driverDemand, 3)} | ${fmt(last.engineLoad, 3)} | ${fmt(roadLoadEstimate(speed), 3)} |`,
+    );
   }
   w();
 }
@@ -123,11 +154,19 @@ for (const id of DRIVETRAIN_PERSONALITY_IDS) {
   w(`| Wheel circumference | ${profile.wheelCircumferenceM} m |`);
   w(`| Upshift duration | ${profile.transmission.shift.upshiftDurationMs} ms |`);
   w(`| Downshift duration | ${profile.transmission.shift.downshiftDurationMs} ms |`);
-  w(`| Rev-match | ${profile.transmission.shift.revMatchEnabled ? `yes (overshoot ${profile.transmission.shift.revMatchOvershoot})` : "no"} |`);
-  w(`| Kickdown | threshold ${profile.transmission.kickdown.throttleThreshold}, maxSteps ${profile.transmission.kickdown.maxSteps} |`);
-  w(`| Torque converter slip | ${profile.transmission.torqueConverter ? `yes (lock ~${profile.transmission.torqueConverter.lockSpeedKmh ?? 52} km/h)` : "no"} |`);
+  w(
+    `| Rev-match | ${profile.transmission.shift.revMatchEnabled ? `yes (overshoot ${profile.transmission.shift.revMatchOvershoot})` : "no"} |`,
+  );
+  w(
+    `| Kickdown | threshold ${profile.transmission.kickdown.throttleThreshold}, maxSteps ${profile.transmission.kickdown.maxSteps} |`,
+  );
+  w(
+    `| Torque converter slip | ${profile.transmission.torqueConverter ? `yes (lock ~${profile.transmission.torqueConverter.lockSpeedKmh ?? 52} km/h)` : "no"} |`,
+  );
   w(`| Shift map valid | ${validation.ok ? "yes" : `no (${validation.issues.join("; ")})`} |`);
-  w(`| Schedule RPM @10/50/100% | ${Math.round(rpm10)} / ${Math.round(rpm50)} / ${Math.round(rpm100)} |`);
+  w(
+    `| Schedule RPM @10/50/100% | ${Math.round(rpm10)} / ${Math.round(rpm50)} / ${Math.round(rpm100)} |`,
+  );
   w();
   w("### Road-speed range per gear (idle → redline)");
   w();

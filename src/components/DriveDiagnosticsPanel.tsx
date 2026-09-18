@@ -5,22 +5,22 @@ import { downloadDiagnosticsSession } from "@/lib/diagnostics/export";
 import { getSession } from "@/lib/drive/session";
 
 function fmtNum(value: number | null | undefined, digits = 2): string {
-  if (value === null || value === undefined || !Number.isFinite(value)) return "—";
+  if (value === null || value === undefined || !Number.isFinite(value)) return "-";
   return value.toFixed(digits);
 }
 
 function fmtMs(value: number | null | undefined): string {
-  if (value === null || value === undefined || !Number.isFinite(value)) return "—";
+  if (value === null || value === undefined || !Number.isFinite(value)) return "-";
   return `${Math.round(value)} ms`;
 }
 
 function fmtHz(value: number | null | undefined): string {
-  if (value === null || value === undefined || !Number.isFinite(value)) return "—";
+  if (value === null || value === undefined || !Number.isFinite(value)) return "-";
   return `${Math.round(value)} Hz`;
 }
 
 function fmtPct(value: number | null | undefined): string {
-  if (value === null || value === undefined || !Number.isFinite(value)) return "—";
+  if (value === null || value === undefined || !Number.isFinite(value)) return "-";
   return `${Math.round(value * 100)}%`;
 }
 
@@ -113,7 +113,7 @@ function MotionSection({ frame }: { frame: DriveDiagnosticsFrame }) {
       />
       <MetricRow label="Pedal" value={fmtPct(motion.teslaTelemetry.pedal)} />
       <MetricRow label="Motor RPM" value={fmtNum(motion.teslaTelemetry.motorRpm, 0)} />
-      <MetricRow label="Operating state" value={motion.teslaTelemetry.operatingState ?? "—"} />
+      <MetricRow label="Operating state" value={motion.teslaTelemetry.operatingState ?? "-"} />
       <MetricRow label="Age" value={fmtMs(motion.teslaTelemetry.ageMs)} />
     </Section>
   );
@@ -135,22 +135,22 @@ function FusionSection({ frame }: { frame: DriveDiagnosticsFrame }) {
 
 function PowertrainSection({ frame }: { frame: DriveDiagnosticsFrame }) {
   const { powertrain } = frame;
-  const [profileLabel, setProfileLabel] = useState("—");
+  const [profileLabel, setProfileLabel] = useState("-");
   useEffect(() => {
     const id = window.setInterval(() => {
-      setProfileLabel(getSession().snapshot().profileName || "—");
+      setProfileLabel(getSession().snapshot().profileName || "-");
     }, 500);
-    setProfileLabel(getSession().snapshot().profileName || "—");
+    setProfileLabel(getSession().snapshot().profileName || "-");
     return () => window.clearInterval(id);
   }, []);
   const gearLabel = powertrain.gear > 0 ? `D${powertrain.gear}` : "N";
-  const phase = powertrain.shifting ? (powertrain.shiftPhase ?? "—") : "none";
+  const phase = powertrain.shifting ? (powertrain.shiftPhase ?? "-") : "none";
   const queued =
     powertrain.queuedTargetGear == null || powertrain.queuedTargetGear === powertrain.gear
-      ? "—"
+      ? "-"
       : String(powertrain.queuedTargetGear);
   const sensor =
-    powertrain.motionSource ?? frame.fusion.primarySource ?? powertrain.fallbackTier ?? "—";
+    powertrain.motionSource ?? frame.fusion.primarySource ?? powertrain.fallbackTier ?? "-";
 
   return (
     <Section title="Powertrain runtime">
@@ -162,16 +162,19 @@ function PowertrainSection({ frame }: { frame: DriveDiagnosticsFrame }) {
       <MetricRow label="GEAR" value={gearLabel} />
       <MetricRow
         label="TARGET GEAR"
-        value={powertrain.targetGear == null ? "—" : String(powertrain.targetGear)}
+        value={powertrain.targetGear == null ? "-" : String(powertrain.targetGear)}
       />
       <MetricRow label="QUEUED GEAR" value={queued} />
       <MetricRow label="RPM" value={fmtNum(powertrain.mechanicalRpm ?? powertrain.rpm, 0)} />
-      <MetricRow label="DRIVER DEMAND" value={fmtPct(powertrain.driverDemand ?? powertrain.throttle)} />
+      <MetricRow
+        label="DRIVER DEMAND"
+        value={fmtPct(powertrain.driverDemand ?? powertrain.throttle)}
+      />
       <MetricRow label="ENGINE LOAD" value={fmtPct(powertrain.engineLoad ?? powertrain.load)} />
       <MetricRow label="SHIFT PHASE" value={phase} />
       <MetricRow label="SENSOR SOURCE" value={String(sensor)} />
-      <MetricRow label="AUDIO BACKEND" value={frame.audio.synthesisMode || "—"} />
-      <MetricRow label="Last shift reason" value={powertrain.lastShiftReason ?? "—"} />
+      <MetricRow label="AUDIO BACKEND" value={frame.audio.synthesisMode || "-"} />
+      <MetricRow label="Last shift reason" value={powertrain.lastShiftReason ?? "-"} />
       <MetricRow label="Display speed" value={`${fmtNum(powertrain.displaySpeedKmh, 1)} km/h`} />
       <MetricRow
         label="Mechanical speed"

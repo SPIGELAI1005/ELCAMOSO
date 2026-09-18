@@ -22,26 +22,26 @@ Field checklist for opening ELCAMOSO in a Tesla (or similar) in-car browser whil
 
 ## 1. Load & shell
 
-| Step                                                                                                      | Pass? | Notes                                                 |
-| --------------------------------------------------------------------------------------------------------- | ----- | ----------------------------------------------------- |
-| Open the site; landing renders (mark + tagline)                                                           | ☐     |                                                       |
-| No blank white / “This page didn’t load”                                                                  | ☐     |                                                       |
-| Nav opens; `/sounds` and `/demo` load                                                                     | ☐     |                                                       |
-| Service worker does not break reload (hard refresh still works)                                           | ☐     |                                                       |
-| Switch Sound Profile while Listen / Demo / Drive is already playing (no “This page didn’t load”)          | ☐     |                                                       |
-| Preview another sound without restarting the whole audio engine                                           | ☐     |                                                       |
-| Drive safety mode above ~5 km/h: instrument only (mark, speed, profile, Stop); nav hidden                 | ☐     |                                                       |
-| With motion character on: gear arc, rev, profile name; connection hint only if needed | ☐     | Settings → Advanced → Motion-matched sound            |
-| Split-screen (browser beside maps): gear pulses on shift; rev beside arc in landscape  | ☐     | `?cockpit=1` or safety mode                           |
-| Phone link: **Connect phone** on `/drive` → scan QR `/pair/{token}` or enter code on `/pair` | ☐     | Free; no `?cockpit=1` required; same Wi‑Fi for local WS |
-| Dev only: peer rows, Signal + Latency test when Drive debug on                          | ☐     | Settings → Advanced → Drive debug                     |
-| Phone optional controls: Sound Profile, intensity, motion character, shift feel, master | ☐     | Collapsed panel; set while parked                     |
-| Phone control change → Tesla reflects within one relay hop                              | ☐     | Change profile or volume on phone; hear/see on Tesla    |
-| Tesla Fleet Telemetry (optional, server): flag off → Drive works on browser/phone only  | ☐     | `teslaFleetTelemetry` default off; see `docs/dynamic-drive/tesla-telemetry.md` |
-| Drive debug: pipeline stages (sensor → server → Tesla → fusion → audio)               | ☐     | Settings → Advanced → Developer → Drive debug         |
-| Tip-in: sound responds before GPS speed catches up (phone linked)                       | ☐     | Dynamic Drive + motion character on                   |
-| Phone brief disconnect: audio coasts, no silence cliff (≤ ~2.5 s grace)                | ☐     | Lock phone or toggle Wi‑Fi briefly                    |
-| Product status shows Sound Active / GPS Only / Simulation (not AudioContext jargon)                       | ☐     |                                                       |
+| Step                                                                                             | Pass? | Notes                                                                          |
+| ------------------------------------------------------------------------------------------------ | ----- | ------------------------------------------------------------------------------ |
+| Open the site; landing renders (mark + tagline)                                                  | ☐     |                                                                                |
+| No blank white / “This page didn’t load”                                                         | ☐     |                                                                                |
+| Nav opens; `/sounds` and `/demo` load                                                            | ☐     |                                                                                |
+| Service worker does not break reload (hard refresh still works)                                  | ☐     |                                                                                |
+| Switch Sound Profile while Listen / Demo / Drive is already playing (no “This page didn’t load”) | ☐     |                                                                                |
+| Preview another sound without restarting the whole audio engine                                  | ☐     |                                                                                |
+| Drive safety mode above ~5 km/h: instrument only (mark, speed, profile, Stop); nav hidden        | ☐     |                                                                                |
+| With motion character on: gear arc, rev, profile name; connection hint only if needed            | ☐     | Settings → Advanced → Motion-matched sound                                     |
+| Split-screen (browser beside maps): gear pulses on shift; rev beside arc in landscape            | ☐     | `?cockpit=1` or safety mode                                                    |
+| Phone link: **Connect phone** on `/drive` → scan QR `/pair/{token}` or enter code on `/pair`     | ☐     | Free; no `?cockpit=1` required; same Wi‑Fi for local WS                        |
+| Dev only: peer rows, Signal + Latency test when Drive debug on                                   | ☐     | Settings → Advanced → Drive debug                                              |
+| Phone optional controls: Sound Profile, intensity, motion character, shift feel, master          | ☐     | Collapsed panel; set while parked                                              |
+| Phone control change → Tesla reflects within one relay hop                                       | ☐     | Change profile or volume on phone; hear/see on Tesla                           |
+| Tesla Fleet Telemetry (optional, server): flag off → Drive works on browser/phone only           | ☐     | `teslaFleetTelemetry` default off; see `docs/dynamic-drive/tesla-telemetry.md` |
+| Drive debug: pipeline stages (sensor → server → Tesla → fusion → audio)                          | ☐     | Settings → Advanced → Developer → Drive debug                                  |
+| Tip-in: sound responds before GPS speed catches up (phone linked)                                | ☐     | Dynamic Drive + motion character on                                            |
+| Phone brief disconnect: audio coasts, no silence cliff (≤ ~2.5 s grace)                          | ☐     | Lock phone or toggle Wi‑Fi briefly                                             |
+| Product status shows Sound Active / GPS Only / Simulation (not AudioContext jargon)              | ☐     |                                                                                |
 
 ---
 
@@ -129,16 +129,16 @@ ELCAMOSO in-car browser path uses **GPS + IMU inference** (and optional phone re
 
 Parked only. Requires Stripe test mode on the server and a signed-in account on both Tesla and phone.
 
-| Step | Pass? | Notes |
-| ---- | ----- | ----- |
-| FREE user on `/drive?cockpit=1` with Dynamic Drive preview active | ☐ | Trial UI shows remaining preview time |
-| Trial ≤10 min: milestone nudge or **Unlock on phone** CTA visible | ☐ | Cockpit uses QR path, not in-car card entry |
-| Open upgrade overlay (`?upgrade=drive-plus` or CTA) — QR renders | ☐ | No Stripe iframe on Tesla |
-| Phone scans QR → `/upgrade/{token}` loads price + **Unlock Drive+** | ☐ | Sign in if prompted |
-| Stripe Checkout opens on phone (test card in test mode) | ☐ | Payment stays off Tesla browser |
-| After payment: phone shows success; Tesla shows **Drive+ is ready** without reload | ☐ | ≤ few seconds via relay or 2.5 s poll |
-| Dynamic Drive continues — same drive session, no full page refresh | ☐ | Audio should not hard-stop |
-| Close overlay early — plan still updates via polling | ☐ | Reopen overlay shows unlocked |
+| Step                                                                               | Pass? | Notes                                       |
+| ---------------------------------------------------------------------------------- | ----- | ------------------------------------------- |
+| FREE user on `/drive?cockpit=1` with Dynamic Drive preview active                  | ☐     | Trial UI shows remaining preview time       |
+| Trial ≤10 min: milestone nudge or **Unlock on phone** CTA visible                  | ☐     | Cockpit uses QR path, not in-car card entry |
+| Open upgrade overlay (`?upgrade=drive-plus` or CTA) — QR renders                   | ☐     | No Stripe iframe on Tesla                   |
+| Phone scans QR → `/upgrade/{token}` loads price + **Unlock Drive+**                | ☐     | Sign in if prompted                         |
+| Stripe Checkout opens on phone (test card in test mode)                            | ☐     | Payment stays off Tesla browser             |
+| After payment: phone shows success; Tesla shows **Drive+ is ready** without reload | ☐     | ≤ few seconds via relay or 2.5 s poll       |
+| Dynamic Drive continues — same drive session, no full page refresh                 | ☐     | Audio should not hard-stop                  |
+| Close overlay early — plan still updates via polling                               | ☐     | Reopen overlay shows unlocked               |
 
 **Full scenario + failure matrix:** `docs/billing/tesla-purchase-e2e.md`  
 **Automated integration:** `src/lib/tesla-upgrade/purchase-flow.integration.test.ts`

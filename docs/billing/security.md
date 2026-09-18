@@ -8,14 +8,14 @@ ELCAMOSO runs procedural Web Audio in the browser. A determined user can always 
 
 ## Threat model (summary)
 
-| Asset | Authority | Client bypass risk |
-|-------|-----------|------------------|
-| Stripe secrets | Server env only | N/A if env stays server-side |
-| Subscription / Drive+ | Stripe webhooks + local store | UI gates bypassable; file delivery gated server-side |
-| Dynamic Drive trial | Server trial service | Procedural audio bypassable client-side |
-| Account sessions | HttpOnly cookie `elcamoso_account_session` (Secure in production, SameSite=Lax); server session store | Cookie theft still possible via XSS on non-HttpOnly siblings; session token itself is not in JS |
-| Premium sound files | Signed URLs + manifest entitlement check | Signed URL is a bearer token until expiry |
-| Tesla upgrade QR tokens | Server in-memory store | Single-use + TTL; lost on restart |
+| Asset                   | Authority                                                                                             | Client bypass risk                                                                              |
+| ----------------------- | ----------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| Stripe secrets          | Server env only                                                                                       | N/A if env stays server-side                                                                    |
+| Subscription / Drive+   | Stripe webhooks + local store                                                                         | UI gates bypassable; file delivery gated server-side                                            |
+| Dynamic Drive trial     | Server trial service                                                                                  | Procedural audio bypassable client-side                                                         |
+| Account sessions        | HttpOnly cookie `elcamoso_account_session` (Secure in production, SameSite=Lax); server session store | Cookie theft still possible via XSS on non-HttpOnly siblings; session token itself is not in JS |
+| Premium sound files     | Signed URLs + manifest entitlement check                                                              | Signed URL is a bearer token until expiry                                                       |
+| Tesla upgrade QR tokens | Server in-memory store                                                                                | Single-use + TTL; lost on restart                                                               |
 
 ---
 

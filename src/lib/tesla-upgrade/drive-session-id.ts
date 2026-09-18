@@ -1,4 +1,4 @@
-/** Client drive session id — one per browser tab, used for trial and Tesla upgrade linking. */
+/** Client drive session id - one per browser tab, used for trial and Tesla upgrade linking. */
 export function readClientDriveSessionId(): string {
   if (typeof window === "undefined") return "";
   const key = "elcamoso.driveSessionId";

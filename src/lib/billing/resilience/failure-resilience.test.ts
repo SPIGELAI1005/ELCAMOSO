@@ -14,7 +14,10 @@ import {
   memorySubscriptionRepository,
   resetSubscriptionRepositoryStoreForTests,
 } from "@/lib/billing/subscription-repository-memory";
-import { getSubscriptionForUser, resetSubscriptionStoreForTests } from "@/lib/billing/subscription-store";
+import {
+  getSubscriptionForUser,
+  resetSubscriptionStoreForTests,
+} from "@/lib/billing/subscription-store";
 import type { Subscription } from "@/lib/billing/types";
 import {
   dispatchStripeWebhookEvent,
@@ -103,7 +106,7 @@ describe("billing failure resilience", () => {
     expect(snapshot.entitlements).not.toContain("dynamic_drive");
   });
 
-  it("premium gates read local store only — no Stripe on access check", () => {
+  it("premium gates read local store only - no Stripe on access check", () => {
     provisionEntitlementsFromSubscription(baseSubscription());
     expect(userHasLocalDrivePlusAccess(USER_ID)).toBe(true);
     expect(subscriptionsList).not.toHaveBeenCalled();
@@ -126,7 +129,7 @@ describe("billing failure resilience", () => {
     expect(snapshot.entitlements).toContain("basic_drive");
   });
 
-  it("simulates payment failure with past_due grace — Drive+ retained locally", () => {
+  it("simulates payment failure with past_due grace - Drive+ retained locally", () => {
     provisionEntitlementsFromSubscription(
       baseSubscription({ status: "past_due", updatedAt: new Date() }),
     );
@@ -135,7 +138,7 @@ describe("billing failure resilience", () => {
     expect(access.reason).toBe("past_due_grace");
   });
 
-  it("simulates subscription canceled after period end — FREE locally", () => {
+  it("simulates subscription canceled after period end - FREE locally", () => {
     provisionEntitlementsFromSubscription(
       baseSubscription({
         status: "canceled",
@@ -145,7 +148,7 @@ describe("billing failure resilience", () => {
     expect(getSubscriptionForUser(USER_ID)).toMatchObject({ plan: "FREE", status: "free" });
   });
 
-  it("simulates subscription renewed — active with new period", () => {
+  it("simulates subscription renewed - active with new period", () => {
     provisionEntitlementsFromSubscription(
       baseSubscription({
         status: "active",
@@ -155,7 +158,7 @@ describe("billing failure resilience", () => {
     expect(resolveLocalSubscriptionAccess(USER_ID).hasDrivePlusAccess).toBe(true);
   });
 
-  it("simulates database unavailable — webhook still provisions memory entitlements", async () => {
+  it("simulates database unavailable - webhook still provisions memory entitlements", async () => {
     const upsert = vi
       .spyOn(memorySubscriptionRepository, "upsert")
       .mockRejectedValue(new Error("database unavailable"));
@@ -179,7 +182,7 @@ describe("billing failure resilience", () => {
     upsert.mockRestore();
   });
 
-  it("simulates duplicated webhook — second dispatch is idempotent", async () => {
+  it("simulates duplicated webhook - second dispatch is idempotent", async () => {
     const event = {
       id: "evt_duplicate_1",
       object: "event",
@@ -215,7 +218,7 @@ describe("billing failure resilience", () => {
     expect(second.duplicate).toBe(true);
   });
 
-  it("simulates webhook delayed — FREE until local store updated", () => {
+  it("simulates webhook delayed - FREE until local store updated", () => {
     expect(userHasLocalDrivePlusAccess(USER_ID)).toBe(false);
     const snapshot = buildEntitlementSnapshot(freeEntitlementUser());
     expect(snapshot.entitlements).toContain("basic_drive");
@@ -223,7 +226,7 @@ describe("billing failure resilience", () => {
     expect(userHasLocalDrivePlusAccess(USER_ID)).toBe(true);
   });
 
-  it("simulates customer portal unavailable — throws without touching entitlements", async () => {
+  it("simulates customer portal unavailable - throws without touching entitlements", async () => {
     provisionEntitlementsFromSubscription(baseSubscription());
     portalCreate.mockRejectedValue({ type: "StripeConnectionError" });
 
@@ -237,7 +240,7 @@ describe("billing failure resilience", () => {
     expect(resolveLocalSubscriptionAccess(USER_ID).hasDrivePlusAccess).toBe(true);
   });
 
-  it("simulates expired checkout — no entitlement change until webhook", () => {
+  it("simulates expired checkout - no entitlement change until webhook", () => {
     expect(getSubscriptionForUser(USER_ID)).toBeNull();
     const snapshot = buildEntitlementSnapshot(freeEntitlementUser());
     expect(snapshot.entitlements).toContain("basic_drive");

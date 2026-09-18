@@ -5,7 +5,7 @@ import { t } from "@/lib/i18n";
 
 const PRIMARY = [
   { to: "/drive", key: "nav.drive" as const },
-  { to: "/sounds", key: "nav.sounds" as const },
+  { to: "/explore", key: "nav.explore" as const },
   { to: "/studio", key: "nav.studio" as const },
   { to: "/garage", key: "nav.garage" as const },
 ];

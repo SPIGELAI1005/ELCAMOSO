@@ -3,12 +3,12 @@ import type { DriveDiagnosticsFrame } from "@/lib/diagnostics/types";
 import { getSession } from "@/lib/drive/session";
 
 function fmt(value: number | null | undefined, digits = 0): string {
-  if (value === null || value === undefined || !Number.isFinite(value)) return "—";
+  if (value === null || value === undefined || !Number.isFinite(value)) return "-";
   return value.toFixed(digits);
 }
 
 function fmtPct(value: number | null | undefined): string {
-  if (value === null || value === undefined || !Number.isFinite(value)) return "—";
+  if (value === null || value === undefined || !Number.isFinite(value)) return "-";
   return `${Math.round(value * 100)}%`;
 }
 
@@ -19,7 +19,7 @@ function sensorLabel(frame: DriveDiagnosticsFrame): string {
   if (src === "phone") return "phone relay";
   if (frame.fusion.transitioning) return "fused";
   if (tier === "hold" || tier === "decay") return "fallback";
-  return src || tier || "—";
+  return src || tier || "-";
 }
 
 function Field({ label, value, large }: { label: string; value: string; large?: boolean }) {
@@ -51,7 +51,7 @@ export function TeslaRoadTestHud({ className = "", compact = false }: TeslaRoadT
   const [frame, setFrame] = useState<DriveDiagnosticsFrame>(() =>
     getSession().getDriveDiagnostics(),
   );
-  const [profileName, setProfileName] = useState("—");
+  const [profileName, setProfileName] = useState("-");
   const [shiftFlash, setShiftFlash] = useState<string | null>(null);
   const prevGear = useRef<number | null>(null);
 
@@ -63,7 +63,12 @@ export function TeslaRoadTestHud({ className = "", compact = false }: TeslaRoadT
       const snap = session.snapshot();
       if (snap.profileName) setProfileName(snap.profileName);
       const gear = next.powertrain.gear;
-      if (prevGear.current != null && gear > 0 && prevGear.current > 0 && gear !== prevGear.current) {
+      if (
+        prevGear.current != null &&
+        gear > 0 &&
+        prevGear.current > 0 &&
+        gear !== prevGear.current
+      ) {
         setShiftFlash(`${prevGear.current} → ${gear}`);
       }
       prevGear.current = gear;
@@ -81,7 +86,7 @@ export function TeslaRoadTestHud({ className = "", compact = false }: TeslaRoadT
 
   const pt = frame.powertrain;
   const gearLabel = pt.gear > 0 ? `D${pt.gear}` : "N";
-  const phase = pt.shifting ? (pt.shiftPhase ?? "—") : "none";
+  const phase = pt.shifting ? (pt.shiftPhase ?? "-") : "none";
   const powertrain = pt.powertrainBackend === "dynamic" ? "Dynamic" : "Legacy";
 
   return (
@@ -119,13 +124,13 @@ export function TeslaRoadTestHud({ className = "", compact = false }: TeslaRoadT
 
       {!compact ? (
         <div className="mt-4 grid grid-cols-2 gap-3 border-t border-border/40 pt-3 sm:grid-cols-4">
-          <Field label="Target gear" value={pt.targetGear == null ? "—" : String(pt.targetGear)} />
+          <Field label="Target gear" value={pt.targetGear == null ? "-" : String(pt.targetGear)} />
           <Field
             label="Queued gear"
-            value={pt.queuedTargetGear == null ? "—" : String(pt.queuedTargetGear)}
+            value={pt.queuedTargetGear == null ? "-" : String(pt.queuedTargetGear)}
           />
           <Field label="Engine load" value={fmtPct(pt.engineLoad ?? pt.load)} />
-          <Field label="Audio backend" value={frame.audio.synthesisMode || "—"} />
+          <Field label="Audio backend" value={frame.audio.synthesisMode || "-"} />
         </div>
       ) : null}
     </section>

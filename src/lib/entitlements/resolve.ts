@@ -1,10 +1,6 @@
 import { entitlementsForPlan } from "@/lib/entitlements/plans";
 import { effectiveTrialStatus, isTrialActive } from "@/lib/entitlements/trial";
-import type {
-  Entitlement,
-  EntitlementSnapshot,
-  EntitlementUser,
-} from "@/lib/entitlements/types";
+import type { Entitlement, EntitlementSnapshot, EntitlementUser } from "@/lib/entitlements/types";
 
 /** Resolve the full entitlement set for a user (plan + active trial overlay). */
 export function resolveEntitlements(

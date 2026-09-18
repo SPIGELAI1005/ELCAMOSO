@@ -237,7 +237,7 @@ function DebugCalibrationLab() {
     recorderRef.current = null;
   };
 
-  // Poll session while road recording — buffered recorder throttles writes (no JSON in hot path).
+  // Poll session while road recording - buffered recorder throttles writes (no JSON in hot path).
   useEffect(() => {
     if (!roadRecording) return;
     const id = window.setInterval(() => {
@@ -679,14 +679,14 @@ function DebugCalibrationLab() {
                 <li>Downshifts: {metrics.downshifts}</li>
                 <li>Hunting events: {metrics.gearHuntingEvents}</li>
                 <li>
-                  Avg time between shifts: {metrics.averageTimeBetweenShiftsMs?.toFixed(0) ?? "—"}{" "}
+                  Avg time between shifts: {metrics.averageTimeBetweenShiftsMs?.toFixed(0) ?? "-"}{" "}
                   ms
                 </li>
-                <li>Min gear hold: {metrics.minimumGearHoldMs ?? "—"} ms</li>
+                <li>Min gear hold: {metrics.minimumGearHoldMs ?? "-"} ms</li>
                 <li>RPM discontinuities: {metrics.rpmDiscontinuitiesOutsideShifts}</li>
                 <li>Largest shift RPM error: {metrics.largestShiftRpmError.toFixed(0)}</li>
                 <li>Redline violations: {metrics.redlineViolations}</li>
-                <li>Kickdown response: {metrics.kickdownResponseMs ?? "—"} ms</li>
+                <li>Kickdown response: {metrics.kickdownResponseMs ?? "-"} ms</li>
                 <li>Sensor-transition shifts: {metrics.sensorTransitionInducedShifts}</li>
               </ul>
               {metrics.flags.length > 0 && (

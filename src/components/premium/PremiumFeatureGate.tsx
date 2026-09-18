@@ -2,10 +2,7 @@ import type { ReactNode } from "react";
 
 import { UpgradePrompt } from "@/components/premium/UpgradePrompt";
 import type { UpgradePromptVariant } from "@/components/premium/UpgradePrompt";
-import {
-  entitlementForPremiumContext,
-  type PremiumContext,
-} from "@/lib/premium/contexts";
+import { entitlementForPremiumContext, type PremiumContext } from "@/lib/premium/contexts";
 import type { Entitlement } from "@/lib/entitlements/types";
 import { useEntitlement } from "@/lib/entitlements/selectors";
 
@@ -23,7 +20,7 @@ interface PremiumFeatureGateProps {
 
 /**
  * Declarative premium gate with benefit copy.
- * Never full-screen — inline prompt only when locked.
+ * Never full-screen - inline prompt only when locked.
  */
 export function PremiumFeatureGate({
   context,
@@ -42,7 +39,7 @@ export function PremiumFeatureGate({
   return (
     <UpgradePrompt
       context={context}
-      title={promptTitle}
+      {...(promptTitle ? { title: promptTitle } : {})}
       variant={promptVariant}
       required={required}
       className={className}

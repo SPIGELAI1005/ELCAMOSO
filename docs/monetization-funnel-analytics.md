@@ -19,35 +19,35 @@ Allowed meta fields: `source`, `plan`, `interval`, `context`, `milestone`.
 
 ## Funnel events
 
-| Event | When | Typical source |
-| ----- | ---- | -------------- |
-| `pricing_viewed` | `/pricing` mount | `pricing` |
-| `dynamic_trial_offered` | Trial offer UI shown | `pricing`, `trial_offer`, `settings` |
-| `dynamic_trial_started` | User activates preview | `trial_offer`, `account_callback` |
-| `dynamic_trial_session_started` | Server trial drive session begins | `drive` |
-| `dynamic_trial_session_completed` | Trial drive session ends | `drive` |
-| `dynamic_trial_low_remaining` | 10 / 5 / 1 min milestone nudge | `drive` |
-| `dynamic_trial_exhausted` | Preview time or sessions exhausted | `drive` |
-| `premium_feature_clicked` | Locked premium feature opened | `sounds`, `locked_sound` context |
-| `upgrade_clicked` | Upgrade CTA tapped | `pricing`, `settings_plan`, `upgrade_prompt_*` |
-| `plan_interval_selected` | Monthly / annual chosen at checkout | same as checkout source |
-| `checkout_started` | Redirect to Stripe Checkout | `pricing`, `trial_complete`, `cockpit_upgrade` |
-| `checkout_completed` | Stripe return `?billing=success` or webhook | `settings_plan`, checkout `source` metadata |
-| `checkout_canceled` | Stripe return `?billing=cancel` | `settings_plan` |
-| `subscription_started` | Webhook `checkout.session.completed` | checkout `source` metadata |
-| `subscription_canceled` | Webhook subscription deleted | `billing` |
+| Event                             | When                                        | Typical source                                 |
+| --------------------------------- | ------------------------------------------- | ---------------------------------------------- |
+| `pricing_viewed`                  | `/pricing` mount                            | `pricing`                                      |
+| `dynamic_trial_offered`           | Trial offer UI shown                        | `pricing`, `trial_offer`, `settings`           |
+| `dynamic_trial_started`           | User activates preview                      | `trial_offer`, `account_callback`              |
+| `dynamic_trial_session_started`   | Server trial drive session begins           | `drive`                                        |
+| `dynamic_trial_session_completed` | Trial drive session ends                    | `drive`                                        |
+| `dynamic_trial_low_remaining`     | 10 / 5 / 1 min milestone nudge              | `drive`                                        |
+| `dynamic_trial_exhausted`         | Preview time or sessions exhausted          | `drive`                                        |
+| `premium_feature_clicked`         | Locked premium feature opened               | `sounds`, `locked_sound` context               |
+| `upgrade_clicked`                 | Upgrade CTA tapped                          | `pricing`, `settings_plan`, `upgrade_prompt_*` |
+| `plan_interval_selected`          | Monthly / annual chosen at checkout         | same as checkout source                        |
+| `checkout_started`                | Redirect to Stripe Checkout                 | `pricing`, `trial_complete`, `cockpit_upgrade` |
+| `checkout_completed`              | Stripe return `?billing=success` or webhook | `settings_plan`, checkout `source` metadata    |
+| `checkout_canceled`               | Stripe return `?billing=cancel`             | `settings_plan`                                |
+| `subscription_started`            | Webhook `checkout.session.completed`        | checkout `source` metadata                     |
+| `subscription_canceled`           | Webhook subscription deleted                | `billing`                                      |
 
 ---
 
 ## Meta fields
 
-| Field | Values | Notes |
-| ----- | ------ | ----- |
-| `source` | `pricing`, `settings_plan`, `drive`, `sounds`, `trial_complete`, `cockpit_upgrade`, `upgrade_prompt_*`, … | Where the user acted |
-| `plan` | `free`, `drive_plus` | Commercial plan at event time |
-| `interval` | `monthly`, `yearly` | When checkout / subscription relevant |
-| `context` | `locked_sound`, `dynamic_drive`, `phone_pairing`, … | Premium gate context |
-| `milestone` | `10`, `5`, `1` | Trial low-remaining minutes |
+| Field       | Values                                                                                                    | Notes                                 |
+| ----------- | --------------------------------------------------------------------------------------------------------- | ------------------------------------- |
+| `source`    | `pricing`, `settings_plan`, `drive`, `sounds`, `trial_complete`, `cockpit_upgrade`, `upgrade_prompt_*`, … | Where the user acted                  |
+| `plan`      | `free`, `drive_plus`                                                                                      | Commercial plan at event time         |
+| `interval`  | `monthly`, `yearly`                                                                                       | When checkout / subscription relevant |
+| `context`   | `locked_sound`, `dynamic_drive`, `phone_pairing`, …                                                       | Premium gate context                  |
+| `milestone` | `10`, `5`, `1`                                                                                            | Trial low-remaining minutes           |
 
 Stripe checkout copies `source` and `interval` into session metadata for webhook correlation.
 
@@ -76,12 +76,12 @@ pricing_viewed
 
 ## Privacy
 
-| Included | Excluded |
-| -------- | -------- |
-| Anonymous `installId` | User email |
+| Included                | Excluded                                     |
+| ----------------------- | -------------------------------------------- |
+| Anonymous `installId`   | User email                                   |
 | Coarse `source` strings | Stripe customer / subscription ids in events |
-| Plan + interval slugs | Webhook payload bodies |
-| Trial milestone minutes | Exact route, GPS, motion traces |
+| Plan + interval slugs   | Webhook payload bodies                       |
+| Trial milestone minutes | Exact route, GPS, motion traces              |
 
 Usage insights must be **enabled** in Settings → Privacy for client events to leave the device. Server webhook events are recorded regardless (aggregate billing funnel only).
 
@@ -89,17 +89,17 @@ Usage insights must be **enabled** in Settings → Privacy for client events to 
 
 ## Implementation map
 
-| Area | File |
-| ---- | ---- |
-| Event types + sanitizer | `src/lib/telemetry/monetization-analytics.ts` |
-| Client queue | `src/lib/telemetry/analytics.ts` |
-| Flush bridge | `src/components/TelemetryBridge.tsx` |
-| Server ingest | `src/lib/telemetry/store.ts` |
-| Webhook funnel | `src/lib/billing/stripe/subscription-sync.ts` |
-| Pricing | `src/routes/pricing.tsx` |
-| Trial UX | `DynamicDriveTrialOffer`, `TryDynamicDriveButton`, `DynamicDriveTrialBridge`, `DynamicDriveTrialDuringDrive` |
-| Upgrade CTAs | `UpgradePrompt`, `DrivePlusCheckoutButton`, `BillingSettingsPanel` |
-| Locked sounds | `src/routes/sounds.tsx` |
+| Area                    | File                                                                                                         |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------ |
+| Event types + sanitizer | `src/lib/telemetry/monetization-analytics.ts`                                                                |
+| Client queue            | `src/lib/telemetry/analytics.ts`                                                                             |
+| Flush bridge            | `src/components/TelemetryBridge.tsx`                                                                         |
+| Server ingest           | `src/lib/telemetry/store.ts`                                                                                 |
+| Webhook funnel          | `src/lib/billing/stripe/subscription-sync.ts`                                                                |
+| Pricing                 | `src/routes/pricing.tsx`                                                                                     |
+| Trial UX                | `DynamicDriveTrialOffer`, `TryDynamicDriveButton`, `DynamicDriveTrialBridge`, `DynamicDriveTrialDuringDrive` |
+| Upgrade CTAs            | `UpgradePrompt`, `DrivePlusCheckoutButton`, `BillingSettingsPanel`                                           |
+| Locked sounds           | `src/routes/sounds.tsx`                                                                                      |
 
 ---
 

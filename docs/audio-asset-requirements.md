@@ -12,11 +12,11 @@
 
 In addition to one-shots below, sample-assisted mode expects **RPM × load** loop entries (see `CombustionSampleEntry`):
 
-| Field | Requirement |
-| ----- | ----------- |
-| `rpmRef` | Center RPM of the recording |
-| `load` | `idle` \| `low` \| `medium` \| `high` \| `overrun` |
-| Loop seams | Zero-crossing; optional `loopStart` / `loopEnd` |
+| Field         | Requirement                                              |
+| ------------- | -------------------------------------------------------- |
+| `rpmRef`      | Center RPM of the recording                              |
+| `load`        | `idle` \| `low` \| `medium` \| `high` \| `overrun`       |
+| Loop seams    | Zero-crossing; optional `loopStart` / `loopEnd`          |
 | Playback rate | Prefer neighbor crossfade outside ~0.85–1.18 vs `rpmRef` |
 
 Example GT V8 set: 900 idle; 1800/2500/3500 low; 2500/3500/4500/5500 high; overrun bed.
@@ -210,10 +210,10 @@ Procedural `variantPools` in `drivetrain-personalities.ts` are active. WAV files
 
 ### Profiles without dedicated personality
 
-| Profile | Fallback today | Suggested map | Assets |
-| ------- | -------------- | ------------- | ------ |
-| `farting-car` | `gt-v8` | `american-v8` | Low — comedy strategy dominates |
-| `kazoo-kart` | `gt-v8` | keep or future `playful-mini` | Low |
+| Profile       | Fallback today | Suggested map                 | Assets                          |
+| ------------- | -------------- | ----------------------------- | ------------------------------- |
+| `farting-car` | `gt-v8`        | `american-v8`                 | Low — comedy strategy dominates |
+| `kazoo-kart`  | `gt-v8`        | keep or future `playful-mini` | Low                             |
 
 ---
 

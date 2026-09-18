@@ -1,4 +1,4 @@
-/** ELCAMOSO account — links entitlements and billing; no card data stored. */
+/** ELCAMOSO account - links entitlements and billing; no card data stored. */
 export interface User {
   id: string;
   email: string | null;

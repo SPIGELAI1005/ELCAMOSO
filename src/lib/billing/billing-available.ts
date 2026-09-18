@@ -1,7 +1,7 @@
 import { isMonetizationEnabled } from "@/lib/billing/monetization-flag";
 import { isStripeConfigured } from "@/lib/billing/stripe/config";
 
-/** New purchases and upgrade flows — requires flag and Stripe config. */
+/** New purchases and upgrade flows - requires flag and Stripe config. */
 export function isBillingAvailable(): boolean {
   return isMonetizationEnabled() && isStripeConfigured();
 }

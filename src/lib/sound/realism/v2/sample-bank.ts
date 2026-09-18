@@ -1,6 +1,6 @@
 /**
  * Sample-bank schema for Realism V2 sample-assisted combustion.
- * Assets are optional — procedural fallback always works without them.
+ * Assets are optional - procedural fallback always works without them.
  */
 
 export type SampleLoadRegion = "idle" | "low" | "medium" | "high" | "overrun";
@@ -76,7 +76,7 @@ export function playbackRateForRpm(rpm: number, rpmRef: number): number {
   return Math.min(SAMPLE_RATE_MAX, Math.max(SAMPLE_RATE_MIN, raw));
 }
 
-/** Empty banks — ready for licensed assets via sound-assets catalog. */
+/** Empty banks - ready for licensed assets via sound-assets catalog. */
 export const EMPTY_COMBUSTION_SAMPLE_BANKS: Record<string, CombustionSampleBank> = {
   "gt-v8": { personalityId: "gt-v8", entries: [] },
   "american-v8": { personalityId: "american-v8", entries: [] },

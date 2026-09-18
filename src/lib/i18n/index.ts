@@ -5,6 +5,7 @@ const STRINGS: Record<Locale, Record<string, string>> = {
   en: {
     "nav.home": "Home",
     "nav.drive": "Drive",
+    "nav.explore": "Explore",
     "nav.sounds": "Sounds",
     "nav.studio": "Studio",
     "nav.garage": "Garage",
@@ -39,6 +40,7 @@ const STRINGS: Record<Locale, Record<string, string>> = {
   de: {
     "nav.home": "Start",
     "nav.drive": "Fahrt",
+    "nav.explore": "Entdecken",
     "nav.sounds": "Klange",
     "nav.studio": "Studio",
     "nav.garage": "Garage",
@@ -73,6 +75,7 @@ const STRINGS: Record<Locale, Record<string, string>> = {
   ro: {
     "nav.home": "Acasa",
     "nav.drive": "Condus",
+    "nav.explore": "Exploreaza",
     "nav.sounds": "Sunete",
     "nav.studio": "Studio",
     "nav.garage": "Garaj",

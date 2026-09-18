@@ -20,9 +20,7 @@ export const getSubscriptionSummaryFn = createServerFn({ method: "POST" })
   .inputValidator((data: { sessionToken?: string | null }) => data)
   .handler(async ({ data }) => {
     const { getAccountSession } = await import("@/lib/account/auth-service");
-    const { tryResolveRequestSessionToken } = await import(
-      "@/lib/account/session-cookies.server"
-    );
+    const { tryResolveRequestSessionToken } = await import("@/lib/account/session-cookies.server");
     const token = tryResolveRequestSessionToken(data.sessionToken);
     const session = token ? getAccountSession(token) : null;
     if (!session) {
@@ -38,7 +36,13 @@ export const getSubscriptionSummaryFn = createServerFn({ method: "POST" })
     const canManage = isBillingManagementAvailable() && Boolean(stripeCustomerId);
     const trialSnapshot = await getDynamicDriveTrialService().getStatus(session.userId);
 
-    const summary = buildSubscriptionSummary(subscription, canManage, Date.now(), "en-US", trialSnapshot);
+    const summary = buildSubscriptionSummary(
+      subscription,
+      canManage,
+      Date.now(),
+      "en-US",
+      trialSnapshot,
+    );
     if (!isMonetizationEnabled()) {
       return {
         authenticated: true as const,
@@ -57,27 +61,19 @@ export const getSubscriptionSummaryFn = createServerFn({ method: "POST" })
 export const getBillingHealthFn = createServerFn({ method: "POST" })
   .inputValidator((data: { sessionToken?: string | null }) => data)
   .handler(async ({ data }) => {
-    const { resolveAuthenticatedUserId } = await import(
-      "@/lib/account/resolve-authenticated-user"
-    );
-    const { tryResolveRequestSessionToken } = await import(
-      "@/lib/account/session-cookies.server"
-    );
+    const { resolveAuthenticatedUserId } = await import("@/lib/account/resolve-authenticated-user");
+    const { tryResolveRequestSessionToken } = await import("@/lib/account/session-cookies.server");
     const userId = resolveAuthenticatedUserId(tryResolveRequestSessionToken(data.sessionToken));
     const health = await getBillingHealthSnapshot(userId);
     return { health };
   });
 
-/** Explicit Stripe reconciliation — never used by Drive audio or entitlement gates. */
+/** Explicit Stripe reconciliation - never used by Drive audio or entitlement gates. */
 export const reconcileBillingFn = createServerFn({ method: "POST" })
   .inputValidator((data: { sessionToken?: string | null }) => data)
   .handler(async ({ data }) => {
-    const { resolveAuthenticatedUserId } = await import(
-      "@/lib/account/resolve-authenticated-user"
-    );
-    const { tryResolveRequestSessionToken } = await import(
-      "@/lib/account/session-cookies.server"
-    );
+    const { resolveAuthenticatedUserId } = await import("@/lib/account/resolve-authenticated-user");
+    const { tryResolveRequestSessionToken } = await import("@/lib/account/session-cookies.server");
     const userId = resolveAuthenticatedUserId(tryResolveRequestSessionToken(data.sessionToken));
     return reconcileUserBillingFromStripe(userId);
   });
@@ -95,9 +91,7 @@ export const createCheckoutSessionFn = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     const { getAccountSession } = await import("@/lib/account/auth-service");
-    const { tryResolveRequestSessionToken } = await import(
-      "@/lib/account/session-cookies.server"
-    );
+    const { tryResolveRequestSessionToken } = await import("@/lib/account/session-cookies.server");
     const token = tryResolveRequestSessionToken(data.sessionToken);
     const session = token ? getAccountSession(token) : null;
     if (!session) throw new Error("Sign in required");
@@ -109,8 +103,8 @@ export const createCheckoutSessionFn = createServerFn({ method: "POST" })
       request: {
         plan: data.plan,
         interval: data.interval,
-        returnPath: data.returnPath,
-        source: data.source,
+        ...(data.returnPath ? { returnPath: data.returnPath } : {}),
+        ...(data.source ? { source: data.source } : {}),
       },
     });
   });
@@ -120,12 +114,8 @@ export const createBillingPortalSessionFn = createServerFn({ method: "POST" })
     (data: { sessionToken?: string | null; origin: string; returnPath?: string }) => data,
   )
   .handler(async ({ data }) => {
-    const { resolveAuthenticatedUserId } = await import(
-      "@/lib/account/resolve-authenticated-user"
-    );
-    const { tryResolveRequestSessionToken } = await import(
-      "@/lib/account/session-cookies.server"
-    );
+    const { resolveAuthenticatedUserId } = await import("@/lib/account/resolve-authenticated-user");
+    const { tryResolveRequestSessionToken } = await import("@/lib/account/session-cookies.server");
     const userId = resolveAuthenticatedUserId(tryResolveRequestSessionToken(data.sessionToken));
     const stripeCustomerId = await getUserBillingRepository().getStripeCustomerId(userId);
     if (!stripeCustomerId) {
@@ -135,6 +125,6 @@ export const createBillingPortalSessionFn = createServerFn({ method: "POST" })
     return createStripePortalSession({
       stripeCustomerId,
       origin: data.origin,
-      returnPath: data.returnPath,
+      ...(data.returnPath ? { returnPath: data.returnPath } : {}),
     });
   });

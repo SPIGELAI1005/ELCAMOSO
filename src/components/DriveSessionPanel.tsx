@@ -247,7 +247,7 @@ export function DriveSessionPanel({
           </button>
         </div>
         <p className="mt-3 text-[11px] text-muted-foreground">
-          Optional. Improves motion quality. Set up while parked or by a passenger.
+          Optional. Improves motion quality. Pair while parked or let a passenger connect.
         </p>
       </section>
     );
@@ -263,7 +263,10 @@ export function DriveSessionPanel({
           <div>
             <p className="text-sm font-light text-foreground">Phone sensor</p>
             <p className="mt-1 text-xs text-muted-foreground">
-              <span className="mr-1.5 inline-block h-1.5 w-1.5 rounded-full bg-foreground" aria-hidden />
+              <span
+                className="mr-1.5 inline-block h-1.5 w-1.5 rounded-full bg-foreground"
+                aria-hidden
+              />
               Connected
             </p>
           </div>
@@ -295,9 +298,11 @@ export function DriveSessionPanel({
             </p>
             <p className="mt-3 text-center text-xs leading-relaxed text-muted-foreground">
               Scan a QR with your phone so motion sensors reach this drive. Sound stays on the car.
-              Do this while parked or have a passenger help.
+              Do this while parked or have a passenger help. ELCAMOSO does not control the vehicle.
             </p>
-            {error ? <p className="mt-3 text-center text-xs text-muted-foreground">{error}</p> : null}
+            {error ? (
+              <p className="mt-3 text-center text-xs text-muted-foreground">{error}</p>
+            ) : null}
             <button
               type="button"
               disabled={creating}
@@ -331,7 +336,7 @@ export function DriveSessionPanel({
                     Code
                   </p>
                   <p className="mt-1 font-mono text-3xl tracking-[0.2em] text-foreground">
-                    {pairingCode ? formatPairingCode(pairingCode) : "— — —"}
+                    {pairingCode ? formatPairingCode(pairingCode) : "- - -"}
                   </p>
                   <p className="mt-2 text-[11px] text-muted-foreground">
                     Or open elcamoso.com/pair and enter the code

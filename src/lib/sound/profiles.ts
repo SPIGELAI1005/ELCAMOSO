@@ -1,9 +1,9 @@
 import type { LayerMix } from "@/lib/sound/environments";
 import { EXPANSION_PROFILES } from "@/lib/sound/profiles-expansion";
-import {
-  applyResolvedAccessToProfiles,
-  type SoundProfileAccess,
-} from "@/lib/sound/profile-access";
+import { SYMPHONY_SOUND_PROFILES } from "@/lib/symphony/symphony-profiles";
+import { FUSION_SOUND_PROFILES } from "@/lib/fusion/fusion-profiles";
+import { WORLD_SOUND_PROFILES } from "@/lib/worlds/world-profiles";
+import { applyResolvedAccessToProfiles, type SoundProfileAccess } from "@/lib/sound/profile-access";
 
 export type { SoundProfileAccess } from "@/lib/sound/profile-access";
 
@@ -125,7 +125,7 @@ export interface SoundProfile {
   drivetrainMode: DrivetrainMode;
   /** Improved-synth motion interpretation; defaults from drivetrainMode / family. */
   motionModel?: MotionModel;
-  /** procedural | sample | hybrid — all current built-ins are procedural or hybrid. */
+  /** procedural | sample | hybrid - all current built-ins are procedural or hybrid. */
   sourceMode?: SourceMode;
   /** timbre parameters consumed by the synthesis layer */
   voice: ProfileVoice;
@@ -762,6 +762,9 @@ const BUILT_IN_SOUND_PROFILES: SoundProfile[] = [
     },
   },
   ...EXPANSION_PROFILES,
+  ...SYMPHONY_SOUND_PROFILES,
+  ...WORLD_SOUND_PROFILES,
+  ...FUSION_SOUND_PROFILES,
 ];
 
 export const SOUND_PROFILES: SoundProfile[] =

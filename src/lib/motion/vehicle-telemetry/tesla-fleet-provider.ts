@@ -16,7 +16,7 @@ type Listener = (sample: MotionSample) => void;
  * A server-side Fleet Telemetry receiver forwards decoded records here
  * (future: drive-relay `telemetry` role or ELCAMOSO Cloud bridge).
  *
- * This class never fabricates field values — it only maps records that arrive
+ * This class never fabricates field values - it only maps records that arrive
  * via ingest().
  */
 export class TeslaFleetTelemetryProvider implements VehicleTelemetryProvider {
@@ -57,7 +57,7 @@ export class TeslaFleetTelemetryProvider implements VehicleTelemetryProvider {
     return () => this.listeners.delete(listener);
   }
 
-  /** Ingress from server bridge — the only path that produces samples. */
+  /** Ingress from server bridge - the only path that produces samples. */
   ingest(record: TeslaFleetTelemetryRecord): boolean {
     if (!this.connected) return false;
     const sample = mapTeslaFleetSignalsToMotionSample(record);

@@ -1,7 +1,7 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 
 export function getSoundAssetSigningSecret(): string | null {
-  const secret = process.env.SOUND_ASSET_SIGNING_SECRET?.trim();
+  const secret = process.env["SOUND_ASSET_SIGNING_SECRET"]?.trim();
   return secret || null;
 }
 
@@ -16,7 +16,7 @@ export function buildSignedDeliveryUrl(
   expiresAt: number,
   secret: string,
 ): string {
-  const cdnBase = process.env.SOUND_ASSETS_CDN_BASE_URL?.trim();
+  const cdnBase = process.env["SOUND_ASSETS_CDN_BASE_URL"]?.trim();
   const signature = signAssetPath(path, expiresAt, secret);
   const params = new URLSearchParams({
     path,

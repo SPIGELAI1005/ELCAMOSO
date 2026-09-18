@@ -21,9 +21,7 @@ export function resetSubscriptionRepositoryForTests(): void {
 
 export const memorySubscriptionRepository: SubscriptionRepository = {
   async upsert(input) {
-    const existing = byProviderSubscription.get(
-      key(input.provider, input.providerSubscriptionId),
-    );
+    const existing = byProviderSubscription.get(key(input.provider, input.providerSubscriptionId));
     const now = new Date();
     const next: Subscription = {
       id: existing?.id ?? randomUUID(),
@@ -62,7 +60,7 @@ export function setSubscriptionRepository(repository: SubscriptionRepository): v
 
 export function getSubscriptionRepository(): SubscriptionRepository {
   if (activeRepository !== memorySubscriptionRepository) return activeRepository;
-  if (process.env.DATABASE_URL) return postgresSubscriptionRepository;
+  if (process.env["DATABASE_URL"]) return postgresSubscriptionRepository;
   return memorySubscriptionRepository;
 }
 

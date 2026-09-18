@@ -108,7 +108,7 @@ function ConnectionRow({
 
 /**
  * Motion-matched cockpit cluster: gear hero, rev arc, profile, link quality.
- * No raw sensor values — product copy only.
+ * No raw sensor values - product copy only.
  */
 export const DynamicDriveInstrument = memo(function DynamicDriveInstrument({
   profile,

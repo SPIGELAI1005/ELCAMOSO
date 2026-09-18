@@ -21,4 +21,5 @@ export interface SubscriptionRepository {
     provider: Subscription["provider"],
     providerSubscriptionId: string,
   ): Promise<Subscription | null>;
+  findLatestByUserId?(userId: string): Promise<Subscription | null>;
 }

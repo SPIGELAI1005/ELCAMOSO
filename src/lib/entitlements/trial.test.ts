@@ -9,9 +9,7 @@ const NOW = 1_700_000_000_000;
 describe("trial helpers", () => {
   it("isTrialActive is false for none/expired status", () => {
     expect(isTrialActive(DEFAULT_ENTITLEMENT_USER, NOW)).toBe(false);
-    expect(
-      isTrialActive({ ...DEFAULT_ENTITLEMENT_USER, trialStatus: "expired" }, NOW),
-    ).toBe(false);
+    expect(isTrialActive({ ...DEFAULT_ENTITLEMENT_USER, trialStatus: "expired" }, NOW)).toBe(false);
   });
 
   it("isTrialActive respects trialEndsAt", () => {

@@ -8,7 +8,7 @@ import {
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { BrandNav } from "@/components/BrandNav";
 import { PrimaryBottomNav } from "@/components/PrimaryBottomNav";
 import { MiniPlayer } from "@/components/MiniPlayer";
@@ -27,6 +27,7 @@ import { useSessionSelector } from "@/lib/store/session-store";
 
 import appCss from "../styles.css?url";
 import { reportRuntimeError } from "../lib/runtime-error-reporting";
+import { SEO_CONFIG, isSeoPreviewDeployment, seoHtmlLang } from "@/lib/seo";
 
 function NotFoundComponent() {
   return (
@@ -93,16 +94,14 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "ELCAMOSO · Your EV. Your Sound. More Emotion." },
-      {
-        name: "description",
-        content: "Motion-responsive sound experiences for electric cars.",
-      },
+      { title: SEO_CONFIG.defaultTitle },
+      { name: "description", content: SEO_CONFIG.defaultDescription },
       { name: "theme-color", content: "#000000" },
-      { name: "apple-mobile-web-app-title", content: "ELCAMOSO" },
-      { property: "og:site_name", content: "ELCAMOSO" },
+      { name: "apple-mobile-web-app-title", content: SEO_CONFIG.siteName },
+      { property: "og:site_name", content: SEO_CONFIG.siteName },
       { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:card", content: SEO_CONFIG.twitterCard },
+      ...(isSeoPreviewDeployment() ? [{ name: "robots", content: "noindex, nofollow" }] : []),
     ],
     links: [
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
@@ -111,10 +110,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         rel: "stylesheet",
         href: "https://fonts.googleapis.com/css2?family=Outfit:wght@200;300;400&display=swap",
       },
-      {
-        rel: "stylesheet",
-        href: appCss,
-      },
+      { rel: "stylesheet", href: appCss },
       { rel: "icon", type: "image/svg+xml", href: "/icon.svg" },
       { rel: "icon", type: "image/png", href: "/favicon.png" },
       { rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
@@ -129,7 +125,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 function RootShell({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
+    <html lang={seoHtmlLang()}>
       <head>
         <HeadContent />
       </head>
@@ -145,12 +141,21 @@ function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const showMiniPlayer = pathname !== "/";
+  const [hydrated, setHydrated] = useState(false);
+
+  useEffect(() => {
+    setHydrated(true);
+  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>
       <AccountProvider>
         <EntitlementsProvider>
-          <div id="app-root" className="flex min-h-svh flex-col">
+          <div
+            id="app-root"
+            className="flex min-h-svh flex-col"
+            data-hydrated={hydrated ? "true" : "false"}
+          >
             <SessionBridge />
             <EntitlementEnforcer />
             <DynamicDriveSessionBridge />

@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { createSeoHeadFromPath } from "@/lib/seo";
 import { useCallback } from "react";
 import { ElcamosoMark } from "@/components/ElcamosoLogo";
 import { DemoCockpit } from "@/components/DemoCockpit";
@@ -6,11 +7,7 @@ import { useSettings } from "@/lib/drive/useSettings";
 import { useReducedMotion } from "@/lib/drive/useReducedMotion";
 import { useDemoDrive } from "@/lib/drive/useDemoDrive";
 import { useHaptics } from "@/lib/drive/useHaptics";
-import {
-  getProfileGain,
-  getTuning,
-  type ElcamosoSettings,
-} from "@/lib/drive/settings";
+import { getProfileGain, getTuning, type ElcamosoSettings } from "@/lib/drive/settings";
 import { getProfile } from "@/lib/sound/profiles";
 import { EnvironmentPicker } from "@/components/EnvironmentPicker";
 import { DemoSoundPicker } from "@/components/DemoSoundPicker";
@@ -19,24 +16,7 @@ import { getSession } from "@/lib/drive/session";
 
 export const Route = createFileRoute("/demo")({
   component: DemoDrive,
-  head: () => ({
-    meta: [
-      { title: "Demo Drive · ELCAMOSO" },
-      {
-        name: "description",
-        content:
-          "Preview how your sound profile behaves with simulated throttle, acceleration and regeneration, with no motion sensors required.",
-      },
-      { property: "og:title", content: "Demo Drive · ELCAMOSO" },
-      {
-        property: "og:description",
-        content: "Simulated throttle, acceleration and regen to preview sound behaviour.",
-      },
-      { property: "og:type", content: "website" },
-      { property: "og:url", content: "/demo" },
-    ],
-    links: [{ rel: "canonical", href: "/demo" }],
-  }),
+  head: () => createSeoHeadFromPath("/demo"),
 });
 
 function demoSessionConfig(settings: ElcamosoSettings) {

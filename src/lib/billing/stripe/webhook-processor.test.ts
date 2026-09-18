@@ -29,10 +29,12 @@ vi.mock("@/lib/billing/stripe/client", () => ({
   resetStripeClientForTests: vi.fn(),
 }));
 
-function buildSubscription(
-  overrides: Partial<Stripe.Subscription> = {},
-): Stripe.Subscription {
-  return {
+function buildSubscription(overrides: Partial<Stripe.Subscription> = {}): Stripe.Subscription {
+  const legacyPeriod = overrides as Partial<Stripe.Subscription> & {
+    current_period_start?: number;
+    current_period_end?: number;
+  };
+  const subscription = {
     id: "sub_test_123",
     object: "subscription",
     customer: "cus_test_123",
@@ -55,6 +57,13 @@ function buildSubscription(
     },
     ...overrides,
   } as Stripe.Subscription;
+  subscription.items.data = subscription.items.data.map((item) => ({
+    ...item,
+    current_period_start:
+      item.current_period_start ?? legacyPeriod.current_period_start ?? 1_700_000_000,
+    current_period_end: item.current_period_end ?? legacyPeriod.current_period_end ?? 1_700_086_400,
+  }));
+  return subscription;
 }
 
 function signEvent(event: Stripe.Event, secret: string): { rawBody: string; signature: string } {
@@ -181,7 +190,11 @@ describe("stripe webhook processor", () => {
         object: {
           id: "in_test",
           object: "invoice",
-          subscription: "sub_test_123",
+          parent: {
+            type: "subscription_details",
+            quote_details: null,
+            subscription_details: { subscription: "sub_test_123", metadata: null },
+          },
         },
       },
     } as Stripe.Event;
@@ -195,9 +208,8 @@ describe("stripe webhook processor", () => {
 
   it("supports paused and resumed subscription events", async () => {
     await memoryUserBillingRepository.setStripeCustomerId(USER_ID, "cus_test_123");
-    const { getSubscriptionRepository } = await import(
-      "@/lib/billing/subscription-repository-memory"
-    );
+    const { getSubscriptionRepository } =
+      await import("@/lib/billing/subscription-repository-memory");
 
     await dispatchStripeWebhookEvent({
       id: "evt_paused",

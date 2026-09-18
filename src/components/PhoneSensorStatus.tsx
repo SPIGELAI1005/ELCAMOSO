@@ -15,7 +15,7 @@ interface PhoneSensorStatusProps {
   displayConnected: boolean;
   sensor: PhoneSensorStatusSnapshot;
   className?: string;
-  /** session: paired phone page — always show the five status rows */
+  /** session: paired phone page - always show the five status rows */
   variant?: "session" | "alert-only";
 }
 
@@ -35,7 +35,7 @@ function connectedLabel(relayStatus: RelayConnectionState, displayConnected: boo
   return relayStatusLabel(relayStatus);
 }
 
-/** Phone-side sensor status — connected, GPS, motion, calibration, signal health. */
+/** Phone-side sensor status - connected, GPS, motion, calibration, signal health. */
 export function PhoneSensorStatus({
   relayStatus,
   displayConnected,

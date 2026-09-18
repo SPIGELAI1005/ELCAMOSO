@@ -22,10 +22,7 @@ import {
   memoryUserBillingRepository,
   resetUserBillingRepositoryForTests,
 } from "@/lib/billing/user-billing-store";
-import {
-  createTeslaUpgradeToken,
-  resetTeslaUpgradeStoreForTests,
-} from "@/lib/tesla-upgrade/store";
+import { createTeslaUpgradeToken, resetTeslaUpgradeStoreForTests } from "@/lib/tesla-upgrade/store";
 
 const USER_A = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const USER_B = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
@@ -64,9 +61,7 @@ describe("checkout origin allowlist", () => {
 
   it("rejects origins outside the allowlist", () => {
     process.env.ELCAMOSO_ALLOWED_ORIGINS = "https://app.example.com";
-    expect(() => assertAllowedCheckoutOrigin("https://evil.example.com")).toThrow(
-      /not allowed/i,
-    );
+    expect(() => assertAllowedCheckoutOrigin("https://evil.example.com")).toThrow(/not allowed/i);
   });
 
   it("allows localhost in non-production when allowlist is unset", () => {
@@ -79,9 +74,9 @@ describe("checkout origin allowlist", () => {
     delete process.env.ELCAMOSO_ALLOWED_ORIGINS;
     process.env.ELCAMOSO_ENV = "production";
     expect(() => assertAllowedCheckoutOrigin("https://evil.example.com")).toThrow(/not allowed/i);
-    expect(
-      assertAllowedCheckoutOrigin("https://app.example.com", "app.example.com"),
-    ).toBe("https://app.example.com");
+    expect(assertAllowedCheckoutOrigin("https://app.example.com", "app.example.com")).toBe(
+      "https://app.example.com",
+    );
   });
 });
 

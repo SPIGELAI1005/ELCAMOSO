@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createSeoHeadFromPath } from "@/lib/seo";
 import { useSettings } from "@/lib/drive/useSettings";
 import {
   clearStoredSettings,
@@ -48,23 +49,7 @@ export const Route = createFileRoute("/settings")({
     };
   },
   component: Settings,
-  head: () => ({
-    meta: [
-      { title: "Settings - ELCAMOSO" },
-      {
-        name: "description",
-        content: "Sound volume, driving sensors and privacy for your ELCAMOSO drives.",
-      },
-      { property: "og:title", content: "Settings - ELCAMOSO" },
-      {
-        property: "og:description",
-        content: "Sound volume, driving sensors and privacy for your ELCAMOSO drives.",
-      },
-      { property: "og:type", content: "website" },
-      { property: "og:url", content: "/settings" },
-    ],
-    links: [{ rel: "canonical", href: "/settings" }],
-  }),
+  head: () => createSeoHeadFromPath("/settings"),
 });
 
 type Workspace = {
@@ -81,7 +66,8 @@ const WORKSPACES: Workspace[] = [
     step: "00",
     title: "Plan",
     hint: "Account, billing, Drive+",
-    keywords: "plan subscription drive plus billing manage account sign in upgrade renewal cancel trial preview",
+    keywords:
+      "plan subscription drive plus billing manage account sign in upgrade renewal cancel trial preview",
   },
   {
     id: "sound",
@@ -187,8 +173,7 @@ function Settings() {
     }
   };
 
-  const billingFlash =
-    billing === "success" ? "success" : billing === "cancel" ? "cancel" : null;
+  const billingFlash = billing === "success" ? "success" : billing === "cancel" ? "cancel" : null;
 
   return (
     <main className="min-h-screen">
@@ -229,9 +214,7 @@ function Settings() {
                 />
               </AccordionTrigger>
               <AccordionContent className="pb-10">
-                {workspace.id === "plan" ? (
-                  <PlanWorkspace billingFlash={billingFlash} />
-                ) : null}
+                {workspace.id === "plan" ? <PlanWorkspace billingFlash={billingFlash} /> : null}
                 {workspace.id === "sound" ? (
                   <SoundWorkspace
                     settings={settings}
@@ -384,69 +367,69 @@ function SoundWorkspace({
           entitlement="virtual_transmission"
           promptTitle="Gear-shift feel"
         >
-        <Block title="Gear-shift feel">
-          <p className="mt-2 text-sm text-muted-foreground">
-            For Sound Profiles with gear shifts.
-          </p>
-          <label className="mt-6 block text-sm" htmlFor="shift-ms">
-            Shift time
-          </label>
-          <input
-            id="shift-ms"
-            type="range"
-            min={40}
-            max={400}
-            value={settings.shiftFeel.shiftMs}
-            onChange={(e) =>
-              update({ shiftFeel: { ...settings.shiftFeel, shiftMs: Number(e.target.value) } })
-            }
-            aria-label="Shift time"
-            className="mt-3 slider h-11 w-full"
-          />
-          <label className="mt-6 block text-sm" htmlFor="torque-dip">
-            Torque dip
-          </label>
-          <input
-            id="torque-dip"
-            type="range"
-            min={0}
-            max={0.6}
-            step={0.02}
-            value={settings.shiftFeel.torqueDip}
-            onChange={(e) =>
-              update({
-                shiftFeel: { ...settings.shiftFeel, torqueDip: Number(e.target.value) },
-              })
-            }
-            aria-label="Torque dip"
-            className="mt-3 slider h-11 w-full"
-          />
-          <label className="mt-6 block text-sm" htmlFor="rev-match">
-            Rev match
-          </label>
-          <input
-            id="rev-match"
-            type="range"
-            min={0}
-            max={1}
-            step={0.05}
-            value={settings.shiftFeel.revMatch}
-            onChange={(e) =>
-              update({
-                shiftFeel: { ...settings.shiftFeel, revMatch: Number(e.target.value) },
-              })
-            }
-            aria-label="Rev match"
-            className="mt-3 slider h-11 w-full"
-          />
-          <button
-            type="button"
-            className="mt-4 text-[11px] uppercase text-muted-foreground hover:text-foreground"
-            onClick={() => update({ shiftFeel: DEFAULT_SHIFT_FEEL })}
-          >
-            Reset shift feel
-          </button>
-        </Block>
+          <Block title="Gear-shift feel">
+            <p className="mt-2 text-sm text-muted-foreground">
+              For Sound Profiles with gear shifts.
+            </p>
+            <label className="mt-6 block text-sm" htmlFor="shift-ms">
+              Shift time
+            </label>
+            <input
+              id="shift-ms"
+              type="range"
+              min={40}
+              max={400}
+              value={settings.shiftFeel.shiftMs}
+              onChange={(e) =>
+                update({ shiftFeel: { ...settings.shiftFeel, shiftMs: Number(e.target.value) } })
+              }
+              aria-label="Shift time"
+              className="mt-3 slider h-11 w-full"
+            />
+            <label className="mt-6 block text-sm" htmlFor="torque-dip">
+              Torque dip
+            </label>
+            <input
+              id="torque-dip"
+              type="range"
+              min={0}
+              max={0.6}
+              step={0.02}
+              value={settings.shiftFeel.torqueDip}
+              onChange={(e) =>
+                update({
+                  shiftFeel: { ...settings.shiftFeel, torqueDip: Number(e.target.value) },
+                })
+              }
+              aria-label="Torque dip"
+              className="mt-3 slider h-11 w-full"
+            />
+            <label className="mt-6 block text-sm" htmlFor="rev-match">
+              Rev match
+            </label>
+            <input
+              id="rev-match"
+              type="range"
+              min={0}
+              max={1}
+              step={0.05}
+              value={settings.shiftFeel.revMatch}
+              onChange={(e) =>
+                update({
+                  shiftFeel: { ...settings.shiftFeel, revMatch: Number(e.target.value) },
+                })
+              }
+              aria-label="Rev match"
+              className="mt-3 slider h-11 w-full"
+            />
+            <button
+              type="button"
+              className="mt-4 text-[11px] uppercase text-muted-foreground hover:text-foreground"
+              onClick={() => update({ shiftFeel: DEFAULT_SHIFT_FEEL })}
+            >
+              Reset shift feel
+            </button>
+          </Block>
         </PremiumFeatureGate>
       ) : null}
 
@@ -535,38 +518,38 @@ function SensorsWorkspace({
       </div>
 
       <PremiumFeatureGate context="advanced_controls">
-      <Block title="Match sound to motion">
-        <p className="mt-2 text-sm text-muted-foreground">
-          On Bluetooth headphones the sound can lag. Lookahead keeps the feel locked. 0 to 250 ms.
-        </p>
-        <input
-          type="range"
-          min={0}
-          max={250}
-          step={5}
-          value={settings.latencyCompMs}
-          aria-label="Latency match"
-          onChange={(e) => update({ latencyCompMs: Number(e.target.value) })}
-          className="mt-5 slider h-11 w-full"
-        />
-        <div className="mt-3 flex flex-wrap items-center justify-between gap-4 text-sm text-muted-foreground">
-          <span>{Math.round(settings.latencyCompMs)} ms</span>
-          <button
-            type="button"
-            className="h-11 text-[11px] tracking-[0.16em] uppercase hover:text-foreground"
-            onClick={() => {
-              const perf = getSession().snapshot().perf;
-              const measured = Math.min(
-                250,
-                Math.max(0, Math.round(perf.outputLatencyMs || perf.baseLatencyMs || 80)),
-              );
-              update({ latencyCompMs: measured });
-            }}
-          >
-            Measure from last Listen
-          </button>
-        </div>
-      </Block>
+        <Block title="Match sound to motion">
+          <p className="mt-2 text-sm text-muted-foreground">
+            On Bluetooth headphones the sound can lag. Lookahead keeps the feel locked. 0 to 250 ms.
+          </p>
+          <input
+            type="range"
+            min={0}
+            max={250}
+            step={5}
+            value={settings.latencyCompMs}
+            aria-label="Latency match"
+            onChange={(e) => update({ latencyCompMs: Number(e.target.value) })}
+            className="mt-5 slider h-11 w-full"
+          />
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-4 text-sm text-muted-foreground">
+            <span>{Math.round(settings.latencyCompMs)} ms</span>
+            <button
+              type="button"
+              className="h-11 text-[11px] tracking-[0.16em] uppercase hover:text-foreground"
+              onClick={() => {
+                const perf = getSession().snapshot().perf;
+                const measured = Math.min(
+                  250,
+                  Math.max(0, Math.round(perf.outputLatencyMs || perf.baseLatencyMs || 80)),
+                );
+                update({ latencyCompMs: measured });
+              }}
+            >
+              Measure from last Listen
+            </button>
+          </div>
+        </Block>
       </PremiumFeatureGate>
 
       <RowToggle
@@ -718,17 +701,11 @@ function PrivacyWorkspace({
   );
 }
 
-function PlanWorkspace({
-  billingFlash,
-}: {
-  billingFlash: "success" | "cancel" | null;
-}) {
+function PlanWorkspace({ billingFlash }: { billingFlash: "success" | "cancel" | null }) {
   return (
     <div className="space-y-12">
       <Block title="Your plan">
-        <p className="mt-2 text-sm text-muted-foreground">
-          Plan status and Dynamic Drive preview.
-        </p>
+        <p className="mt-2 text-sm text-muted-foreground">Plan status and Dynamic Drive preview.</p>
         <div className="mt-4">
           <BillingSettingsPanel billingFlash={billingFlash} />
         </div>
@@ -865,13 +842,13 @@ function AdvancedWorkspace({
     <div className="space-y-12">
       <DynamicDriveTrialSettings settings={settings} />
       <PremiumFeatureGate context="dynamic_drive">
-      <RowToggle
-        title="Motion character"
-        hint="Gears and response follow your driving. Off keeps a simpler speed-based feel."
-        checked={settings.dynamicDrive}
-        onChange={(v) => update({ dynamicDrive: v })}
-        label="Motion-matched sound"
-      />
+        <RowToggle
+          title="Motion character"
+          hint="Gears and response follow your driving. Off keeps a simpler speed-based feel."
+          checked={settings.dynamicDrive}
+          onChange={(v) => update({ dynamicDrive: v })}
+          label="Motion-matched sound"
+        />
       </PremiumFeatureGate>
       <RowToggle
         title="Diagnostics panel"

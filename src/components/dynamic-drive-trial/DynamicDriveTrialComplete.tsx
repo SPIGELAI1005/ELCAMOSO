@@ -15,7 +15,7 @@ interface DynamicDriveTrialCompleteProps {
   className?: string;
 }
 
-/** Shown after preview exhausts — drive continues with essential motion sound. */
+/** Shown after preview exhausts - drive continues with essential motion sound. */
 export function DynamicDriveTrialComplete({ className = "" }: DynamicDriveTrialCompleteProps) {
   const { showComplete } = useDynamicDriveTrialUi();
   const monetizationEnabled = useMonetizationEnabled();

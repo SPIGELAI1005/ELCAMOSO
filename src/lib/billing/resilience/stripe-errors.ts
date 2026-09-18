@@ -1,5 +1,5 @@
 export class BillingServiceUnavailableError extends Error {
-  readonly cause?: unknown;
+  override readonly cause?: unknown;
 
   constructor(message = "Billing is temporarily unavailable", cause?: unknown) {
     super(message);

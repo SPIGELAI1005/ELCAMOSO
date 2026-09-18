@@ -12,6 +12,24 @@ export const ALL_ENTITLEMENTS: readonly Entitlement[] = [
   "all_sound_profiles",
   "advanced_controls",
   "vehicle_telemetry",
+  "symphony_essential",
+  "symphony_all",
+  "worlds_sampler",
+  "worlds_all",
+  "fusion",
+  "drive_dna",
+  "drive_song_basic",
+  "drive_song_full",
+  "drive_reel",
+  "journey_history_local",
+  "journey_history_full",
+  "journey_remix",
+  "basic_share",
+  "studio_sound",
+  "studio_symphony",
+  "studio_fusion",
+  "premium_presets",
+  "experience_drops",
 ] as const;
 
 export const FREE_ENTITLEMENTS: readonly Entitlement[] = [
@@ -19,9 +37,16 @@ export const FREE_ENTITLEMENTS: readonly Entitlement[] = [
   "basic_sound_profiles",
   /** Basic Tesla ↔ phone QR pairing + sensor relay (not premium telemetry). */
   "phone_sensor",
+  "symphony_essential",
+  "worlds_sampler",
+  "drive_dna",
+  "drive_song_basic",
+  "journey_history_local",
+  "basic_share",
+  "studio_sound",
 ] as const;
 
-/** Premium entitlements — everything beyond FREE. */
+/** Premium entitlements - everything beyond FREE. */
 export const PREMIUM_ENTITLEMENTS: readonly Entitlement[] = ALL_ENTITLEMENTS.filter(
   (e) => !FREE_ENTITLEMENTS.includes(e),
 );

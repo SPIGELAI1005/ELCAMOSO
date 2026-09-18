@@ -4,17 +4,17 @@ Secure QR / short-code pairing so a phone can stream motion sensors into an ELCA
 
 ## Architecture map
 
-| Layer | Status |
-| ----- | ------ |
-| In-memory drive-relay sessions + WebSocket hub | **Exists** (`src/lib/drive-relay/`) |
-| QR generation (`qrcode`) on Tesla panel | **Exists** — now points at `/pair/{claimToken}` |
-| Sensor fusion (phone preferred over browser GPS) | **Exists** (`SPEED_SOURCE_PRIORITY`) |
-| Smooth phone dropout / reconnect | **Exists** (`onPhoneRelayPeerLost`, motion fallback) |
-| Free entitlement for basic pairing | **Was missing** — Free now includes `phone_sensor` |
-| Discoverable Drive UI (no `?cockpit=1`) | **Was missing** — panel always on `/drive` |
-| Opaque short-lived claim tokens | **New** — 3 minute TTL, single-use |
-| Manual `/pair` code entry | **New** |
-| Phone confirm + sensor status UI | **New** (`PhonePairSession`) |
+| Layer                                            | Status                                               |
+| ------------------------------------------------ | ---------------------------------------------------- |
+| In-memory drive-relay sessions + WebSocket hub   | **Exists** (`src/lib/drive-relay/`)                  |
+| QR generation (`qrcode`) on Tesla panel          | **Exists** — now points at `/pair/{claimToken}`      |
+| Sensor fusion (phone preferred over browser GPS) | **Exists** (`SPEED_SOURCE_PRIORITY`)                 |
+| Smooth phone dropout / reconnect                 | **Exists** (`onPhoneRelayPeerLost`, motion fallback) |
+| Free entitlement for basic pairing               | **Was missing** — Free now includes `phone_sensor`   |
+| Discoverable Drive UI (no `?cockpit=1`)          | **Was missing** — panel always on `/drive`           |
+| Opaque short-lived claim tokens                  | **New** — 3 minute TTL, single-use                   |
+| Manual `/pair` code entry                        | **New**                                              |
+| Phone confirm + sensor status UI                 | **New** (`PhonePairSession`)                         |
 
 ## Sequence
 
@@ -29,11 +29,11 @@ Secure QR / short-code pairing so a phone can stream motion sensors into an ELCA
 
 ## Security model
 
-| Token | Lifetime | Use |
-| ----- | -------- | --- |
-| `claimToken` | ~3 minutes, **single-use** | QR URL only |
+| Token         | Lifetime                               | Use                                       |
+| ------------- | -------------------------------------- | ----------------------------------------- |
+| `claimToken`  | ~3 minutes, **single-use**             | QR URL only                               |
 | `pairingCode` | Session TTL (30 min, heartbeat extend) | Manual entry / reconnect after disconnect |
-| `joinSecret` | Session TTL | WebSocket auth — never put in QR |
+| `joinSecret`  | Session TTL                            | WebSocket auth — never put in QR          |
 
 - Cryptographically random ids/secrets (`crypto.randomBytes`).
 - Rate limits on claim / code attempts (12 / minute / key).
@@ -44,9 +44,12 @@ Secure QR / short-code pairing so a phone can stream motion sensors into an ELCA
 
 ## Relay transport
 
-- WebSocket: `/api/drive-relay/ws`
-- Local/dev/preview: Vite `driveRelayWsPlugin`
-- **Production (Vercel):** serverless HTTP does not keep long-lived WS; relay may require a dedicated WS host. See `docs/drive-relay-sessions.md`.
+- Path: `/api/drive-relay/ws` (via `DriveRelayTransport` + `buildRelayWsUrl`)
+- Config: `VITE_DRIVE_RELAY_PUBLIC_ORIGIN` (client) — empty = same-origin (local Vite)
+- Local/dev/preview: Vite `driveRelayWsPlugin` on the app origin
+- **Production (www.elcamoso.com, probed 2026-09-17):** `GET/upgrade /api/drive-relay/ws` → **404**. Vercel serverless does not host this WS. Deploy the dedicated relay (`docs/DRIVE_RELAY_DEPLOYMENT.md`) and set public + internal relay env vars before promoting phone pairing.
+
+Copy: **Pair while parked or let a passenger connect.** ELCAMOSO does not control the vehicle.
 
 ## Sensor priority & fallback
 
@@ -56,23 +59,23 @@ On phone loss: no fake accel/brake/RPM spike — fusion and motion fallback blen
 
 ## Free vs Drive+
 
-| Capability | Free | Drive+ |
-| ---------- | ---- | ------ |
-| QR / code pairing | Yes | Yes |
-| Phone sensor relay | Yes | Yes |
-| One drive session + one phone | Yes | Yes |
-| Reconnect in-session | Yes | Yes |
-| Premium profiles / Dynamic Drive / advanced audio | No | Yes |
+| Capability                                        | Free | Drive+ |
+| ------------------------------------------------- | ---- | ------ |
+| QR / code pairing                                 | Yes  | Yes    |
+| Phone sensor relay                                | Yes  | Yes    |
+| One drive session + one phone                     | Yes  | Yes    |
+| Reconnect in-session                              | Yes  | Yes    |
+| Premium profiles / Dynamic Drive / advanced audio | No   | Yes    |
 
 Pairing is **optional**. Free users can drive with Tesla/browser sensors only.
 
 ## Routes
 
-| Route | Role |
-| ----- | ---- |
-| `/drive` | Tesla UI — Connect phone + QR |
-| `/pair/{token}` | Phone QR claim |
-| `/pair` | Phone manual code |
+| Route                  | Role                                      |
+| ---------------------- | ----------------------------------------- |
+| `/drive`               | Tesla UI — Connect phone + QR             |
+| `/pair/{token}`        | Phone QR claim                            |
+| `/pair`                | Phone manual code                         |
 | `/connect/{sessionId}` | Legacy join (code / optional token query) |
 
 ## Diagnostics

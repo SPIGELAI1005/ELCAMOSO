@@ -20,16 +20,16 @@ Implemented in `motion-fallback.ts` + `sensor-fusion.ts`. Tier type: `MotionFall
 
 ## Scenarios handled
 
-| Event | Behavior |
-| ----- | -------- |
+| Event                          | Behavior                                                                   |
+| ------------------------------ | -------------------------------------------------------------------------- |
 | Phone closes browser / WS drop | **2.5 s grace** before phone tier suspended; cached samples coast via hold |
-| iPhone lock / background | Motion stops; hold → browser GPS or decay; relay may reconnect |
-| Packet loss | `SIGNAL_HOLD_MS` bridges gaps; seq gaps tracked in pipeline metrics |
-| Stale data | Per-source stale limits; poor GPS accuracy rejected |
-| Wi‑Fi / mobile switch | Relay grace + hold; browser GPS fallback on Tesla |
-| Tesla browser refresh | New session; browser sensors reattach on Drive start |
-| Backend reconnect | WebSocket auto-reconnect; grace cancelled if phone returns |
-| Temporary network loss | Hold tier preserves speed/throttle; slow decay |
+| iPhone lock / background       | Motion stops; hold → browser GPS or decay; relay may reconnect             |
+| Packet loss                    | `SIGNAL_HOLD_MS` bridges gaps; seq gaps tracked in pipeline metrics        |
+| Stale data                     | Per-source stale limits; poor GPS accuracy rejected                        |
+| Wi‑Fi / mobile switch          | Relay grace + hold; browser GPS fallback on Tesla                          |
+| Tesla browser refresh          | New session; browser sensors reattach on Drive start                       |
+| Backend reconnect              | WebSocket auto-reconnect; grace cancelled if phone returns                 |
+| Temporary network loss         | Hold tier preserves speed/throttle; slow decay                             |
 
 ## Transitions
 
@@ -39,11 +39,11 @@ Implemented in `motion-fallback.ts` + `sensor-fusion.ts`. Tier type: `MotionFall
 
 ## API
 
-| Call | When |
-| ---- | ---- |
-| `session.onPhoneRelayPeerLost()` | Display sees phone peer disconnect (debounced) |
-| `session.onPhoneRelayPeerAvailable()` | Phone peer reconnects within grace |
-| `markPhoneRelayLost(fusion)` | Grace expired — purge phone source, suspend tier |
+| Call                                  | When                                             |
+| ------------------------------------- | ------------------------------------------------ |
+| `session.onPhoneRelayPeerLost()`      | Display sees phone peer disconnect (debounced)   |
+| `session.onPhoneRelayPeerAvailable()` | Phone peer reconnects within grace               |
+| `markPhoneRelayLost(fusion)`          | Grace expired — purge phone source, suspend tier |
 
 ## Tests
 

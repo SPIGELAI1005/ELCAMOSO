@@ -19,7 +19,15 @@ export type AnalyticsName =
   | "checkout_canceled"
   | "subscription_started"
   | "subscription_canceled"
-  | "plan_interval_selected";
+  | "plan_interval_selected"
+  | "experience_selected"
+  | "symphony_started"
+  | "symphony_completed"
+  | "drive_song_created"
+  | "drive_song_shared"
+  | "drive_reel_created"
+  | "fusion_started"
+  | "phone_pair_success";
 
 export interface AnalyticsEvent {
   name: AnalyticsName;

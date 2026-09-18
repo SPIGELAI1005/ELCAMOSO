@@ -49,9 +49,9 @@ export interface PowertrainSimulatorInternals {
   queuedTargetGear: number;
   kickdownPlanActive: boolean;
   lastShiftReason: ShiftReason;
-  /** Lightly filtered — RPM / driveline. */
+  /** Lightly filtered - RPM / driveline. */
   mechanicalSpeedKmh: number;
-  /** Heavier filter — gear schedule / hysteresis only. */
+  /** Heavier filter - gear schedule / hysteresis only. */
   shiftDecisionSpeedKmh: number;
   clockMs: number;
   lastFallbackTier: VehicleMotionState["fallbackTier"];
@@ -70,7 +70,7 @@ function lowPassToward(current: number, target: number, dt: number, tau: number)
   return current + (target - current) * a;
 }
 
-/** Standalone powertrain tick — no audio, no GPS. */
+/** Standalone powertrain tick - no audio, no GPS. */
 export class PowertrainSimulator {
   private profile: PowertrainProfile;
   private internal: PowertrainSimulatorInternals;
@@ -114,7 +114,7 @@ export class PowertrainSimulator {
     ) {
       this.internal.lastFallbackTier = motion.fallbackTier;
       this.internal.lastPrimarySource = motion.primarySource;
-      // Short, mild blend — do not disconnect RPM from road speed for seconds.
+      // Short, mild blend - do not disconnect RPM from road speed for seconds.
       this.internal.reconnectBlendUntil = now + 900;
     }
     const resilienceBlend = motion.transitioning || now < this.internal.reconnectBlendUntil;

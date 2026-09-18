@@ -1,6 +1,4 @@
-import {
-  DYNAMIC_DRIVE_SESSION_CONFLICT_MESSAGE,
-} from "@/lib/dynamic-drive-session/config";
+import { DYNAMIC_DRIVE_SESSION_CONFLICT_MESSAGE } from "@/lib/dynamic-drive-session/config";
 import type { DynamicDriveSessionSnapshot } from "@/lib/dynamic-drive-session/types";
 
 export class DynamicDriveSessionConflictError extends Error {

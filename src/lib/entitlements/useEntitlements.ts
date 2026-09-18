@@ -1,4 +1,9 @@
-import type { Entitlement, EntitlementSnapshot, EntitlementUser, Plan } from "@/lib/entitlements/types";
+import type {
+  Entitlement,
+  EntitlementSnapshot,
+  EntitlementUser,
+  Plan,
+} from "@/lib/entitlements/types";
 import { useEntitlementsContext } from "@/lib/entitlements/EntitlementsProvider";
 
 export interface UseEntitlementsResult {
@@ -10,10 +15,14 @@ export interface UseEntitlementsResult {
   isTrialActive: boolean;
 }
 
-/** React hook for feature gates — reads resolved entitlements, never Stripe. */
+/** React hook for feature gates - reads resolved entitlements, never Stripe. */
 export function useEntitlements(): UseEntitlementsResult {
-  const { user, snapshot, hasEntitlement: check, isTrialActive: trialActive } =
-    useEntitlementsContext();
+  const {
+    user,
+    snapshot,
+    hasEntitlement: check,
+    isTrialActive: trialActive,
+  } = useEntitlementsContext();
 
   return {
     user,

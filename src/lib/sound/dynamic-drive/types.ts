@@ -39,7 +39,7 @@ export interface DynamicLayerDebugInfo {
 
   fundamentalHz: number;
 
-  /** Ratio vs profile base frequency — shown for tuning only. */
+  /** Ratio vs profile base frequency - shown for tuning only. */
 
   playbackRate: number;
 }

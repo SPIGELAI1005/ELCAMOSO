@@ -61,17 +61,12 @@ const WAVE_RADIATE_PEAK_OFFSET = 0.35;
 
 export type HeroWavePhase = "intro" | "hold" | "radiate";
 
-function markRadiateCycleMs(
-  intensity: number,
-  waveResponse: number,
-  drive: number,
-): number {
-  const cycleRaw =
-    2400 / (0.55 + waveResponse * (0.5 + Math.max(drive, intensity * 0.6)));
+function markRadiateCycleMs(intensity: number, waveResponse: number, drive: number): number {
+  const cycleRaw = 2400 / (0.55 + waveResponse * (0.5 + Math.max(drive, intensity * 0.6)));
   return Math.max(1200, Math.round(cycleRaw / 40) * 40);
 }
 
-/** Idle mark pulse at full intensity — matches header logo. */
+/** Idle mark pulse at full intensity - matches header logo. */
 export const MARK_IDLE_RADIATE_CYCLE_MS = markRadiateCycleMs(1, 1, 0);
 
 function markRadiateAnimation(index: number, cycleMs: number, phaseOffsetMs = 0) {
@@ -85,9 +80,7 @@ function markHeroRadiateAnimation(index: number, cycleMs: number) {
 
 export function useHeroWavePhase(): { phase: HeroWavePhase; reducedMotion: boolean } {
   const reducedMotion = useReducedMotion();
-  const [phase, setPhase] = useState<HeroWavePhase>(() =>
-    reducedMotion ? "radiate" : "intro",
-  );
+  const [phase, setPhase] = useState<HeroWavePhase>(() => (reducedMotion ? "radiate" : "intro"));
 
   useEffect(() => {
     if (reducedMotion) {
@@ -151,12 +144,8 @@ export const ElcamosoMark = memo(function ElcamosoMark({
   const drive = Math.min(1, Math.max(0, throttle));
   const brake = Math.min(1, Math.max(0, regen));
   const dirIn = direction === "inward" || (direction !== "outward" && brake > drive);
-  const live =
-    !heroPhase &&
-    !reducedMotion &&
-    (drive > 0.02 || brake > 0.02 || intensity > 0.08);
-  const animateIn =
-    !reducedMotion && (heroPhase === "intro" || (animate && !heroPhase));
+  const live = !heroPhase && !reducedMotion && (drive > 0.02 || brake > 0.02 || intensity > 0.08);
+  const animateIn = !reducedMotion && (heroPhase === "intro" || (animate && !heroPhase));
   const heroHold = heroPhase === "hold";
   const heroRadiate = heroPhase === "radiate" && !reducedMotion;
   const cycleMs = markRadiateCycleMs(intensity, waveResponse, drive);
@@ -307,10 +296,7 @@ const WORDMARK_EXPANSION_INLINE_TEXT = WORDMARK_EXPANSION_WORDS.map((word) =>
   word.split("").join("\u00a0"),
 ).join("\u00a0\u00a0");
 
-function useFitExpansionWidth(
-  targetWidth: number | undefined,
-  enabled: boolean,
-) {
+function useFitExpansionWidth(targetWidth: number | undefined, enabled: boolean) {
   const ref = useRef<HTMLParagraphElement>(null);
 
   useLayoutEffect(() => {
@@ -333,8 +319,7 @@ function useFitExpansionWidth(
         return;
       }
 
-      const spacing =
-        (targetWidth - naturalWidth) / (WORDMARK_EXPANSION_INLINE_TEXT.length - 1);
+      const spacing = (targetWidth - naturalWidth) / (WORDMARK_EXPANSION_INLINE_TEXT.length - 1);
       el.style.letterSpacing = `${spacing}px`;
     };
 
@@ -390,13 +375,7 @@ export function ElcamosoLogoLockup({
 }: LogoLockupProps) {
   return (
     <span className="inline-flex w-fit max-w-full flex-col items-center text-center">
-      <span
-        className={cn(
-          "relative block overflow-visible",
-          markClassName,
-          "w-full max-w-full",
-        )}
-      >
+      <span className={cn("relative block overflow-visible", markClassName, "w-full max-w-full")}>
         <ElcamosoMark
           {...markProps}
           heroPhase={heroPhase}
@@ -405,8 +384,8 @@ export function ElcamosoLogoLockup({
         />
       </span>
       <ElcamosoWordmark
-        ref={wordmarkRef}
-        ariaHidden={wordmarkAriaHidden}
+        {...(wordmarkRef ? { ref: wordmarkRef } : {})}
+        {...(wordmarkAriaHidden !== undefined ? { ariaHidden: wordmarkAriaHidden } : {})}
         heroPhase={heroPhase ?? "off"}
         reducedMotion={reducedMotion ?? false}
         className={cn(wordmarkClassName)}

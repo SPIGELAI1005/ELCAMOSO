@@ -15,7 +15,11 @@ export interface AccountSessionCookieOptions {
 }
 
 export function isProductionRuntime(): boolean {
-  const tier = (process.env["ELCAMOSO_ENV"] ?? process.env["NODE_ENV"] ?? "development").toLowerCase();
+  const tier = (
+    process.env["ELCAMOSO_ENV"] ??
+    process.env["NODE_ENV"] ??
+    "development"
+  ).toLowerCase();
   return tier === "production";
 }
 

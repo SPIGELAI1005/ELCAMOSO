@@ -10,7 +10,7 @@ export class StripeWebhookVerificationError extends Error {
   }
 }
 
-/** Verify Stripe-Signature against the raw UTF-8 request body — server-only. */
+/** Verify Stripe-Signature against the raw UTF-8 request body - server-only. */
 export function constructStripeWebhookEvent(
   rawBody: string,
   signatureHeader: string | null,

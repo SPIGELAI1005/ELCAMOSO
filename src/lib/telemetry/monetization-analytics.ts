@@ -80,7 +80,7 @@ export function trackMonetizationEvent(
   trackEvent(name, sanitizeMonetizationMeta(meta));
 }
 
-/** Server-side funnel events (Stripe webhooks) — same ingest path, no vendor. */
+/** Server-side funnel events (Stripe webhooks) - same ingest path, no vendor. */
 export function recordServerMonetizationEvent(
   name: MonetizationAnalyticsName,
   meta?: MonetizationEventMeta,
@@ -112,17 +112,17 @@ export function monetizationMetaFromStripeMetadata(
   metadata?: Record<string, string> | null,
 ): MonetizationEventMeta {
   const source =
-    typeof metadata?.source === "string" && metadata.source.trim()
-      ? metadata.source.trim()
+    typeof metadata?.["source"] === "string" && metadata["source"].trim()
+      ? metadata["source"].trim()
       : "checkout";
   const interval =
-    metadata?.interval === "monthly" || metadata?.interval === "yearly"
-      ? metadata.interval
+    metadata?.["interval"] === "monthly" || metadata?.["interval"] === "yearly"
+      ? metadata["interval"]
       : undefined;
   return {
     source,
     plan: "drive_plus",
-    interval,
+    ...(interval ? { interval } : {}),
   };
 }
 

@@ -24,6 +24,13 @@ import {
   type SoundSnippet,
 } from "@/lib/sound/snippets";
 import type { LayerKey } from "@/lib/sound/environments";
+import type { SavedFusionPreset } from "@/lib/fusion/types";
+import type {
+  ExperiencePreset,
+  SymphonyStudioParams,
+  FusionStudioParams,
+} from "@/lib/studio/types";
+import { DEFAULT_FUSION_PARAMS, DEFAULT_SYMPHONY_PARAMS } from "@/lib/studio/types";
 
 /** Per-profile fine-tuning of how motion translates into sound state. */
 export interface ProfileTuning {
@@ -148,6 +155,13 @@ export interface ElcamosoSettings {
   /** master volume, 0..1 */
   volume: number;
   demoMotion: boolean;
+  /**
+   * Drive output mode:
+   * live | capture (silent) | live-and-capture
+   */
+  driveOutputMode: import("@/lib/journey-trace").DriveOutputMode;
+  /** Native location sampling policy; high-detail uses more battery. */
+  captureQuality: import("@/lib/motion-capture").CaptureQuality;
   safetyAcknowledged: boolean;
   onboarded: boolean;
   /** last onboarding step reached, 0..2 */
@@ -205,7 +219,7 @@ export interface ElcamosoSettings {
   accountEmail: string | null;
   /** User explicitly activated the Dynamic Drive preview trial. */
   dynamicDriveTrialActivated: boolean;
-  /** Trial converted to paid plan — trial bridge stops accounting. */
+  /** Trial converted to paid plan - trial bridge stops accounting. */
   dynamicDriveTrialConverted: boolean;
   includeDriveHistory: boolean;
   /** opt-in, no motion or location */
@@ -223,6 +237,12 @@ export interface ElcamosoSettings {
   /** Selected vehicle VIN for display / future telemetry (not a secret). */
   teslaVehicleVin: string | null;
   teslaLinkedAt: number | null;
+  /** Garage Experiences: Symphony / World / Fusion favorites */
+  experienceFavourites: string[];
+  /** User-saved Fusion blends */
+  savedFusionPresets: SavedFusionPreset[];
+  /** Studio 2.0 Experience Presets (Sound / Symphony / Fusion) */
+  experiencePresets: ExperiencePreset[];
 }
 
 export interface PlaylistSegment {
@@ -247,6 +267,8 @@ export const DEFAULT_SETTINGS: ElcamosoSettings = {
   profileId: DEFAULT_PROFILE_ID,
   volume: 0.7,
   demoMotion: false,
+  driveOutputMode: "live",
+  captureQuality: "balanced",
   safetyAcknowledged: false,
   onboarded: false,
   onboardingStep: 0,
@@ -287,12 +309,15 @@ export const DEFAULT_SETTINGS: ElcamosoSettings = {
   analyticsEnabled: false,
   devPanel: false,
   debugDriveDiagnostics: false,
-  /** Default on — SessionBridge still ANDs with Drive+ entitlement / trial. */
+  /** Default on - SessionBridge still ANDs with Drive+ entitlement / trial. */
   dynamicDrive: true,
   teslaFleetTelemetry: false,
   teslaLinkId: null,
   teslaVehicleVin: null,
   teslaLinkedAt: null,
+  experienceFavourites: [],
+  savedFusionPresets: [],
+  experiencePresets: [],
 };
 
 export function getTuning(settings: ElcamosoSettings, profileId: string): ProfileTuning {
@@ -600,6 +625,102 @@ function sanitizeStudioPresets(v: unknown): StudioPreset[] {
   return out;
 }
 
+function sanitizeSavedFusionPresets(v: unknown): SavedFusionPreset[] {
+  if (!Array.isArray(v)) return [];
+  const out: SavedFusionPreset[] = [];
+  for (const item of v) {
+    if (!isRecord(item)) continue;
+    const id = str(item["id"], "");
+    const machineProfileId = str(item["machineProfileId"], "");
+    const symphonyProfileId = str(item["symphonyProfileId"], "");
+    if (!id || !machineProfileId || !symphonyProfileId) continue;
+    out.push({
+      id,
+      name: str(item["name"], "Fusion").slice(0, 48),
+      machineProfileId,
+      symphonyProfileId,
+      mix: num(item["mix"], 0.6, 0, 1),
+      harmonicResonance: num(item["harmonicResonance"], 0.25, 0, 1),
+      createdAt: num(item["createdAt"], Date.now(), 0, Number.MAX_SAFE_INTEGER),
+    });
+    if (out.length >= 40) break;
+  }
+  return out;
+}
+
+function sanitizeSymphonyParams(v: unknown): SymphonyStudioParams {
+  if (!isRecord(v)) return { ...DEFAULT_SYMPHONY_PARAMS };
+  const instruments = isRecord(v["instruments"])
+    ? {
+        atmosphere: bool(v["instruments"]["atmosphere"], true),
+        drums: bool(v["instruments"]["drums"], true),
+        bass: bool(v["instruments"]["bass"], true),
+        guitar: bool(v["instruments"]["guitar"], true),
+        strings: bool(v["instruments"]["strings"], true),
+        lead: bool(v["instruments"]["lead"], true),
+      }
+    : DEFAULT_SYMPHONY_PARAMS.instruments;
+  return {
+    energy: num(v["energy"], DEFAULT_SYMPHONY_PARAMS.energy, 0, 1),
+    build: num(v["build"], DEFAULT_SYMPHONY_PARAMS.build, 0, 1),
+    rhythm: num(v["rhythm"], DEFAULT_SYMPHONY_PARAMS.rhythm, 0, 1),
+    melody: num(v["melody"], DEFAULT_SYMPHONY_PARAMS.melody, 0, 1),
+    drama: num(v["drama"], DEFAULT_SYMPHONY_PARAMS.drama, 0, 1),
+    variation: num(v["variation"], DEFAULT_SYMPHONY_PARAMS.variation, 0, 1),
+    instruments,
+    transitionFrequency: num(v["transitionFrequency"], 0.5, 0, 1),
+    fillFrequency: num(v["fillFrequency"], 0.45, 0, 1),
+    climaxSensitivity: num(v["climaxSensitivity"], 0.5, 0, 1),
+    minSectionDuration: num(v["minSectionDuration"], 2, 0.5, 12),
+    stemMix: isRecord(v["stemMix"])
+      ? (Object.fromEntries(
+          Object.entries(v["stemMix"]).filter(([, g]) => typeof g === "number"),
+        ) as SymphonyStudioParams["stemMix"])
+      : {},
+  };
+}
+
+function sanitizeFusionStudioParams(v: unknown): FusionStudioParams {
+  if (!isRecord(v)) return { ...DEFAULT_FUSION_PARAMS };
+  return {
+    machineProfileId: str(v["machineProfileId"], DEFAULT_FUSION_PARAMS.machineProfileId),
+    symphonyProfileId: str(v["symphonyProfileId"], DEFAULT_FUSION_PARAMS.symphonyProfileId),
+    mix: num(v["mix"], 0.6, 0, 1),
+    machinePresence: num(v["machinePresence"], 0.55, 0, 1),
+    musicEnergy: num(v["musicEnergy"], 0.6, 0, 1),
+    shiftEmphasis: num(v["shiftEmphasis"], 0.4, 0, 1),
+    harmonicResonance: num(v["harmonicResonance"], 0.25, 0, 1),
+  };
+}
+
+function sanitizeExperiencePresets(v: unknown): ExperiencePreset[] {
+  if (!Array.isArray(v)) return [];
+  const out: ExperiencePreset[] = [];
+  for (const item of v) {
+    if (!isRecord(item)) continue;
+    const id = str(item["id"], "");
+    const kind = item["kind"];
+    if (!id || (kind !== "sound" && kind !== "symphony" && kind !== "fusion")) continue;
+    const preset: ExperiencePreset = {
+      id,
+      kind,
+      name: str(item["name"], "Preset").slice(0, 48),
+      createdAt: num(item["createdAt"], Date.now(), 0, Number.MAX_SAFE_INTEGER),
+    };
+    if (typeof item["note"] === "string") preset.note = item["note"].slice(0, 160);
+    if (typeof item["soundId"] === "string") preset.soundId = item["soundId"];
+    if (typeof item["baseProfileId"] === "string") preset.baseProfileId = item["baseProfileId"];
+    if (typeof item["symphonyPackId"] === "string") preset.symphonyPackId = item["symphonyPackId"];
+    if (item["symphonyParams"] !== undefined)
+      preset.symphonyParams = sanitizeSymphonyParams(item["symphonyParams"]);
+    if (item["fusionParams"] !== undefined)
+      preset.fusionParams = sanitizeFusionStudioParams(item["fusionParams"]);
+    out.push(preset);
+    if (out.length >= 60) break;
+  }
+  return out;
+}
+
 export interface SettingsIssue {
   field: string;
   detail: string;
@@ -663,7 +784,11 @@ export function sanitizeSettings(input: unknown): {
     ? p["favourites"].filter((f): f is string => typeof f === "string").slice(0, 60)
     : [];
 
-  const knownIds = new Set([...SOUND_PROFILES.map((s) => s.id), ...customSounds.map((s) => s.id)]);
+  const knownIds = new Set([
+    ...SOUND_PROFILES.map((s) => s.id),
+    ...customSounds.map((s) => s.id),
+    ...sanitizeSavedFusionPresets(p["savedFusionPresets"]).map((s) => s.id),
+  ]);
   const rawProfileId = p["profileId"];
   const profileId = check(
     "profileId",
@@ -686,6 +811,11 @@ export function sanitizeSettings(input: unknown): {
     profileId,
     volume: num(p["volume"], DEFAULT_SETTINGS.volume, 0, 1),
     demoMotion: bool(p["demoMotion"], false),
+    driveOutputMode:
+      p["driveOutputMode"] === "capture" || p["driveOutputMode"] === "live-and-capture"
+        ? p["driveOutputMode"]
+        : "live",
+    captureQuality: p["captureQuality"] === "high-detail" ? "high-detail" : "balanced",
     safetyAcknowledged,
     onboarded,
     onboardingStep: num(p["onboardingStep"], 0, 0, 2),
@@ -738,6 +868,11 @@ export function sanitizeSettings(input: unknown): {
         ? p["teslaVehicleVin"].trim().slice(0, 32)
         : null,
     teslaLinkedAt: typeof p["teslaLinkedAt"] === "number" ? p["teslaLinkedAt"] : null,
+    experienceFavourites: Array.isArray(p["experienceFavourites"])
+      ? p["experienceFavourites"].filter((f): f is string => typeof f === "string").slice(0, 80)
+      : [],
+    savedFusionPresets: sanitizeSavedFusionPresets(p["savedFusionPresets"]),
+    experiencePresets: sanitizeExperiencePresets(p["experiencePresets"]),
   };
 
   // Keep the legacy boolean in sync for older UI / exports.
@@ -1031,7 +1166,9 @@ function migratePayload(payload: Record<string, unknown>, version: number) {
     // New default is on, but never overwrite an explicit prior choice of false/true.
     if (p["dynamicDrive"] === undefined) {
       p["dynamicDrive"] = true;
-      notes.push("Defaulted Motion-matched gears on for new / unset settings (entitlement still gates).");
+      notes.push(
+        "Defaulted Motion-matched gears on for new / unset settings (entitlement still gates).",
+      );
     }
   }
 
@@ -1253,6 +1390,8 @@ export function restoreRecommended(): ElcamosoSettings {
     reducedMotion: false,
     haptics: false,
     demoMotion: false,
+    driveOutputMode: "live",
+    captureQuality: "balanced",
   });
 }
 

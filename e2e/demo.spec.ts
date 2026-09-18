@@ -45,15 +45,12 @@ test.describe("Demo Drive", () => {
     await page.getByRole("button", { name: "GT V8", pressed: true }).waitFor();
     await page.waitForTimeout(1500);
     await page.getByRole("heading", { name: "Sound Profile" }).scrollIntoViewIfNeeded();
-    const flatSix = page.getByRole("button", { name: "Flat-Six Sport" });
-    await flatSix.click();
-    await expect(flatSix).toHaveAttribute("aria-pressed", "true");
-    await expect(page.getByRole("button", { name: "GT V8" })).toHaveAttribute(
-      "aria-pressed",
-      "false",
-    );
+    await page.getByRole("tab", { name: "Motorsport" }).click();
+    const racingV10 = page.getByRole("button", { name: "Racing V10" });
+    await racingV10.click();
+    await expect(racingV10).toHaveAttribute("aria-pressed", "true");
     await page.waitForTimeout(500);
-    await expect(flatSix).toHaveAttribute("aria-pressed", "true");
-    await expect(page.locator("#feel").getByText("Flat-Six Sport")).toBeVisible();
+    await expect(racingV10).toHaveAttribute("aria-pressed", "true");
+    await expect(page.locator("#feel").getByText("Racing V10")).toBeVisible();
   });
 });

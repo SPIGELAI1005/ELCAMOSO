@@ -12,17 +12,17 @@ function isEntitlementDowngradePatch(
   patch: Record<string, unknown>,
   settings: ReturnType<typeof useSettings>["settings"],
 ): boolean {
-  if ("dynamicDrive" in patch && patch.dynamicDrive === false && settings.dynamicDrive) {
+  if ("dynamicDrive" in patch && patch["dynamicDrive"] === false && settings.dynamicDrive) {
     return true;
   }
   if (
     "profileId" in patch &&
-    typeof patch.profileId === "string" &&
-    patch.profileId !== settings.profileId
+    typeof patch["profileId"] === "string" &&
+    patch["profileId"] !== settings.profileId
   ) {
     return true;
   }
-  if ("latencyCompMs" in patch && patch.latencyCompMs === 0 && settings.latencyCompMs !== 0) {
+  if ("latencyCompMs" in patch && patch["latencyCompMs"] === 0 && settings.latencyCompMs !== 0) {
     return true;
   }
   if ("shiftFeel" in patch) return true;

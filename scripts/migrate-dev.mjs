@@ -18,8 +18,7 @@ if (env !== "development") {
 const databaseUrl = process.env.DATABASE_URL;
 /** Default dev store when DATABASE_URL is unset — PGlite, not production. */
 const resolvedUrl = databaseUrl ?? "idb://elcamoso-dev";
-const isPglite =
-  !resolvedUrl.startsWith("postgresql://") && !resolvedUrl.startsWith("postgres://");
+const isPglite = !resolvedUrl.startsWith("postgresql://") && !resolvedUrl.startsWith("postgres://");
 
 async function migratePostgres(url) {
   const { drizzle } = await import("drizzle-orm/postgres-js");

@@ -27,9 +27,10 @@ type NavLink = {
 /** Desktop primary navigation. */
 const DESKTOP_LINKS: NavLink[] = [
   { to: "/drive", key: "nav.drive", accent: true },
-  { to: "/sounds", key: "nav.sounds" },
+  { to: "/explore", key: "nav.explore" },
   { to: "/studio", key: "nav.studio" },
   { to: "/garage", key: "nav.garage" },
+  { to: "/sounds", key: "nav.sounds" },
   { to: "/demo", key: "nav.demo" },
   { to: "/pricing", key: "nav.pricing" },
   { to: "/about", key: "nav.about", accent: true },
@@ -39,9 +40,10 @@ const DESKTOP_LINKS: NavLink[] = [
 const MENU_LINKS: NavLink[] = [
   { to: "/", key: "nav.home" },
   { to: "/drive", key: "nav.drive", accent: true },
-  { to: "/sounds", key: "nav.sounds" },
+  { to: "/explore", key: "nav.explore" },
   { to: "/studio", key: "nav.studio" },
   { to: "/garage", key: "nav.garage" },
+  { to: "/sounds", key: "nav.sounds" },
   { to: "/demo", key: "nav.demo" },
   { to: "/pricing", key: "nav.pricing" },
   { to: "/settings", key: "nav.settings" },

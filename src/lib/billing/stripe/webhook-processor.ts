@@ -70,7 +70,7 @@ async function handleStripeEvent(event: Stripe.Event): Promise<boolean> {
   }
 }
 
-/** Idempotent webhook processor — billing authority; never trusts browser redirects. */
+/** Idempotent webhook processor - billing authority; never trusts browser redirects. */
 export async function dispatchStripeWebhookEvent(
   event: Stripe.Event,
 ): Promise<StripeWebhookDispatchResult> {

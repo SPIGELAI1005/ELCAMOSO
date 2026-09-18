@@ -49,7 +49,7 @@ export function gainToDb(gain: number): number {
 export const MASTER_BUS_OUTPUT_GAIN = 0.9;
 
 /**
- * Soft-start / profile-switch ramp — close to full so Tesla cabin is audible
+ * Soft-start / profile-switch ramp - close to full so Tesla cabin is audible
  * immediately; sensor source must not dictate engine loudness.
  */
 export const STARTUP_VOLUME_SCALE = 0.92;

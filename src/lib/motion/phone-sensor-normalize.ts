@@ -1,6 +1,6 @@
 import type { MotionSample } from "@/lib/motion/types";
 
-/** Target relay rate — keep within server cap (~22/s) and network budget. */
+/** Target relay rate - keep within server cap (~22/s) and network budget. */
 export const PHONE_SENSOR_TARGET_HZ = 15;
 export const PHONE_SENSOR_TICK_MS = Math.round(1000 / PHONE_SENSOR_TARGET_HZ);
 export const PHONE_SENSOR_CALIBRATION_MS = 2500;

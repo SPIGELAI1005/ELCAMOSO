@@ -6,22 +6,22 @@ Policy implementation: `src/lib/billing/subscription-access-policy.ts`.
 
 ## Drive+ granted when
 
-| Condition | Access |
-|---|---|
-| `status == active` | Yes |
-| `status == trialing` | Yes |
-| `status == past_due` and within grace period | Yes |
-| `cancelAtPeriodEnd == true` and `now < currentPeriodEnd` | Yes until period end |
+| Condition                                                         | Access               |
+| ----------------------------------------------------------------- | -------------------- |
+| `status == active`                                                | Yes                  |
+| `status == trialing`                                              | Yes                  |
+| `status == past_due` and within grace period                      | Yes                  |
+| `cancelAtPeriodEnd == true` and `now < currentPeriodEnd`          | Yes until period end |
 | `status == canceled` but `now < currentPeriodEnd` (scheduled end) | Yes until period end |
 
 ## Drive+ denied (FREE entitlements)
 
-| Condition | Access |
-|---|---|
-| `status == canceled` and period ended | No |
-| `status == past_due` and grace expired | No |
-| `status == paused` | No |
-| No subscription / `plan == FREE` | No |
+| Condition                              | Access |
+| -------------------------------------- | ------ |
+| `status == canceled` and period ended  | No     |
+| `status == past_due` and grace expired | No     |
+| `status == paused`                     | No     |
+| No subscription / `plan == FREE`       | No     |
 
 ## Past due grace
 

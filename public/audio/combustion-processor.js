@@ -1,6 +1,6 @@
 /**
  * AudioWorkletProcessor: continuous four-stroke combustion excitation (Realism V2.1).
- * Served from /audio/combustion-processor.js — never spawn per-fire OscillatorNodes.
+ * Served from /audio/combustion-processor.js - never spawn per-fire OscillatorNodes.
  *
  * Impulse train at firingHz = RPM × cylinders / 120 (four-stroke).
  * Architecture shapes bank balance / lope; load shapes pressure and brightness.

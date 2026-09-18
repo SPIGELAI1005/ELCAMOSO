@@ -114,7 +114,7 @@ export function runImuLeadHardTipInScenario(profileId = "flat-six-sport"): Fusio
   );
 }
 
-/** Scenario I: city stop-go — GPS baseline + IMU transients, no RPM snap from spikes. */
+/** Scenario I: city stop-go - GPS baseline + IMU transients, no RPM snap from spikes. */
 export function runCityStopGoFusionScenario(profileId = "american-v8"): FusionDriveResult {
   return runFusionDrive(
     "fusion-i",
@@ -155,7 +155,7 @@ export function runCityStopGoFusionScenario(profileId = "american-v8"): FusionDr
   );
 }
 
-/** Scenario J: Tesla browser only — GPS speed + browser IMU, no phone relay. */
+/** Scenario J: Tesla browser only - GPS speed + browser IMU, no phone relay. */
 export function runTeslaBrowserOnlyScenario(profileId = "gt-v8"): FusionDriveResult {
   return runFusionDrive(
     "fusion-j",
@@ -178,7 +178,7 @@ export function runTeslaBrowserOnlyScenario(profileId = "gt-v8"): FusionDriveRes
   );
 }
 
-/** Scenario K: conflicting phone vs browser GPS — telemetry-free, phone wins. */
+/** Scenario K: conflicting phone vs browser GPS - telemetry-free, phone wins. */
 export function runPhoneOverBrowserGpsScenario(): FusionDriveResult {
   return runFusionDrive(
     "fusion-k",

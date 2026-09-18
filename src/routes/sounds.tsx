@@ -1,5 +1,6 @@
 import { useMemo, useRef, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { createSeoHeadFromPath } from "@/lib/seo";
 import { ElcamosoMark } from "@/components/ElcamosoLogo";
 import { AuditionPanel } from "@/components/AuditionPanel";
 import {
@@ -32,19 +33,7 @@ import {
 
 export const Route = createFileRoute("/sounds")({
   component: Sounds,
-  head: () => ({
-    meta: [
-      { title: "Sounds - ELCAMOSO" },
-      {
-        name: "description",
-        content: "Choose how motion feels with Sound Profiles for your EV.",
-      },
-      { property: "og:title", content: "Sounds - ELCAMOSO" },
-      { property: "og:type", content: "website" },
-      { property: "og:url", content: "/sounds" },
-    ],
-    links: [{ rel: "canonical", href: "/sounds" }],
-  }),
+  head: () => createSeoHeadFromPath("/sounds"),
 });
 
 function Sounds() {

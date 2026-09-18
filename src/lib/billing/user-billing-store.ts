@@ -3,7 +3,11 @@ import { postgresUserBillingRepository } from "@/lib/billing/user-billing-reposi
 export interface UserBillingRepository {
   getStripeCustomerId(userId: string): Promise<string | null>;
   getUserIdByStripeCustomerId(stripeCustomerId: string): Promise<string | null>;
-  setStripeCustomerId(userId: string, stripeCustomerId: string, email?: string | null): Promise<void>;
+  setStripeCustomerId(
+    userId: string,
+    stripeCustomerId: string,
+    email?: string | null,
+  ): Promise<void>;
 }
 
 const stripeCustomerByUser = new Map<string, string>();
@@ -42,6 +46,6 @@ export function resetUserBillingRepositoryForTests(): void {
 
 export function getUserBillingRepository(): UserBillingRepository {
   if (activeRepositoryOverride) return activeRepositoryOverride;
-  if (process.env.DATABASE_URL) return postgresUserBillingRepository;
+  if (process.env["DATABASE_URL"]) return postgresUserBillingRepository;
   return memoryUserBillingRepository;
 }

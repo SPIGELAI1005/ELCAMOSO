@@ -260,7 +260,7 @@ export const POWERTRAIN_SCENARIOS: PowertrainScenario[] = [
     steps: 600,
     integrateSpeed: false,
     drive: (frame) => {
-      // Mid-band for gear 3 on flat-six — not on an upshift knife-edge.
+      // Mid-band for gear 3 on flat-six - not on an upshift knife-edge.
       const base = 48;
       const speed = base + (frame % 20 < 10 ? 2 : -2);
       return { speedKmh: speed, accelerationMs2: 0, throttle: 0.32, braking: 0 };
@@ -475,7 +475,7 @@ export function validatePowertrainTrace(
     const a = result.gearChanges[i - 2]!;
     const b = result.gearChanges[i - 1]!;
     const c = result.gearChanges[i]!;
-    // Ignore N↔1 creep chatter — covered by engagement hold tests.
+    // Ignore N↔1 creep chatter - covered by engagement hold tests.
     if (a.to === 0 || b.to === 0 || c.to === 0 || a.from === 0) continue;
     if (a.to === c.to && b.to !== a.to && c.atMs - a.atMs < 2500) bounce += 1;
   }
@@ -557,7 +557,7 @@ export function verifyUpshiftRpmDrops(result: ScenarioRunResult): string[] {
     );
     const afterWindow = result.samples.slice(idx + 1, Math.min(result.samples.length, idx + 50));
     const settled = afterWindow.filter((sample, j) => !sample.shifting && j > 2);
-    if (settled.length === 0) continue; // next shift queued immediately — skip this edge
+    if (settled.length === 0) continue; // next shift queued immediately - skip this edge
     const afterRpm = Math.min(...settled.slice(0, 12).map((sample) => sample.rpm));
 
     const beforeSample = result.samples[Math.max(0, idx - 3)]!;

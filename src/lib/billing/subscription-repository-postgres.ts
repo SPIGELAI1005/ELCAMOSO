@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 
 import type {
   SubscriptionRepository,
@@ -62,5 +62,16 @@ export const postgresSubscriptionRepository: SubscriptionRepository = {
       .limit(1);
     if (!row || row.provider !== provider) return null;
     return subscriptionRowToSubscription(row);
+  },
+
+  async findLatestByUserId(userId) {
+    const db = getDb();
+    const [row] = await db
+      .select()
+      .from(subscriptions)
+      .where(eq(subscriptions.userId, userId))
+      .orderBy(desc(subscriptions.updatedAt))
+      .limit(1);
+    return row ? subscriptionRowToSubscription(row) : null;
   },
 };

@@ -1,8 +1,6 @@
 import { useEffect, useRef } from "react";
 
-import {
-  DYNAMIC_DRIVE_SESSION_HEARTBEAT_INTERVAL_MS,
-} from "@/lib/dynamic-drive-session/config";
+import { DYNAMIC_DRIVE_SESSION_HEARTBEAT_INTERVAL_MS } from "@/lib/dynamic-drive-session/config";
 import { readClientRelaySessionId } from "@/lib/dynamic-drive-session/client-relay-id";
 import {
   claimDynamicDriveSessionFn,
@@ -43,8 +41,7 @@ export function DynamicDriveSessionBridge() {
 
   const liveDrive = drive.kind === "drive" && isLiveSessionStatus(drive.status);
   const driving = drive.kind === "drive" && drive.status === "running";
-  const shouldLease =
-    isAuthenticated && entitledToDynamicDrive && settings.dynamicDrive && driving;
+  const shouldLease = isAuthenticated && entitledToDynamicDrive && settings.dynamicDrive && driving;
 
   useEffect(() => {
     if (!isAuthenticated || !entitledToDynamicDrive) {

@@ -6,9 +6,7 @@ import { resetAccountAuthStoreForTests, saveAccountSession } from "@/lib/account
 import { provisionEntitlementsFromSubscription } from "@/lib/billing/provision-entitlements";
 import { resetSubscriptionStoreForTests } from "@/lib/billing/subscription-store";
 import type { Subscription } from "@/lib/billing/types";
-import {
-  DYNAMIC_DRIVE_SESSION_STALE_MS,
-} from "@/lib/dynamic-drive-session/config";
+import { DYNAMIC_DRIVE_SESSION_STALE_MS } from "@/lib/dynamic-drive-session/config";
 import {
   DYNAMIC_DRIVE_TRIAL_ALLOCATED_SECONDS,
   DYNAMIC_DRIVE_TRIAL_MAX_CREDIT_GAP_MS,
@@ -102,7 +100,7 @@ describe("Dynamic Drive trial lifecycle", () => {
     return service.startPreview(TRIAL_TEST_USER_ID, at);
   }
 
-  it("new user starts with available trial — no entitlements until activation", async () => {
+  it("new user starts with available trial - no entitlements until activation", async () => {
     const status = await service.getStatus(TRIAL_TEST_USER_ID, TRIAL_TEST_BASE);
     expect(status.status).toBe("available");
     assertTrialAllocations(status);
@@ -169,12 +167,19 @@ describe("Dynamic Drive trial lifecycle", () => {
       await service.endDriveSession(TRIAL_TEST_USER_ID, id, true, advanceTrialMs(at, 1_000));
     }
 
-    const status = await service.getStatus(TRIAL_TEST_USER_ID, advanceTrialMs(TRIAL_TEST_BASE, 300_000));
+    const status = await service.getStatus(
+      TRIAL_TEST_USER_ID,
+      advanceTrialMs(TRIAL_TEST_BASE, 300_000),
+    );
     expect(status.remainingSessions).toBe(0);
     expect(status.usedSessions).toBe(DYNAMIC_DRIVE_TRIAL_MAX_SESSIONS);
 
     await expect(
-      service.startDriveSession(TRIAL_TEST_USER_ID, randomUUID(), advanceTrialMs(TRIAL_TEST_BASE, 310_000)),
+      service.startDriveSession(
+        TRIAL_TEST_USER_ID,
+        randomUUID(),
+        advanceTrialMs(TRIAL_TEST_BASE, 310_000),
+      ),
     ).rejects.toThrow(/sessions exhausted/i);
   });
 
@@ -191,7 +196,11 @@ describe("Dynamic Drive trial lifecycle", () => {
     await activateTrial();
     const driveSessionId = randomUUID();
 
-    const first = await service.startDriveSession(TRIAL_TEST_USER_ID, driveSessionId, TRIAL_TEST_BASE);
+    const first = await service.startDriveSession(
+      TRIAL_TEST_USER_ID,
+      driveSessionId,
+      TRIAL_TEST_BASE,
+    );
     expect(first.resumed).toBe(false);
     expect(first.snapshot.usedSessions).toBe(1);
 
@@ -216,7 +225,10 @@ describe("Dynamic Drive trial lifecycle", () => {
       advanceTrialMs(TRIAL_TEST_BASE, 30_000),
     );
 
-    const before = await service.getStatus(TRIAL_TEST_USER_ID, advanceTrialMs(TRIAL_TEST_BASE, 30_000));
+    const before = await service.getStatus(
+      TRIAL_TEST_USER_ID,
+      advanceTrialMs(TRIAL_TEST_BASE, 30_000),
+    );
     const usedBefore = before.usedSeconds;
 
     const ended = await service.endDriveSession(
@@ -229,7 +241,7 @@ describe("Dynamic Drive trial lifecycle", () => {
     expect(ended.snapshot.usedSeconds).toBeGreaterThanOrEqual(usedBefore);
   });
 
-  it("session heartbeat lost caps credit to server gap — never negative", async () => {
+  it("session heartbeat lost caps credit to server gap - never negative", async () => {
     await activateTrial();
     const driveSessionId = randomUUID();
     await service.startDriveSession(TRIAL_TEST_USER_ID, driveSessionId, TRIAL_TEST_BASE);
@@ -250,10 +262,19 @@ describe("Dynamic Drive trial lifecycle", () => {
     const sessionB = randomUUID();
 
     await service.startDriveSession(TRIAL_TEST_USER_ID, sessionA, TRIAL_TEST_BASE);
-    await service.heartbeat(TRIAL_TEST_USER_ID, sessionA, true, advanceTrialMs(TRIAL_TEST_BASE, 30_000));
+    await service.heartbeat(
+      TRIAL_TEST_USER_ID,
+      sessionA,
+      true,
+      advanceTrialMs(TRIAL_TEST_BASE, 30_000),
+    );
 
     await expect(
-      service.startDriveSession(TRIAL_TEST_USER_ID, sessionB, advanceTrialMs(TRIAL_TEST_BASE, 60_000)),
+      service.startDriveSession(
+        TRIAL_TEST_USER_ID,
+        sessionB,
+        advanceTrialMs(TRIAL_TEST_BASE, 60_000),
+      ),
     ).rejects.toBeInstanceOf(DynamicDriveTrialSessionConflictError);
   });
 
@@ -261,7 +282,11 @@ describe("Dynamic Drive trial lifecycle", () => {
     await activateTrial();
     const sharedDriveSessionId = randomUUID();
 
-    const phone = await service.startDriveSession(TRIAL_TEST_USER_ID, sharedDriveSessionId, TRIAL_TEST_BASE);
+    const phone = await service.startDriveSession(
+      TRIAL_TEST_USER_ID,
+      sharedDriveSessionId,
+      TRIAL_TEST_BASE,
+    );
     expect(phone.snapshot.usedSessions).toBe(1);
 
     const tesla = await service.startDriveSession(
@@ -285,7 +310,10 @@ describe("Dynamic Drive trial lifecycle", () => {
       advanceTrialMs(TRIAL_TEST_BASE, 60_000),
     );
 
-    const beforeUpgrade = await service.getStatus(TRIAL_TEST_USER_ID, advanceTrialMs(TRIAL_TEST_BASE, 60_000));
+    const beforeUpgrade = await service.getStatus(
+      TRIAL_TEST_USER_ID,
+      advanceTrialMs(TRIAL_TEST_BASE, 60_000),
+    );
     const usedBefore = beforeUpgrade.usedSeconds;
 
     await syncStripeSubscriptionRecord({
@@ -296,11 +324,18 @@ describe("Dynamic Drive trial lifecycle", () => {
       cancel_at_period_end: false,
       current_period_start: 1_700_000_000,
       current_period_end: 1_700_086_400,
-      metadata: { userId: TRIAL_TEST_USER_ID, elcamosoPlan: "DRIVE_PLUS", billingInterval: "month" },
+      metadata: {
+        userId: TRIAL_TEST_USER_ID,
+        elcamosoPlan: "DRIVE_PLUS",
+        billingInterval: "month",
+      },
       items: { object: "list", data: [{ price: { id: "price_month_test" } }] },
     } as never);
 
-    const converted = await service.getStatus(TRIAL_TEST_USER_ID, advanceTrialMs(TRIAL_TEST_BASE, 65_000));
+    const converted = await service.getStatus(
+      TRIAL_TEST_USER_ID,
+      advanceTrialMs(TRIAL_TEST_BASE, 65_000),
+    );
     expect(converted.status).toBe("converted");
     expect(converted.usedSeconds).toBe(usedBefore);
     expect(converted.canUseDynamicDrive).toBe(false);
@@ -342,7 +377,10 @@ describe("Dynamic Drive trial lifecycle", () => {
       advanceTrialMs(TRIAL_TEST_BASE, 45_000),
     );
 
-    const beforePaid = await service.getStatus(TRIAL_TEST_USER_ID, advanceTrialMs(TRIAL_TEST_BASE, 45_000));
+    const beforePaid = await service.getStatus(
+      TRIAL_TEST_USER_ID,
+      advanceTrialMs(TRIAL_TEST_BASE, 45_000),
+    );
     const usedBeforePaid = beforePaid.usedSeconds;
 
     provisionEntitlementsFromSubscription(baseSubscription());

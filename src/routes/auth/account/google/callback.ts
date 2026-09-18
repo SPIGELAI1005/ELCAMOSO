@@ -22,7 +22,7 @@ function redirectWithCookies(origin: string, path: string, setCookies: string[])
 }
 
 /**
- * Google OAuth callback — authorization-code exchange runs entirely on the server.
+ * Google OAuth callback - authorization-code exchange runs entirely on the server.
  * Sets the HttpOnly account session cookie on the redirect response (required: a bare
  * Response.redirect() would drop cookies set via setCookie on the H3 event).
  */
@@ -59,9 +59,8 @@ export const Route = createFileRoute("/auth/account/google/callback")({
           try {
             const { isMonetizationEnabled } = await import("@/lib/billing/monetization-flag");
             if (isMonetizationEnabled()) {
-              const { getDynamicDriveTrialService } = await import(
-                "@/lib/dynamic-drive-trial/service"
-              );
+              const { getDynamicDriveTrialService } =
+                await import("@/lib/dynamic-drive-trial/service");
               await getDynamicDriveTrialService().startPreview(result.userId);
             }
           } catch {

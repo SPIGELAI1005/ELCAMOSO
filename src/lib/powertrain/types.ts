@@ -49,7 +49,7 @@ export interface VirtualPowertrainState {
 
   drivingMode: DrivingMode;
 
-  /** Dev/diagnostics only — never show in consumer UI. */
+  /** Dev/diagnostics only - never show in consumer UI. */
   diagnostics?: PowertrainRuntimeDiagnostics;
 }
 

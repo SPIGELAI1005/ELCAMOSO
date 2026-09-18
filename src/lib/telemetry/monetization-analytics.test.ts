@@ -1,8 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  sanitizeMonetizationMeta,
-} from "@/lib/telemetry/monetization-analytics";
+import { sanitizeMonetizationMeta } from "@/lib/telemetry/monetization-analytics";
 
 describe("sanitizeMonetizationMeta", () => {
   it("passes allowed monetization fields", () => {
@@ -35,9 +33,8 @@ describe("sanitizeMonetizationMeta", () => {
 
 describe("monetizationMetaFromStripeMetadata", () => {
   it("maps checkout metadata to monetization meta", async () => {
-    const { monetizationMetaFromStripeMetadata } = await import(
-      "@/lib/telemetry/monetization-analytics"
-    );
+    const { monetizationMetaFromStripeMetadata } =
+      await import("@/lib/telemetry/monetization-analytics");
     expect(
       monetizationMetaFromStripeMetadata({
         source: "pricing",

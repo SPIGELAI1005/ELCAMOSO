@@ -24,7 +24,7 @@ export interface KickdownQueueContext {
 
 /**
  * Reconcile a multi-step kickdown queue each tick.
- * Queued targets are not unconditional — release, brake, or unsafe speed clears them.
+ * Queued targets are not unconditional - release, brake, or unsafe speed clears them.
  */
 export function reconcileKickdownQueue(
   ctx: KickdownQueueContext,
@@ -102,7 +102,7 @@ export function reconcileKickdownQueue(
   let queued = selection.desiredGear;
 
   // If a kickdown plan is active and selection still wants lower (or equal plan),
-  // keep the more aggressive safe target — but never below redline-safe gears.
+  // keep the more aggressive safe target - but never below redline-safe gears.
   if (ctx.kickdownPlanActive && ctx.queuedTargetGear < gear && selection.reason === "kickdown") {
     queued = Math.min(ctx.queuedTargetGear, selection.desiredGear);
   }

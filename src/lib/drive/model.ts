@@ -24,11 +24,11 @@ export interface DriveState {
   jerk: number;
   /** true while a virtual gear change is in progress */
   isShifting: boolean;
-  /** Dynamic Drive powertrain overlay — present when Dynamic Drive mode is active */
+  /** Dynamic Drive powertrain overlay - present when Dynamic Drive mode is active */
   powertrain?: VirtualPowertrainState;
   /**
    * Dev/diagnostics only: which transmission backend produced this frame.
-   * Never surface in consumer UI — use to avoid mistaking Legacy for Dynamic Drive.
+   * Never surface in consumer UI - use to avoid mistaking Legacy for Dynamic Drive.
    */
   powertrainBackend?: PowertrainBackend;
   /** 0..1 speed vs ~160 km/h */
@@ -78,7 +78,7 @@ export function computeDriveState({
 }: ModelInput): DriveState {
   const tune = { ...DEFAULT_TUNING, ...(tuning ?? {}) };
   const feel = { ...DEFAULT_SHIFT_FEEL, ...(shiftFeel ?? {}) };
-  // Road speed is not driver demand — only a small road-load term.
+  // Road speed is not driver demand - only a small road-load term.
   const roadLoad = Math.min(0.12, (speed / 50) * 0.08 + (speed / 70) ** 2 * 0.04);
   const throttleTarget = clamp((Math.max(0, acceleration) / 2.6) * tune.throttle + roadLoad);
   const regenTarget = clamp((-acceleration / 2.6) * tune.regen);
@@ -123,7 +123,7 @@ export function computeDriveState({
     if (rpmHere < downLine && pickGear(gear - 1)) gear -= 1;
     else break;
   }
-  // Mechanical-ish RPM from legacy slope — no throttle×900 wander at cruise.
+  // Mechanical-ish RPM from legacy slope - no throttle×900 wander at cruise.
   const launchSlip = kmh < 8 ? throttle * 450 : throttle * 40;
   const targetRpm = Math.min(
     t.redlineRpm,

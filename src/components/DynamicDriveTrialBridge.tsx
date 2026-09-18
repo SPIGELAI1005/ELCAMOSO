@@ -1,20 +1,14 @@
 import { useEffect, useRef } from "react";
 
-import {
-  claimDynamicDriveSessionFn,
-} from "@/lib/dynamic-drive-session/server-fns";
-import {
-  showDynamicDriveSessionConflict,
-} from "@/lib/dynamic-drive-session/session-ui-store";
+import { claimDynamicDriveSessionFn } from "@/lib/dynamic-drive-session/server-fns";
+import { showDynamicDriveSessionConflict } from "@/lib/dynamic-drive-session/session-ui-store";
 import { readClientRelaySessionId } from "@/lib/dynamic-drive-session/client-relay-id";
 import {
   markDynamicDriveTrialExhaustedPending,
   setDynamicDriveTrialSnapshot,
   showDynamicDriveTrialComplete,
 } from "@/lib/dynamic-drive-trial/trial-ui-store";
-import {
-  DYNAMIC_DRIVE_TRIAL_HEARTBEAT_INTERVAL_MS,
-} from "@/lib/dynamic-drive-trial/config";
+import { DYNAMIC_DRIVE_TRIAL_HEARTBEAT_INTERVAL_MS } from "@/lib/dynamic-drive-trial/config";
 import { readClientDriveSessionId } from "@/lib/tesla-upgrade/drive-session-id";
 import {
   endDynamicDriveTrialSessionFn,
@@ -68,9 +62,7 @@ export function DynamicDriveTrialBridge() {
   const wasLiveDriveRef = useRef(false);
 
   const trialActive =
-    isAuthenticated &&
-    settings.dynamicDriveTrialActivated &&
-    !settings.dynamicDriveTrialConverted;
+    isAuthenticated && settings.dynamicDriveTrialActivated && !settings.dynamicDriveTrialConverted;
   const liveDrive = drive.kind === "drive" && isLiveSessionStatus(drive.status);
   const driving = drive.kind === "drive" && drive.status === "running";
 

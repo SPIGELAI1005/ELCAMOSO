@@ -1,22 +1,11 @@
+import { createSeoHeadFromPath } from "@/lib/seo";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { LegalPage, LegalSection } from "@/components/LegalPage";
 import { LEGAL_OPERATOR } from "@/lib/legal/operator";
 
 export const Route = createFileRoute("/legal/accessibility")({
   component: Accessibility,
-  head: () => ({
-    meta: [
-      { title: "Accessibility · ELCAMOSO" },
-      {
-        name: "description",
-        content: "Accessibility statement for the ELCAMOSO web application.",
-      },
-      { property: "og:title", content: "Accessibility · ELCAMOSO" },
-      { property: "og:type", content: "website" },
-      { property: "og:url", content: "/legal/accessibility" },
-    ],
-    links: [{ rel: "canonical", href: "/legal/accessibility" }],
-  }),
+  head: () => createSeoHeadFromPath("/legal/accessibility"),
 });
 
 function Accessibility() {

@@ -1,6 +1,6 @@
 /**
  * Server-only account cookie helpers.
- * Do not import this module from client code — only from createServerFn handlers
+ * Do not import this module from client code - only from createServerFn handlers
  * (dynamic import) or server route handlers.
  */
 import { deleteCookie, getCookie, setCookie } from "@tanstack/react-start/server";

@@ -3,10 +3,10 @@ import type { CommercialPlanId } from "@/lib/billing/stripe/plans";
 /** Early adopter discount applied to displayed list prices (14%). */
 export const EARLY_ADOPTER_DISCOUNT_RATE = 0.14;
 
-/** Anchor list price for Free — shown struck through for early adopters. */
+/** Anchor list price for Free - shown struck through for early adopters. */
 export const FREE_PLAN_LIST_CENTS = 114;
 
-/** Display amounts — keep in sync with Stripe Price configuration in the Dashboard. */
+/** Display amounts - keep in sync with Stripe Price configuration in the Dashboard. */
 export const DRIVE_PLUS_PRICING = {
   currency: "EUR",
   monthly: {
@@ -24,21 +24,23 @@ export const DRIVE_PLUS_PRICING = {
 export type BillingDisplayInterval = "monthly" | "yearly";
 
 export const FREE_PLAN_FEATURES = [
-  "Essential Sound Profiles",
-  "Tesla browser Drive",
-  "Motion-matched sound",
-  "Dynamic Drive preview",
+  "Essential Engine profiles",
+  "Tesla or browser Drive with phone pairing",
+  "Cinematic Rock Symphony experience",
+  "Space Drive Worlds sampler",
+  "Drive DNA and local Journey history",
+  "One basic Drive Song with sharing",
 ] as const;
 
-/** Shipped Drive+ capabilities — omit speculative or unreleased entitlements. */
+/** Shipped Drive+ capabilities - omit speculative or unreleased entitlements. */
 export const DRIVE_PLUS_FEATURES = [
-  "Every Sound Profile",
-  "Motion-matched gears",
-  "Live rev and load",
-  "Rev matching",
-  "Tip-in and lift-off feel",
-  "Phone motion link",
-  "Fine motion tuning",
+  "Every Engine personality",
+  "All Symphony packs and Worlds",
+  "Fusion: machine meets music",
+  "Full Drive Songs and multiple remixes",
+  "Full Journey history and Drive Reel",
+  "Sound, Symphony, and Fusion Studio",
+  "Premium presets and future Experience Drops",
 ] as const;
 
 export interface PlanPriceDisplay {

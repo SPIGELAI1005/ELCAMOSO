@@ -2,10 +2,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 
 import { findSoundAssetByPath } from "@/lib/sound-assets/catalog";
-import {
-  getSoundAssetSigningSecret,
-  verifySignedDelivery,
-} from "@/lib/sound-assets/signing";
+import { getSoundAssetSigningSecret, verifySignedDelivery } from "@/lib/sound-assets/signing";
 
 export class SoundAssetDeliveryError extends Error {
   readonly status: number;
@@ -18,7 +15,7 @@ export class SoundAssetDeliveryError extends Error {
 }
 
 function resolveStorageRoot(): string | null {
-  const root = process.env.SOUND_ASSETS_STORAGE_ROOT?.trim();
+  const root = process.env["SOUND_ASSETS_STORAGE_ROOT"]?.trim();
   return root || null;
 }
 
@@ -52,13 +49,13 @@ export async function deliverSignedSoundAsset(input: {
     expiresAt: input.expiresAt,
     signature: input.signature,
     secret,
-    now: input.now,
+    ...(input.now !== undefined ? { now: input.now } : {}),
   });
   if (!valid) {
     throw new SoundAssetDeliveryError("Invalid or expired signature", 403);
   }
 
-  const cdnBase = process.env.SOUND_ASSETS_CDN_BASE_URL?.trim();
+  const cdnBase = process.env["SOUND_ASSETS_CDN_BASE_URL"]?.trim();
   if (cdnBase) {
     const base = cdnBase.replace(/\/$/, "");
     const redirectUrl = `${base}/${safePath}?exp=${input.expiresAt}&sig=${encodeURIComponent(input.signature)}`;
@@ -90,7 +87,8 @@ export async function deliverSignedSoundAsset(input: {
     throw new SoundAssetDeliveryError("Asset file missing", 404);
   }
 
-  return new Response(fileBytes, {
+  const responseBody = new Uint8Array(fileBytes).buffer as ArrayBuffer;
+  return new Response(responseBody, {
     status: 200,
     headers: {
       "content-type": descriptor.contentType,

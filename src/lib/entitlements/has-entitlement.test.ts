@@ -34,7 +34,7 @@ describe("hasEntitlement", () => {
     }
   });
 
-  it("never references billing provider — plan field drives access", () => {
+  it("never references billing provider - plan field drives access", () => {
     const user: EntitlementUser = {
       accountId: "acct_1",
       plan: "DRIVE_PLUS",

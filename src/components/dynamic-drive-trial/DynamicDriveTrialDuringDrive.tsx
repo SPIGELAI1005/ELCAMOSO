@@ -1,6 +1,4 @@
-import {
-  formatTrialRemainingMinutes,
-} from "@/lib/dynamic-drive-trial/display";
+import { formatTrialRemainingMinutes } from "@/lib/dynamic-drive-trial/display";
 import { useDynamicDriveTrialUi } from "@/lib/dynamic-drive-trial/use-dynamic-drive-trial-ui";
 import { useEntitlements } from "@/lib/entitlements/useEntitlements";
 
@@ -9,7 +7,7 @@ interface DynamicDriveTrialDuringDriveProps {
   safetyMode?: boolean;
 }
 
-/** Subtle in-drive preview status — no pricing nudges while driving. */
+/** Subtle in-drive preview status - no pricing nudges while driving. */
 export function DynamicDriveTrialDuringDrive({
   dynamicDriveActive,
   safetyMode = false,

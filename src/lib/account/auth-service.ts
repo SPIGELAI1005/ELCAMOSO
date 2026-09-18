@@ -55,7 +55,7 @@ export interface BeginGoogleSignInResult {
   message?: string;
 }
 
-/** Client-safe Google completion payload — never includes Google tokens or session secrets. */
+/** Client-safe Google completion payload - never includes Google tokens or session secrets. */
 export interface CompleteGoogleSignInPublicResult {
   userId: string;
   email: string;
@@ -168,7 +168,7 @@ export async function completeGoogleSignIn(
   if (!pending) throw new Error("Google sign-in expired. Try again.");
 
   const tokens = await exchangeGoogleAuthorizationCode(code, pending.codeVerifier);
-  // Google access/refresh tokens are discarded after ID token verification — never stored or returned.
+  // Google access/refresh tokens are discarded after ID token verification - never stored or returned.
   const idToken = tokens.id_token;
   if (!idToken) throw new Error("Google token response missing id_token.");
   const claims = await verifyExchangedGoogleIdToken(idToken, pending.nonce);

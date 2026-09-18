@@ -10,8 +10,20 @@ import {
 } from "@/lib/entitlements/plans";
 
 describe("plan entitlements", () => {
-  it("FREE includes basic drive, sound profiles, and phone sensor pairing", () => {
-    expect(FREE_ENTITLEMENTS).toEqual(["basic_drive", "basic_sound_profiles", "phone_sensor"]);
+  it("FREE preserves legacy grants and completes the creative viral loop", () => {
+    expect(FREE_ENTITLEMENTS).toEqual(
+      expect.arrayContaining([
+        "basic_drive",
+        "basic_sound_profiles",
+        "phone_sensor",
+        "symphony_essential",
+        "worlds_sampler",
+        "drive_dna",
+        "drive_song_basic",
+        "journey_history_local",
+        "basic_share",
+      ]),
+    );
     expect(entitlementsForPlan("FREE")).toEqual(FREE_ENTITLEMENTS);
   });
 
@@ -29,5 +41,23 @@ describe("plan entitlements", () => {
 
   it("trial grant matches premium entitlements", () => {
     expect(TRIAL_DRIVE_PLUS_ENTITLEMENTS).toEqual(PREMIUM_ENTITLEMENTS);
+  });
+
+  it("Drive+ includes every full creative capability", () => {
+    expect(entitlementsForPlan("DRIVE_PLUS")).toEqual(
+      expect.arrayContaining([
+        "symphony_all",
+        "worlds_all",
+        "fusion",
+        "drive_song_full",
+        "drive_reel",
+        "journey_history_full",
+        "journey_remix",
+        "studio_symphony",
+        "studio_fusion",
+        "premium_presets",
+        "experience_drops",
+      ]),
+    );
   });
 });

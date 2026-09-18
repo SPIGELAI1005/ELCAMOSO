@@ -1,12 +1,12 @@
 /**
  * Versioned calibration-trace schema for road-test replay.
- * No latitude/longitude — powertrain + motion only.
+ * No latitude/longitude - powertrain + motion only.
  */
 
 export const CALIBRATION_TRACE_KIND = "elcamoso.calibration.trace" as const;
 export const CALIBRATION_TRACE_VERSION = 1 as const;
 
-/** One sample — enough to reproduce drivetrain + audio state without GPS route. */
+/** One sample - enough to reproduce drivetrain + audio state without GPS route. */
 export interface CalibrationTraceSample {
   /** Milliseconds from trace start. */
   tMs: number;
@@ -59,7 +59,7 @@ export interface CalibrationTraceMeta {
   dynamicDrive: boolean;
   synthesisMode: string;
   label: string;
-  /** Wall-clock ISO start — not a geographic route. */
+  /** Wall-clock ISO start - not a geographic route. */
   recordedAt: string;
   /** Source: road | scenario | import */
   origin: "road" | "scenario" | "import";

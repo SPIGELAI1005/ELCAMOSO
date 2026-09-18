@@ -60,19 +60,19 @@ After optimization, the typical cockpit path targets **~4–8 React commits/s** 
 
 ### After audit (latest)
 
-| Change                                        | Effect                                                 |
-| --------------------------------------------- | ------------------------------------------------------ |
-| `computeUiFingerprint()` + `tryEmitUi()`      | Skip emit when RPM/gear/speed/motion buckets unchanged |
+| Change                                        | Effect                                                        |
+| --------------------------------------------- | ------------------------------------------------------------- |
+| `computeUiFingerprint()` + `tryEmitUi()`      | Skip emit when RPM/gear/speed/motion buckets unchanged        |
 | **Core/aux fingerprint split**                | Skip analyser + pipeline reads when core stable (non-cockpit) |
-| **Cockpit aux throttle**                      | Pipeline/meter refresh ~320 ms during steady cruise    |
-| `useSessionSelector()` on chrome              | Nav/layout ignore RPM-only emits                       |
-| Single subscription in `useDriveSession`      | Removes redundant store read                           |
-| `memo(DynamicDriveInstrument)`                | Skips SVG/text work when quantized props match         |
-| `memo(ElcamosoMark)` + quantized motion props | Fewer inline style + animation restarts                |
-| Diagnostics: interval-only                    | No 12.5 Hz diagnostic collection from subscribe        |
-| **Relay motion callback ingest**              | Phone motion at 15 Hz → fusion only; **no React re-render** |
-| **`RelayRemoteControlBridge` selector**       | Ignores RPM ticks; syncs on kind/status changes only   |
-| **`DriveSessionPanel` pipeline selector**     | Dev pipeline panel ignores unrelated session fields    |
+| **Cockpit aux throttle**                      | Pipeline/meter refresh ~320 ms during steady cruise           |
+| `useSessionSelector()` on chrome              | Nav/layout ignore RPM-only emits                              |
+| Single subscription in `useDriveSession`      | Removes redundant store read                                  |
+| `memo(DynamicDriveInstrument)`                | Skips SVG/text work when quantized props match                |
+| `memo(ElcamosoMark)` + quantized motion props | Fewer inline style + animation restarts                       |
+| Diagnostics: interval-only                    | No 12.5 Hz diagnostic collection from subscribe               |
+| **Relay motion callback ingest**              | Phone motion at 15 Hz → fusion only; **no React re-render**   |
+| **`RelayRemoteControlBridge` selector**       | Ignores RPM ticks; syncs on kind/status changes only          |
+| **`DriveSessionPanel` pipeline selector**     | Dev pipeline panel ignores unrelated session fields           |
 
 **Quantization buckets (UI fingerprint):**
 
@@ -127,15 +127,15 @@ Display ingest: `onPhoneMotion` callback → `ingestPhoneRelayMotion()` → fusi
 
 ### Before relay callback fix
 
-| Source                         | Approx. re-renders/s |
-| ------------------------------ | -------------------- |
-| `DriveSessionPanel` (motion)   | **~15** (via `lastMotion` state) |
+| Source                       | Approx. re-renders/s             |
+| ---------------------------- | -------------------------------- |
+| `DriveSessionPanel` (motion) | **~15** (via `lastMotion` state) |
 
 ### After relay callback fix
 
-| Source                         | Approx. re-renders/s |
-| ------------------------------ | -------------------- |
-| `DriveSessionPanel` (motion)   | **0** (ingest only)  |
+| Source                       | Approx. re-renders/s |
+| ---------------------------- | -------------------- |
+| `DriveSessionPanel` (motion) | **0** (ingest only)  |
 
 ---
 
@@ -252,21 +252,21 @@ Optional dev flags: `?debug=1` + Settings → Drive debug diagnostics (keep off 
 
 ## Files touched in this audit
 
-| File                                        | Change                                            |
-| ------------------------------------------- | ------------------------------------------------- |
-| `src/lib/drive/session.ts`                  | UI fingerprint, `tryEmitUi`, core/aux split, diagnostics throttle |
-| `src/lib/store/session-store.ts`            | `useSessionSelector`                              |
-| `src/lib/drive/useDriveSession.ts`          | Expose `sessionSnap`                              |
-| `src/routes/drive.tsx`                      | Single subscription                               |
-| `src/routes/__root.tsx`, nav components     | Selective selectors                               |
-| `src/components/DynamicDriveInstrument.tsx` | `memo`                                            |
-| `src/components/ElcamosoLogo.tsx`           | `memo` + quantization                             |
-| `src/components/DriveDiagnosticsPanel.tsx`  | Interval-only updates                             |
-| `src/lib/sound/dynamic-drive/synth.ts`      | Lazy debug info                                   |
-| `src/lib/drive-relay/client.ts`             | Motion/telemetry callback ingest (no WS `setState`) |
-| `src/components/DriveSessionPanel.tsx`      | Callback ingest + pipeline selector               |
-| `src/components/RelayRemoteControlBridge.tsx` | Session kind/status selector                    |
-| `src/lib/drive-relay/remote-control.ts`     | `buildDriveRemoteState` accepts session slice     |
+| File                                          | Change                                                            |
+| --------------------------------------------- | ----------------------------------------------------------------- |
+| `src/lib/drive/session.ts`                    | UI fingerprint, `tryEmitUi`, core/aux split, diagnostics throttle |
+| `src/lib/store/session-store.ts`              | `useSessionSelector`                                              |
+| `src/lib/drive/useDriveSession.ts`            | Expose `sessionSnap`                                              |
+| `src/routes/drive.tsx`                        | Single subscription                                               |
+| `src/routes/__root.tsx`, nav components       | Selective selectors                                               |
+| `src/components/DynamicDriveInstrument.tsx`   | `memo`                                                            |
+| `src/components/ElcamosoLogo.tsx`             | `memo` + quantization                                             |
+| `src/components/DriveDiagnosticsPanel.tsx`    | Interval-only updates                                             |
+| `src/lib/sound/dynamic-drive/synth.ts`        | Lazy debug info                                                   |
+| `src/lib/drive-relay/client.ts`               | Motion/telemetry callback ingest (no WS `setState`)               |
+| `src/components/DriveSessionPanel.tsx`        | Callback ingest + pipeline selector                               |
+| `src/components/RelayRemoteControlBridge.tsx` | Session kind/status selector                                      |
+| `src/lib/drive-relay/remote-control.ts`       | `buildDriveRemoteState` accepts session slice                     |
 
 ---
 

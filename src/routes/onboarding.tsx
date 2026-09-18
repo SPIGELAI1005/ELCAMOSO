@@ -1,29 +1,13 @@
 import { useEffect, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createSeoHeadFromPath } from "@/lib/seo";
 import { ElcamosoMark } from "@/components/ElcamosoLogo";
 import { useSettings } from "@/lib/drive/useSettings";
 import { useReducedMotion } from "@/lib/drive/useReducedMotion";
 
 export const Route = createFileRoute("/onboarding")({
   component: Onboarding,
-  head: () => ({
-    meta: [
-      { title: "Get started - ELCAMOSO" },
-      {
-        name: "description",
-        content:
-          "Set up ELCAMOSO in three steps: brand, Location and Motion, then start your drive.",
-      },
-      { property: "og:title", content: "Get started - ELCAMOSO" },
-      {
-        property: "og:description",
-        content: "Set up ELCAMOSO in three steps and let your sound follow your drive.",
-      },
-      { property: "og:type", content: "website" },
-      { property: "og:url", content: "/onboarding" },
-    ],
-    links: [{ rel: "canonical", href: "/onboarding" }],
-  }),
+  head: () => createSeoHeadFromPath("/onboarding"),
 });
 
 type Step = 0 | 1 | 2;

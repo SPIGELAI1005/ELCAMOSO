@@ -9,18 +9,11 @@ import {
   writeStoredRelayCred,
 } from "@/components/PhonePairSession";
 import { joinDriveRelayByCodeFn } from "@/lib/drive-relay/server-fns";
+import { createSeoHeadFromPath } from "@/lib/seo";
 
 export const Route = createFileRoute("/pair")({
   component: PairManualScreen,
-  head: () => ({
-    meta: [
-      { title: "Pair phone - ELCAMOSO" },
-      {
-        name: "description",
-        content: "Enter the code from your car to connect this phone as a motion sensor.",
-      },
-    ],
-  }),
+  head: () => createSeoHeadFromPath("/pair"),
 });
 
 function PairManualScreen() {
@@ -81,7 +74,7 @@ function PairManualScreen() {
         <div>
           <h1 className="text-2xl font-light">Connect this phone</h1>
           <p className="mt-3 text-sm text-muted-foreground">
-            Enter the six-digit code shown on the car. This phone sends motion only — sound plays in
+            Enter the six-digit code shown on the car. This phone sends motion only - sound plays in
             the car.
           </p>
         </div>

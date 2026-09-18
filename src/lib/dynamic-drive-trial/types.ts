@@ -1,9 +1,5 @@
 export type DynamicDriveTrialStatus =
-  | "available"
-  | "active"
-  | "exhausted"
-  | "expired"
-  | "converted";
+  "available" | "active" | "exhausted" | "expired" | "converted";
 
 export type DynamicDriveTrialSessionStatus = "active" | "ended";
 

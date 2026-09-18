@@ -23,8 +23,8 @@ export const Route = createFileRoute("/api/billing/portal")({
         }
 
         const returnPath =
-          typeof body.returnPath === "string" && body.returnPath.trim()
-            ? body.returnPath.trim()
+          typeof body["returnPath"] === "string" && body["returnPath"].trim()
+            ? body["returnPath"].trim()
             : "/settings";
 
         try {

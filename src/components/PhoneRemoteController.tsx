@@ -131,7 +131,7 @@ export function PhoneRemoteController({ relay, className = "" }: PhoneRemoteCont
       {open ? (
         <div className="mt-5 space-y-5 border-t border-border/50 pt-5">
           <p className="text-xs leading-relaxed text-muted-foreground">
-            Sound plays in the car. Set your Sound Profile while parked — you do not need these
+            Sound plays in the car. Set your Sound Profile while parked - you do not need these
             controls while moving. Motion keeps flowing when this panel is closed.
           </p>
 

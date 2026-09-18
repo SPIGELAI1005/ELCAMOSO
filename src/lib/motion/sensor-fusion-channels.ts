@@ -1,6 +1,6 @@
 import type { MotionSample, SensorSource } from "@/lib/motion/types";
 
-/** Logical ingress channels — mapped onto MotionSample fields, not separate wire types. */
+/** Logical ingress channels - mapped onto MotionSample fields, not separate wire types. */
 export type FusionInputChannel =
   "tesla-browser-gps" | "tesla-browser-imu" | "phone-gps" | "phone-imu" | "vehicle-telemetry";
 

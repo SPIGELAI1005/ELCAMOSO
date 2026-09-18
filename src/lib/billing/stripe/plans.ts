@@ -1,7 +1,7 @@
 import type { Plan } from "@/lib/entitlements/types";
 import type { BillingInterval } from "@/lib/billing/status";
 
-/** Internal commercial plan ids — safe for client requests. Never Stripe Price ids. */
+/** Internal commercial plan ids - safe for client requests. Never Stripe Price ids. */
 export type CommercialPlanId = "drive_plus_monthly" | "drive_plus_yearly";
 
 export const COMMERCIAL_PLAN_IDS: readonly CommercialPlanId[] = [

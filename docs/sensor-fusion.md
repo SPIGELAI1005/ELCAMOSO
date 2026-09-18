@@ -4,13 +4,13 @@ Multi-source motion fusion produces a single `VehicleMotionState` for the virtua
 
 ## Input hierarchy
 
-| Priority | Channel | Source tag | Role |
-| -------- | ------- | ---------- | ---- |
-| 1 | Vehicle telemetry | `vehicle-telemetry` | Accurate speed/accel baseline (Fleet API stream or poll) |
-| 2 | Phone IMU | `phone` | Fast transients (acceleration spikes, lead correction) |
-| 3 | Phone GPS | `phone` | Speed fallback when telemetry is absent or stale |
-| 4 | Tesla browser IMU | `tesla-browser` | IMU fallback when phone relay is unavailable |
-| 5 | Tesla browser GPS | `tesla-browser` | Final speed fallback |
+| Priority | Channel           | Source tag          | Role                                                     |
+| -------- | ----------------- | ------------------- | -------------------------------------------------------- |
+| 1        | Vehicle telemetry | `vehicle-telemetry` | Accurate speed/accel baseline (Fleet API stream or poll) |
+| 2        | Phone IMU         | `phone`             | Fast transients (acceleration spikes, lead correction)   |
+| 3        | Phone GPS         | `phone`             | Speed fallback when telemetry is absent or stale         |
+| 4        | Tesla browser IMU | `tesla-browser`     | IMU fallback when phone relay is unavailable             |
+| 5        | Tesla browser GPS | `tesla-browser`     | Final speed fallback                                     |
 
 Ingress helpers: `browserGpsMotionSample`, `browserImuMotionSample`, `phoneRelayMotionSample`, `vehicleTelemetryMotionSample`.
 
@@ -38,15 +38,15 @@ Relay loss helpers: `markTelemetryRelayLost()`, `markPhoneRelayLost()`, `markPho
 
 ## Key files
 
-| File | Role |
-| ---- | ---- |
-| `sensor-fusion.ts` | Fusion state, tick, ingest |
-| `sensor-fusion-correction.ts` | Layered speed/accel correction, conflict/lag tuning |
-| `sensor-fusion-channels.ts` | Input channel model |
-| `motion-fallback.ts` | Tier transitions, hold/decay, reconnect blend |
-| `types.ts` | `MotionSample`, `VehicleMotionState`, `MotionFallbackTier` |
-| `filters.ts` | Low-pass, spike reject, interpolate |
-| `fusion-scenarios.ts` | Fusion → powertrain test scenarios |
+| File                          | Role                                                       |
+| ----------------------------- | ---------------------------------------------------------- |
+| `sensor-fusion.ts`            | Fusion state, tick, ingest                                 |
+| `sensor-fusion-correction.ts` | Layered speed/accel correction, conflict/lag tuning        |
+| `sensor-fusion-channels.ts`   | Input channel model                                        |
+| `motion-fallback.ts`          | Tier transitions, hold/decay, reconnect blend              |
+| `types.ts`                    | `MotionSample`, `VehicleMotionState`, `MotionFallbackTier` |
+| `filters.ts`                  | Low-pass, spike reject, interpolate                        |
+| `fusion-scenarios.ts`         | Fusion → powertrain test scenarios                         |
 
 ## Tests
 

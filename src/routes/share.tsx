@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createSeoHeadFromPath } from "@/lib/seo";
 import { ElcamosoMark } from "@/components/ElcamosoLogo";
 import { useSettings } from "@/lib/drive/useSettings";
 import { useAudition } from "@/lib/drive/useAudition";
@@ -15,24 +16,7 @@ export const Route = createFileRoute("/share")({
     return { ...(p ? { p } : {}), ...(c ? { c } : {}) };
   },
   component: ShareSound,
-  head: () => ({
-    meta: [
-      { title: "Shared sound - ELCAMOSO" },
-      {
-        name: "description",
-        content:
-          "Audition a Studio sound personality someone shared with you. Nothing is saved until you keep it.",
-      },
-      { property: "og:title", content: "Shared sound - ELCAMOSO" },
-      {
-        property: "og:description",
-        content: "Audition a Studio sound personality someone shared with you.",
-      },
-      { property: "og:type", content: "website" },
-      { property: "og:url", content: "/share" },
-    ],
-    links: [{ rel: "canonical", href: "/share" }],
-  }),
+  head: () => createSeoHeadFromPath("/share"),
 });
 
 function ShareSound() {

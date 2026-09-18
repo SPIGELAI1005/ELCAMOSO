@@ -4,11 +4,11 @@ Restricted developer/ops tooling for inspecting and reconciling subscription sta
 
 ## Access control
 
-| Layer | Guard |
-|-------|--------|
-| Web UI | `/debug/billing` — `import.meta.env.DEV` only (redirects to `/` in production builds) |
-| Server fns | `ELCAMOSO_BILLING_ADMIN_SECRET` required on every admin request |
-| CLI | Same secret via environment variable |
+| Layer      | Guard                                                                                 |
+| ---------- | ------------------------------------------------------------------------------------- |
+| Web UI     | `/debug/billing` — `import.meta.env.DEV` only (redirects to `/` in production builds) |
+| Server fns | `ELCAMOSO_BILLING_ADMIN_SECRET` required on every admin request                       |
+| CLI        | Same secret via environment variable                                                  |
 
 Set the secret in local `.env`:
 
@@ -45,17 +45,17 @@ Outputs JSON diagnostics (and reconcile result when `--resync` is used).
 
 ## Snapshot fields
 
-| Field | Source |
-|-------|--------|
-| Internal plan | Local entitlement resolution |
-| Entitlements | `buildEntitlementSnapshot` (plan + trial overlay) |
-| Trial status | Dynamic Drive trial service |
-| Stripe customer id | User billing repository |
-| Stripe subscription id | Latest persisted subscription |
-| Local subscription status | Runtime subscription store |
-| Current period end | Runtime store, fallback to persisted |
-| Last subscription update | Persisted subscription `updatedAt` (webhook sync proxy) |
-| Failed webhooks | Webhook event store `listFailed` |
+| Field                     | Source                                                  |
+| ------------------------- | ------------------------------------------------------- |
+| Internal plan             | Local entitlement resolution                            |
+| Entitlements              | `buildEntitlementSnapshot` (plan + trial overlay)       |
+| Trial status              | Dynamic Drive trial service                             |
+| Stripe customer id        | User billing repository                                 |
+| Stripe subscription id    | Latest persisted subscription                           |
+| Local subscription status | Runtime subscription store                              |
+| Current period end        | Runtime store, fallback to persisted                    |
+| Last subscription update  | Persisted subscription `updatedAt` (webhook sync proxy) |
+| Failed webhooks           | Webhook event store `listFailed`                        |
 
 ## Modules
 

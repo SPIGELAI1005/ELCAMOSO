@@ -22,14 +22,14 @@ Do **not** solve realism by EQ-ing sawtooth voices, raising broadband noise, or 
 
 ## Why V1 / “Current” sounded electronic
 
-| Cause | Effect |
-| --- | --- |
-| Dominant saw / multi-oscillator stacks | Pitch-bent synth voice as RPM rises |
-| Globally pitch-shifted harmonics | Everything scales with RPM like one oscillator |
-| Continuous filtered noise beds | Hiss / whoosh instead of combustion pressure |
-| White/pink shift “swooshes” | Fake gear events |
-| Cap ~40 Hz per-stroke pulse nodes | Either too soft or too expensive if uncapped |
-| Missing semi-stationary resonances | No stable exhaust/body “place” |
+| Cause                                  | Effect                                         |
+| -------------------------------------- | ---------------------------------------------- |
+| Dominant saw / multi-oscillator stacks | Pitch-bent synth voice as RPM rises            |
+| Globally pitch-shifted harmonics       | Everything scales with RPM like one oscillator |
+| Continuous filtered noise beds         | Hiss / whoosh instead of combustion pressure   |
+| White/pink shift “swooshes”            | Fake gear events                               |
+| Cap ~40 Hz per-stroke pulse nodes      | Either too soft or too expensive if uncapped   |
+| Missing semi-stationary resonances     | No stable exhaust/body “place”                 |
 
 ---
 
@@ -61,21 +61,21 @@ Lifecycle preserved: DriveSession, profile crossfade, cabin EQ, Road Feel V3 per
 
 ## Combustion DSP
 
-| Mode | Mechanism |
-| --- | --- |
-| Worklet | `/audio/combustion-processor.js` — one processor, impulse train at `firingHz` |
-| Fallback | Single looping brown buffer AM’d by one sine at `firingHz` + soft shaper |
+| Mode     | Mechanism                                                                     |
+| -------- | ----------------------------------------------------------------------------- |
+| Worklet  | `/audio/combustion-processor.js` — one processor, impulse train at `firingHz` |
+| Fallback | Single looping brown buffer AM’d by one sine at `firingHz` + soft shaper      |
 
 Impulse ≈ pressure event. Load raises punch + brightness inside the worklet. Architecture codes:
 
-| Code | Character |
-| --- | --- |
-| 0 | Even (I6 / V10 / I4) |
-| 1 | Lope (American V8) |
-| 2 | Flat overlapping (Flat-Six) |
-| 3 | Cross-plane refined (GT V8) |
-| 4 | V-twin uneven |
-| 5 | Single |
+| Code | Character                   |
+| ---- | --------------------------- |
+| 0    | Even (I6 / V10 / I4)        |
+| 1    | Lope (American V8)          |
+| 2    | Flat overlapping (Flat-Six) |
+| 3    | Cross-plane refined (GT V8) |
+| 4    | V-twin uneven               |
+| 5    | Single                      |
 
 No per-fire `OscillatorNode` / `AudioBufferSourceNode` creation.
 
@@ -94,13 +94,13 @@ No per-fire `OscillatorNode` / `AudioBufferSourceNode` creation.
 
 Configured in `src/lib/sound/realism/v2/acoustic-engine.ts`:
 
-| Profile | Feel |
-| --- | --- |
-| GT V8 | Dense, refined, broad-spectrum |
-| American Muscle V8 | Lower pulse, idle lope, exhaust-dominant |
-| Flat-Six Sport | Smooth, precise, strong intake development |
-| Turbo Inline-6 | Deep midrange + load-linked spool |
-| Racing V10 | Dense high-RPM intake richness |
+| Profile               | Feel                                          |
+| --------------------- | --------------------------------------------- |
+| GT V8                 | Dense, refined, broad-spectrum                |
+| American Muscle V8    | Lower pulse, idle lope, exhaust-dominant      |
+| Flat-Six Sport        | Smooth, precise, strong intake development    |
+| Turbo Inline-6        | Deep midrange + load-linked spool             |
+| Racing V10            | Dense high-RPM intake richness                |
 | Motorcycle / Big Twin | High-RPM I4 / lopey twin (secondary priority) |
 
 ---
@@ -119,12 +119,12 @@ Not gain alone.
 
 Uses Powertrain phases + `shiftLoadMultiplier`:
 
-| Phase | Audio |
-| --- | --- |
-| torque_cut / disengage | Combustion/intake energy drops |
-| ratio_transition | RPM falls/rises from powertrain |
-| reengage | Short resonant engagement impulse |
-| settle | Load restores |
+| Phase                  | Audio                             |
+| ---------------------- | --------------------------------- |
+| torque_cut / disengage | Combustion/intake energy drops    |
+| ratio_transition       | RPM falls/rises from powertrain   |
+| reengage               | Short resonant engagement impulse |
+| settle                 | Load restores                     |
 
 Primary cue = **RPM + load interruption**, not a white-noise transient.
 
@@ -164,10 +164,10 @@ Legacy `createCombustionPulseLayer` (per-fire nodes, 40 Hz cap) is **not** on th
 
 ## A/B method
 
-| Control | Values | Where |
-| --- | --- | --- |
-| `SoundEngine.setRealismEngine` | `"current"` \| `"v2"` | Dev |
-| Harness | Current Engine / Realism V2 | `/debug`, `/debug/calibration` |
+| Control                        | Values                      | Where                          |
+| ------------------------------ | --------------------------- | ------------------------------ |
+| `SoundEngine.setRealismEngine` | `"current"` \| `"v2"`       | Dev                            |
+| Harness                        | Current Engine / Realism V2 | `/debug`, `/debug/calibration` |
 
 Use the **same** prerecorded / scenario trace. Match loudness (Road Feel V3 staging + profile trim) before judging — louder must not win by default.
 

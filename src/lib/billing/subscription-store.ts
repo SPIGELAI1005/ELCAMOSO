@@ -8,7 +8,7 @@ export interface UserSubscriptionRecord {
   interval: BillingInterval | null;
   cancelAtPeriodEnd?: boolean;
   currentPeriodEnd?: Date | null;
-  /** Set when status first becomes past_due — starts grace clock. */
+  /** Set when status first becomes past_due - starts grace clock. */
   pastDueSince?: Date | null;
 }
 

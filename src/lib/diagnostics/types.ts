@@ -38,7 +38,7 @@ export interface FusionDiagnostics {
 }
 
 export interface PowertrainDiagnostics {
-  /** Explicit backend — never confuse Legacy Mode with Dynamic Drive in tests. */
+  /** Explicit backend - never confuse Legacy Mode with Dynamic Drive in tests. */
   powertrainBackend: "legacy" | "dynamic";
   throttle: number;
   load: number;
@@ -114,7 +114,7 @@ export interface DiagnosticsSessionExport {
   exportedAt: string;
   durationMs: number;
   frameCount: number;
-  /** Session context — no location fields. */
+  /** Session context - no location fields. */
   meta: DiagnosticsSessionMeta;
   frames: DriveDiagnosticsFrame[];
 }

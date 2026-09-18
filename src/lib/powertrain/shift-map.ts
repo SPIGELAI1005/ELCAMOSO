@@ -11,7 +11,7 @@ export interface ShiftMap {
   demandBreakpoints: readonly number[];
   /** upshiftSpeedKmh[fromGear - 1][breakpointIndex] */
   upshiftSpeedKmh: number[][];
-  /** downshiftSpeedKmh[fromGear - 1][breakpointIndex] — leave `fromGear` when below */
+  /** downshiftSpeedKmh[fromGear - 1][breakpointIndex] - leave `fromGear` when below */
   downshiftSpeedKmh: number[][];
   /** Extra km/h deadband around schedule boundaries. */
   speedHysteresisKmh: number;

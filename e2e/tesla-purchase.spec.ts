@@ -13,16 +13,18 @@ test.describe("Tesla purchase shell", () => {
     await expect(page.getByText(/scan a fresh code from your car/i)).toBeVisible();
   });
 
-  test("upgrade success return page renders", async ({ page }) => {
+  test("billing success cannot bypass an invalid upgrade token", async ({ page }) => {
     await gotoPath(page, "/upgrade/test-token?billing=success");
     await expectAppHealthy(page);
-    await expect(page.getByRole("heading", { name: /payment received/i })).toBeVisible();
-    await expect(page.getByText(/your car should show drive\+ is ready/i)).toBeVisible();
+    await expect(page.getByRole("heading", { name: /link expired/i })).toBeVisible();
+    await expect(page.getByText(/scan a fresh code from your car/i)).toBeVisible();
   });
 
   test("drive cockpit with upgrade param loads without error boundary", async ({ page }) => {
     await gotoPath(page, "/drive?cockpit=1&upgrade=drive-plus");
     await expectAppHealthy(page);
-    await expect(page.locator("body")).toContainText(/Start Drive|Stop Drive|Sound Active|No motion yet/i);
+    await expect(page.locator("body")).toContainText(
+      /Start Drive|Stop Drive|Sound Active|No motion yet/i,
+    );
   });
 });

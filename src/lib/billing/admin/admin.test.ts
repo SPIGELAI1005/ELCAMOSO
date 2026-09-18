@@ -1,9 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import {
-  assertBillingAdminAccess,
-  BillingAdminAccessDeniedError,
-} from "@/lib/billing/admin/auth";
+import { assertBillingAdminAccess, BillingAdminAccessDeniedError } from "@/lib/billing/admin/auth";
 import { buildBillingAdminDiagnostics } from "@/lib/billing/admin/diagnostics";
 import { resolveInternalUserLookup } from "@/lib/billing/admin/resolve-user";
 import { reconcileUserBillingFromStripe } from "@/lib/billing/resilience/reconciliation";
@@ -12,7 +9,10 @@ import {
   getSubscriptionRepository,
   resetSubscriptionRepositoryStoreForTests,
 } from "@/lib/billing/subscription-repository-memory";
-import { getSubscriptionForUser, resetSubscriptionStoreForTests } from "@/lib/billing/subscription-store";
+import {
+  getSubscriptionForUser,
+  resetSubscriptionStoreForTests,
+} from "@/lib/billing/subscription-store";
 import {
   createUserForEmail,
   registerUserEmail,

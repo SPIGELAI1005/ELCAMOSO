@@ -12,7 +12,7 @@ interface DynamicDriveTrialSettingsProps {
   settings: ElcamosoSettings;
 }
 
-/** Trial status in Settings — offer, active preview, or exhausted note. */
+/** Trial status in Settings - offer, active preview, or exhausted note. */
 export function DynamicDriveTrialSettings({ settings }: DynamicDriveTrialSettingsProps) {
   const monetizationEnabled = useMonetizationEnabled();
   const { isAuthenticated } = useAccount();

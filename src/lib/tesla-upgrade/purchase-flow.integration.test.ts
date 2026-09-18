@@ -1,5 +1,5 @@
 /**
- * End-to-end Tesla purchase flow — server-side integration.
+ * End-to-end Tesla purchase flow - server-side integration.
  *
  * Simulates: FREE user → trial → upgrade CTA window → QR token → phone checkout
  * → Stripe webhook → entitlements → relay entitlement-update → Drive+ without reload.
@@ -13,7 +13,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { resetAccountAuthStoreForTests, saveAccountSession } from "@/lib/account/session-store";
 import { beginDrivePlusCheckout } from "@/lib/billing/checkout-service";
 import { provisionEntitlementsFromSubscription } from "@/lib/billing/provision-entitlements";
-import { resetSubscriptionStoreForTests, getSubscriptionForUser } from "@/lib/billing/subscription-store";
+import {
+  resetSubscriptionStoreForTests,
+  getSubscriptionForUser,
+} from "@/lib/billing/subscription-store";
 import { dispatchStripeWebhookEvent } from "@/lib/billing/stripe/webhook";
 import { resetSubscriptionRepositoryStoreForTests } from "@/lib/billing/subscription-repository-memory";
 import {
@@ -22,9 +25,7 @@ import {
   pushEntitlementUpdateToDisplay,
   resetDriveRelayStoreForTests,
 } from "@/lib/drive-relay/store";
-import {
-  DYNAMIC_DRIVE_TRIAL_MAX_CREDIT_GAP_MS,
-} from "@/lib/dynamic-drive-trial/config";
+import { DYNAMIC_DRIVE_TRIAL_MAX_CREDIT_GAP_MS } from "@/lib/dynamic-drive-trial/config";
 import { resolveTrialUpgradeMilestone } from "@/lib/dynamic-drive-trial/display";
 import {
   getDynamicDriveTrialService,
@@ -154,7 +155,7 @@ describe("Tesla purchase flow (integration)", () => {
   });
 
   it("happy path: trial → QR → checkout → webhook → relay → Drive+ without reload", async () => {
-    // 1. FREE user — no Drive+ yet
+    // 1. FREE user - no Drive+ yet
     let entitlements = await resolveEntitlementUser({
       sessionToken: SESSION_TOKEN,
       now: BASE.getTime(),
@@ -184,7 +185,7 @@ describe("Tesla purchase flow (integration)", () => {
     await trialService.startDriveSession(USER_ID, driveSessionId, BASE);
     beginLiveDriveAccess(PREMIUM_ENTITLEMENTS);
 
-    // 4. Trial nearly expires — upgrade CTA at 10 / 5 / 1 min milestones
+    // 4. Trial nearly expires - upgrade CTA at 10 / 5 / 1 min milestones
     let at = BASE;
     const chunkMs = DYNAMIC_DRIVE_TRIAL_MAX_CREDIT_GAP_MS;
     let lowRemaining = await trialService.getStatus(USER_ID, at);
@@ -214,7 +215,7 @@ describe("Tesla purchase flow (integration)", () => {
     expect(upgrade.upgradePath).toContain("/upgrade/");
     expect(tokenStatusForTests(upgrade.token)).toBe("pending");
 
-    // 6. Phone scans QR — token resolves
+    // 6. Phone scans QR - token resolves
     const resolved = resolveTeslaUpgradeToken(upgrade.token);
     expect(resolved.valid).toBe(true);
 
@@ -242,7 +243,7 @@ describe("Tesla purchase flow (integration)", () => {
       }),
     );
 
-    // 8–9. Test payment succeeds — webhook is billing authority
+    // 8–9. Test payment succeeds - webhook is billing authority
     const checkoutEvent = {
       id: "evt_tesla_checkout_complete",
       object: "event",
@@ -275,7 +276,7 @@ describe("Tesla purchase flow (integration)", () => {
     expect(hasEntitlement(entitlements, "dynamic_drive")).toBe(true);
     expect(getSubscriptionForUser(USER_ID)?.plan).toBe("DRIVE_PLUS");
 
-    // 11. Trial converted — no further trial burn
+    // 11. Trial converted - no further trial burn
     const trialAfter = await trialService.getStatus(USER_ID, at);
     expect(trialAfter.status).toBe("converted");
 
@@ -289,8 +290,12 @@ describe("Tesla purchase flow (integration)", () => {
       }),
     );
 
-    // 13. Dynamic Drive continues — same session resumes without reload
-    const resumed = await trialService.startDriveSession(USER_ID, driveSessionId, advanceFrom(at, 5000));
+    // 13. Dynamic Drive continues - same session resumes without reload
+    const resumed = await trialService.startDriveSession(
+      USER_ID,
+      driveSessionId,
+      advanceFrom(at, 5000),
+    );
     expect(resumed.resumed).toBe(true);
     expect(resumed.snapshot.status).toBe("converted");
 
@@ -314,7 +319,7 @@ describe("Tesla purchase flow (integration)", () => {
   });
 });
 
-describe("Tesla purchase flow — failure states", () => {
+describe("Tesla purchase flow - failure states", () => {
   beforeEach(() => {
     resetTeslaUpgradeStoreForTests();
     resetDriveRelayStoreForTests();
@@ -330,7 +335,7 @@ describe("Tesla purchase flow — failure states", () => {
     process.env.STRIPE_PRICE_DRIVE_PLUS_YEARLY = "price_year_test";
   });
 
-  it("expired upgrade token — phone cannot checkout", () => {
+  it("expired upgrade token - phone cannot checkout", () => {
     vi.useFakeTimers();
     vi.setSystemTime(BASE);
     const upgrade = createTeslaUpgradeToken({
@@ -347,17 +352,17 @@ describe("Tesla purchase flow — failure states", () => {
     vi.useRealTimers();
   });
 
-  it("wrong account on phone — bind rejected", () => {
+  it("wrong account on phone - bind rejected", () => {
     const upgrade = createTeslaUpgradeToken({
       userId: USER_ID,
       clientDriveSessionId: CLIENT_DRIVE_SESSION_ID,
     });
-    expect(() => bindUserToTeslaUpgradeToken(upgrade.token, "88888888-8888-4888-8888-888888888888")).toThrow(
-      /same account/i,
-    );
+    expect(() =>
+      bindUserToTeslaUpgradeToken(upgrade.token, "88888888-8888-4888-8888-888888888888"),
+    ).toThrow(/same account/i);
   });
 
-  it("relay disconnected — push fails, polling fallback remains", () => {
+  it("relay disconnected - push fails, polling fallback remains", () => {
     expect(
       pushEntitlementUpdateToDisplay("missing-relay", { plan: "DRIVE_PLUS", revision: 1 }),
     ).toBe(false);
@@ -370,7 +375,7 @@ describe("Tesla purchase flow — failure states", () => {
     ).toBe(false);
   });
 
-  it("webhook delayed — FREE until checkout.session.completed", async () => {
+  it("webhook delayed - FREE until checkout.session.completed", async () => {
     saveAccountSession({
       token: SESSION_TOKEN,
       userId: USER_ID,
@@ -391,7 +396,7 @@ describe("Tesla purchase flow — failure states", () => {
     expect(tokenStatusForTests(upgrade.token)).toBe("pending");
   });
 
-  it("payment succeeds but no relay — token completes, car polls entitlements", () => {
+  it("payment succeeds but no relay - token completes, car polls entitlements", () => {
     const upgrade = createTeslaUpgradeToken({
       userId: USER_ID,
       clientDriveSessionId: CLIENT_DRIVE_SESSION_ID,
@@ -401,7 +406,7 @@ describe("Tesla purchase flow — failure states", () => {
     expect(tokenStatusForTests(upgrade.token)).toBe("completed");
   });
 
-  it("already Drive+ — checkout redirects to portal not duplicate subscription", async () => {
+  it("already Drive+ - checkout redirects to portal not duplicate subscription", async () => {
     saveAccountSession({
       token: SESSION_TOKEN,
       userId: USER_ID,

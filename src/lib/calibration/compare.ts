@@ -27,7 +27,7 @@ export interface CalibrationComparisonReport {
 
 /**
  * Compare two replays of the same motion (or before/after code).
- * Does not claim objective "more realistic" — only reports deltas.
+ * Does not claim objective "more realistic" - only reports deltas.
  */
 export function compareCalibrationTraces(
   before: CalibrationTrace,
@@ -74,14 +74,14 @@ export function compareCalibrationTraces(
   }
   if (beforeMetrics.kickdownResponseMs != null || afterMetrics.kickdownResponseMs != null) {
     narrative.push(
-      `Kickdown response: ${beforeMetrics.kickdownResponseMs ?? "—"} ms → ${afterMetrics.kickdownResponseMs ?? "—"} ms.`,
+      `Kickdown response: ${beforeMetrics.kickdownResponseMs ?? "-"} ms → ${afterMetrics.kickdownResponseMs ?? "-"} ms.`,
     );
   }
   narrative.push(
     `Audio/backends in meta: before realism=${before.meta.realismEngine}, after realism=${after.meta.realismEngine}.`,
   );
   narrative.push(
-    "Deltas describe behavior change under the same motion — not an automatic realism verdict.",
+    "Deltas describe behavior change under the same motion - not an automatic realism verdict.",
   );
 
   return {

@@ -7,7 +7,7 @@ import {
   type UserSubscriptionRecord,
 } from "@/lib/billing/subscription-store";
 
-/** Entitlement gates read this in-memory store only — never Stripe. */
+/** Entitlement gates read this in-memory store only - never Stripe. */
 export function resolveLocalSubscriptionAccess(
   userId: string,
   now = Date.now(),

@@ -22,7 +22,7 @@ export interface GearSelectorContext {
   load: number;
   /** Fast road speed (display / RPM). */
   speedKmh: number;
-  /** Slow-filtered speed for schedule decisions — falls back to speedKmh. */
+  /** Slow-filtered speed for schedule decisions - falls back to speedKmh. */
   shiftDecisionSpeedKmh?: number;
   braking: number;
   lastShiftCompletedAt: number;
@@ -115,7 +115,7 @@ export function selectTargetGearDetailed(
   const coastMax = tx.downshift.coastMaxThrottle ?? 0.28;
   const redlineSoft = profile.engine.redlineRpm * tx.redline.softFraction;
 
-  // Kickdown — may request multiple gears; redline-checked.
+  // Kickdown - may request multiple gears; redline-checked.
   const demandDelta = Math.max(0, ctx.throttle - (ctx.previousDemand ?? ctx.throttle));
   const kickdownReady =
     tx.kickdown.enabled &&
@@ -142,7 +142,7 @@ export function selectTargetGearDetailed(
     return { targetGear: gear + 1, reason: "redline", desiredGear: gear + 1 };
   }
 
-  // Schedule upshift — never while braking (prevents climbing gears into a stop).
+  // Schedule upshift - never while braking (prevents climbing gears into a stop).
   if (gear < tx.gears && ctx.braking < 0.35) {
     const upLine = upshiftSpeedForDemand(map, gear, demand) + hyst;
     if (decisionSpeed >= upLine) {

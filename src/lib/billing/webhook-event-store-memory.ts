@@ -43,7 +43,7 @@ export const memoryWebhookEventStore: WebhookEventStore = {
       .map((event) => ({
         stripeEventId: event.stripeEventId,
         eventType: event.eventType,
-        errorMessage: event.errorMessage,
+        ...(event.errorMessage ? { errorMessage: event.errorMessage } : {}),
       }));
   },
 };
@@ -56,7 +56,7 @@ export function setWebhookEventStore(store: WebhookEventStore): void {
 
 export function getWebhookEventStore(): WebhookEventStore {
   if (activeStore !== memoryWebhookEventStore) return activeStore;
-  if (process.env.DATABASE_URL) return postgresWebhookEventStore;
+  if (process.env["DATABASE_URL"]) return postgresWebhookEventStore;
   return memoryWebhookEventStore;
 }
 

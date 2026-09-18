@@ -4,7 +4,7 @@ import type {
   VehicleTelemetryStatusSnapshot,
 } from "@/lib/motion/vehicle-telemetry/types";
 
-/** Default no-op provider — used when feature flag is off or kind is none. */
+/** Default no-op provider - used when feature flag is off or kind is none. */
 export class NullVehicleTelemetryProvider implements VehicleTelemetryProvider {
   readonly id = "none";
   readonly label = "None";

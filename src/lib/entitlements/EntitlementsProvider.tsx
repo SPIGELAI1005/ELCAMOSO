@@ -58,7 +58,7 @@ export function EntitlementsProvider({ user, now, children }: EntitlementsProvid
     const snapshot =
       user != null
         ? buildEntitlementSnapshot(resolvedUser, at)
-        : query.data ?? buildEntitlementSnapshot(DEFAULT_ENTITLEMENT_USER, at);
+        : (query.data ?? buildEntitlementSnapshot(DEFAULT_ENTITLEMENT_USER, at));
 
     return {
       user: resolvedUser,

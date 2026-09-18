@@ -161,7 +161,7 @@ describe("selectTargetGear", () => {
   });
 
   it("refuses downshift that would exceed redline protection", () => {
-    // High speed in gear 3 — dropping to 2 would exceed redline fraction.
+    // High speed in gear 3 - dropping to 2 would exceed redline fraction.
     const unsafe = speedKmhFromRpmAndGear(
       profile.engine.redlineRpm * profile.transmission.redline.maxDownshiftFraction + 400,
       2,

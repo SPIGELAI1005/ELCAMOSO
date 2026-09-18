@@ -4,13 +4,13 @@ Each **Sound Profile** with `drivetrainMode: "virtual-transmission"` references 
 
 ## Core personalities (launch set)
 
-| Id | Sound profiles | Gears | Idle → Redline | Upshift (ms) | Kickdown | Overrun | Transient character |
-| --- | --- | ---: | --- | --- | --- | --- | --- |
-| `flat-six-sport` | Flat-Six Sport, Race Car, Racing V10 | 7 | 880 → 8000 | 110 / 160 | Late, high threshold | Moderate | NA, crisp rev-match |
-| `american-v8` | American Muscle V8 | 5 | 680 → 6000 | 280 / 340 | Lazy, floor pedal | Strong | NA, long overrun pops |
-| `turbo-inline-6` | Turbo Inline-6, Rally Car | 7 | 750 → 7000 | 130 / 180 | Early, elastic | Medium | Turbo flutter, wastegate |
-| `gt-v8` | GT V8 | 6 | 900 → 6500 | 95 / 140 | Sport, refined | Light | NA, quick rev-match |
-| `synthetic-ev` | Synthetic Hyper EV | 6 | 0 → 12000 | 75 / 90 | Instant, low threshold | Low | Electric clunk, no rev-match |
+| Id               | Sound profiles                       | Gears | Idle → Redline | Upshift (ms) | Kickdown               | Overrun  | Transient character          |
+| ---------------- | ------------------------------------ | ----: | -------------- | ------------ | ---------------------- | -------- | ---------------------------- |
+| `flat-six-sport` | Flat-Six Sport, Race Car, Racing V10 |     7 | 880 → 8000     | 110 / 160    | Late, high threshold   | Moderate | NA, crisp rev-match          |
+| `american-v8`    | American Muscle V8                   |     5 | 680 → 6000     | 280 / 340    | Lazy, floor pedal      | Strong   | NA, long overrun pops        |
+| `turbo-inline-6` | Turbo Inline-6, Rally Car            |     7 | 750 → 7000     | 130 / 180    | Early, elastic         | Medium   | Turbo flutter, wastegate     |
+| `gt-v8`          | GT V8                                |     6 | 900 → 6500     | 95 / 140     | Sport, refined         | Light    | NA, quick rev-match          |
+| `synthetic-ev`   | Synthetic Hyper EV                   |     6 | 0 → 12000      | 75 / 90      | Instant, low threshold | Low      | Electric clunk, no rev-match |
 
 Extended personalities: `motorcycle-inline-4`, `v-twin-cruiser`, `single-cylinder-ag`.
 
@@ -18,19 +18,19 @@ Registry: `src/lib/drive/drivetrain-personalities.ts`.
 
 ## Configuration blocks
 
-| Block | Controls |
-| --- | --- |
-| `engine` | Idle and redline RPM |
-| `transmission.gearRatios` | Physical gear spacing (count = number of gears) |
-| `transmission.upshiftRpm` | Load-dependent shift RPM (low / medium / high) |
-| `transmission.kickdown` | Floor-pedal downshift threshold, min speed, max steps |
-| `transmission.shift` | Shift duration, min hold, rev-match, torque dip |
-| `throttle` | Pedal attack / release (engine response feel) |
-| `overrun` | Lift-off probability, cooldown, prior-throttle gate |
-| `behavior` | Shift aggression multiplier, engine response scaling |
-| `transient` | Dynamic Drive crossfade strengths, aspiration, scheduler overrides, **variant pools** |
-| `motion` | Pitch smoothing for improved synth path |
-| `legacy` | Simplified ratios for Legacy Mode (`computeDriveState`) |
+| Block                     | Controls                                                                              |
+| ------------------------- | ------------------------------------------------------------------------------------- |
+| `engine`                  | Idle and redline RPM                                                                  |
+| `transmission.gearRatios` | Physical gear spacing (count = number of gears)                                       |
+| `transmission.upshiftRpm` | Load-dependent shift RPM (low / medium / high)                                        |
+| `transmission.kickdown`   | Floor-pedal downshift threshold, min speed, max steps                                 |
+| `transmission.shift`      | Shift duration, min hold, rev-match, torque dip                                       |
+| `throttle`                | Pedal attack / release (engine response feel)                                         |
+| `overrun`                 | Lift-off probability, cooldown, prior-throttle gate                                   |
+| `behavior`                | Shift aggression multiplier, engine response scaling                                  |
+| `transient`               | Dynamic Drive crossfade strengths, aspiration, scheduler overrides, **variant pools** |
+| `motion`                  | Pitch smoothing for improved synth path                                               |
+| `legacy`                  | Simplified ratios for Legacy Mode (`computeDriveState`)                               |
 
 ## Attach a personality to a Sound Profile
 
@@ -78,11 +78,11 @@ No engine changes are required unless you introduce a new **aspiration** class (
 
 ## Files
 
-| File | Role |
-| --- | --- |
-| `src/lib/drive/drivetrain-personalities.ts` | Personality registry (source of truth) |
-| `src/lib/drive/drivetrain-resolve.ts` | Sound Profile → powertrain + transients |
-| `src/lib/powertrain/profiles.ts` | Re-exports `POWERTRAIN_PROFILES` |
-| `src/lib/powertrain/types-config.ts` | Transmission TypeScript interfaces |
-| `src/lib/sound/dynamic-drive/layer-weights.ts` | RPM band crossfade from config |
-| `src/lib/sound/dynamic-drive/transient-scheduler.ts` | Event scheduling from config |
+| File                                                 | Role                                    |
+| ---------------------------------------------------- | --------------------------------------- |
+| `src/lib/drive/drivetrain-personalities.ts`          | Personality registry (source of truth)  |
+| `src/lib/drive/drivetrain-resolve.ts`                | Sound Profile → powertrain + transients |
+| `src/lib/powertrain/profiles.ts`                     | Re-exports `POWERTRAIN_PROFILES`        |
+| `src/lib/powertrain/types-config.ts`                 | Transmission TypeScript interfaces      |
+| `src/lib/sound/dynamic-drive/layer-weights.ts`       | RPM band crossfade from config          |
+| `src/lib/sound/dynamic-drive/transient-scheduler.ts` | Event scheduling from config            |

@@ -1,34 +1,28 @@
 import { useLayoutEffect, useRef, useState } from "react";
-import { Link, useNavigate } from "@tanstack/react-router";
-import {
-  ElcamosoLogoLockup,
-  useHeroWavePhase,
-  WordmarkExpansion,
-} from "@/components/ElcamosoLogo";
+import { Link } from "@tanstack/react-router";
+import { ElcamosoLogoLockup, useHeroWavePhase, WordmarkExpansion } from "@/components/ElcamosoLogo";
 import { getSession } from "@/lib/drive/session";
 import { StartDriveBeacon } from "@/components/StartDriveBeacon";
 import { cn } from "@/lib/utils";
 
 export function LandingStartDriveButton({ className }: { className?: string }) {
-  const navigate = useNavigate();
-
-  const onStartDrive = () => {
+  const primeAudio = () => {
     getSession().primeAudioFromUserGesture();
-    void navigate({ to: "/drive", search: { start: true } });
   };
 
   return (
     <StartDriveBeacon className="max-w-full">
-      <button
-        type="button"
-        onClick={onStartDrive}
+      <Link
+        to="/drive"
+        search={{ start: true }}
+        onClick={primeAudio}
         className={cn(
           "relative z-10 inline-flex h-14 w-full min-w-[14rem] items-center justify-center rounded-full bg-primary px-10 text-sm tracking-[0.22em] text-primary-foreground uppercase transition-opacity hover:opacity-90 sm:w-auto",
           className,
         )}
       >
         Start Drive
-      </button>
+      </Link>
     </StartDriveBeacon>
   );
 }
@@ -40,9 +34,7 @@ function HeroReadAboutLink({ className }: { className?: string }) {
       className={cn("group shrink-0 leading-[1.2] text-muted-foreground", className)}
     >
       Read{" "}
-      <span className="text-[#e53935] transition-colors group-hover:text-[#ff5252]">
-        About
-      </span>
+      <span className="text-[#e53935] transition-colors group-hover:text-[#ff5252]">About</span>
     </Link>
   );
 }
@@ -51,20 +43,25 @@ function HeroSecondaryLinks({ className }: { className?: string }) {
   return (
     <div
       className={cn(
-        "flex flex-col items-center gap-3 text-[10px] tracking-[0.24em] uppercase sm:text-[11px] lg:flex-row lg:items-center lg:gap-x-3 lg:gap-y-0 lg:justify-start lg:text-xs",
+        "flex flex-col items-center gap-3 text-[10px] tracking-[0.24em] uppercase sm:text-[11px] lg:items-start lg:text-xs",
         className,
       )}
     >
-      <HeroReadAboutLink />
-      <span className="hidden text-muted-foreground/50 lg:inline" aria-hidden="true">
-        //
-      </span>
-      <Link
-        to="/demo"
-        hash="feel"
-        className="shrink-0 text-muted-foreground hover:text-foreground"
-      >
-        Hear it
+      <div className="flex items-center gap-3">
+        <HeroReadAboutLink />
+        <span className="text-muted-foreground/50" aria-hidden="true">
+          //
+        </span>
+        <Link
+          to="/demo"
+          hash="feel"
+          className="shrink-0 text-muted-foreground hover:text-foreground"
+        >
+          Hear it
+        </Link>
+      </div>
+      <Link to="/explore" className="text-muted-foreground hover:text-foreground">
+        Explore Experiences
       </Link>
     </div>
   );
@@ -78,7 +75,7 @@ function useWordmarkWidth() {
     const wordmark = wordmarkRef.current;
     if (!wordmark) return;
 
-    // Layout width only — getBoundingClientRect includes letter wave-in transforms
+    // Layout width only - getBoundingClientRect includes letter wave-in transforms
     // and can make the expansion (and perceived lockup) jitter on refresh.
     const sync = () => {
       const width = wordmark.offsetWidth;
@@ -96,8 +93,7 @@ function useWordmarkWidth() {
 }
 
 const WORDMARK_CLASS = "text-[2.76rem] sm:text-[3.24rem] lg:text-[3.45rem]";
-const MARK_CLASS =
-  "h-[7.65rem] w-auto sm:h-[9rem] lg:h-[11.475rem] xl:h-[12.825rem]";
+const MARK_CLASS = "h-[7.65rem] w-auto sm:h-[9rem] lg:h-[11.475rem] xl:h-[12.825rem]";
 
 export function LandingHero() {
   const { phase, reducedMotion } = useHeroWavePhase();
@@ -131,7 +127,10 @@ export function LandingHero() {
         </div>
 
         <div className="flex w-full max-w-xs flex-col items-center text-center lg:col-start-2 lg:row-start-1 lg:max-w-none lg:items-start lg:self-end lg:text-left">
-          <h1 className="text-[2.05rem] leading-[1.08] font-light tracking-tight sm:text-5xl xl:text-[3.25rem] xl:leading-[1.06]">
+          <p className="text-[10px] tracking-[0.32em] text-muted-foreground uppercase">
+            Turn motion into sound
+          </p>
+          <h1 className="mt-3 text-[2.05rem] leading-[1.08] font-light tracking-tight sm:text-5xl xl:text-[3.25rem] xl:leading-[1.06]">
             Your EV.
             <br />
             Your Sound.
@@ -139,6 +138,8 @@ export function LandingHero() {
             More Emotion.
           </h1>
           <p className="mt-3 max-w-md text-[0.9375rem] text-muted-foreground sm:mt-6 sm:text-base">
+            Engines. Music. Worlds.
+            <br />
             Feel the e-motion in your electrical motion.
           </p>
         </div>

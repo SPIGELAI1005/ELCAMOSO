@@ -30,6 +30,9 @@ import {
   type HybridCombustionDiagnostics,
   type RealismEngineMode,
 } from "@/lib/sound/realism/v2";
+import { isSymphonyProfileId, SymphonySynth } from "@/lib/symphony";
+import { FusionSynth, isFusionProfileId } from "@/lib/fusion";
+import { isWorldProfileId, WorldSynth } from "@/lib/worlds";
 
 export interface MeterReading {
   peak: number;
@@ -118,6 +121,8 @@ export class SoundEngine {
   private rhythms: RhythmClock[] = [];
   private signals: SignalClock[] = [];
   private profile: SoundProfile | null = null;
+  /** Stable per-interpretation seed (Journey Replay passes its saved seed). */
+  private experienceSeed = 1;
   private volume = 0.7;
   /** per-profile balance gain, 0.4..1.6 */
   private profileGain = 1;
@@ -138,6 +143,9 @@ export class SoundEngine {
   private improved: ImprovedSynth | null = null;
   private dynamicDriveEnabled = false;
   private dynamicDrive: DynamicDriveSynth | null = null;
+  private symphony: SymphonySynth | null = null;
+  private fusion: FusionSynth | null = null;
+  private world: WorldSynth | null = null;
   /** Dev A/B: current engine vs Realism V2. Default v2 for combustion when eligible. */
   private realismEngine: RealismEngineMode = "v2";
   private hybrid: HybridCombustionSynth | null = null;
@@ -181,6 +189,52 @@ export class SoundEngine {
 
   getDynamicDriveDebug(): DynamicLayerDebugInfo[] {
     return this.dynamicDrive?.getDebugInfo() ?? [];
+  }
+
+  getSymphonyDiagnostics(audioTime?: number) {
+    if (!this.symphony) return null;
+    const t = audioTime ?? this.now();
+    return this.symphony.getDiagnosticsAt(t);
+  }
+
+  getSymphonyEnergy() {
+    return (
+      this.symphony?.getEnergy() ?? this.fusion?.getEnergy() ?? this.world?.getEnergy() ?? null
+    );
+  }
+
+  getFusionDiagnostics() {
+    return this.fusion?.getDiagnostics() ?? null;
+  }
+
+  setFusionMix(mix: number) {
+    this.fusion?.setMix(mix, this.now());
+  }
+
+  setFusionHarmonicResonance(depth: number) {
+    this.fusion?.setHarmonicResonance(depth, this.now());
+  }
+
+  getWorldDiagnostics() {
+    return this.world?.getDiagnostics() ?? null;
+  }
+
+  /** Test/debug visibility for proving interpretation switches release old graphs. */
+  getResourceDiagnostics() {
+    return {
+      contextActive: Boolean(this.ctx),
+      oscillatorVoices: this.voices.length,
+      textureVoices: this.textures.length,
+      snippetVoices: this.snippets.length,
+      strategyCount: [
+        this.improved,
+        this.dynamicDrive,
+        this.symphony,
+        this.fusion,
+        this.world,
+        this.hybrid,
+      ].filter(Boolean).length,
+    };
   }
 
   listImprovedLayers() {
@@ -306,7 +360,12 @@ export class SoundEngine {
       seed?: number | undefined;
     },
   ) {
-    if (typeof options?.seed === "number") seedAudioRandom(options.seed);
+    if (typeof options?.seed === "number") {
+      this.experienceSeed = options.seed >>> 0;
+      seedAudioRandom(this.experienceSeed);
+    } else {
+      this.experienceSeed = Date.now() & 0xffff;
+    }
     if (this.ctx) {
       this.setProfile(profile);
       return;
@@ -820,7 +879,34 @@ export class SoundEngine {
         }
       : null;
 
-    // Realism V2 hybrid combustion — A/B vs current Improved / Dynamic Drive path.
+    // Fusion - Engine + Symphony through FusionMixer.
+    if (isFusionProfileId(profile.id) && strategyBuses) {
+      this.fusion = new FusionSynth();
+      const ok = this.fusion.build(ctx, profile, strategyBuses, this.experienceSeed);
+      if (ok) return;
+      this.fusion.dispose();
+      this.fusion = null;
+    }
+
+    // Drive Symphony - musical arrangement from DriveState (fixed BPM, quantized stems).
+    if (isSymphonyProfileId(profile.id) && strategyBuses) {
+      this.symphony = new SymphonySynth();
+      const ok = this.symphony.build(ctx, profile, strategyBuses, this.experienceSeed);
+      if (ok) return;
+      this.symphony.dispose();
+      this.symphony = null;
+    }
+
+    // Worlds - reactive sonic fiction from Drive Energy.
+    if (isWorldProfileId(profile.id) && strategyBuses) {
+      this.world = new WorldSynth();
+      const ok = this.world.build(ctx, profile, strategyBuses, this.experienceSeed);
+      if (ok) return;
+      this.world.dispose();
+      this.world = null;
+    }
+
+    // Realism V2 hybrid combustion - A/B vs current Improved / Dynamic Drive path.
     if (
       this.realismEngine === "v2" &&
       this.synthesisMode === "improved" &&
@@ -1034,7 +1120,17 @@ export class SoundEngine {
     if (!ctx || !profile || !this.filter || this.swapping) return;
     const t = this.now();
 
-    if (this.improved || this.dynamicDrive || this.hybrid) {
+    if (
+      this.improved ||
+      this.dynamicDrive ||
+      this.hybrid ||
+      this.symphony ||
+      this.fusion ||
+      this.world
+    ) {
+      if (this.fusion) this.fusion.update(state, t);
+      if (this.symphony) this.symphony.update(state, t);
+      if (this.world) this.world.update(state, t);
       if (this.hybrid) this.hybrid.update(state, t);
       if (this.improved) this.improved.update(state, t);
       if (this.dynamicDrive) this.dynamicDrive.update(state, t);
@@ -1810,6 +1906,12 @@ export class SoundEngine {
     this.improved = null;
     this.dynamicDrive?.dispose();
     this.dynamicDrive = null;
+    this.symphony?.dispose();
+    this.symphony = null;
+    this.fusion?.dispose();
+    this.fusion = null;
+    this.world?.dispose();
+    this.world = null;
     this.hybrid?.dispose();
     this.hybrid = null;
     this.voices.forEach(({ osc }) => {

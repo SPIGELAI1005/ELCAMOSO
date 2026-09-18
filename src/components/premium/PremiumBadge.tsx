@@ -3,7 +3,7 @@ interface PremiumBadgeProps {
   label?: string;
 }
 
-/** Subtle Drive+ marker — never loud or gamified. */
+/** Subtle Drive+ marker - never loud or gamified. */
 export function PremiumBadge({ className = "", label = "Drive+" }: PremiumBadgeProps) {
   return (
     <span

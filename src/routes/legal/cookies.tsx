@@ -1,22 +1,11 @@
+import { createSeoHeadFromPath } from "@/lib/seo";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { LegalNote, LegalPage, LegalSection } from "@/components/LegalPage";
 import { clearCookieConsent } from "@/lib/legal/cookie-consent";
 
 export const Route = createFileRoute("/legal/cookies")({
   component: Cookies,
-  head: () => ({
-    meta: [
-      { title: "Cookie Notice · ELCAMOSO" },
-      {
-        name: "description",
-        content: "How ELCAMOSO uses cookies and similar storage technologies.",
-      },
-      { property: "og:title", content: "Cookie Notice · ELCAMOSO" },
-      { property: "og:type", content: "website" },
-      { property: "og:url", content: "/legal/cookies" },
-    ],
-    links: [{ rel: "canonical", href: "/legal/cookies" }],
-  }),
+  head: () => createSeoHeadFromPath("/legal/cookies"),
 });
 
 function Cookies() {

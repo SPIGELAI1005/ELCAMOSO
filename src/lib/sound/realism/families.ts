@@ -57,6 +57,16 @@ const FAMILY_BY_ID: Record<string, ProfileFamily> = {
   "synthwave-drive": "musical",
   "deep-bass-pulse": "musical",
   heartbeat: "musical",
+  "symphony-cinematic-rock": "musical",
+  "symphony-motion-orchestra": "musical",
+  "symphony-neon-run": "musical",
+  "world-space-drive": "designed",
+  "world-cyber-city": "designed",
+  "world-storm-run": "environmental",
+  "fusion-road-anthem": "musical",
+  "fusion-mechanical-symphony": "musical",
+  "fusion-midnight-boost": "musical",
+  "fusion-future-pulse": "musical",
 };
 
 export function familyForProfile(profile: SoundProfile | string): ProfileFamily {

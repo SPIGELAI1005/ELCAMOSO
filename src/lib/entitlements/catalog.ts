@@ -16,10 +16,7 @@ export function isEssentialSoundProfile(profileId: string): boolean {
 }
 
 /** Whether the profile can be used during active driving for the current entitlements. */
-export function isSoundProfileEntitled(
-  profileId: string,
-  hasAllSoundProfiles: boolean,
-): boolean {
+export function isSoundProfileEntitled(profileId: string, hasAllSoundProfiles: boolean): boolean {
   return canDriveWithSoundProfile(getProfile(profileId), hasAllSoundProfiles);
 }
 
@@ -28,5 +25,5 @@ export function isSoundProfilePreviewAllowed(profileId: string): boolean {
   return canPreviewSoundProfile(profileId);
 }
 
-/** First free profile — safe fallback when a Drive+ profile is denied for driving. */
+/** First free profile - safe fallback when a Drive+ profile is denied for driving. */
 export const FALLBACK_SOUND_PROFILE_ID = FREE_SOUND_PROFILE_IDS[0] ?? "gt-v8";

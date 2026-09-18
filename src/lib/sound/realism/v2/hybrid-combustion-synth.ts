@@ -1,5 +1,5 @@
 /**
- * HybridCombustionSynth — Realism V2.1 combustion backend.
+ * HybridCombustionSynth - Realism V2.1 combustion backend.
  * Continuous worklet excitation → formants / body resonance → restrained support.
  * Optional sample overlay. Powertrain V2/V3 is authoritative for RPM/load/shift phase.
  */
@@ -157,7 +157,7 @@ export class HybridCombustionSynth {
     this.diagnostics.excitationMode = this.excitation.mode;
     nodes += this.excitation.mode === "worklet" ? 1 : 5;
 
-    // Exhaust formants — semi-stationary resonances excited by combustion
+    // Exhaust formants - semi-stationary resonances excited by combustion
     this.exhaustFormants = cfg.exhaustFormantsHz.map((hz, i) => {
       const filter = ctx.createBiquadFilter();
       filter.type = i === 0 ? "lowpass" : "bandpass";
@@ -173,7 +173,7 @@ export class HybridCombustionSynth {
     });
     this.spectralTilt.connect(this.combustionBus);
 
-    // Body / structure resonances — stay nearly fixed vs RPM
+    // Body / structure resonances - stay nearly fixed vs RPM
     this.bodyResonances = cfg.bodyResonanceHz.map((hz, i) => {
       const filter = ctx.createBiquadFilter();
       filter.type = "peaking";
@@ -204,7 +204,7 @@ export class HybridCombustionSynth {
       return { filter, gain };
     });
 
-    // Supporting band-limited harmonics (triangle/sine — low-level only)
+    // Supporting band-limited harmonics (triangle/sine - low-level only)
     cfg.supportRatios.forEach((ratio, i) => {
       const osc = ctx.createOscillator();
       const g = ctx.createGain();
@@ -230,7 +230,7 @@ export class HybridCombustionSynth {
     this.intakeBus.connect(buses.beds);
     this.sampleBus.connect(buses.body);
 
-    // Mechanical / valvetrain — restrained brown through bandpass
+    // Mechanical / valvetrain - restrained brown through bandpass
     {
       const src = ctx.createBufferSource();
       src.buffer = getNoiseBuffer(ctx, "brown");
@@ -460,7 +460,7 @@ export class HybridCombustionSynth {
       );
     }
 
-    // Overrun: requires prior load + lift — not random cruise pops
+    // Overrun: requires prior load + lift - not random cruise pops
     if (this.overrun) {
       if (load > 0.4 && demand > 0.35) this.liftArmed = true;
       if (demand > 0.25) this.liftArmed = false;
@@ -589,7 +589,7 @@ export class HybridCombustionSynth {
       targetParam(voiceA.gain.gain, trimA * 0.55, audioTime, 0.1);
       if (this.sampleB) targetParam(this.sampleB.gain.gain, 0.0001, audioTime, 0.1);
     }
-    // Samples assist under procedural — never fully replace excitation
+    // Samples assist under procedural - never fully replace excitation
     targetParam(this.sampleBus.gain, 0.35, audioTime, 0.12);
     if (this.combustionBus) {
       targetParam(

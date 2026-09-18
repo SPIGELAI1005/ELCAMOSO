@@ -6,20 +6,20 @@ Server-only configuration for **ELCAMOSO account** sign-in with Google. This is 
 
 ## Required
 
-| Variable | Description |
-| --- | --- |
-| `GOOGLE_CLIENT_ID` | OAuth 2.0 Web client ID from [Google Cloud Console](https://cloud.google.com/apis/credentials) |
-| `GOOGLE_CLIENT_SECRET` | OAuth client secret (server only; used only in the token exchange) |
-| `GOOGLE_REDIRECT_URI` | Must match a registered redirect URI exactly |
+| Variable               | Description                                                                                    |
+| ---------------------- | ---------------------------------------------------------------------------------------------- |
+| `GOOGLE_CLIENT_ID`     | OAuth 2.0 Web client ID from [Google Cloud Console](https://cloud.google.com/apis/credentials) |
+| `GOOGLE_CLIENT_SECRET` | OAuth client secret (server only; used only in the token exchange)                             |
+| `GOOGLE_REDIRECT_URI`  | Must match a registered redirect URI exactly                                                   |
 
 When all three are set, the account sign-in dialog shows **Continue with Google**. If any are missing, the button is hidden. Partial configuration fails server startup validation.
 
 ## Redirect URIs
 
-| Environment | `GOOGLE_REDIRECT_URI` |
-| --- | --- |
-| Local | `http://localhost:5173/auth/account/google/callback` |
-| Production | `https://www.elcamoso.com/auth/account/google/callback` |
+| Environment | `GOOGLE_REDIRECT_URI`                                   |
+| ----------- | ------------------------------------------------------- |
+| Local       | `http://localhost:5173/auth/account/google/callback`    |
+| Production  | `https://www.elcamoso.com/auth/account/google/callback` |
 
 ## Google Cloud Console setup
 
@@ -43,8 +43,8 @@ When all three are set, the account sign-in dialog shows **Continue with Google*
 
 ## Environment separation
 
-| Variable | Description |
-| --- | --- |
+| Variable       | Description                                         |
+| -------------- | --------------------------------------------------- |
 | `ELCAMOSO_ENV` | `development` (default), `staging`, or `production` |
 
 When `ELCAMOSO_ENV=staging` or `production`, the server prefers:

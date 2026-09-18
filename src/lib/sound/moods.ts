@@ -157,7 +157,7 @@ export function groupProfilesBySection(profiles: SoundProfile[]): {
   for (const section of order) map.set(section, []);
   for (const profile of profiles) {
     const section = sectionForProfile(profile);
-    // Featured IDs also appear in their natural section via category — keep Featured exclusive.
+    // Featured IDs also appear in their natural section via category - keep Featured exclusive.
     if (FEATURED_IDS.includes(profile.id)) {
       map.get("Featured")!.push(profile);
       continue;

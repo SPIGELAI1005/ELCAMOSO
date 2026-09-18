@@ -28,7 +28,7 @@ export interface OverrunResult {
   state: OverrunState;
 }
 
-/** Lift-off detection with cooldown — no spam on every decel sample. */
+/** Lift-off detection with cooldown - no spam on every decel sample. */
 export function updateOverrun(input: OverrunInput): OverrunResult {
   const { profile, now, state } = input;
   const cfg = profile.overrun;

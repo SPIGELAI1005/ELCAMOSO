@@ -1,7 +1,7 @@
 import { userHasLocalDrivePlusAccess } from "@/lib/billing/resilience/local-access";
 
 /**
- * Checkout guard — local subscription store only.
+ * Checkout guard - local subscription store only.
  * Premium feature gates and entitlements never call Stripe.
  * Use reconcileUserBillingFromStripe() explicitly when ops needs a Stripe pull.
  */

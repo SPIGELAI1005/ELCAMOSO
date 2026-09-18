@@ -1,7 +1,10 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 
 import { TryDynamicDriveButton } from "@/components/TryDynamicDriveButton";
-import { useBillingAvailable, useMonetizationEnabled } from "@/lib/billing/use-billing-public-config";
+import {
+  useBillingAvailable,
+  useMonetizationEnabled,
+} from "@/lib/billing/use-billing-public-config";
 import { getPremiumContext, type PremiumContext } from "@/lib/premium/contexts";
 import { usePremiumPromptDismiss } from "@/lib/premium/use-premium-prompt-dismiss";
 import { useSessionSelector } from "@/lib/store/session-store";
@@ -11,10 +14,10 @@ export type UpgradePromptVariant = "inline" | "compact" | "banner";
 
 interface UpgradePromptProps {
   context: PremiumContext;
-  /** Override default copy title — e.g. include a Sound Profile name. */
+  /** Override default copy title - e.g. include a Sound Profile name. */
   title?: string;
   variant?: UpgradePromptVariant;
-  /** When true, user cannot dismiss — use only when access is genuinely required. */
+  /** When true, user cannot dismiss - use only when access is genuinely required. */
   required?: boolean;
   className?: string;
 }
@@ -25,7 +28,7 @@ const VARIANT_CLASS: Record<UpgradePromptVariant, string> = {
   banner: "border-y border-border/60 bg-card/20 px-4 py-4",
 };
 
-/** Benefit-first upgrade prompt — inline only, never full-screen. */
+/** Benefit-first upgrade prompt - inline only, never full-screen. */
 export function UpgradePrompt({
   context,
   title,
@@ -34,7 +37,7 @@ export function UpgradePrompt({
   className = "",
 }: UpgradePromptProps) {
   const copy = getPremiumContext(context);
-  const cockpit = useSessionSelector((snap) => snap.cockpit);
+  const { cockpit } = useSessionSelector((snap) => ({ cockpit: snap.cockpit }));
   const navigate = useNavigate();
   const monetizationEnabled = useMonetizationEnabled();
   const billingAvailable = useBillingAvailable();
@@ -113,9 +116,7 @@ export function UpgradePrompt({
         ) : null}
       </div>
 
-      {copy.footnote ? (
-        <p className="mt-3 text-xs text-muted-foreground">{copy.footnote}</p>
-      ) : null}
+      {copy.footnote ? <p className="mt-3 text-xs text-muted-foreground">{copy.footnote}</p> : null}
     </aside>
   );
 }

@@ -1,6 +1,6 @@
 /**
  * Server-only Google OAuth client config for ELCAMOSO account sign-in.
- * Never prefix with VITE_ — secrets must not reach the browser bundle.
+ * Never prefix with VITE_ - secrets must not reach the browser bundle.
  */
 
 export interface GoogleOAuthConfig {
@@ -15,8 +15,7 @@ export interface GoogleOAuthConfig {
 
 export const PRODUCTION_GOOGLE_REDIRECT_URI =
   "https://www.elcamoso.com/auth/account/google/callback";
-export const LOCAL_GOOGLE_REDIRECT_URI =
-  "http://localhost:5173/auth/account/google/callback";
+export const LOCAL_GOOGLE_REDIRECT_URI = "http://localhost:5173/auth/account/google/callback";
 
 const AUTHORIZE_URL = "https://accounts.google.com/o/oauth2/v2/auth";
 const TOKEN_URL = "https://oauth2.googleapis.com/token";

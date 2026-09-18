@@ -6,7 +6,11 @@ import { assertAllowedCheckoutOrigin } from "@/lib/billing/checkout-origin";
 import { isBillingAvailable } from "@/lib/billing/billing-available";
 import { ensureStripeCustomer } from "@/lib/billing/stripe/customer";
 import { getStripeClient } from "@/lib/billing/stripe/client";
-import { isStripeConfigured, readStripeConfig, resolveStripePriceId } from "@/lib/billing/stripe/config";
+import {
+  isStripeConfigured,
+  readStripeConfig,
+  resolveStripePriceId,
+} from "@/lib/billing/stripe/config";
 import { buildCheckoutSessionTaxParams } from "@/lib/billing/stripe/tax-config";
 import { createStripePortalSession } from "@/lib/billing/stripe/portal";
 import { userHasActiveDrivePlusSubscription } from "@/lib/billing/stripe/subscription-guard";
@@ -18,7 +22,7 @@ export interface BeginCheckoutInput {
   email: string;
   origin: string;
   request: CheckoutPlanRequest;
-  /** Request Host header — used to validate origin when allowlist is unset. */
+  /** Request Host header - used to validate origin when allowlist is unset. */
   trustedHost?: string | null;
 }
 
@@ -94,8 +98,8 @@ export async function beginDrivePlusCheckout(
     elcamosoPlan: described.entitlementPlan,
     billingInterval: described.billingInterval,
   };
-  if (source) metadata.source = source;
-  if (input.request.upgradeToken) metadata.upgradeToken = input.request.upgradeToken;
+  if (source) metadata["source"] = source;
+  if (input.request.upgradeToken) metadata["upgradeToken"] = input.request.upgradeToken;
 
   const params: Stripe.Checkout.SessionCreateParams = {
     mode: "subscription",

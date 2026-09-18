@@ -26,7 +26,7 @@ function readBooleanEnv(name: string, deploy: ElcamosoDeployEnv): boolean {
 export type StripeBillingAddressCollection = "auto" | "required";
 
 /**
- * Checkout tax-related flags — all off by default.
+ * Checkout tax-related flags - all off by default.
  * Does not encode VAT rates, registrations, or legal jurisdiction logic.
  */
 export interface StripeCheckoutTaxConfig {
@@ -60,9 +60,7 @@ function readCustomerUpdate(
   return null;
 }
 
-export function readStripeCheckoutTaxConfig(
-  deploy = resolveDeployEnv(),
-): StripeCheckoutTaxConfig {
+export function readStripeCheckoutTaxConfig(deploy = resolveDeployEnv()): StripeCheckoutTaxConfig {
   const automaticTax = readBooleanEnv("STRIPE_CHECKOUT_AUTOMATIC_TAX", deploy);
   const taxIdCollection = readBooleanEnv("STRIPE_CHECKOUT_TAX_ID_COLLECTION", deploy);
   const taxFeaturesEnabled = automaticTax || taxIdCollection;

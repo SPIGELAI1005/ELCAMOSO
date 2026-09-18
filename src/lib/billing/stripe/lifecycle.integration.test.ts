@@ -2,10 +2,7 @@ import Stripe from "stripe";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { syncStripeSubscriptionRecord } from "@/lib/billing/stripe/subscription-sync";
-import {
-  assertLocalEntitlements,
-  STRIPE_TEST_USER_ID,
-} from "@/lib/billing/stripe/test-fixtures";
+import { assertLocalEntitlements, STRIPE_TEST_USER_ID } from "@/lib/billing/stripe/test-fixtures";
 import { getSubscriptionForUser } from "@/lib/billing/subscription-store";
 import { resetSubscriptionRepositoryStoreForTests } from "@/lib/billing/subscription-repository-memory";
 import { resetSubscriptionStoreForTests } from "@/lib/billing/subscription-store";
@@ -22,8 +19,7 @@ const canRunLiveStripe =
   Boolean(process.env.STRIPE_PRICE_DRIVE_PLUS_MONTHLY) &&
   Boolean(process.env.STRIPE_PRICE_DRIVE_PLUS_YEARLY);
 
-const canRunTestClock =
-  canRunLiveStripe && process.env.STRIPE_LIFECYCLE_TEST_CLOCK === "1";
+const canRunTestClock = canRunLiveStripe && process.env.STRIPE_LIFECYCLE_TEST_CLOCK === "1";
 
 const live = canRunLiveStripe ? describe : describe.skip;
 const testClockSuite = canRunTestClock ? describe : describe.skip;

@@ -64,7 +64,7 @@ interface TransientLayer {
 
 /**
  * Layered RPM crossfade synthesis for Dynamic Drive.
- * Each band owns harmonic voices with independent fundamental frequency —
+ * Each band owns harmonic voices with independent fundamental frequency -
  * not a single source with playbackRate.
  */
 export class DynamicDriveSynth {

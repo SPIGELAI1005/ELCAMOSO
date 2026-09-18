@@ -5,7 +5,8 @@ export default defineConfig({
   out: "./drizzle/migrations",
   dialect: "postgresql",
   dbCredentials: {
-    url: process.env.DATABASE_URL ?? "postgresql://elcamoso:elcamoso_dev@localhost:5432/elcamoso_dev",
+    url:
+      process.env.DATABASE_URL ?? "postgresql://elcamoso:elcamoso_dev@localhost:5432/elcamoso_dev",
   },
   strict: true,
   verbose: true,

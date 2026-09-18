@@ -5,7 +5,7 @@ export interface UpshiftRpmTable {
   highLoad: number;
 }
 
-/** Kickdown tuning — floor pedal requests lower gear. */
+/** Kickdown tuning - floor pedal requests lower gear. */
 export interface KickdownProfile {
   enabled: boolean;
   throttleThreshold: number;
@@ -65,7 +65,7 @@ export interface RpmTrackingProfile {
   downshiftEasePower: number;
 }
 
-/** Explicit slip — launch / optional torque converter only (no generic cruise slip). */
+/** Explicit slip - launch / optional torque converter only (no generic cruise slip). */
 export interface SlipProfile {
   /** Below this speed, launch slip may raise RPM above mechanical. */
   launchSpeedKmh: number;
@@ -92,7 +92,7 @@ export interface ShiftMapOverrides {
   downshiftSpeedKmh?: number[][];
 }
 
-/** Automatic transmission tuning — profile-specific, not global. */
+/** Automatic transmission tuning - profile-specific, not global. */
 export interface TransmissionProfile {
   gears: number;
   gearRatios: number[];

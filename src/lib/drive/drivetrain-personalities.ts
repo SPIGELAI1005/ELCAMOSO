@@ -15,7 +15,7 @@ type DeepPartial<T> = {
   [P in keyof T]?: T[P] extends object ? DeepPartial<T[P]> : T[P];
 };
 
-/** Audio transient shaping — consumed by Dynamic Drive layer crossfade. */
+/** Audio transient shaping - consumed by Dynamic Drive layer crossfade. */
 export interface TransientAudioConfig {
   /** Drives turbo / NA / EV eligibility in the transient scheduler. */
   aspiration: TransientAspiration;
@@ -51,7 +51,7 @@ export interface DrivetrainMotionTuning {
 }
 
 /**
- * Complete virtual drivetrain personality — single configuration source.
+ * Complete virtual drivetrain personality - single configuration source.
  * Powertrain simulation, legacy transmission box, and audio transients all derive from this.
  */
 export interface DrivetrainPersonalityConfig {
@@ -92,7 +92,7 @@ export interface DrivetrainPersonalityConfig {
     downshiftHysteresisRpm: number;
     postUpshiftBlockMs: number;
     perGearOffsetRpm?: number[];
-    /** Coast downshift gate — defaults to 0.28 when omitted. */
+    /** Coast downshift gate - defaults to 0.28 when omitted. */
     coastDownshiftMaxThrottle?: number;
     kickdown: KickdownProfile;
     shift: ShiftProfile;
@@ -254,7 +254,7 @@ export const DRIVETRAIN_PERSONALITY_IDS = [
   "single-cylinder-ag",
 ] as const;
 
-/** Primary launch personalities — referenced by featured Sound Profiles. */
+/** Primary launch personalities - referenced by featured Sound Profiles. */
 export const CORE_DRIVETRAIN_PERSONALITY_IDS = [
   "flat-six-sport",
   "american-v8",

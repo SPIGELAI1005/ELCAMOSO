@@ -1,5 +1,5 @@
 /**
- * Dynamic Drive — powertrain simulation domain (no audio, no live sensors).
+ * Dynamic Drive - powertrain simulation domain (no audio, no live sensors).
  *
  * Input: VehicleMotionState (or dev simulator controls)
  * Output: VirtualPowertrainState

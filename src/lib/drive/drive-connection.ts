@@ -37,7 +37,7 @@ export function connectionQualityLabel(quality: ConnectionQuality): string {
   }
 }
 
-/** Cockpit instrument subtitle — hidden in product UI (profile name is enough). */
+/** Cockpit instrument subtitle - hidden in product UI (profile name is enough). */
 export function dynamicDriveCockpitLabel(_active: boolean): string {
   return "";
 }
@@ -48,7 +48,7 @@ export function connectionNeedsAttention(status: DriveProductStatus): boolean {
   return q === "gps" || q === "weak" || q === "paused";
 }
 
-/** Settings / remote hint — not shown on the main Drive instrument. */
+/** Settings / remote hint - not shown on the main Drive instrument. */
 export function dynamicDriveStatusLabel(active: boolean): string {
   return active ? "Full response" : "Classic";
 }

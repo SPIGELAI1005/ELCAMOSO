@@ -1,7 +1,7 @@
 import type { Plan } from "@/lib/entitlements/types";
 import type { BillingInterval, BillingStatus, SubscriptionProvider } from "@/lib/billing/status";
 
-/** Billing subscription record — no payment method or card fields. */
+/** Billing subscription record - no payment method or card fields. */
 export interface Subscription {
   id: string;
   userId: string;

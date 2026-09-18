@@ -127,7 +127,7 @@ function PowertrainDebug() {
     const last = result.samples[result.samples.length - 1]!;
     setScenarioReport(
       validation.ok
-        ? `${scenario.label}: ${result.shiftCount} shifts, final ${last.speedKmh.toFixed(0)} km/h, gear ${last.gear || "N"} — trace OK`
+        ? `${scenario.label}: ${result.shiftCount} shifts, final ${last.speedKmh.toFixed(0)} km/h, gear ${last.gear || "N"} - trace OK`
         : `${scenario.label}: ${validation.issues.length} issue(s)\n${validation.issues.slice(0, 5).join("\n")}`,
     );
   };
@@ -141,7 +141,7 @@ function PowertrainDebug() {
         <p className="text-[11px] tracking-[0.28em] text-muted-foreground uppercase">Dev only</p>
         <h1 className="mt-3 text-3xl font-light">Dynamic Drive Simulator</h1>
         <p className="mt-3 text-sm text-muted-foreground">
-          Powertrain domain only — no audio, no vehicle sensors. Pick any personality; tune speed,
+          Powertrain domain only - no audio, no vehicle sensors. Pick any personality; tune speed,
           acceleration, throttle and braking; inspect gear, RPM, load and driving state.
         </p>
         <div className="mt-4 flex flex-wrap gap-4">
@@ -356,7 +356,7 @@ function PowertrainDebug() {
             value={(state.diagnostics?.braking ?? controls.braking).toFixed(2)}
           />
           <Readout label="Motion source" value={state.diagnostics?.motionSource ?? "simulator"} />
-          <Readout label="Fallback tier" value={state.diagnostics?.fallbackTier ?? "—"} />
+          <Readout label="Fallback tier" value={state.diagnostics?.fallbackTier ?? "-"} />
           <Readout label="Redline" value={String(profile.engine.redlineRpm)} />
           <Readout label="Gears" value={String(profile.transmission.gears)} />
         </section>

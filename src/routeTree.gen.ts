@@ -15,7 +15,10 @@ import { Route as CalibrateRouteImport } from './routes/calibrate'
 import { Route as DebugRouteImport } from './routes/debug'
 import { Route as DemoRouteImport } from './routes/demo'
 import { Route as DriveRouteImport } from './routes/drive'
+import { Route as ExploreRouteImport } from './routes/explore'
+import { Route as FusionRouteImport } from './routes/fusion'
 import { Route as GarageRouteImport } from './routes/garage'
+import { Route as JourneysRouteImport } from './routes/journeys'
 import { Route as LegalRouteRouteImport } from './routes/legal/route'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as PairRouteImport } from './routes/pair'
@@ -23,13 +26,21 @@ import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as ReplayRouteImport } from './routes/replay'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as ShareRouteImport } from './routes/share'
+import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as SoundsRouteImport } from './routes/sounds'
 import { Route as StudioRouteImport } from './routes/studio'
+import { Route as SymphonyRouteImport } from './routes/symphony'
+import { Route as WorldsRouteImport } from './routes/worlds'
+import { Route as ApiOgRouteImport } from './routes/api/og'
 import { Route as ConnectSessionIdRouteImport } from './routes/connect.$sessionId'
 import { Route as DebugBillingRouteImport } from './routes/debug.billing'
 import { Route as DebugCalibrationRouteImport } from './routes/debug.calibration'
 import { Route as DebugDiagnosticsRouteImport } from './routes/debug.diagnostics'
+import { Route as DebugOgRouteImport } from './routes/debug.og'
 import { Route as DebugPowertrainRouteImport } from './routes/debug.powertrain'
+import { Route as DebugSymphonyRouteImport } from './routes/debug.symphony'
+import { Route as DebugSymphonyAssetsRouteImport } from './routes/debug.symphony-assets'
+import { Route as JourneysJourneyIdRouteImport } from './routes/journeys.$journeyId'
 import { Route as LegalIndexRouteImport } from './routes/legal/index'
 import { Route as LegalAccessibilityRouteImport } from './routes/legal/accessibility'
 import { Route as LegalCookiesRouteImport } from './routes/legal/cookies'
@@ -45,6 +56,8 @@ import { Route as ApiSoundAssetsManifestRouteImport } from './routes/api/sound-a
 import { Route as ApiStripeWebhookRouteImport } from './routes/api/stripe/webhook'
 import { Route as AuthAccountCallbackRouteImport } from './routes/auth/account/callback'
 import { Route as AuthTeslaCallbackRouteImport } from './routes/auth/tesla/callback'
+import { Route as ShareDriveShareIdRouteImport } from './routes/share.drive.$shareId'
+import { Route as ApiOgDriveSongShareIdRouteImport } from './routes/api/og/drive-song.$shareId'
 import { Route as AuthAccountGoogleCallbackRouteImport } from './routes/auth/account/google/callback'
 
 const IndexRoute = IndexRouteImport.update({
@@ -77,9 +90,24 @@ const DriveRoute = DriveRouteImport.update({
   path: '/drive',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ExploreRoute = ExploreRouteImport.update({
+  id: '/explore',
+  path: '/explore',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FusionRoute = FusionRouteImport.update({
+  id: '/fusion',
+  path: '/fusion',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const GarageRoute = GarageRouteImport.update({
   id: '/garage',
   path: '/garage',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const JourneysRoute = JourneysRouteImport.update({
+  id: '/journeys',
+  path: '/journeys',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LegalRouteRoute = LegalRouteRouteImport.update({
@@ -117,6 +145,11 @@ const ShareRoute = ShareRouteImport.update({
   path: '/share',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
+  id: '/sitemap.xml',
+  path: '/sitemap.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SoundsRoute = SoundsRouteImport.update({
   id: '/sounds',
   path: '/sounds',
@@ -125,6 +158,21 @@ const SoundsRoute = SoundsRouteImport.update({
 const StudioRoute = StudioRouteImport.update({
   id: '/studio',
   path: '/studio',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SymphonyRoute = SymphonyRouteImport.update({
+  id: '/symphony',
+  path: '/symphony',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WorldsRoute = WorldsRouteImport.update({
+  id: '/worlds',
+  path: '/worlds',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiOgRoute = ApiOgRouteImport.update({
+  id: '/api/og',
+  path: '/api/og',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ConnectSessionIdRoute = ConnectSessionIdRouteImport.update({
@@ -147,10 +195,30 @@ const DebugDiagnosticsRoute = DebugDiagnosticsRouteImport.update({
   path: '/diagnostics',
   getParentRoute: () => DebugRoute,
 } as any)
+const DebugOgRoute = DebugOgRouteImport.update({
+  id: '/og',
+  path: '/og',
+  getParentRoute: () => DebugRoute,
+} as any)
 const DebugPowertrainRoute = DebugPowertrainRouteImport.update({
   id: '/powertrain',
   path: '/powertrain',
   getParentRoute: () => DebugRoute,
+} as any)
+const DebugSymphonyRoute = DebugSymphonyRouteImport.update({
+  id: '/symphony',
+  path: '/symphony',
+  getParentRoute: () => DebugRoute,
+} as any)
+const DebugSymphonyAssetsRoute = DebugSymphonyAssetsRouteImport.update({
+  id: '/symphony-assets',
+  path: '/symphony-assets',
+  getParentRoute: () => DebugRoute,
+} as any)
+const JourneysJourneyIdRoute = JourneysJourneyIdRouteImport.update({
+  id: '/$journeyId',
+  path: '/$journeyId',
+  getParentRoute: () => JourneysRoute,
 } as any)
 const LegalIndexRoute = LegalIndexRouteImport.update({
   id: '/',
@@ -227,6 +295,16 @@ const AuthTeslaCallbackRoute = AuthTeslaCallbackRouteImport.update({
   path: '/auth/tesla/callback',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ShareDriveShareIdRoute = ShareDriveShareIdRouteImport.update({
+  id: '/drive/$shareId',
+  path: '/drive/$shareId',
+  getParentRoute: () => ShareRoute,
+} as any)
+const ApiOgDriveSongShareIdRoute = ApiOgDriveSongShareIdRouteImport.update({
+  id: '/drive-song/$shareId',
+  path: '/drive-song/$shareId',
+  getParentRoute: () => ApiOgRoute,
+} as any)
 const AuthAccountGoogleCallbackRoute =
   AuthAccountGoogleCallbackRouteImport.update({
     id: '/auth/account/google/callback',
@@ -242,20 +320,31 @@ export interface FileRoutesByFullPath {
   '/debug': typeof DebugRouteWithChildren
   '/demo': typeof DemoRoute
   '/drive': typeof DriveRoute
+  '/explore': typeof ExploreRoute
+  '/fusion': typeof FusionRoute
   '/garage': typeof GarageRoute
+  '/journeys': typeof JourneysRouteWithChildren
   '/onboarding': typeof OnboardingRoute
   '/pair': typeof PairRoute
   '/pricing': typeof PricingRoute
   '/replay': typeof ReplayRoute
   '/settings': typeof SettingsRoute
-  '/share': typeof ShareRoute
+  '/share': typeof ShareRouteWithChildren
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/sounds': typeof SoundsRoute
   '/studio': typeof StudioRoute
+  '/symphony': typeof SymphonyRoute
+  '/worlds': typeof WorldsRoute
+  '/api/og': typeof ApiOgRouteWithChildren
   '/connect/$sessionId': typeof ConnectSessionIdRoute
   '/debug/billing': typeof DebugBillingRoute
   '/debug/calibration': typeof DebugCalibrationRoute
   '/debug/diagnostics': typeof DebugDiagnosticsRoute
+  '/debug/og': typeof DebugOgRoute
   '/debug/powertrain': typeof DebugPowertrainRoute
+  '/debug/symphony': typeof DebugSymphonyRoute
+  '/debug/symphony-assets': typeof DebugSymphonyAssetsRoute
+  '/journeys/$journeyId': typeof JourneysJourneyIdRoute
   '/legal/accessibility': typeof LegalAccessibilityRoute
   '/legal/cookies': typeof LegalCookiesRoute
   '/legal/impressum': typeof LegalImpressumRoute
@@ -271,6 +360,8 @@ export interface FileRoutesByFullPath {
   '/api/stripe/webhook': typeof ApiStripeWebhookRoute
   '/auth/account/callback': typeof AuthAccountCallbackRoute
   '/auth/tesla/callback': typeof AuthTeslaCallbackRoute
+  '/share/drive/$shareId': typeof ShareDriveShareIdRoute
+  '/api/og/drive-song/$shareId': typeof ApiOgDriveSongShareIdRoute
   '/auth/account/google/callback': typeof AuthAccountGoogleCallbackRoute
 }
 export interface FileRoutesByTo {
@@ -280,20 +371,31 @@ export interface FileRoutesByTo {
   '/debug': typeof DebugRouteWithChildren
   '/demo': typeof DemoRoute
   '/drive': typeof DriveRoute
+  '/explore': typeof ExploreRoute
+  '/fusion': typeof FusionRoute
   '/garage': typeof GarageRoute
+  '/journeys': typeof JourneysRouteWithChildren
   '/onboarding': typeof OnboardingRoute
   '/pair': typeof PairRoute
   '/pricing': typeof PricingRoute
   '/replay': typeof ReplayRoute
   '/settings': typeof SettingsRoute
-  '/share': typeof ShareRoute
+  '/share': typeof ShareRouteWithChildren
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/sounds': typeof SoundsRoute
   '/studio': typeof StudioRoute
+  '/symphony': typeof SymphonyRoute
+  '/worlds': typeof WorldsRoute
+  '/api/og': typeof ApiOgRouteWithChildren
   '/connect/$sessionId': typeof ConnectSessionIdRoute
   '/debug/billing': typeof DebugBillingRoute
   '/debug/calibration': typeof DebugCalibrationRoute
   '/debug/diagnostics': typeof DebugDiagnosticsRoute
+  '/debug/og': typeof DebugOgRoute
   '/debug/powertrain': typeof DebugPowertrainRoute
+  '/debug/symphony': typeof DebugSymphonyRoute
+  '/debug/symphony-assets': typeof DebugSymphonyAssetsRoute
+  '/journeys/$journeyId': typeof JourneysJourneyIdRoute
   '/legal/accessibility': typeof LegalAccessibilityRoute
   '/legal/cookies': typeof LegalCookiesRoute
   '/legal/impressum': typeof LegalImpressumRoute
@@ -309,6 +411,8 @@ export interface FileRoutesByTo {
   '/api/stripe/webhook': typeof ApiStripeWebhookRoute
   '/auth/account/callback': typeof AuthAccountCallbackRoute
   '/auth/tesla/callback': typeof AuthTeslaCallbackRoute
+  '/share/drive/$shareId': typeof ShareDriveShareIdRoute
+  '/api/og/drive-song/$shareId': typeof ApiOgDriveSongShareIdRoute
   '/auth/account/google/callback': typeof AuthAccountGoogleCallbackRoute
 }
 export interface FileRoutesById {
@@ -320,20 +424,31 @@ export interface FileRoutesById {
   '/debug': typeof DebugRouteWithChildren
   '/demo': typeof DemoRoute
   '/drive': typeof DriveRoute
+  '/explore': typeof ExploreRoute
+  '/fusion': typeof FusionRoute
   '/garage': typeof GarageRoute
+  '/journeys': typeof JourneysRouteWithChildren
   '/onboarding': typeof OnboardingRoute
   '/pair': typeof PairRoute
   '/pricing': typeof PricingRoute
   '/replay': typeof ReplayRoute
   '/settings': typeof SettingsRoute
-  '/share': typeof ShareRoute
+  '/share': typeof ShareRouteWithChildren
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/sounds': typeof SoundsRoute
   '/studio': typeof StudioRoute
+  '/symphony': typeof SymphonyRoute
+  '/worlds': typeof WorldsRoute
+  '/api/og': typeof ApiOgRouteWithChildren
   '/connect/$sessionId': typeof ConnectSessionIdRoute
   '/debug/billing': typeof DebugBillingRoute
   '/debug/calibration': typeof DebugCalibrationRoute
   '/debug/diagnostics': typeof DebugDiagnosticsRoute
+  '/debug/og': typeof DebugOgRoute
   '/debug/powertrain': typeof DebugPowertrainRoute
+  '/debug/symphony': typeof DebugSymphonyRoute
+  '/debug/symphony-assets': typeof DebugSymphonyAssetsRoute
+  '/journeys/$journeyId': typeof JourneysJourneyIdRoute
   '/legal/accessibility': typeof LegalAccessibilityRoute
   '/legal/cookies': typeof LegalCookiesRoute
   '/legal/impressum': typeof LegalImpressumRoute
@@ -349,6 +464,8 @@ export interface FileRoutesById {
   '/api/stripe/webhook': typeof ApiStripeWebhookRoute
   '/auth/account/callback': typeof AuthAccountCallbackRoute
   '/auth/tesla/callback': typeof AuthTeslaCallbackRoute
+  '/share/drive/$shareId': typeof ShareDriveShareIdRoute
+  '/api/og/drive-song/$shareId': typeof ApiOgDriveSongShareIdRoute
   '/auth/account/google/callback': typeof AuthAccountGoogleCallbackRoute
 }
 export interface FileRouteTypes {
@@ -361,20 +478,31 @@ export interface FileRouteTypes {
     | '/debug'
     | '/demo'
     | '/drive'
+    | '/explore'
+    | '/fusion'
     | '/garage'
+    | '/journeys'
     | '/onboarding'
     | '/pair'
     | '/pricing'
     | '/replay'
     | '/settings'
     | '/share'
+    | '/sitemap.xml'
     | '/sounds'
     | '/studio'
+    | '/symphony'
+    | '/worlds'
+    | '/api/og'
     | '/connect/$sessionId'
     | '/debug/billing'
     | '/debug/calibration'
     | '/debug/diagnostics'
+    | '/debug/og'
     | '/debug/powertrain'
+    | '/debug/symphony'
+    | '/debug/symphony-assets'
+    | '/journeys/$journeyId'
     | '/legal/accessibility'
     | '/legal/cookies'
     | '/legal/impressum'
@@ -390,6 +518,8 @@ export interface FileRouteTypes {
     | '/api/stripe/webhook'
     | '/auth/account/callback'
     | '/auth/tesla/callback'
+    | '/share/drive/$shareId'
+    | '/api/og/drive-song/$shareId'
     | '/auth/account/google/callback'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -399,20 +529,31 @@ export interface FileRouteTypes {
     | '/debug'
     | '/demo'
     | '/drive'
+    | '/explore'
+    | '/fusion'
     | '/garage'
+    | '/journeys'
     | '/onboarding'
     | '/pair'
     | '/pricing'
     | '/replay'
     | '/settings'
     | '/share'
+    | '/sitemap.xml'
     | '/sounds'
     | '/studio'
+    | '/symphony'
+    | '/worlds'
+    | '/api/og'
     | '/connect/$sessionId'
     | '/debug/billing'
     | '/debug/calibration'
     | '/debug/diagnostics'
+    | '/debug/og'
     | '/debug/powertrain'
+    | '/debug/symphony'
+    | '/debug/symphony-assets'
+    | '/journeys/$journeyId'
     | '/legal/accessibility'
     | '/legal/cookies'
     | '/legal/impressum'
@@ -428,6 +569,8 @@ export interface FileRouteTypes {
     | '/api/stripe/webhook'
     | '/auth/account/callback'
     | '/auth/tesla/callback'
+    | '/share/drive/$shareId'
+    | '/api/og/drive-song/$shareId'
     | '/auth/account/google/callback'
   id:
     | '__root__'
@@ -438,20 +581,31 @@ export interface FileRouteTypes {
     | '/debug'
     | '/demo'
     | '/drive'
+    | '/explore'
+    | '/fusion'
     | '/garage'
+    | '/journeys'
     | '/onboarding'
     | '/pair'
     | '/pricing'
     | '/replay'
     | '/settings'
     | '/share'
+    | '/sitemap.xml'
     | '/sounds'
     | '/studio'
+    | '/symphony'
+    | '/worlds'
+    | '/api/og'
     | '/connect/$sessionId'
     | '/debug/billing'
     | '/debug/calibration'
     | '/debug/diagnostics'
+    | '/debug/og'
     | '/debug/powertrain'
+    | '/debug/symphony'
+    | '/debug/symphony-assets'
+    | '/journeys/$journeyId'
     | '/legal/accessibility'
     | '/legal/cookies'
     | '/legal/impressum'
@@ -467,6 +621,8 @@ export interface FileRouteTypes {
     | '/api/stripe/webhook'
     | '/auth/account/callback'
     | '/auth/tesla/callback'
+    | '/share/drive/$shareId'
+    | '/api/og/drive-song/$shareId'
     | '/auth/account/google/callback'
   fileRoutesById: FileRoutesById
 }
@@ -478,15 +634,22 @@ export interface RootRouteChildren {
   DebugRoute: typeof DebugRouteWithChildren
   DemoRoute: typeof DemoRoute
   DriveRoute: typeof DriveRoute
+  ExploreRoute: typeof ExploreRoute
+  FusionRoute: typeof FusionRoute
   GarageRoute: typeof GarageRoute
+  JourneysRoute: typeof JourneysRouteWithChildren
   OnboardingRoute: typeof OnboardingRoute
   PairRoute: typeof PairRoute
   PricingRoute: typeof PricingRoute
   ReplayRoute: typeof ReplayRoute
   SettingsRoute: typeof SettingsRoute
-  ShareRoute: typeof ShareRoute
+  ShareRoute: typeof ShareRouteWithChildren
+  SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   SoundsRoute: typeof SoundsRoute
   StudioRoute: typeof StudioRoute
+  SymphonyRoute: typeof SymphonyRoute
+  WorldsRoute: typeof WorldsRoute
+  ApiOgRoute: typeof ApiOgRouteWithChildren
   ConnectSessionIdRoute: typeof ConnectSessionIdRoute
   PairTokenRoute: typeof PairTokenRoute
   UpgradeTokenRoute: typeof UpgradeTokenRoute
@@ -544,11 +707,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DriveRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/explore': {
+      id: '/explore'
+      path: '/explore'
+      fullPath: '/explore'
+      preLoaderRoute: typeof ExploreRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/fusion': {
+      id: '/fusion'
+      path: '/fusion'
+      fullPath: '/fusion'
+      preLoaderRoute: typeof FusionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/garage': {
       id: '/garage'
       path: '/garage'
       fullPath: '/garage'
       preLoaderRoute: typeof GarageRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/journeys': {
+      id: '/journeys'
+      path: '/journeys'
+      fullPath: '/journeys'
+      preLoaderRoute: typeof JourneysRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/legal': {
@@ -600,6 +784,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ShareRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/sitemap.xml': {
+      id: '/sitemap.xml'
+      path: '/sitemap.xml'
+      fullPath: '/sitemap.xml'
+      preLoaderRoute: typeof SitemapDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/sounds': {
       id: '/sounds'
       path: '/sounds'
@@ -612,6 +803,27 @@ declare module '@tanstack/react-router' {
       path: '/studio'
       fullPath: '/studio'
       preLoaderRoute: typeof StudioRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/symphony': {
+      id: '/symphony'
+      path: '/symphony'
+      fullPath: '/symphony'
+      preLoaderRoute: typeof SymphonyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/worlds': {
+      id: '/worlds'
+      path: '/worlds'
+      fullPath: '/worlds'
+      preLoaderRoute: typeof WorldsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/og': {
+      id: '/api/og'
+      path: '/api/og'
+      fullPath: '/api/og'
+      preLoaderRoute: typeof ApiOgRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/connect/$sessionId': {
@@ -642,12 +854,40 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DebugDiagnosticsRouteImport
       parentRoute: typeof DebugRoute
     }
+    '/debug/og': {
+      id: '/debug/og'
+      path: '/og'
+      fullPath: '/debug/og'
+      preLoaderRoute: typeof DebugOgRouteImport
+      parentRoute: typeof DebugRoute
+    }
     '/debug/powertrain': {
       id: '/debug/powertrain'
       path: '/powertrain'
       fullPath: '/debug/powertrain'
       preLoaderRoute: typeof DebugPowertrainRouteImport
       parentRoute: typeof DebugRoute
+    }
+    '/debug/symphony': {
+      id: '/debug/symphony'
+      path: '/symphony'
+      fullPath: '/debug/symphony'
+      preLoaderRoute: typeof DebugSymphonyRouteImport
+      parentRoute: typeof DebugRoute
+    }
+    '/debug/symphony-assets': {
+      id: '/debug/symphony-assets'
+      path: '/symphony-assets'
+      fullPath: '/debug/symphony-assets'
+      preLoaderRoute: typeof DebugSymphonyAssetsRouteImport
+      parentRoute: typeof DebugRoute
+    }
+    '/journeys/$journeyId': {
+      id: '/journeys/$journeyId'
+      path: '/$journeyId'
+      fullPath: '/journeys/$journeyId'
+      preLoaderRoute: typeof JourneysJourneyIdRouteImport
+      parentRoute: typeof JourneysRoute
     }
     '/legal/': {
       id: '/legal/'
@@ -754,6 +994,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthTeslaCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/share/drive/$shareId': {
+      id: '/share/drive/$shareId'
+      path: '/drive/$shareId'
+      fullPath: '/share/drive/$shareId'
+      preLoaderRoute: typeof ShareDriveShareIdRouteImport
+      parentRoute: typeof ShareRoute
+    }
+    '/api/og/drive-song/$shareId': {
+      id: '/api/og/drive-song/$shareId'
+      path: '/drive-song/$shareId'
+      fullPath: '/api/og/drive-song/$shareId'
+      preLoaderRoute: typeof ApiOgDriveSongShareIdRouteImport
+      parentRoute: typeof ApiOgRoute
+    }
     '/auth/account/google/callback': {
       id: '/auth/account/google/callback'
       path: '/auth/account/google/callback'
@@ -790,17 +1044,55 @@ interface DebugRouteChildren {
   DebugBillingRoute: typeof DebugBillingRoute
   DebugCalibrationRoute: typeof DebugCalibrationRoute
   DebugDiagnosticsRoute: typeof DebugDiagnosticsRoute
+  DebugOgRoute: typeof DebugOgRoute
   DebugPowertrainRoute: typeof DebugPowertrainRoute
+  DebugSymphonyRoute: typeof DebugSymphonyRoute
+  DebugSymphonyAssetsRoute: typeof DebugSymphonyAssetsRoute
 }
 
 const DebugRouteChildren: DebugRouteChildren = {
   DebugBillingRoute: DebugBillingRoute,
   DebugCalibrationRoute: DebugCalibrationRoute,
   DebugDiagnosticsRoute: DebugDiagnosticsRoute,
+  DebugOgRoute: DebugOgRoute,
   DebugPowertrainRoute: DebugPowertrainRoute,
+  DebugSymphonyRoute: DebugSymphonyRoute,
+  DebugSymphonyAssetsRoute: DebugSymphonyAssetsRoute,
 }
 
 const DebugRouteWithChildren = DebugRoute._addFileChildren(DebugRouteChildren)
+
+interface JourneysRouteChildren {
+  JourneysJourneyIdRoute: typeof JourneysJourneyIdRoute
+}
+
+const JourneysRouteChildren: JourneysRouteChildren = {
+  JourneysJourneyIdRoute: JourneysJourneyIdRoute,
+}
+
+const JourneysRouteWithChildren = JourneysRoute._addFileChildren(
+  JourneysRouteChildren,
+)
+
+interface ShareRouteChildren {
+  ShareDriveShareIdRoute: typeof ShareDriveShareIdRoute
+}
+
+const ShareRouteChildren: ShareRouteChildren = {
+  ShareDriveShareIdRoute: ShareDriveShareIdRoute,
+}
+
+const ShareRouteWithChildren = ShareRoute._addFileChildren(ShareRouteChildren)
+
+interface ApiOgRouteChildren {
+  ApiOgDriveSongShareIdRoute: typeof ApiOgDriveSongShareIdRoute
+}
+
+const ApiOgRouteChildren: ApiOgRouteChildren = {
+  ApiOgDriveSongShareIdRoute: ApiOgDriveSongShareIdRoute,
+}
+
+const ApiOgRouteWithChildren = ApiOgRoute._addFileChildren(ApiOgRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
@@ -810,15 +1102,22 @@ const rootRouteChildren: RootRouteChildren = {
   DebugRoute: DebugRouteWithChildren,
   DemoRoute: DemoRoute,
   DriveRoute: DriveRoute,
+  ExploreRoute: ExploreRoute,
+  FusionRoute: FusionRoute,
   GarageRoute: GarageRoute,
+  JourneysRoute: JourneysRouteWithChildren,
   OnboardingRoute: OnboardingRoute,
   PairRoute: PairRoute,
   PricingRoute: PricingRoute,
   ReplayRoute: ReplayRoute,
   SettingsRoute: SettingsRoute,
-  ShareRoute: ShareRoute,
+  ShareRoute: ShareRouteWithChildren,
+  SitemapDotxmlRoute: SitemapDotxmlRoute,
   SoundsRoute: SoundsRoute,
   StudioRoute: StudioRoute,
+  SymphonyRoute: SymphonyRoute,
+  WorldsRoute: WorldsRoute,
+  ApiOgRoute: ApiOgRouteWithChildren,
   ConnectSessionIdRoute: ConnectSessionIdRoute,
   PairTokenRoute: PairTokenRoute,
   UpgradeTokenRoute: UpgradeTokenRoute,
