@@ -179,7 +179,7 @@ function AppChrome({ showMiniPlayer }: { showMiniPlayer: boolean }) {
   const hideTop = safetyMode && onDrive;
   const padTop = hideTop
     ? "pt-[env(safe-area-inset-top,0px)]"
-    : "pt-[calc(3.5rem+env(safe-area-inset-top,0px))] sm:pt-[calc(4rem+env(safe-area-inset-top,0px))]";
+    : "pt-[calc(3.85rem+env(safe-area-inset-top,0px))] sm:pt-[calc(4.4rem+env(safe-area-inset-top,0px))]";
   const padBottom =
     safetyMode && onDrive
       ? "pb-[env(safe-area-inset-bottom,0px)]"

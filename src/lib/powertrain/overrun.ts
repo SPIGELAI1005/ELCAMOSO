@@ -1,4 +1,3 @@
-import { audioRandom } from "@/lib/sound/rng";
 import type { PowertrainProfile } from "@/lib/powertrain/profiles";
 
 export interface OverrunState {
@@ -42,10 +41,8 @@ export function updateOverrun(input: OverrunInput): OverrunResult {
   const moving = input.speedKmh > 25;
   const cooled = now >= state.cooldownUntil;
 
-  let triggered = wasLoaded && lifting && accelLow && moving && cooled;
-  if (triggered && cfg.probability < 1 && audioRandom() > cfg.probability) {
-    triggered = false;
-  }
+  // Direct pedal lift is authoritative. GPS-only inference still requires filtered deceleration.
+  const triggered = cfg.probability > 0 && wasLoaded && lifting && (pedalLift || accelLow) && moving && cooled;
 
   if (triggered) {
     const next: OverrunState = {

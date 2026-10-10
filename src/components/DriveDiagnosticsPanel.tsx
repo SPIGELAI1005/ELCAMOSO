@@ -124,8 +124,11 @@ function FusionSection({ frame }: { frame: DriveDiagnosticsFrame }) {
   return (
     <Section title="Fusion">
       <MetricRow label="Chosen speed" value={`${fmtNum(fusion.speedKmh, 1)} km/h`} />
+      <MetricRow label="Speed basis" value={fusion.speedProvenance} />
       <MetricRow label="Chosen acceleration" value={`${fmtNum(fusion.accelerationMs2, 2)} m/s²`} />
+      <MetricRow label="Acceleration basis" value={fusion.accelerationProvenance} />
       <MetricRow label="Confidence" value={fmtPct(fusion.confidence)} />
+      <MetricRow label="Input age" value={fmtMs(fusion.inputAgeMs)} />
       <MetricRow label="Primary source" value={fusion.primarySource} />
       <MetricRow label="Fallback tier" value={fusion.fallbackTier} />
       <MetricRow label="Transitioning" value={fusion.transitioning ? "Yes" : "No"} />
@@ -166,14 +169,19 @@ function PowertrainSection({ frame }: { frame: DriveDiagnosticsFrame }) {
       />
       <MetricRow label="QUEUED GEAR" value={queued} />
       <MetricRow label="RPM" value={fmtNum(powertrain.mechanicalRpm ?? powertrain.rpm, 0)} />
+      <MetricRow label="Virtual values" value={powertrain.valueProvenance} />
       <MetricRow
         label="DRIVER DEMAND"
         value={fmtPct(powertrain.driverDemand ?? powertrain.throttle)}
       />
       <MetricRow label="ENGINE LOAD" value={fmtPct(powertrain.engineLoad ?? powertrain.load)} />
+      <MetricRow
+        label="BOOST"
+        value={powertrain.boost == null ? "unavailable" : `${fmtPct(powertrain.boost)} simulated`}
+      />
       <MetricRow label="SHIFT PHASE" value={phase} />
       <MetricRow label="SENSOR SOURCE" value={String(sensor)} />
-      <MetricRow label="AUDIO BACKEND" value={frame.audio.synthesisMode || "-"} />
+      <MetricRow label="AUDIO BACKEND" value={frame.audio.backend || "-"} />
       <MetricRow label="Last shift reason" value={powertrain.lastShiftReason ?? "-"} />
       <MetricRow label="Display speed" value={`${fmtNum(powertrain.displaySpeedKmh, 1)} km/h`} />
       <MetricRow
@@ -190,11 +198,14 @@ function PowertrainSection({ frame }: { frame: DriveDiagnosticsFrame }) {
 
 function AudioSection({ frame }: { frame: DriveDiagnosticsFrame }) {
   const { audio } = frame;
-  const isDynamic = audio.synthesisMode === "dynamic-drive";
+  const isDynamic = audio.backend === "dynamic-drive";
 
   return (
     <Section title="Audio">
-      <MetricRow label="Synthesis" value={audio.synthesisMode} />
+      <MetricRow label="Backend actually active" value={audio.backend} />
+      <MetricRow label="Recorded engine bank" value={audio.recordedSampleBank} />
+      <MetricRow label="Sample loading" value={audio.sampleState ?? "-"} />
+      <MetricRow label="Sample fallback" value={audio.sampleFallbackReason ?? "-"} />
       {isDynamic && audio.dynamicLayers.length > 0 ? (
         <DynamicDriveLayerPanel
           layers={audio.dynamicLayers.map((row) => ({
@@ -220,10 +231,20 @@ function AudioSection({ frame }: { frame: DriveDiagnosticsFrame }) {
       <p className="pt-1 text-[10px] tracking-[0.18em] text-muted-foreground uppercase">
         Master output
       </p>
-      <MetricRow label="Peak" value={fmtNum(audio.master?.peak, 3)} />
-      <MetricRow label="RMS" value={fmtNum(audio.master?.rms, 3)} />
-      <MetricRow label="Headroom" value={fmtNum(audio.master?.headroom, 3)} />
-      <MetricRow label="Limiter reduction" value={fmtNum(audio.master?.reduction, 3)} />
+      <MetricRow label="Approx pre sample peak" value={fmtNum(audio.master?.prePeak, 3)} />
+      <MetricRow label="Approx pre RMS" value={fmtNum(audio.master?.preRms, 3)} />
+      <MetricRow label="Approx post sample peak" value={fmtNum(audio.master?.peak, 3)} />
+      <MetricRow label="Approx post RMS" value={fmtNum(audio.master?.rms, 3)} />
+      <MetricRow label="Approx headroom" value={fmtNum(audio.master?.headroom, 3)} />
+      <MetricRow label="Profile compressor reduction dB" value={fmtNum(audio.master?.compressorReduction, 2)} />
+      <MetricRow label="Limiter reduction dB" value={fmtNum(audio.master?.reduction, 2)} />
+      <p className="pt-1 text-[10px] tracking-[0.18em] text-muted-foreground uppercase">
+        Effective gains
+      </p>
+      <MetricRow label="User / profile / loudness" value={`${fmtNum(audio.gains?.userVolume, 2)} / ${fmtNum(audio.gains?.profileGain, 2)} / ${fmtNum(audio.gains?.loudnessTrim, 2)}`} />
+      <MetricRow label="Load scale / master target" value={`${fmtNum(audio.gains?.loadScale, 2)} / ${fmtNum(audio.gains?.effectiveMasterTarget, 3)}`} />
+      <MetricRow label="Master / duck / profile bus" value={`${fmtNum(audio.gains?.masterNode, 3)} / ${fmtNum(audio.gains?.duck, 3)} / ${fmtNum(audio.gains?.profileBusOutput, 3)}`} />
+      <MetricRow label="Body / accents / beds / wet" value={`${fmtNum(audio.gains?.body, 2)} / ${fmtNum(audio.gains?.accents, 2)} / ${fmtNum(audio.gains?.beds, 2)} / ${fmtNum(audio.gains?.wet, 2)}`} />
       <MetricRow label="Output latency" value={fmtMs(audio.master?.outputLatencyMs)} />
       <MetricRow label="Underruns" value={String(audio.master?.underruns ?? 0)} />
     </Section>

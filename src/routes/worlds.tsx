@@ -5,7 +5,6 @@ import { listWorldExperiences } from "@/lib/experiences";
 import { useSettings } from "@/lib/drive/useSettings";
 import { getSession } from "@/lib/drive/session";
 import { demoStateAt, demoTotalDurationSec } from "@/lib/symphony";
-import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/worlds")({
   component: WorldsPage,
@@ -107,25 +106,21 @@ function WorldsPage() {
                   <p className="mt-2 text-xs tracking-[0.18em] text-muted-foreground uppercase">
                     {item.tagline}
                   </p>
-                  <div
-                    className={cn(
-                      "mt-5 h-16 w-40 overflow-hidden border border-border/60",
-                      listening && "animate-pulse",
-                    )}
-                    aria-hidden
-                  >
-                    <div
-                      className="h-full bg-gradient-to-r from-transparent via-foreground/15 to-transparent"
-                      style={{
-                        transform: `translateX(${listening ? energy * 40 : 8}%)`,
-                        transition: "transform 200ms linear",
-                      }}
-                    />
-                  </div>
                   {listening ? (
-                    <p className="mt-3 text-[10px] tracking-[0.22em] text-muted-foreground uppercase">
-                      {worldState.replace("_", " ")} · energy {Math.round(energy * 100)}%
-                    </p>
+                    <div
+                      className="mt-5 w-40"
+                      aria-label={`Reactive energy ${Math.round(energy * 100)}%`}
+                    >
+                      <div className="h-px overflow-hidden bg-border">
+                        <div
+                          className="h-full bg-foreground transition-[width] duration-200"
+                          style={{ width: `${Math.max(3, energy * 100)}%` }}
+                        />
+                      </div>
+                      <p className="mt-3 text-[10px] tracking-[0.22em] text-muted-foreground uppercase">
+                        {worldState.replace("_", " ")} · energy {Math.round(energy * 100)}%
+                      </p>
+                    </div>
                   ) : null}
                 </div>
                 <div className="flex shrink-0 flex-col items-end gap-2">

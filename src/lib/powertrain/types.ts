@@ -29,6 +29,10 @@ export interface VirtualPowertrainState {
   driverDemand: number;
   /** Virtual power needed at current speed/accel. */
   engineLoad: number;
+  /** Simulated normalized boost (0..1); never measured pressure. */
+  boost: number;
+  /** One-tick release edge after sufficient boost and a genuine load drop. */
+  boostRelease: boolean;
   /** @deprecated alias of driverDemand for older consumers */
   throttle: number;
   /** @deprecated alias of engineLoad for older consumers */
@@ -66,6 +70,10 @@ export interface PowertrainRuntimeDiagnostics {
   braking: number;
   motionSource: string;
   fallbackTier: string;
+  /** Timestamp-aware acceleration used by load inference, in m/s². */
+  accelerationFilteredMs2: number;
+  /** Effective sample/tick interval used by the simulator, in milliseconds. */
+  effectiveDtMs: number;
 }
 
 export const IDLE_POWERTRAIN: VirtualPowertrainState = {
@@ -79,6 +87,8 @@ export const IDLE_POWERTRAIN: VirtualPowertrainState = {
   queuedTargetGear: 0,
   driverDemand: 0,
   engineLoad: 0,
+  boost: 0,
+  boostRelease: false,
   load: 0,
   throttle: 0,
   shifting: false,

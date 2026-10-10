@@ -39,6 +39,34 @@ function integrate(speed: number, throttle: number, braking: number, dt: number)
 
 export const CALIBRATION_SCENARIOS: CalibrationScenarioDef[] = [
   {
+    id: "full-powertrain-replay",
+    label: "Full deterministic powertrain replay",
+    description: "Idle, gentle and hard acceleration, cruise, lift-off, braking and shifts",
+    profileId: "gt-v8",
+    dt: 0.05,
+    steps: 720,
+    integrateSpeed: false,
+    drive: (frame) => {
+      if (frame < 60) return { speedKmh: 0, throttle: 0, braking: 0, accelerationMs2: 0 };
+      if (frame < 220) {
+        const p = (frame - 60) / 160;
+        return { speedKmh: p * 50, throttle: 0.3, braking: 0, accelerationMs2: 1.74 };
+      }
+      if (frame < 380) {
+        const p = (frame - 220) / 160;
+        return { speedKmh: 50 + p * 80, throttle: 0.95, braking: 0, accelerationMs2: 2.78 };
+      }
+      if (frame < 480) return { speedKmh: 130, throttle: 0.22, braking: 0, accelerationMs2: 0 };
+      if (frame < 580) {
+        const p = (frame - 480) / 100;
+        return { speedKmh: 130 - p * 30, throttle: 0, braking: 0, accelerationMs2: -1.67 };
+      }
+      const p = Math.min(1, (frame - 580) / 139);
+      return { speedKmh: 100 * (1 - p), throttle: 0, braking: 0.72, accelerationMs2: -4 };
+    },
+    motionPatch: () => ({ primarySource: "simulator", fallbackTier: "simulator", motionConfidence: 1 }),
+  },
+  {
     id: "gentle-city-launch",
     label: "Gentle city launch",
     description: "Light throttle 0→50 km/h",

@@ -1,8 +1,13 @@
 import type { SoundProfile } from "@/lib/sound/profiles";
 
 /**
- * Technical families for improved synthesis.
+ * Technical families for improved synthesis / motion routing.
  * Profiles do not share one sound model.
+ *
+ * Authoritative for `motionFromDrive` and related routing. Package INDEX
+ * "Technical family" labels may differ for a few IDs — see
+ * docs/FAMILY_CLASSIFICATION_MISMATCHES.md. Do not realign those without a
+ * dedicated sound-improvement pass (not metadata-only).
  */
 export type ProfileFamily = "physical" | "designed" | "environmental" | "musical";
 
@@ -36,6 +41,8 @@ const FAMILY_BY_ID: Record<string, ProfileFamily> = {
   ufo: "designed",
   "electric-hypercar": "designed",
   "formula-electric": "designed",
+  // Package INDEX labels neon-drive musical and dragon/thunder-beast environmental.
+  // Runtime stays designed — changing these alters motion envelopes (not metadata-only).
   "neon-drive": "designed",
   dragon: "designed",
   "thunder-beast": "designed",

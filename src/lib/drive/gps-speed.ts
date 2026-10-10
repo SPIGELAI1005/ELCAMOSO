@@ -1,7 +1,8 @@
 /**
  * Resolve vehicle speed (m/s) from a GeolocationPosition.
- * Prefer coords.speed when the browser provides it; otherwise derive from
- * successive lat/lon fixes (common on phones / in-car browsers that omit speed).
+ * Prefer a trustworthy coords.speed value. Some in-car browsers expose a
+ * permanently-zero speed field while coordinates continue to move, so a
+ * validated position delta may override a stale reported zero.
  */
 
 export interface GpsPoint {
@@ -68,7 +69,7 @@ export interface ResolveGpsSpeedInput {
 }
 
 /**
- * Choose reported GPS speed when present; else fall back to position deltas.
+ * Choose reported GPS speed when trustworthy; else fall back to position deltas.
  * Always advances `point` when the fix has usable coordinates.
  */
 export function resolveGpsSpeed(input: ResolveGpsSpeedInput): GpsSpeedResult {
@@ -76,23 +77,30 @@ export function resolveGpsSpeed(input: ResolveGpsSpeedInput): GpsSpeedResult {
   const coordsOk = Number.isFinite(lat) && Number.isFinite(lon);
   const point: GpsPoint | null = coordsOk ? { lat, lon, atMs } : previous;
 
+  const accuracyOk = accuracyM == null || !Number.isFinite(accuracyM) || accuracyM <= 45;
+  const derived = coordsOk && previous && accuracyOk ? speedFromDelta(previous, point!) : null;
   const reported = input.reportedSpeed;
-  if (typeof reported === "number" && Number.isFinite(reported) && reported >= 0) {
+  const reportedOk = typeof reported === "number" && Number.isFinite(reported) && reported >= 0;
+  const clampedReported = reportedOk ? Math.min(MAX_SPEED_MS, Math.max(0, reported)) : null;
+  const reportedZeroLooksStale =
+    clampedReported !== null &&
+    clampedReported < MIN_DELTA_SPEED &&
+    derived !== null &&
+    derived > 1;
+
+  if (clampedReported !== null && !reportedZeroLooksStale) {
     return {
-      speed: Math.min(MAX_SPEED_MS, Math.max(0, reported)),
+      speed: clampedReported,
       source: "reported",
       point,
     };
   }
 
-  const accuracyOk = accuracyM == null || !Number.isFinite(accuracyM) || accuracyM <= 45;
-
-  if (coordsOk && previous && accuracyOk) {
-    const derived = speedFromDelta(previous, { lat, lon, atMs });
-    if (derived !== null) {
-      return { speed: derived, source: "delta", point };
-    }
+  if (derived !== null) {
+    return { speed: derived, source: "delta", point };
   }
+
+  if (clampedReported !== null) return { speed: clampedReported, source: "reported", point };
 
   return { speed: 0, source: "none", point };
 }

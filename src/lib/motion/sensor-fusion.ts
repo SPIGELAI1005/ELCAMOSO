@@ -695,6 +695,14 @@ export function tickSensorFusion(
     speedKmh,
     accelerationMs2: state.accelTransientMs2,
     accelerationFiltered: state.accelFilteredMs2,
+    accelerationProvenance:
+      imuFresh
+        ? "measured-imu"
+        : telemetryAccel !== null
+          ? "measured-telemetry"
+          : gpsFresh
+            ? "estimated-speed"
+            : "unavailable",
     decelerationMs2,
     inferredThrottle: state.inferredThrottle,
     motionConfidence: state.motionConfidence,

@@ -10,11 +10,18 @@ import {
 import {
   loadRegionFromDemand,
   playbackRateForRpm,
+  playbackRateWithinCoverage,
   SAMPLE_RATE_MAX,
   SAMPLE_RATE_MIN,
   selectSampleNeighbors,
+  selectSampleMix,
   type CombustionSampleBank,
 } from "@/lib/sound/realism/v2/sample-bank";
+import {
+  AMERICAN_V8_PILOT_MANIFEST,
+  isPilotEntryApproved,
+  missingPilotRecordingRequirements,
+} from "@/lib/sound/realism/v2/american-v8-pilot-manifest";
 import { IDLE_STATE, type DriveState } from "@/lib/drive/model";
 import { HybridCombustionSynth } from "@/lib/sound/realism/v2/hybrid-combustion-synth";
 import { getProfile } from "@/lib/sound/profiles";
@@ -83,6 +90,21 @@ describe("acoustic eligibility V2.1", () => {
     expect(v10.cylinders).toBe(10);
     expect(v10.combustionSharpness).toBeGreaterThan(gt.combustionSharpness);
   });
+
+  it("does not reuse flat-six or inline-six acoustics for track and rally profiles", () => {
+    const flatSix = acousticEngineForProfile("flat-six-sport")!;
+    const track = acousticEngineForProfile("race-car")!;
+    const turboSix = acousticEngineForProfile("turbo-inline-6")!;
+    const rally = acousticEngineForProfile("rally-car")!;
+
+    expect(track.architecture).toBe("flat-plane-v8");
+    expect(track.cylinders).toBe(8);
+    expect(track.combustionSharpness).toBeGreaterThan(flatSix.combustionSharpness);
+    expect(rally.architecture).toBe("inline-3");
+    expect(rally.cylinders).toBe(3);
+    expect(rally.forcedInduction).toBe(true);
+    expect(rally.exhaustPulse).toBeGreaterThan(turboSix.exhaustPulse);
+  });
 });
 
 describe("sample bank helpers", () => {
@@ -113,6 +135,57 @@ describe("sample bank helpers", () => {
     expect(loadRegionFromDemand(0.05, false)).toBe("idle");
     expect(loadRegionFromDemand(0.5, false)).toBe("medium");
     expect(loadRegionFromDemand(0.2, true)).toBe("overrun");
+    expect(loadRegionFromDemand(0.05, false, 2400)).toBe("off-load");
+  });
+
+  it("falls back instead of pitching outside an entry's permitted range", () => {
+    const entry = {
+      assetId: "limited",
+      personalityId: "american-v8",
+      rpmRef: 2000,
+      load: "high" as const,
+      permittedPlaybackRate: { min: 0.9, max: 1.1 },
+    };
+    expect(playbackRateWithinCoverage(entry, 2600)).toBeNull();
+    const selection = selectSampleMix(
+      { personalityId: "american-v8", entries: [entry] },
+      2600,
+      "high",
+      0.9,
+    );
+    expect(selection.targets).toEqual([]);
+    expect(selection.fallbackReason).toBe("rate-out-of-range");
+  });
+
+  it("interpolates adjacent RPM and load anchors with bounded linear overlap", () => {
+    const entries = [
+      ["low-2", 2000, 0.35],
+      ["low-4", 4000, 0.35],
+      ["high-2", 2000, 0.85],
+      ["high-4", 4000, 0.85],
+    ].map(([assetId, rpmRef, loadAnchor]) => ({
+      assetId: String(assetId), personalityId: "american-v8", rpmRef: Number(rpmRef),
+      load: "medium" as const, loadAnchor: Number(loadAnchor),
+      permittedPlaybackRate: { min: 0.7, max: 1.6 },
+    }));
+    const selection = selectSampleMix(
+      { personalityId: "american-v8", entries },
+      3000,
+      "medium",
+      0.6,
+    );
+    expect(selection.targets).toHaveLength(4);
+    expect(selection.targets.reduce((sum, target) => sum + target.weight, 0)).toBeCloseTo(1, 6);
+    expect(selection.targets.every((target) => target.weight >= 0)).toBe(true);
+  });
+});
+
+describe("American V8 pilot manifest", () => {
+  it("keeps absent asset and provenance metadata explicitly unknown", () => {
+    expect(AMERICAN_V8_PILOT_MANIFEST.every((entry) => entry.assetPath === null)).toBe(true);
+    expect(AMERICAN_V8_PILOT_MANIFEST.every((entry) => entry.rpmAnchor === null)).toBe(true);
+    expect(AMERICAN_V8_PILOT_MANIFEST.every((entry) => !isPilotEntryApproved(entry))).toBe(true);
+    expect(missingPilotRecordingRequirements()).toHaveLength(9);
   });
 });
 
@@ -120,7 +193,8 @@ describe("HybridCombustionSynth phase + load", () => {
   function mockAudioParam() {
     return {
       value: 0,
-      setTargetAtTime() {
+      setTargetAtTime(value: number) {
+        this.value = value;
         return this;
       },
       setValueAtTime() {
@@ -271,5 +345,95 @@ describe("HybridCombustionSynth phase + load", () => {
     }
     expect(synth.getDiagnostics().activeNodeEstimate).toBe(before);
     synth.dispose();
+  });
+
+  it("changes spectral shape and intake/exhaust balance at fixed RPM when load changes", () => {
+    const synth = new HybridCombustionSynth();
+    const body = mockNode() as unknown as GainNode;
+    synth.build(mockCtx(), getProfile("american-muscle-v8"), {
+      body,
+      accents: mockNode() as unknown as GainNode,
+      beds: mockNode() as unknown as GainNode,
+      profile: body,
+    });
+    synth.update(state({ rpm: 2800, throttle: 0.15, load: 0.2 }), 0.1);
+    const light = synth.getDiagnostics();
+    synth.update(state({ rpm: 2800, throttle: 0.85, load: 0.9 }), 0.2);
+    const loaded = synth.getDiagnostics();
+    expect(loaded.spectralTiltDb).toBeGreaterThan(light.spectralTiltDb);
+    expect(loaded.intakeGain).toBeGreaterThan(light.intakeGain);
+    expect(loaded.combustionGain).toBeGreaterThan(light.combustionGain);
+    expect(loaded.formantGains).not.toEqual(light.formantGains);
+    synth.dispose();
+  });
+
+  it("edge-gates held boost-release and shift phases", () => {
+    const synth = new HybridCombustionSynth();
+    const body = mockNode() as unknown as GainNode;
+    synth.build(mockCtx(), getProfile("turbo-inline-6"), {
+      body,
+      accents: mockNode() as unknown as GainNode,
+      beds: mockNode() as unknown as GainNode,
+      profile: body,
+    });
+    for (let i = 0; i < 80; i += 1) {
+      synth.update(
+        state({
+          rpm: 3600,
+          throttle: 0.8,
+          load: 0.85,
+          powertrain: {
+            ...IDLE_POWERTRAIN,
+            rpm: 3600,
+            mechanicalRpm: 3600,
+            gear: 3,
+            boost: 0.9,
+            driverDemand: 0.8,
+            engineLoad: 0.85,
+          },
+        }),
+        0.02 + i * 0.02,
+      );
+    }
+    const held = state({
+      rpm: 3600,
+      throttle: 0.05,
+      load: 0.12,
+      powertrain: {
+        ...IDLE_POWERTRAIN,
+        rpm: 3600,
+        mechanicalRpm: 3600,
+        gear: 3,
+        shifting: true,
+        shiftPhase: "reengage",
+        shiftDirection: "up",
+        boost: 0.55,
+        boostRelease: true,
+      },
+    });
+    synth.update(held, 1.7);
+    synth.update(held, 1.72);
+    synth.update(held, 1.74);
+    expect(synth.getDiagnostics().eventCounts).toEqual({
+      shift: 2,
+      overrun: 0,
+      boostRelease: 1,
+    });
+    synth.dispose();
+  });
+
+  it("releases all graph resources and stays inert after dispose", () => {
+    const synth = new HybridCombustionSynth();
+    const body = mockNode() as unknown as GainNode;
+    synth.build(mockCtx(), getProfile("american-muscle-v8"), {
+      body,
+      accents: mockNode() as unknown as GainNode,
+      beds: mockNode() as unknown as GainNode,
+      profile: body,
+    });
+    expect(synth.getDiagnostics().activeNodeEstimate).toBeGreaterThan(0);
+    synth.dispose();
+    synth.update(state({ rpm: 4000, throttle: 1, load: 1 }), 1);
+    expect(synth.getDiagnostics().activeNodeEstimate).toBe(0);
   });
 });

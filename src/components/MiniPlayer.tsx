@@ -20,6 +20,11 @@ export function MiniPlayer() {
     meterRms: snap.meter ? Math.round(snap.meter.rms * 16) : 0,
     meterHeadroom: snap.meter ? Math.round(snap.meter.headroom * 16) : 0,
     meterReduction: snap.meter ? Math.round(snap.meter.reduction * 16) : 0,
+    meterPrePeak: snap.meter ? Math.round(snap.meter.prePeak * 16) : 0,
+    meterPreRms: snap.meter ? Math.round(snap.meter.preRms * 16) : 0,
+    meterCompressorReduction: snap.meter
+      ? Math.round(snap.meter.compressorReduction * 16)
+      : 0,
   }));
   const { settings } = useSettings();
   if (pathname === "/") return null;
@@ -35,6 +40,9 @@ export function MiniPlayer() {
         rms: ui.meterRms / 16,
         headroom: ui.meterHeadroom / 16,
         reduction: ui.meterReduction / 16,
+        prePeak: ui.meterPrePeak / 16,
+        preRms: ui.meterPreRms / 16,
+        compressorReduction: ui.meterCompressorReduction / 16,
       }
     : null;
 

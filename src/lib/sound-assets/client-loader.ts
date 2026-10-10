@@ -5,6 +5,7 @@ const MANIFEST_ENDPOINT = "/api/sound-assets/manifest";
 export async function fetchSoundAssetManifest(input: {
   sessionToken?: string | null;
   personality?: string;
+  signal?: AbortSignal;
 }): Promise<SoundAssetManifest> {
   const headers: Record<string, string> = {
     "content-type": "application/json",
@@ -17,6 +18,7 @@ export async function fetchSoundAssetManifest(input: {
     method: "POST",
     headers,
     body: JSON.stringify(input.personality ? { personality: input.personality } : {}),
+    ...(input.signal ? { signal: input.signal } : {}),
   });
 
   if (!response.ok) {
@@ -27,17 +29,18 @@ export async function fetchSoundAssetManifest(input: {
 }
 
 export async function decodeManifestAssets(
-  audioContext: AudioContext,
+  audioContext: BaseAudioContext,
   manifest: SoundAssetManifest,
+  signal?: AbortSignal,
 ): Promise<Map<string, AudioBuffer>> {
   const buffers = new Map<string, AudioBuffer>();
   if (manifest.deliveryMode === "procedural_only" || manifest.assets.length === 0) {
     return buffers;
   }
 
-  await Promise.all(
+  await Promise.allSettled(
     manifest.assets.map(async (asset) => {
-      const response = await fetch(asset.url);
+      const response = await fetch(asset.url, signal ? { signal } : undefined);
       if (!response.ok) {
         throw new Error(`Failed to fetch sound asset ${asset.id}`);
       }

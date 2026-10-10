@@ -38,4 +38,17 @@ test.describe("Route smoke", () => {
       await expect(page.locator("body")).toContainText(route.signal);
     });
   }
+
+  test("About begins with the origin story before live-or-later positioning", async ({ page }) => {
+    await gotoPath(page, "/about");
+    const text = (await page.locator("main").innerText()).toLocaleLowerCase();
+    expect(text.indexOf("where it started")).toBeGreaterThanOrEqual(0);
+    expect(text.indexOf("where it started")).toBeLessThan(text.indexOf("sound when you want it"));
+  });
+
+  test("World cards do not show decorative gradient placeholders", async ({ page }) => {
+    await gotoPath(page, "/worlds");
+    await expect(page.locator("main [class*='bg-gradient']")).toHaveCount(0);
+    await expect(page.getByLabel(/Reactive energy/i)).toHaveCount(0);
+  });
 });

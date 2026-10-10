@@ -3,7 +3,7 @@ import type { SoundProfile } from "@/lib/sound/profiles";
 const SPORT_BOX = {
   gearRatios: [14.5, 9.2, 6.8, 5.2, 4.2, 3.5, 3.0],
   idleRpm: 880,
-  redlineRpm: 8000,
+  redlineRpm: 9000,
   shiftSmoothing: 0.11,
 };
 

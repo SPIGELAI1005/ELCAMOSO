@@ -3,7 +3,7 @@ import type { DriveState } from "@/lib/drive/model";
 import type { MotionPipelineMetrics } from "@/lib/motion/pipeline-metrics";
 import type { SensorFusionState } from "@/lib/motion/sensor-fusion";
 import type { VehicleMotionState } from "@/lib/motion/types";
-import type { MeterReading } from "@/lib/sound/engine";
+import type { MeterReading, SoundGainDiagnostics } from "@/lib/sound/engine";
 import type { DynamicLayerDebugInfo } from "@/lib/sound/dynamic-drive/types";
 import type {
   AudioDiagnostics,
@@ -81,7 +81,11 @@ function readMotion(state: SensorFusionState, now: number): MotionDiagnostics {
 function readFusion(
   state: SensorFusionState,
   vehicleMotion: VehicleMotionState,
+  now: number,
 ): FusionDiagnostics {
+  const sourceRow = state.bySource[state.primarySource];
+  const simulated = String(state.primarySource) === "simulator";
+  const telemetryAccel = state.bySource["vehicle-telemetry"]?.sample.accelerationLongitudinal;
   return {
     speedKmh: vehicleMotion.speedKmh,
     accelerationMs2: vehicleMotion.accelerationMs2,
@@ -89,6 +93,9 @@ function readFusion(
     primarySource: state.primarySource,
     fallbackTier: vehicleMotion.fallbackTier,
     transitioning: vehicleMotion.transitioning,
+    inputAgeMs: sourceRow ? Math.max(0, Math.round(now - sourceRow.receivedAt)) : null,
+    speedProvenance: simulated ? "simulated" : vehicleMotion.fallbackTier === "hold" ? "estimated" : "measured",
+    accelerationProvenance: simulated ? "simulated" : telemetryAccel != null ? "measured" : "estimated",
   };
 }
 
@@ -119,6 +126,9 @@ function readPowertrain(driveState: DriveState): PowertrainDiagnostics {
     motionSource: pt?.diagnostics?.motionSource ?? null,
     fallbackTier: pt?.diagnostics?.fallbackTier ?? null,
     drivingMode: pt?.drivingMode ?? null,
+    valueProvenance: pt?.diagnostics?.motionSource === "simulator" ? "simulated" : "estimated",
+    boost: pt?.boost ?? null,
+    boostProvenance: pt ? "simulated" : "unavailable",
   };
 }
 
@@ -132,10 +142,14 @@ function layerRow(info: DynamicLayerDebugInfo): AudioDiagnostics["activeLayers"]
 }
 
 function readAudio(input: {
+  backend: string;
+  sampleState?: string | null;
+  sampleFallbackReason?: string | null;
   synthesisMode: string;
   dynamicLayers: DynamicLayerDebugInfo[];
   meter: MeterReading | null;
   perf: AudioPerf;
+  gains: SoundGainDiagnostics | null;
 }): AudioDiagnostics {
   const allLayers = input.dynamicLayers.map(layerRow);
   const active = allLayers.filter((row) => row.gain >= ACTIVE_GAIN);
@@ -143,22 +157,34 @@ function readAudio(input: {
   const steady = active.filter((row) => STEADY_LAYER_IDS.has(row.id));
 
   return {
+    backend: input.backend,
+    recordedSampleBank: allLayers.some((row) => row.id === "v2-recorded-samples")
+      ? "active"
+      : input.backend.startsWith("realism-v2")
+        ? "not-shipped"
+        : "not-applicable",
+    sampleState: input.sampleState ?? null,
+    sampleFallbackReason: input.sampleFallbackReason ?? null,
     synthesisMode: input.synthesisMode,
     dynamicLayers: allLayers,
     activeLayers: steady.length ? steady : active,
     transients,
     master: input.meter
       ? {
+          prePeak: input.meter.prePeak,
+          preRms: input.meter.preRms,
           peak: input.meter.peak,
           rms: input.meter.rms,
           headroom: input.meter.headroom,
           reduction: input.meter.reduction,
+          compressorReduction: input.meter.compressorReduction,
           underruns: input.perf.underruns,
           outputLatencyMs: Number.isFinite(input.perf.outputLatencyMs)
             ? input.perf.outputLatencyMs
             : null,
         }
       : null,
+    gains: input.gains,
   };
 }
 
@@ -181,21 +207,29 @@ export function collectDriveDiagnostics(input: {
   driveState: DriveState;
   pipeline: MotionPipelineMetrics;
   synthesisMode: string;
+  backend?: string;
+  sampleState?: string | null;
+  sampleFallbackReason?: string | null;
   dynamicLayers: DynamicLayerDebugInfo[];
   meter: MeterReading | null;
   perf: AudioPerf;
+  gains?: SoundGainDiagnostics | null;
 }): DriveDiagnosticsFrame {
   const now = input.now ?? performance.now();
   return {
     at: Math.round(now),
     motion: readMotion(input.sensorFusion, now),
-    fusion: readFusion(input.sensorFusion, input.vehicleMotion),
+    fusion: readFusion(input.sensorFusion, input.vehicleMotion, now),
     powertrain: readPowertrain(input.driveState),
     audio: readAudio({
       synthesisMode: input.synthesisMode,
+      backend: input.backend ?? input.synthesisMode,
+      sampleState: input.sampleState ?? null,
+      sampleFallbackReason: input.sampleFallbackReason ?? null,
       dynamicLayers: input.dynamicLayers,
       meter: input.meter,
       perf: input.perf,
+      gains: input.gains ?? null,
     }),
     network: readNetwork(input.pipeline),
   };

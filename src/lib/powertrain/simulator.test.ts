@@ -87,7 +87,37 @@ describe("PowertrainSimulator", () => {
     }));
     expect(sport.rpm).not.toBeCloseTo(muscle.rpm, 0);
   });
+
+  it("uses sample timestamps and rejects GPS jitter as rapid acceleration", () => {
+    const sim = new PowertrainSimulator({ profileId: "american-v8" });
+    const gears = new Set<number>();
+    let last = sim.tick(gpsMotion(1000, 80), 0.016);
+    for (let i = 1; i <= 80; i += 1) {
+      last = sim.tick(gpsMotion(1000 + i * 100, 80 + (i % 2 ? 0.8 : -0.8)), 0.016);
+      if (i > 50) gears.add(last.gear);
+    }
+    expect(last.diagnostics?.effectiveDtMs).toBeCloseTo(100, 1);
+    expect(Math.abs(last.diagnostics?.accelerationFilteredMs2 ?? 99)).toBeLessThan(0.5);
+    // At most one settling shift after reconnect hold; alternating jitter must not hunt.
+    expect(gears.size).toBeLessThanOrEqual(2);
+  });
 });
+
+function gpsMotion(timestamp: number, speedKmh: number): VehicleMotionState {
+  return {
+    timestamp,
+    speedKmh,
+    accelerationMs2: 0,
+    accelerationFiltered: 0,
+    decelerationMs2: 0,
+    inferredThrottle: 0.08,
+    motionConfidence: 0.8,
+    primarySource: "tesla-browser",
+    sourceHealth: { phone: false, browser: true, vehicleTelemetry: false },
+    fallbackTier: "browser",
+    transitioning: false,
+  };
+}
 
 function sampleMotion(
   timestamp: number,

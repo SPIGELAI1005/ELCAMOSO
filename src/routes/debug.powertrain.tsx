@@ -12,6 +12,10 @@ import {
   type SimulatorControls,
   type VirtualPowertrainState,
 } from "@/lib/powertrain/domain";
+import { driveStateFromPowertrain } from "@/lib/powertrain/adapters/drive-state";
+import { IDLE_STATE } from "@/lib/drive/model";
+import { SoundEngine } from "@/lib/sound/engine";
+import { SOUND_PROFILES, type SoundProfile } from "@/lib/sound/profiles";
 
 export const Route = createFileRoute("/debug/powertrain")({
   beforeLoad: () => {
@@ -53,6 +57,13 @@ const PRESETS: { id: string; label: string; apply: () => SimulatorControls }[] =
   },
 ];
 
+function soundProfileForPowertrain(profileId: string): SoundProfile {
+  return (
+    SOUND_PROFILES.find((profile) => profile.drivetrainPersonalityId === profileId) ??
+    SOUND_PROFILES.find((profile) => profile.id === "gt-v8")!
+  );
+}
+
 function PowertrainDebug() {
   const [profileId, setProfileId] = useState(POWERTRAIN_PROFILES[0]!.id);
   const [controls, setControls] = useState<SimulatorControls>(DEFAULT_SIMULATOR_CONTROLS);
@@ -60,11 +71,14 @@ function PowertrainDebug() {
   const [running, setRunning] = useState(true);
   const [state, setState] = useState<VirtualPowertrainState>(IDLE_POWERTRAIN);
   const [scenarioReport, setScenarioReport] = useState<string | null>(null);
+  const [audioEnabled, setAudioEnabled] = useState(false);
 
   const sessionRef = useRef(new PowertrainSimulationSession(profileId));
   const controlsRef = useRef(controls);
   const rafRef = useRef<number | null>(null);
   const lastRef = useRef(performance.now());
+  const audioRef = useRef<SoundEngine | null>(null);
+  const previousDriveRef = useRef(IDLE_STATE);
 
   useEffect(() => {
     controlsRef.current = controls;
@@ -73,6 +87,10 @@ function PowertrainDebug() {
   useEffect(() => {
     sessionRef.current.setProfile(profileId);
     sessionRef.current.reset(controlsRef.current);
+    previousDriveRef.current = IDLE_STATE;
+    if (audioRef.current?.running) {
+      audioRef.current.setProfile(soundProfileForPowertrain(profileId), true);
+    }
   }, [profileId]);
 
   const tick = useCallback(() => {
@@ -80,7 +98,7 @@ function PowertrainDebug() {
     const dt = Math.min(0.05, (now - lastRef.current) / 1000);
     lastRef.current = now;
 
-    const { controls: nextControls, powertrain } = sessionRef.current.tick(
+    const { controls: nextControls, powertrain, motion } = sessionRef.current.tick(
       controlsRef.current,
       dt,
       integrate,
@@ -88,8 +106,41 @@ function PowertrainDebug() {
     controlsRef.current = nextControls;
     setControls(nextControls);
     setState(powertrain);
+    if (audioRef.current?.running) {
+      const drive = driveStateFromPowertrain(
+        powertrain,
+        motion,
+        previousDriveRef.current,
+        undefined,
+        dt,
+      );
+      previousDriveRef.current = drive;
+      audioRef.current.update(drive);
+    }
     if (running) rafRef.current = requestAnimationFrame(tick);
   }, [integrate, running]);
+
+  useEffect(
+    () => () => {
+      void audioRef.current?.stop();
+      audioRef.current = null;
+    },
+    [],
+  );
+
+  const toggleAudio = async () => {
+    if (audioRef.current?.running) {
+      await audioRef.current.stop();
+      audioRef.current = null;
+      setAudioEnabled(false);
+      return;
+    }
+    const engine = new SoundEngine();
+    await engine.start(soundProfileForPowertrain(profileId), { signature: false, seed: 17 });
+    audioRef.current = engine;
+    previousDriveRef.current = IDLE_STATE;
+    setAudioEnabled(true);
+  };
 
   useEffect(() => {
     if (!running) return;
@@ -141,8 +192,8 @@ function PowertrainDebug() {
         <p className="text-[11px] tracking-[0.28em] text-muted-foreground uppercase">Dev only</p>
         <h1 className="mt-3 text-3xl font-light">Dynamic Drive Simulator</h1>
         <p className="mt-3 text-sm text-muted-foreground">
-          Powertrain domain only - no audio, no vehicle sensors. Pick any personality; tune speed,
-          acceleration, throttle and braking; inspect gear, RPM, load and driving state.
+          Manual developer inputs with optional local audio. Values are simulated and never connected
+          to vehicle sensors. Tune speed, acceleration, pedal and braking while inspecting the virtual drivetrain.
         </p>
         <div className="mt-4 flex flex-wrap gap-4">
           <Link
@@ -235,7 +286,7 @@ function PowertrainDebug() {
             onChange={(v) => patch({ accelerationMs2: v })}
           />
           <SliderRow
-            label="Throttle"
+            label="Simulated pedal (0–1)"
             value={controls.throttle}
             min={0}
             max={1}
@@ -244,7 +295,7 @@ function PowertrainDebug() {
             onChange={(v) => patch({ throttle: v })}
           />
           <SliderRow
-            label="Braking"
+            label="Simulated brake (0–1)"
             value={controls.braking}
             min={0}
             max={1}
@@ -275,6 +326,13 @@ function PowertrainDebug() {
               className="h-10 rounded-full border border-border px-5 text-[11px] tracking-[0.2em] uppercase hover:bg-secondary"
             >
               Reset
+            </button>
+            <button
+              type="button"
+              onClick={() => void toggleAudio()}
+              className="h-10 rounded-full border border-border px-5 text-[11px] tracking-[0.2em] uppercase hover:bg-secondary"
+            >
+              {audioEnabled ? "Stop audio" : "Start audio"}
             </button>
           </div>
         </section>
@@ -309,6 +367,7 @@ function PowertrainDebug() {
           <div className="mx-auto mt-8 grid max-w-md gap-4">
             <MeterBar label="Driver demand" value={state.driverDemand} />
             <MeterBar label="Engine load" value={state.engineLoad} />
+            <MeterBar label="Simulated boost" value={state.boost} />
           </div>
         </section>
 
@@ -319,6 +378,8 @@ function PowertrainDebug() {
           <Readout label="Queued target" value={String(state.queuedTargetGear)} />
           <Readout label="Driver demand" value={state.driverDemand.toFixed(2)} />
           <Readout label="Engine load" value={state.engineLoad.toFixed(2)} />
+          <Readout label="Simulated boost" value={state.boost.toFixed(2)} />
+          <Readout label="Boost release edge" value={state.boostRelease ? "yes" : "no"} />
           <Readout
             label="Mechanical RPM"
             value={Math.round(state.mechanicalRpm).toLocaleString()}
@@ -357,8 +418,24 @@ function PowertrainDebug() {
           />
           <Readout label="Motion source" value={state.diagnostics?.motionSource ?? "simulator"} />
           <Readout label="Fallback tier" value={state.diagnostics?.fallbackTier ?? "-"} />
+          <Readout
+            label="Filtered acceleration"
+            value={`${(state.diagnostics?.accelerationFilteredMs2 ?? 0).toFixed(2)} m/s²`}
+          />
+          <Readout
+            label="Effective timestep"
+            value={`${(state.diagnostics?.effectiveDtMs ?? 0).toFixed(1)} ms`}
+          />
           <Readout label="Redline" value={String(profile.engine.redlineRpm)} />
           <Readout label="Gears" value={String(profile.transmission.gears)} />
+          {profile.boost ? (
+            <>
+              <Readout label="Boost spool range" value={`${profile.boost.minSpoolRpm}–${profile.boost.fullSpoolRpm} rpm`} />
+              <Readout label="Boost buildup τ" value={`${profile.boost.buildupTauSec.toFixed(2)} s`} />
+              <Readout label="Boost release τ" value={`${profile.boost.releaseTauSec.toFixed(2)} s`} />
+              <Readout label="Boost release cooldown" value={`${profile.boost.releaseCooldownMs} ms`} />
+            </>
+          ) : null}
         </section>
       </div>
     </main>

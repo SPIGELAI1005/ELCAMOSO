@@ -117,6 +117,19 @@ export const INDEXABLE_ROUTE_POLICIES: SeoRoutePolicy[] = [
     ],
   },
   {
+    path: "/science",
+    indexable: true,
+    title: "Science of ELCAMOSO",
+    description:
+      "How ELCAMOSO turns motion into music: speed, acceleration and continuity become Movement, Richness and Release for Symphony Experiences.",
+    image: IMG,
+    imageAlt: ALT,
+    breadcrumbs: [
+      { name: "Home", path: "/" },
+      { name: "Science", path: "/science" },
+    ],
+  },
+  {
     path: "/legal",
     indexable: true,
     title: "Legal - ELCAMOSO",

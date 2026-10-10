@@ -246,6 +246,8 @@ export function driveStateFromCalibrationSample(
       queuedTargetGear: sample.queuedTargetGear,
       driverDemand: sample.driverDemand,
       engineLoad: sample.engineLoad,
+      boost: previous?.powertrain?.boost ?? 0,
+      boostRelease: false,
       throttle: sample.driverDemand,
       load: sample.engineLoad,
       shifting: sample.shifting,
@@ -266,6 +268,8 @@ export function driveStateFromCalibrationSample(
         braking: sample.braking,
         motionSource: sample.motionSource,
         fallbackTier: sample.fallbackTier,
+        accelerationFilteredMs2: sample.accelerationFilteredMs2,
+        effectiveDtMs: previous?.powertrain?.diagnostics?.effectiveDtMs ?? 16,
       },
     },
   };

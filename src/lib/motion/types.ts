@@ -37,6 +37,14 @@ export interface VehicleMotionState {
   accelerationMs2: number;
   accelerationFiltered: number;
 
+  /** Origin of longitudinal acceleration; keeps measured IMU distinct from speed-derived estimates. */
+  accelerationProvenance?:
+    | "measured-imu"
+    | "measured-telemetry"
+    | "estimated-speed"
+    | "simulated"
+    | "unavailable";
+
   decelerationMs2: number;
 
   /** 0..1 inferred driver demand */

@@ -68,7 +68,9 @@ export interface DrivetrainPersonalityConfig {
         | "cross-plane-v8"
         | "cross-plane-v8-lope"
         | "flat-six"
+        | "flat-plane-v8"
         | "inline-6"
+        | "inline-3"
         | "v10-even"
         | "inline-4"
         | "v-twin"
@@ -224,7 +226,23 @@ export function personalityToPowertrain(c: DrivetrainPersonalityConfig): Powertr
     engine: {
       idleRpm: c.engine.idleRpm,
       redlineRpm: c.engine.redlineRpm,
+      forcedInduction: Boolean(c.engine.acoustic?.forcedInduction),
     },
+    ...(c.engine.acoustic?.forcedInduction
+      ? {
+          boost: {
+            minSpoolRpm: 1400,
+            fullSpoolRpm: Math.min(4200, c.engine.redlineRpm * 0.68),
+            buildupTauSec: 0.48,
+            releaseTauSec: 0.24,
+            armMinLoad: 0.52,
+            releaseMinBoost: 0.42,
+            releaseLoadDrop: 0.28,
+            releaseMaxDemand: 0.22,
+            releaseCooldownMs: 900,
+          },
+        }
+      : {}),
     transmission: buildTransmission(c.transmission),
     wheelCircumferenceM: c.wheelCircumferenceM,
     throttle: c.throttle,
@@ -245,6 +263,9 @@ export function personalityLegacyTransmission(c: DrivetrainPersonalityConfig) {
 
 export const DRIVETRAIN_PERSONALITY_IDS = [
   "flat-six-sport",
+  "high-rev-v10",
+  "flat-plane-v8-track",
+  "rally-turbo-3",
   "american-v8",
   "turbo-inline-6",
   "gt-v8",
@@ -257,6 +278,9 @@ export const DRIVETRAIN_PERSONALITY_IDS = [
 /** Primary launch personalities - referenced by featured Sound Profiles. */
 export const CORE_DRIVETRAIN_PERSONALITY_IDS = [
   "flat-six-sport",
+  "high-rev-v10",
+  "flat-plane-v8-track",
+  "rally-turbo-3",
   "american-v8",
   "turbo-inline-6",
   "gt-v8",
@@ -267,13 +291,13 @@ export type CoreDrivetrainPersonalityId = (typeof CORE_DRIVETRAIN_PERSONALITY_ID
 
 export type DrivetrainPersonalityId = (typeof DRIVETRAIN_PERSONALITY_IDS)[number];
 
-export const DRIVETRAIN_PERSONALITIES: DrivetrainPersonalityConfig[] = [
+const BASE_DRIVETRAIN_PERSONALITIES: DrivetrainPersonalityConfig[] = [
   {
     id: "flat-six-sport",
     name: "Flat-Six Sport",
     engine: {
       idleRpm: 880,
-      redlineRpm: 8000,
+      redlineRpm: 9000,
       acoustic: {
         cylinders: 6,
         architecture: "flat-six",
@@ -286,7 +310,7 @@ export const DRIVETRAIN_PERSONALITIES: DrivetrainPersonalityConfig[] = [
     transmission: {
       gearRatios: [3.15, 2.05, 1.52, 1.18, 0.96, 0.8, 0.68],
       finalDrive: 3.44,
-      upshiftRpm: { lowLoad: 5200, mediumLoad: 6400, highLoad: 7200 },
+      upshiftRpm: { lowLoad: 5200, mediumLoad: 7000, highLoad: 8600 },
       upshiftLoadMedium: 0.36,
       upshiftLoadHigh: 0.7,
       upshiftHysteresisRpm: 260,
@@ -320,7 +344,7 @@ export const DRIVETRAIN_PERSONALITIES: DrivetrainPersonalityConfig[] = [
       redline: { softFraction: 0.97, maxDownshiftFraction: 0.96 },
       rpm: {
         trackTau: 0.055,
-        maxRateRpmPerSec: 5200,
+        maxRateRpmPerSec: 6000,
         upshiftEasePower: 1.8,
         downshiftEasePower: 1.45,
       },
@@ -1054,6 +1078,290 @@ export const DRIVETRAIN_PERSONALITIES: DrivetrainPersonalityConfig[] = [
     },
     legacy: { shiftSmoothing: 0.55, gearRatios: [22, 14, 10, 7.5] },
   },
+];
+
+function requireBasePersonality(id: string): DrivetrainPersonalityConfig {
+  const personality = BASE_DRIVETRAIN_PERSONALITIES.find((item) => item.id === id);
+  if (!personality) throw new Error(`Missing base drivetrain personality: ${id}`);
+  return personality;
+}
+
+const flatSixBase = requireBasePersonality("flat-six-sport");
+const turboSixBase = requireBasePersonality("turbo-inline-6");
+
+const HIGH_REV_V10_PERSONALITY: DrivetrainPersonalityConfig = {
+  ...flatSixBase,
+  id: "high-rev-v10",
+  name: "High-Rev V10",
+  engine: {
+    idleRpm: 850,
+    redlineRpm: 8500,
+    acoustic: {
+      cylinders: 10,
+      architecture: "v10-even",
+      idleIrregularity: 0.07,
+      exhaustPulse: 0.65,
+      intakePresence: 0.84,
+      mechanicalIntensity: 0.58,
+    },
+  },
+  transmission: {
+    ...flatSixBase.transmission,
+    gearRatios: [3.13, 2.59, 1.88, 1.52, 1.24, 1.04, 0.85],
+    finalDrive: 3.15,
+    upshiftRpm: { lowLoad: 5000, mediumLoad: 6800, highLoad: 8150 },
+    upshiftLoadMedium: 0.34,
+    upshiftLoadHigh: 0.68,
+    upshiftHysteresisRpm: 300,
+    downshiftBaseRpm: 3300,
+    downshiftHysteresisRpm: 360,
+    postUpshiftBlockMs: 360,
+    kickdown: {
+      enabled: true,
+      throttleThreshold: 0.76,
+      rpmFractionOfUpshift: 0.54,
+      maxSteps: 2,
+    },
+    shift: {
+      ...flatSixBase.transmission.shift,
+      upshiftDurationMs: 85,
+      downshiftDurationMs: 120,
+      minGearHoldMs: 580,
+      torqueDipUp: 0.34,
+      torqueDipDown: 0.12,
+      revMatchOvershoot: 0.13,
+      revMatchFlareFraction: 0.46,
+    },
+    idle: {
+      ...flatSixBase.transmission.idle,
+      stoppedInGearRpm: 850,
+      revLimitFraction: 0.58,
+    },
+    redline: { softFraction: 0.975, maxDownshiftFraction: 0.96 },
+    rpm: {
+      trackTau: 0.045,
+      maxRateRpmPerSec: 6900,
+      upshiftEasePower: 1.55,
+      downshiftEasePower: 1.3,
+    },
+  },
+  wheelCircumferenceM: 2.04,
+  throttle: { attackTau: 0.055, releaseTau: 0.17, directWeight: 0.64 },
+  overrun: {
+    probability: 0.22,
+    minIntervalMs: 1900,
+    minPriorThrottle: 0.4,
+    liftOffAccelThreshold: 0.13,
+  },
+  behavior: { engineResponse: 1.24, shiftAggression: 1.32, overrunIntensity: 0.5 },
+  transient: {
+    ...flatSixBase.transient,
+    upshiftStrength: 0.96,
+    downshiftStrength: 0.9,
+    revMatchStrength: 0.92,
+    highLoadThreshold: 0.36,
+    upshiftPitchDrop: 0.2,
+    downshiftPitchFlare: 0.18,
+    maxLayerGain: 0.5,
+  },
+  motion: {
+    pitchTauBase: 0.032,
+    pitchTauShiftScale: 0.055,
+    pitchTauRevMatchExtra: 0.05,
+    speedSlowTau: 0.46,
+  },
+  legacy: {
+    shiftSmoothing: 0.075,
+    gearRatios: [16.5, 11.7, 8.6, 6.8, 5.55, 4.7, 4.05],
+  },
+};
+
+const FLAT_PLANE_V8_TRACK_PERSONALITY: DrivetrainPersonalityConfig = {
+  ...flatSixBase,
+  id: "flat-plane-v8-track",
+  name: "Flat-Plane V8 Track",
+  engine: {
+    idleRpm: 900,
+    redlineRpm: 8600,
+    acoustic: {
+      cylinders: 8,
+      architecture: "flat-plane-v8",
+      idleIrregularity: 0.08,
+      exhaustPulse: 0.7,
+      intakePresence: 0.74,
+      mechanicalIntensity: 0.66,
+    },
+  },
+  transmission: {
+    ...flatSixBase.transmission,
+    gearRatios: [2.91, 1.76, 1.22, 0.88, 0.65, 0.51, 0.4, 0.33],
+    finalDrive: 5.56,
+    upshiftRpm: { lowLoad: 5200, mediumLoad: 7000, highLoad: 8250 },
+    upshiftLoadMedium: 0.32,
+    upshiftLoadHigh: 0.66,
+    upshiftHysteresisRpm: 280,
+    downshiftBaseRpm: 3500,
+    downshiftHysteresisRpm: 340,
+    postUpshiftBlockMs: 320,
+    kickdown: {
+      enabled: true,
+      throttleThreshold: 0.74,
+      rpmFractionOfUpshift: 0.56,
+      maxSteps: 2,
+    },
+    shift: {
+      ...flatSixBase.transmission.shift,
+      upshiftDurationMs: 75,
+      downshiftDurationMs: 105,
+      minGearHoldMs: 520,
+      torqueDipUp: 0.3,
+      torqueDipDown: 0.1,
+      revMatchOvershoot: 0.14,
+      revMatchFlareFraction: 0.5,
+    },
+    idle: {
+      ...flatSixBase.transmission.idle,
+      stoppedInGearRpm: 900,
+      revLimitFraction: 0.6,
+    },
+    redline: { softFraction: 0.975, maxDownshiftFraction: 0.965 },
+    rpm: {
+      trackTau: 0.04,
+      maxRateRpmPerSec: 7400,
+      upshiftEasePower: 1.48,
+      downshiftEasePower: 1.25,
+    },
+  },
+  wheelCircumferenceM: 2.05,
+  throttle: { attackTau: 0.05, releaseTau: 0.16, directWeight: 0.66 },
+  overrun: {
+    probability: 0.28,
+    minIntervalMs: 1550,
+    minPriorThrottle: 0.36,
+    liftOffAccelThreshold: 0.12,
+  },
+  behavior: { engineResponse: 1.28, shiftAggression: 1.4, overrunIntensity: 0.58 },
+  transient: {
+    ...flatSixBase.transient,
+    upshiftStrength: 1,
+    downshiftStrength: 0.96,
+    revMatchStrength: 0.96,
+    overrunStrength: 0.62,
+    highLoadThreshold: 0.34,
+    upshiftPitchDrop: 0.22,
+    downshiftPitchFlare: 0.19,
+    maxLayerGain: 0.52,
+  },
+  motion: {
+    pitchTauBase: 0.03,
+    pitchTauShiftScale: 0.05,
+    pitchTauRevMatchExtra: 0.055,
+    speedSlowTau: 0.42,
+  },
+  legacy: {
+    shiftSmoothing: 0.06,
+    gearRatios: [16.8, 11.8, 8.8, 7, 5.8, 4.9, 4.2, 3.65],
+  },
+};
+
+const RALLY_TURBO_3_PERSONALITY: DrivetrainPersonalityConfig = {
+  ...turboSixBase,
+  id: "rally-turbo-3",
+  name: "Rally Turbo Three",
+  engine: {
+    idleRpm: 950,
+    redlineRpm: 6800,
+    acoustic: {
+      cylinders: 3,
+      architecture: "inline-3",
+      idleIrregularity: 0.2,
+      exhaustPulse: 0.72,
+      intakePresence: 0.58,
+      mechanicalIntensity: 0.62,
+      forcedInduction: true,
+    },
+  },
+  transmission: {
+    ...turboSixBase.transmission,
+    gearRatios: [2.92, 1.88, 1.38, 1.09, 0.91],
+    finalDrive: 4.1,
+    upshiftRpm: { lowLoad: 4100, mediumLoad: 5500, highLoad: 6500 },
+    upshiftLoadMedium: 0.35,
+    upshiftLoadHigh: 0.68,
+    upshiftHysteresisRpm: 230,
+    downshiftBaseRpm: 3000,
+    downshiftHysteresisRpm: 280,
+    postUpshiftBlockMs: 300,
+    kickdown: {
+      enabled: true,
+      throttleThreshold: 0.75,
+      rpmFractionOfUpshift: 0.58,
+      maxSteps: 1,
+    },
+    shift: {
+      ...turboSixBase.transmission.shift,
+      upshiftDurationMs: 65,
+      downshiftDurationMs: 90,
+      minGearHoldMs: 500,
+      torqueDipUp: 0.46,
+      torqueDipDown: 0.14,
+      revMatchOvershoot: 0.12,
+      revMatchFlareFraction: 0.45,
+    },
+    idle: {
+      ...turboSixBase.transmission.idle,
+      stoppedInGearRpm: 950,
+      revLimitFraction: 0.56,
+    },
+    redline: { softFraction: 0.965, maxDownshiftFraction: 0.95 },
+    rpm: {
+      trackTau: 0.05,
+      maxRateRpmPerSec: 5600,
+      upshiftEasePower: 1.55,
+      downshiftEasePower: 1.3,
+    },
+  },
+  wheelCircumferenceM: 2.0,
+  throttle: { attackTau: 0.06, releaseTau: 0.18, directWeight: 0.63 },
+  overrun: {
+    probability: 0.52,
+    minIntervalMs: 1000,
+    minPriorThrottle: 0.28,
+    liftOffAccelThreshold: 0.16,
+  },
+  behavior: { engineResponse: 1.18, shiftAggression: 1.45, overrunIntensity: 0.88 },
+  transient: {
+    ...turboSixBase.transient,
+    scheduler: {
+      ...turboSixBase.transient.scheduler,
+      turboFlutter: { probability: 0.62, cooldownMs: 700, minLoad: 0.34, minRpmNorm: 0.34 },
+      wastegate: { probability: 0.48, cooldownMs: 900, minLoad: 0.42, minRpmNorm: 0.38 },
+      exhaustPop: { probability: 0.32, cooldownMs: 1300, minPriorThrottle: 0.34 },
+    },
+    upshiftStrength: 1,
+    downshiftStrength: 0.94,
+    revMatchStrength: 0.84,
+    overrunStrength: 0.92,
+    highLoadThreshold: 0.32,
+    upshiftPitchDrop: 0.18,
+    downshiftPitchFlare: 0.14,
+    overrunPitchBias: 0.1,
+    maxLayerGain: 0.54,
+  },
+  motion: {
+    pitchTauBase: 0.035,
+    pitchTauShiftScale: 0.052,
+    pitchTauRevMatchExtra: 0.04,
+    speedSlowTau: 0.4,
+  },
+  legacy: { shiftSmoothing: 0.065, gearRatios: [15, 9.8, 7.2, 5.8, 4.9] },
+};
+
+export const DRIVETRAIN_PERSONALITIES: DrivetrainPersonalityConfig[] = [
+  ...BASE_DRIVETRAIN_PERSONALITIES,
+  HIGH_REV_V10_PERSONALITY,
+  FLAT_PLANE_V8_TRACK_PERSONALITY,
+  RALLY_TURBO_3_PERSONALITY,
 ];
 
 const byId = new Map(DRIVETRAIN_PERSONALITIES.map((p) => [p.id, p]));

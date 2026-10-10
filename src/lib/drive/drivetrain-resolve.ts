@@ -13,9 +13,9 @@ import type { PowertrainProfile } from "@/lib/powertrain/profiles";
 /** Fallback when a Sound Profile has no explicit personality (older saves / unmapped profiles). */
 const LEGACY_PERSONALITY_BY_SOUND: Record<string, string> = {
   "gt-v8": "gt-v8",
-  "racing-v10": "flat-six-sport",
-  "race-car": "flat-six-sport",
-  "rally-car": "turbo-inline-6",
+  "racing-v10": "high-rev-v10",
+  "race-car": "flat-plane-v8-track",
+  "rally-car": "rally-turbo-3",
   "motorcycle-superbike": "motorcycle-inline-4",
   "big-twin": "v-twin-cruiser",
   "wiesn-tractor": "single-cylinder-ag",

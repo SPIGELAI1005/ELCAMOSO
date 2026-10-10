@@ -197,7 +197,7 @@ export const EXPANSION_STRATEGIES: ProfileStrategy[] = [
           baseHz: 85,
           shimmerCeiling: 4800,
           meshBoost: 1,
-          level: 0.48,
+          level: 0.46,
         }),
         createGearboxWhineLayer(ctx, {
           id: "reduction",
@@ -212,9 +212,9 @@ export const EXPANSION_STRATEGIES: ProfileStrategy[] = [
           filterType: "bandpass",
           tone: 3600,
           q: 2.4,
-          level: 0.11,
-          throttleWeight: 1.35,
-          speedWeight: 0.45,
+          level: 0.095,
+          throttleWeight: 1.5,
+          speedWeight: 0.3,
         }),
         createWindLayer(ctx, { id: "aero", destination: buses.beds, level: 0.18 }),
       ];

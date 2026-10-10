@@ -162,8 +162,8 @@ const GT_BOX = {
 
 const RACE_BOX = {
   gearRatios: [16, 11.2, 8.4, 6.6, 5.4, 4.6],
-  idleRpm: 1100,
-  redlineRpm: 9200,
+  idleRpm: 850,
+  redlineRpm: 8500,
   shiftSmoothing: 0.09,
 };
 
@@ -199,7 +199,7 @@ const BUILT_IN_SOUND_PROFILES: SoundProfile[] = [
     traits: ["Sharp", "High-Rev", "Responsive"],
     description: "Tight, urgent and metallic. Climbs fast and reacts the instant you ask.",
     drivetrainMode: "virtual-transmission",
-    drivetrainPersonalityId: "flat-six-sport",
+    drivetrainPersonalityId: "high-rev-v10",
     voice: {
       baseFrequency: 34,
       harmonics: [1, 2, 3.01, 5, 7.03, 9],
@@ -244,7 +244,7 @@ const BUILT_IN_SOUND_PROFILES: SoundProfile[] = [
     traits: ["Track", "Aggressive", "Precise"],
     description: "Circuit-bred and edgy, with a hard shift and a bright top end.",
     drivetrainMode: "virtual-transmission",
-    drivetrainPersonalityId: "flat-six-sport",
+    drivetrainPersonalityId: "flat-plane-v8-track",
     voice: {
       baseFrequency: 40,
       harmonics: [1, 2, 3, 4, 5.02, 8],
@@ -268,7 +268,7 @@ const BUILT_IN_SOUND_PROFILES: SoundProfile[] = [
     traits: ["Gravel", "Turbo", "Raw"],
     description: "Loose-surface energy: turbo whistle, stone spray and a gritty texture.",
     drivetrainMode: "virtual-transmission",
-    drivetrainPersonalityId: "turbo-inline-6",
+    drivetrainPersonalityId: "rally-turbo-3",
     voice: {
       baseFrequency: 30,
       harmonics: [1, 2, 3.04, 4.5],

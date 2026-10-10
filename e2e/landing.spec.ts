@@ -9,7 +9,6 @@ test.describe("Landing /", () => {
 
   test("renders brand, tagline, and Start Drive", async ({ page }) => {
     await expectAppHealthy(page);
-    await expect(page.getByText(/Turn motion into sound/i).first()).toBeVisible();
     await expect(
       page.getByRole("heading", { name: /Your EV\.\s*Your Sound\.\s*More Emotion\./i }),
     ).toBeVisible();
@@ -19,6 +18,29 @@ test.describe("Landing /", () => {
     ).toBeVisible();
     await expect(page.getByRole("link", { name: /start drive/i })).toBeVisible();
     await expect(page.getByRole("link", { name: /explore experiences/i })).toBeVisible();
+  });
+
+  test("keeps the hero concise and moves the product line to Experiences", async ({ page }) => {
+    const hero = page.locator("section").first();
+    await expect(hero.getByText(/Turn motion into sound/i)).toHaveCount(0);
+
+    const experiences = page
+      .getByRole("heading", { name: /Choose your experience/i })
+      .locator("..");
+    await expect(experiences).toContainText(
+      "Machine. Music. Another world. Turn motion into sound.",
+    );
+  });
+
+  test("uses touch-sized header controls", async ({ page }) => {
+    const menu = page.getByTestId("nav-menu");
+    const target = (await menu.isVisible())
+      ? menu
+      : page.getByRole("navigation", { name: "Primary" }).getByRole("link").first();
+    await expect(target).toBeVisible();
+    const box = await target.boundingBox();
+    expect(box?.width).toBeGreaterThanOrEqual(48);
+    expect(box?.height).toBeGreaterThanOrEqual(48);
   });
 
   test("Start Drive navigates to /drive", async ({ page }) => {

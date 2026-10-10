@@ -34,6 +34,7 @@ const DESKTOP_LINKS: NavLink[] = [
   { to: "/demo", key: "nav.demo" },
   { to: "/pricing", key: "nav.pricing" },
   { to: "/about", key: "nav.about", accent: true },
+  { to: "/science", key: "nav.science" },
   { to: "/settings", key: "nav.settings" },
 ];
 
@@ -48,6 +49,7 @@ const MENU_LINKS: NavLink[] = [
   { to: "/pricing", key: "nav.pricing" },
   { to: "/settings", key: "nav.settings" },
   { to: "/about", key: "nav.about", accent: true },
+  { to: "/science", key: "nav.science" },
 ];
 
 function navLinkClassName(accent?: boolean) {
@@ -69,30 +71,33 @@ export function BrandNav() {
 
   return (
     <header className="fixed inset-x-0 top-0 z-50 border-b border-border/60 bg-background/95 pt-[env(safe-area-inset-top,0px)] backdrop-blur-md supports-[backdrop-filter]:bg-background/80">
-      <div className="flex h-14 items-center justify-between gap-3 px-4 sm:h-16 sm:px-6 lg:gap-4 lg:px-8">
+      <div className="flex h-[3.85rem] items-center justify-between gap-3 px-4 sm:h-[4.4rem] sm:px-6 lg:gap-4 lg:px-8">
         <Link
           to="/"
           aria-label="ELCAMOSO home"
           className="hidden min-w-0 shrink-0 md:inline-flex lg:hidden"
         >
-          <ElcamosoMark className="h-8 w-auto" />
+          <ElcamosoMark className="h-9 w-auto" />
         </Link>
 
         <Link to="/" aria-label="ELCAMOSO home" className="hidden min-w-0 shrink-0 lg:inline-flex">
-          <ElcamosoLogo variant="full" />
+          <ElcamosoLogo variant="full" className="scale-110" />
         </Link>
 
         <div className="flex-1 lg:hidden" aria-hidden="true" />
 
         <nav
-          className="hidden min-w-0 items-center gap-4 text-[11px] tracking-[0.16em] uppercase lg:flex xl:gap-6 xl:text-xs"
+          className="hidden min-w-0 items-center gap-3 text-xs tracking-[0.14em] uppercase lg:flex xl:gap-4 xl:text-[13px]"
           aria-label="Primary"
         >
           {DESKTOP_LINKS.map((link) => (
             <Link
               key={link.to}
               to={link.to}
-              className={navLinkClassName(link.accent)}
+              className={cn(
+                "inline-flex min-h-12 items-center px-1.5",
+                navLinkClassName(link.accent),
+              )}
               activeProps={{ className: navLinkActiveClassName(link.accent) }}
             >
               {t(settings.language, link.key)}
@@ -108,7 +113,7 @@ export function BrandNav() {
               <button
                 type="button"
                 data-testid="nav-menu"
-                className="inline-flex h-11 w-11 items-center justify-center rounded-full text-foreground transition-colors hover:bg-secondary"
+                className="inline-flex h-12 w-12 items-center justify-center rounded-full text-foreground transition-colors hover:bg-secondary"
                 aria-label={t(settings.language, "nav.menu")}
               >
                 <WaveMenuIcon open={false} />

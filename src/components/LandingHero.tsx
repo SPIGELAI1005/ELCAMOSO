@@ -127,10 +127,7 @@ export function LandingHero() {
         </div>
 
         <div className="flex w-full max-w-xs flex-col items-center text-center lg:col-start-2 lg:row-start-1 lg:max-w-none lg:items-start lg:self-end lg:text-left">
-          <p className="text-[10px] tracking-[0.32em] text-muted-foreground uppercase">
-            Turn motion into sound
-          </p>
-          <h1 className="mt-3 text-[2.05rem] leading-[1.08] font-light tracking-tight sm:text-5xl xl:text-[3.25rem] xl:leading-[1.06]">
+          <h1 className="text-[2.05rem] leading-[1.08] font-light tracking-tight sm:text-5xl xl:text-[3.25rem] xl:leading-[1.06]">
             Your EV.
             <br />
             Your Sound.

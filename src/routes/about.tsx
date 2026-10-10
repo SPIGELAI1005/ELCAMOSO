@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { Link, createFileRoute } from "@tanstack/react-router";
 import { createSeoHeadFromPath } from "@/lib/seo";
 import { ElcamosoMark } from "@/components/ElcamosoLogo";
 
@@ -38,11 +38,34 @@ function About() {
             Your EV. Your Sound. More Emotion.
           </h1>
           <p className="mt-6 text-base leading-relaxed text-muted-foreground">
-            ELCAMOSO turns the way you move into sound, live in the cabin or later from a recorded
-            journey. It is for people who love responsive sound, and for people who love the quiet
-            just as much.
+            ELCAMOSO turns the way you move into sound. It is designed for both drivers who love
+            responsive sound, as well as and for those who love the quiet drive just as much.
           </p>
         </header>
+
+        <section className="mt-16 border-t border-border pt-16">
+          <h2 className="text-2xl font-light">Where it started</h2>
+          <div className="mt-8 space-y-6 text-sm leading-relaxed text-muted-foreground">
+            <p>
+              For four years, my daily drive has been a Tesla. I still choose it every time: the
+              performance, the calm, the technology, the sense that electric motion is the direction
+              the road is taking. I am proud to drive an EV and I do not want to go back.
+            </p>
+            <p>
+              But travel has a way of sharpening what you miss. On trips abroad I would rent cars
+              with powerful petrol engines: the rise of revs, the character under load, the sound
+              that told your body the car was working with you. Coming home to silent acceleration
+              was always a relief, and always slightly incomplete. I loved the electric drive. I
+              missed the emotion petrol had taught me to expect from a great car.
+            </p>
+            <p>
+              That gap is why ELCAMOSO exists. Not to pretend an EV is something it is not, but to
+              give back a layer of feeling: sound that follows speed, acceleration, and regen the
+              way a great engine once did, without giving up what makes electric driving worth
+              choosing.
+            </p>
+          </div>
+        </section>
 
         <section className="mt-16 border-t border-border pt-16">
           <p className="text-[10px] tracking-[0.28em] text-muted-foreground uppercase">
@@ -85,30 +108,6 @@ function About() {
             <p>
               It is made for EV enthusiasts, quiet-cabin drivers, commuters, road-trippers, music
               lovers, and curious creators who want to discover what their own movement sounds like.
-            </p>
-          </div>
-        </section>
-
-        <section className="mt-16 border-t border-border pt-16">
-          <h2 className="text-2xl font-light">Where it started</h2>
-          <div className="mt-8 space-y-6 text-sm leading-relaxed text-muted-foreground">
-            <p>
-              For four years, my daily drive has been a Tesla. I still choose it every time: the
-              performance, the calm, the technology, the sense that electric motion is the direction
-              the road is taking. I am proud to drive an EV and I do not want to go back.
-            </p>
-            <p>
-              But travel has a way of sharpening what you miss. On trips abroad I would rent cars
-              with powerful petrol engines: the rise of revs, the character under load, the sound
-              that told your body the car was working with you. Coming home to silent acceleration
-              was always a relief, and always slightly incomplete. I loved the electric drive. I
-              missed the emotion petrol had taught me to expect from a great car.
-            </p>
-            <p>
-              That gap is why ELCAMOSO exists. Not to pretend an EV is something it is not, but to
-              give back a layer of feeling: sound that follows speed, acceleration, and regen the
-              way a great engine once did, without giving up what makes electric driving worth
-              choosing.
             </p>
           </div>
         </section>
@@ -206,6 +205,12 @@ function About() {
         <footer className="mt-16 border-t border-border pt-10">
           <p className="text-xs tracking-[0.28em] text-muted-foreground uppercase">
             ELCAMOSO - Electric Car Motion Sound
+          </p>
+          <p className="mt-4 text-sm text-muted-foreground">
+            Curious how motion becomes music?{" "}
+            <Link to="/science" className="text-foreground underline-offset-4 hover:underline">
+              Science of ELCAMOSO
+            </Link>
           </p>
         </footer>
       </article>

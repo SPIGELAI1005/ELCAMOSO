@@ -9,16 +9,22 @@ import { getProfile } from "@/lib/sound/profiles";
 import { resolveVariantPools } from "@/lib/sound/dynamic-drive/transient-scheduler";
 
 describe("drivetrain personalities", () => {
-  it("defines eight distinct built-in personalities", () => {
-    expect(DRIVETRAIN_PERSONALITY_IDS).toHaveLength(8);
+  it("defines eleven distinct built-in personalities", () => {
+    expect(DRIVETRAIN_PERSONALITY_IDS).toHaveLength(11);
+    expect(DRIVETRAIN_PERSONALITY_IDS).toContain("high-rev-v10");
+    expect(DRIVETRAIN_PERSONALITY_IDS).toContain("flat-plane-v8-track");
+    expect(DRIVETRAIN_PERSONALITY_IDS).toContain("rally-turbo-3");
     expect(DRIVETRAIN_PERSONALITY_IDS).toContain("motorcycle-inline-4");
     expect(DRIVETRAIN_PERSONALITY_IDS).toContain("v-twin-cruiser");
     expect(DRIVETRAIN_PERSONALITY_IDS).toContain("single-cylinder-ag");
   });
 
-  it("lists five core launch personalities", () => {
+  it("lists the dedicated core engine personalities", () => {
     expect(CORE_DRIVETRAIN_PERSONALITY_IDS).toEqual([
       "flat-six-sport",
+      "high-rev-v10",
+      "flat-plane-v8-track",
+      "rally-turbo-3",
       "american-v8",
       "turbo-inline-6",
       "gt-v8",
@@ -94,8 +100,28 @@ describe("drivetrain personalities", () => {
 
   it("maps featured sound profiles to core personalities", () => {
     expect(resolveDrivetrain(getProfile("gt-v8")).personalityId).toBe("gt-v8");
+    expect(resolveDrivetrain(getProfile("racing-v10")).personalityId).toBe("high-rev-v10");
+    expect(resolveDrivetrain(getProfile("race-car")).personalityId).toBe("flat-plane-v8-track");
+    expect(resolveDrivetrain(getProfile("rally-car")).personalityId).toBe("rally-turbo-3");
     expect(resolveDrivetrain(getProfile("american-muscle-v8")).personalityId).toBe("american-v8");
     expect(resolveDrivetrain(getProfile("turbo-inline-6")).personalityId).toBe("turbo-inline-6");
+  });
+
+  it("keeps V10, track V8, rally, and flat-six gear behavior distinct", () => {
+    const v10 = resolveDrivetrain(getProfile("racing-v10")).personality;
+    const track = resolveDrivetrain(getProfile("race-car")).personality;
+    const rally = resolveDrivetrain(getProfile("rally-car")).personality;
+    const flatSix = resolveDrivetrain(getProfile("flat-six-sport")).personality;
+
+    expect(v10.transmission.gearRatios).toHaveLength(7);
+    expect(track.transmission.gearRatios).toHaveLength(8);
+    expect(rally.transmission.gearRatios).toHaveLength(5);
+    expect(flatSix.transmission.gearRatios).toHaveLength(7);
+    expect(track.engine.redlineRpm).not.toBe(flatSix.engine.redlineRpm);
+    expect(rally.transient.aspiration).toBe("turbo");
+    expect(v10.transmission.shift.upshiftDurationMs).toBeGreaterThan(
+      track.transmission.shift.upshiftDurationMs,
+    );
   });
 
   it("maps motorcycle, twin, and tractor profiles to dedicated personalities", () => {

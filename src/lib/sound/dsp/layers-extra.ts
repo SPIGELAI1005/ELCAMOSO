@@ -42,8 +42,9 @@ function chain(
   output.connect(opts.destination);
   let muted = false;
   let soloed: boolean | null = null;
+  let identityGain = 1;
   const apply = () => {
-    output.gain.value = muted || soloed === false ? 0.0001 : 1;
+    output.gain.value = muted || soloed === false ? 0.0001 : identityGain;
   };
   return {
     gain,
@@ -60,6 +61,10 @@ function chain(
       setSoloed(s) {
         soloed = s;
         apply();
+      },
+      setIdentityGain(value, audioTime, tau) {
+        identityGain = clamp(value, 0.0001, 1.35);
+        if (!muted && soloed !== false) targetParam(output.gain, identityGain, audioTime, tau);
       },
     },
   };

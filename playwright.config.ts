@@ -20,9 +20,14 @@ export default defineConfig({
   expect: { timeout: 10_000 },
   use: {
     baseURL: BASE_URL,
+    // CI may override this, while local validation uses the installed Chrome
+    // rather than requiring a separately downloaded Playwright Chromium.
+    channel: process.env.E2E_BROWSER_CHANNEL ?? "chrome",
     trace: "on-first-retry",
     screenshot: "only-on-failure",
-    video: "retain-on-failure",
+    // Local installed-Chrome runs do not require Playwright's optional ffmpeg.
+    // CI can opt in after installing it with E2E_VIDEO=1.
+    video: process.env.E2E_VIDEO === "1" ? "retain-on-failure" : "off",
     geolocation: { latitude: 48.137, longitude: 11.575 },
     permissions: ["geolocation"],
     launchOptions: {

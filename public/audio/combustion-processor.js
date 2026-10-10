@@ -15,6 +15,8 @@ class CombustionExcitationProcessor extends AudioWorkletProcessor {
     this.noise = 0;
     this.seed = 1;
     this.fireIndex = 0;
+    this.previousRaw = 0;
+    this.dcBlocked = 0;
   }
 
   rand() {
@@ -67,9 +69,12 @@ class CombustionExcitationProcessor extends AudioWorkletProcessor {
     const arch = Math.round(parameters.architecture[0] || 0);
     const phaseIncBase = firingHz / sampleRate;
 
-    // Decay: sharper under high load (pressure pulse), softer at cruise.
-    const decay = 0.88 - sharpness * 0.08 - load * 0.05;
-    const brightDecay = 0.82 - sharpness * 0.1;
+    // Sample-rate-aware pressure tails. Fixed per-sample values around 0.8
+    // die in a fraction of a millisecond and turn cadence into pitched clicks.
+    const bodyTauSeconds = 0.0045 + (1 - sharpness) * 0.004 + load * 0.0015;
+    const edgeTauSeconds = 0.0012 + (1 - sharpness) * 0.0013;
+    const decay = Math.exp(-1 / (sampleRate * bodyTauSeconds));
+    const brightDecay = Math.exp(-1 / (sampleRate * edgeTauSeconds));
 
     for (let i = 0; i < ch0.length; i += 1) {
       let inc = phaseIncBase;
@@ -105,8 +110,12 @@ class CombustionExcitationProcessor extends AudioWorkletProcessor {
           punch *= 1.15;
         }
 
-        this.env = punch * (0.55 + intensity * 0.45);
-        this.bright = punch * sharpness * (0.35 + load * 0.65);
+        // Closely spaced cylinder events overlap into one engine body.
+        this.env = Math.min(2.4, this.env + punch * (0.42 + intensity * 0.38));
+        this.bright = Math.min(
+          1.5,
+          this.bright + punch * sharpness * (0.18 + load * 0.42),
+        );
         this.noise = (this.rand() * 2 - 1) * (0.25 + load * 0.55 * sharpness);
       }
 
@@ -115,9 +124,14 @@ class CombustionExcitationProcessor extends AudioWorkletProcessor {
       this.noise = this.noise * 0.94 + (this.rand() * 2 - 1) * 0.04 * (0.2 + load);
 
       // Pressure impulse + load-bright grit (not a clean oscillator sample)
-      const body = this.env * (0.78 + this.noise * 0.22);
-      const edge = this.bright * this.noise * 0.35;
-      const sample = (body + edge) * intensity * 0.58;
+      const body = this.env * (0.76 + this.noise * 0.16);
+      const edge = this.bright * this.noise * 0.22;
+      const raw = (body + edge) * intensity * 0.42;
+
+      // Make the one-sided pressure envelope bipolar without losing its body.
+      const sample = raw - this.previousRaw + 0.9975 * this.dcBlocked;
+      this.previousRaw = raw;
+      this.dcBlocked = sample;
 
       ch0[i] = sample;
       if (ch1) {

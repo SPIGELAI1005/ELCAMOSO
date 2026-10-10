@@ -72,6 +72,20 @@ describe("resolveGpsSpeed", () => {
     expect(r.speed).toBe(0);
   });
 
+  it("overrides a stale reported zero when accurate coordinates are moving", () => {
+    const previous: GpsPoint = { lat: 48.137, lon: 11.575, atMs: 1_000 };
+    const r = resolveGpsSpeed({
+      reportedSpeed: 0,
+      latitude: 48.137,
+      longitude: 11.5752,
+      atMs: 2_000,
+      previous,
+      accuracyM: 8,
+    });
+    expect(r.source).toBe("delta");
+    expect(r.speed).toBeGreaterThan(10);
+  });
+
   it("rejects delta when accuracy is very poor", () => {
     const prev: GpsPoint = { lat: 48.137, lon: 11.575, atMs: 1_000 };
     const r = resolveGpsSpeed({

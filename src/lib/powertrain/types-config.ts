@@ -127,6 +127,19 @@ export interface PowertrainProfile {
   engine: {
     idleRpm: number;
     redlineRpm: number;
+    forcedInduction?: boolean;
+  };
+  /** Simulated normalized boost tuning; all time values are seconds except cooldownMs. */
+  boost?: {
+    minSpoolRpm: number;
+    fullSpoolRpm: number;
+    buildupTauSec: number;
+    releaseTauSec: number;
+    armMinLoad: number;
+    releaseMinBoost: number;
+    releaseLoadDrop: number;
+    releaseMaxDemand: number;
+    releaseCooldownMs: number;
   };
   transmission: TransmissionProfile;
   wheelCircumferenceM: number;

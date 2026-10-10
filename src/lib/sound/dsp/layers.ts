@@ -19,6 +19,8 @@ export interface LayerHandle {
   dispose: () => void;
   setMuted: (muted: boolean) => void;
   setSoloed: (soloed: boolean | null) => void;
+  /** Developer/identity gain applied after the layer's own authored envelope. */
+  setIdentityGain?: (gain: number, audioTime: number, tau: number) => void;
   /** Optional manual accent (e.g. sonar ping). */
   trigger?: () => void;
 }
@@ -59,9 +61,10 @@ function attachChain(
   const state = {
     muted: false,
     soloed: null as boolean | null,
+    identityGain: 1,
     applyGate() {
       const silence = state.muted || state.soloed === false;
-      output.gain.value = silence ? 0.0001 : 1;
+      output.gain.value = silence ? 0.0001 : state.identityGain;
     },
   };
 
@@ -84,6 +87,12 @@ function attachChain(
       setSoloed(soloed: boolean | null) {
         state.soloed = soloed;
         state.applyGate();
+      },
+      setIdentityGain(identityGain: number, audioTime: number, tau: number) {
+        state.identityGain = clamp(identityGain, 0.0001, 1.35);
+        if (!state.muted && state.soloed !== false) {
+          targetParam(output.gain, state.identityGain, audioTime, tau);
+        }
       },
     },
   };
@@ -1354,7 +1363,7 @@ export function createLaughCadenceLayer(
       if (next < t) next = t;
       const horizon = t + 0.28;
       while (next < horizon) {
-        if (demand > 0.04 || audioRandom() > 0.82) {
+        if (demand > 0.04) {
           const dur = fireBurst(next, m);
           next += dur + gap * (0.75 + audioRandom() * 0.4);
         } else {
@@ -1447,7 +1456,7 @@ export function createFartCadenceLayer(
       if (next < t) next = t;
       const horizon = t + 0.28;
       while (next < horizon) {
-        if (demand > 0.06 || lift || audioRandom() > 0.88) {
+        if (demand > 0.06 || lift) {
           const tone = (opts.tone ?? 95) * (lift ? 0.7 : 1 - demand * 0.25);
           const amp = (opts.level ?? 0.55) * (0.4 + demand * 0.95 + (lift ? 0.35 : 0));
           const dur = fireBlat(next, tone, amp, lift || demand > 0.7);
@@ -1494,6 +1503,10 @@ export interface OneShotSpec {
   manualOnly?: boolean;
 }
 
+export function isMotionQualifiedForEvent(m: MotionFrame): boolean {
+  return m.speedSlow > 0.03 || m.throttleFast > 0.12 || m.accelFast > 0.12 || m.regen > 0.15;
+}
+
 export function createOneShotEventLayer(
   ctx: BaseAudioContext,
   opts: LayerBaseOpts & { events: OneShotSpec[] },
@@ -1534,6 +1547,10 @@ export function createOneShotEventLayer(
         const spec = clock.spec;
         if (spec.manualOnly) return;
         if (t < clock.next) return;
+        if (!isMotionQualifiedForEvent(m)) {
+          clock.next = t + 0.5;
+          return;
+        }
         if (spec.onlyOnLift && !lift && !m.isShifting) {
           clock.next = t + 0.4;
           return;
@@ -2166,7 +2183,7 @@ export function createElectricPulseLayer(
   shimmer.start();
 
   const regenOsc = ctx.createOscillator();
-  regenOsc.type = "sine";
+  regenOsc.type = "triangle";
   regenOsc.frequency.value = 140;
   const rg = ctx.createGain();
   const regenFilt = ctx.createBiquadFilter();
@@ -2187,26 +2204,40 @@ export function createElectricPulseLayer(
       if (disposed) return;
       const base = logPitch(m.speedSlow, opts.baseHz ?? 70, 220);
       targetParam(fund.frequency, base, t, 0.12);
-      targetParam(harm.frequency, base * (1.5 + m.throttleFast * 0.8), t, 0.1);
-      targetParam(fg.gain, softGate(0.22 + m.speedSlow * 0.25), t, 0.15);
-      targetParam(hg.gain, softGate(0.08 + m.throttleFast * 0.22 + m.accelFast * 0.12), t, 0.08);
+      const driveGate = 1 - m.regen * 0.78;
+      targetParam(harm.frequency, base * (2 + m.throttleFast * 0.12), t, 0.1);
+      targetParam(fg.gain, softGate((0.2 + m.speedSlow * 0.25) * driveGate), t, 0.15);
+      targetParam(
+        hg.gain,
+        softGate((0.06 + m.throttleFast * 0.25 + m.accelFast * 0.1) * driveGate),
+        t,
+        0.08,
+      );
       targetParam(mesh.frequency, base * (2.8 + m.throttleFast * 1.2), t, 0.08);
       targetParam(meshLp.frequency, 1800 + m.accelFast * 2200 + m.throttleFast * 800, t, 0.1);
       targetParam(
         meshG.gain,
-        softGate(meshBoost * (0.04 + m.accelFast * 0.14 + m.throttleFast * 0.08)),
+        softGate(meshBoost * (0.035 + m.accelFast * 0.12 + m.throttleFast * 0.1) * driveGate),
         t,
         0.07,
       );
-      targetParam(sg.gain, softGate(m.accelFast * (0.12 + meshBoost * 0.08)), t, 0.06);
+      targetParam(
+        sg.gain,
+        softGate(m.accelFast * (0.1 + meshBoost * 0.07) * driveGate),
+        t,
+        0.06,
+      );
       const shimmerTop = opts.shimmerCeiling ?? 4200;
       targetParam(shBp.frequency, 1400 + m.accelFast * Math.min(1800, shimmerTop - 1400), t, 0.12);
-      targetParam(regenOsc.frequency, base * 0.7 * (1 - m.regen * 0.2), t, 0.15);
-      targetParam(rg.gain, softGate(m.regen * 0.22), t, 0.12);
-      targetParam(regenFilt.frequency, 280 + m.regen * 200, t, 0.15);
+      targetParam(regenOsc.frequency, base * (0.68 - m.regen * 0.08), t, 0.15);
+      targetParam(rg.gain, softGate(m.regen * (0.1 + m.speedSlow * 0.2)), t, 0.12);
+      targetParam(regenFilt.frequency, 260 + base * 1.25 + m.regen * 120, t, 0.15);
       targetParam(
         gain.gain,
-        softGate((opts.level ?? 0.4) * (0.25 + m.speedSlow * 0.6 + m.accelFast * 0.25)),
+        softGate(
+          (opts.level ?? 0.4) *
+            (0.22 + m.speedSlow * 0.52 + m.throttleFast * 0.22 + m.regen * 0.12),
+        ),
         t,
         0.12,
       );

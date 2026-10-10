@@ -25,7 +25,9 @@ function Landing() {
 
       <section className="mx-auto w-full max-w-5xl px-6 py-20 sm:px-12">
         <h2 className="text-3xl font-light tracking-tight sm:text-4xl">Choose your experience</h2>
-        <p className="mt-3 max-w-lg text-muted-foreground">Machine. Music. Another world.</p>
+        <p className="mt-3 max-w-lg text-muted-foreground">
+          Machine. Music. Another world. Turn motion into sound.
+        </p>
         <ExperienceFamilyGrid className="mt-12" families={families} large />
         {fusion ? (
           <Link

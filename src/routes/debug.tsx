@@ -18,6 +18,7 @@ import {
 } from "@/lib/powertrain";
 import { DynamicDriveLayerPanel } from "@/components/DynamicDriveLayerPanel";
 import type { DynamicLayerDebugInfo } from "@/lib/sound/dynamic-drive/types";
+import type { AudioLayerRole } from "@/lib/sound/profile-experience-config";
 
 export const Route = createFileRoute("/debug")({
   beforeLoad: () => {
@@ -38,7 +39,10 @@ function DebugHarness() {
   const [realismEngine, setRealismEngine] = useState<RealismEngineMode>("v2");
   const [dynamicDrive, setDynamicDrive] = useState(false);
   const [playing, setPlaying] = useState(false);
-  const [layers, setLayers] = useState<{ id: string; muted: boolean; triggerable?: boolean }[]>([]);
+  const [layers, setLayers] = useState<
+    { id: string; muted: boolean; role?: AudioLayerRole; triggerable?: boolean }[]
+  >([]);
+  const [mutedRoles, setMutedRoles] = useState<Set<AudioLayerRole>>(() => new Set());
   const [dynamicLayers, setDynamicLayers] = useState<DynamicLayerDebugInfo[]>([]);
   const [solo, setSolo] = useState<string | null>(null);
   const [state, setState] = useState<DriveState>(IDLE_STATE);
@@ -62,6 +66,7 @@ function DebugHarness() {
     powertrainRef.current = null;
     prevDriveRef.current = IDLE_STATE;
     setLayers([]);
+    setMutedRoles(new Set());
     setDynamicLayers([]);
   }, []);
 
@@ -372,13 +377,44 @@ function DebugHarness() {
                 Clear solo
               </button>
             </div>
+            <div className="mt-4 flex flex-wrap gap-2" aria-label="Layer role isolation">
+              {[...new Set(layers.map((layer) => layer.role).filter(Boolean))].map((role) => {
+                const typedRole = role as AudioLayerRole;
+                const muted = mutedRoles.has(typedRole);
+                return (
+                  <button
+                    key={typedRole}
+                    type="button"
+                    aria-pressed={muted}
+                    onClick={() => {
+                      const next = !muted;
+                      engineRef.current?.setIsolationRoleMuted(typedRole, next);
+                      setMutedRoles((current) => {
+                        const updated = new Set(current);
+                        if (next) updated.add(typedRole);
+                        else updated.delete(typedRole);
+                        return updated;
+                      });
+                      refreshLayers();
+                    }}
+                    className={`h-8 rounded-full border px-3 text-[9px] tracking-[0.16em] uppercase ${
+                      muted ? "border-foreground bg-secondary" : "border-border"
+                    }`}
+                  >
+                    {muted ? `Enable ${typedRole}` : `Mute ${typedRole}`}
+                  </button>
+                );
+              })}
+            </div>
             <ul className="mt-4 space-y-3">
               {layers.map((layer) => (
                 <li
                   key={layer.id}
                   className="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-3"
                 >
-                  <span className="font-mono text-xs">{layer.id}</span>
+                  <span className="font-mono text-xs">
+                    {layer.id}{layer.role ? ` · ${layer.role}` : ""}
+                  </span>
                   <div className="flex gap-2">
                     <button
                       type="button"

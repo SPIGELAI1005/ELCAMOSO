@@ -72,6 +72,7 @@ export interface StrategyBuses {
 export interface LayerDebugInfo {
   id: string;
   muted: boolean;
+  role?: import("@/lib/sound/profile-experience-config").AudioLayerRole;
   triggerable?: boolean;
 }
 

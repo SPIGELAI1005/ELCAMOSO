@@ -31,7 +31,7 @@ export function isCombustionWorkletReady() {
 }
 
 export function ensureCombustionWorklet(ctx: BaseAudioContext): Promise<boolean> {
-  if (!(ctx instanceof AudioContext)) return Promise.resolve(false);
+  if (!("audioWorklet" in ctx) || !ctx.audioWorklet) return Promise.resolve(false);
   if (workletReady) return Promise.resolve(true);
   if (workletLoadPromise) return workletLoadPromise;
   workletLoadPromise = (async () => {
@@ -53,12 +53,12 @@ function createFallbackExcitation(ctx: BaseAudioContext): CombustionExcitationHa
   noise.buffer = getNoiseBuffer(ctx, "brown");
   noise.loop = true;
   const am = ctx.createGain();
-  am.gain.value = 0.2;
+  am.gain.value = 0.42;
   const tone = ctx.createOscillator();
-  tone.type = "sine";
+  tone.type = "triangle";
   tone.frequency.value = 40;
   const toneGain = ctx.createGain();
-  toneGain.gain.value = 0.35;
+  toneGain.gain.value = 0.12;
   const mix = ctx.createGain();
   mix.gain.value = 0.45;
   const shaper = ctx.createWaveShaper();
@@ -70,15 +70,32 @@ function createFallbackExcitation(ctx: BaseAudioContext): CombustionExcitationHa
   shaper.curve = curve;
   const tilt = ctx.createBiquadFilter();
   tilt.type = "lowshelf";
-  tilt.frequency.value = 220;
-  tilt.gain.value = 2;
+  tilt.frequency.value = 260;
+  tilt.gain.value = 5;
+  const body = ctx.createBiquadFilter();
+  body.type = "lowpass";
+  body.frequency.value = 900;
+  body.Q.value = 0.65;
+  // Preserve a restrained broadband pressure edge for upper formants. The
+  // previous fallback sent only the low-passed body onward, starving intake
+  // and high-RPM resonances whenever AudioWorklet was unavailable.
+  const edgeHp = ctx.createBiquadFilter();
+  edgeHp.type = "highpass";
+  edgeHp.frequency.value = 720;
+  edgeHp.Q.value = 0.55;
+  const edgeGain = ctx.createGain();
+  edgeGain.gain.value = 0.035;
 
   noise.connect(am);
   tone.connect(toneGain);
   toneGain.connect(am.gain);
   am.connect(shaper);
   shaper.connect(tilt);
-  tilt.connect(mix);
+  tilt.connect(body);
+  body.connect(mix);
+  shaper.connect(edgeHp);
+  edgeHp.connect(edgeGain);
+  edgeGain.connect(mix);
   noise.start();
   tone.start();
 
@@ -88,10 +105,13 @@ function createFallbackExcitation(ctx: BaseAudioContext): CombustionExcitationHa
     setParams({ firingHz, intensity, irregularity, load, sharpness, audioTime }) {
       const hz = Math.max(8, Math.min(400, firingHz));
       tone.frequency.setTargetAtTime(hz, audioTime, 0.04);
-      const depth = 0.1 + intensity * (0.32 + load * 0.28) * (0.7 + sharpness * 0.4);
-      toneGain.gain.setTargetAtTime(depth * (1 + irregularity * 0.15), audioTime, 0.05);
-      mix.gain.setTargetAtTime(0.22 + intensity * 0.48, audioTime, 0.06);
-      tilt.gain.setTargetAtTime(1.5 + load * 3 - sharpness, audioTime, 0.08);
+      const depth = 0.035 + intensity * (0.1 + load * 0.08) * (0.8 + sharpness * 0.2);
+      toneGain.gain.setTargetAtTime(depth * (1 + irregularity * 0.12), audioTime, 0.05);
+      mix.gain.setTargetAtTime(0.28 + intensity * 0.38, audioTime, 0.06);
+      tilt.gain.setTargetAtTime(4 + load * 2.5 - sharpness * 0.8, audioTime, 0.08);
+      body.frequency.setTargetAtTime(620 + load * 520 + sharpness * 180, audioTime, 0.08);
+      edgeHp.frequency.setTargetAtTime(620 + load * 580 + sharpness * 320, audioTime, 0.08);
+      edgeGain.gain.setTargetAtTime(0.018 + load * sharpness * 0.085, audioTime, 0.06);
     },
     dispose() {
       try {
@@ -106,12 +126,15 @@ function createFallbackExcitation(ctx: BaseAudioContext): CombustionExcitationHa
       toneGain.disconnect();
       shaper.disconnect();
       tilt.disconnect();
+      body.disconnect();
+      edgeHp.disconnect();
+      edgeGain.disconnect();
       mix.disconnect();
     },
   };
 }
 
-function createWorkletExcitation(ctx: AudioContext): CombustionExcitationHandle | null {
+function createWorkletExcitation(ctx: BaseAudioContext): CombustionExcitationHandle | null {
   try {
     const node = new AudioWorkletNode(ctx, "elcamoso-combustion-excitation", {
       numberOfInputs: 0,
@@ -147,7 +170,7 @@ function createWorkletExcitation(ctx: AudioContext): CombustionExcitationHandle 
 
 /** Synchronous factory - prefers worklet when already loaded. */
 export function createCombustionExcitation(ctx: BaseAudioContext): CombustionExcitationHandle {
-  if (workletReady && ctx instanceof AudioContext) {
+  if (workletReady && "audioWorklet" in ctx) {
     const worklet = createWorkletExcitation(ctx);
     if (worklet) return worklet;
   }

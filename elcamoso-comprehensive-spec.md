@@ -87,7 +87,7 @@ The product prioritizes:
   - `designed` — Cyber Pulse, Space Ship, UFO, Neon, hypercar/FE, dragon/beast: mostly procedural signatures.
   - `environmental` — carriages, wind, storm, rain, ocean, zen, horse, playful characters: event sequencing; no combustion RPM.
   - `musical` — arcade, synthwave, deep bass, heartbeat: constrained harmonic/rhythmic response.
-- **Built-in catalogue:** 47 Sound Profiles (22 original + 25 expansion). Garage customs remain separate.
+- **Built-in catalogue:** the runtime registry is authoritative (57 selectable profiles as of 2026-09-26). Garage customs remain separate. Public IDs, ordering and entitlement keys must remain stable.
 - **Turbine Jet:** NASA-style stack (low jet broadband, fan broadband, blade-passing tone + harmonics, HF compressor/turbine, discrete tones). Roar dominates; tones stay embedded.
 - **Speed Boat water:** regime-based (displacement → incipient/developed cavitation → planing), not speed→louder.
 - **Oide Wiesn Tractor:** Lanz-style hot-bulb (~280–650 RPM), individual two-stroke fires + flywheel inertia; throttle loads stroke before cadence rises.
@@ -100,9 +100,16 @@ The product prioritizes:
 - **Spatialization:** Stereo panning and dynamic reverb based on environment and driving state.
 - **Crossfade:** 180ms ramps when switching profiles.
 - **Startup signature:** A short rising-tone intro before the profile fades in.
-- **Debug harness:** `/debug` (dev-only) with repeatable motion scenarios, Original/Improved A/B, and layer mute/solo.
+- **Per-profile experience configuration:** `profile-experience-config.ts` defines bounded, typed phase response, acoustic roles, aspiration dynamics and deterministic event limits for every runtime profile. It is executable tuning, while prose identity targets remain in `docs/audio/profile-upgrade-matrix.md`.
+- **Typed acoustic specs:** `src/lib/sound/profile-specs` exports `getAcousticProfileSpec(id)` for the 47 core Sound Profiles. Specs are metadata for validation and future backends; they must not change audible routing by themselves. `family` mirrors `familyForProfile()`; `packageFamily` records package INDEX design intent when it differs (see `docs/FAMILY_CLASSIFICATION_MISMATCHES.md`).
+- **Debug harness:** `/debug` (dev-only) with repeatable motion scenarios, Original/Improved/Realism V2 A/B, per-layer mute/solo and role isolation for combustion/motor, intake, exhaust, boost, mechanical, regeneration and events where present.
+- **Offline validation:** the production `SoundEngine` graph and `PowertrainSimulator` are rendered through Chrome `OfflineAudioContext` at 48 kHz using a shared deterministic 16.5-second drive. Reports must call meters sample peak/RMS and approximate integrated loudness; they must not relabel these as true peak or certified LUFS. Offline worklet availability and other real-time differences must be reported.
 
 ### 4.2 Sound Profiles
+
+Standard combustion profiles have distinct drivetrain and acoustic identities. Racing V10, Race Car, Rally Car, Flat-Six Sport, American Muscle V8, Turbo Inline-6, and GT V8 must not borrow gears, redline, firing architecture, or shift behavior from a different engine archetype. Calibration is grounded in manufacturer technical data while remaining an original ELCAMOSO procedural interpretation. See `docs/SOUND_CHARACTER_SPEC.md`.
+
+The virtual drivetrain uses timestamp-aware speed/acceleration filtering, physical ratio units, profile-specific hysteresis/dwell and phased shifts. With GPS-only input, driver demand, engine load, RPM, gear, braking and normalized boost are simulations; they must never be presented as measured pedal, engine or manifold data. Stale/noisy input holds shifts and decays inferred acceleration. Turbo release events require armed simulated boost, a genuine load drop and cooldown. `/debug/powertrain` provides bounded, unit-labelled manual inputs with optional local audio for deterministic tuning.
 
 A "Sound Profile" is a complete sound personality selectable by the user. Profiles include categories such as:
 
@@ -128,6 +135,8 @@ Each profile has:
 - Curated presets plus user-created custom profiles.
 
 ### 4.3 Drive Telemetry
+
+The speed display must follow live motion. Prefer a valid nonzero browser-reported GPS speed, but allow an accurate coordinate delta to override a persistently stale zero from in-car browsers. Preserve a real stationary zero when coordinate movement does not support motion.
 
 - **Speed (km/h):** Primary display.
 - **RPM:** Simulated or derived.
@@ -276,7 +285,7 @@ Each profile has:
 
 ### 4.16 Dev/Debug
 
-- Hidden diagnostics panel (dev-only) accessible via a secret gesture or route.
+- Hidden diagnostics panel (dev-only) accessible via a secret gesture or route. It must identify the audio backend actually owning the graph, input age/confidence and measured vs estimated vs simulated values; show virtual RPM/gear/load (never imply GPS provides pedal, brake, boost or actual engine load); list active layers/effective gains; and label pre/post meters as approximate sample peak/RMS, with compressor and limiter reduction where available.
 - Shows current audio state, sensor values, settings version, and profile metadata.
 - Does not appear in production or is disabled by a flag.
 
@@ -381,6 +390,8 @@ interface ElcamosoSettings {
 
 ### 6.2 Sound Profile Schema
 
+`SoundProfile` remains the stable catalog entity (`src/lib/sound/profiles.ts`). Separately, `AcousticProfileSpec` (`src/lib/sound/profile-specs`) holds typed acoustic metadata for the 47 core IDs via `getAcousticProfileSpec(id)`. Markdown under `docs/sound-profiles/` is not parsed at runtime.
+
 ```ts
 interface SoundProfile {
   id: string;
@@ -407,6 +418,34 @@ interface SoundLayer {
   wet: number; // reverb amount
   pan: number; // -1 to 1
   params: Record<string, number>; // type-specific params
+}
+
+/** Typed recipe metadata — does not replace SoundProfile. */
+interface AcousticProfileSpec {
+  id: string;
+  family: "physical" | "designed" | "environmental" | "musical"; // == familyForProfile
+  packageFamily: "physical" | "designed" | "environmental" | "musical";
+  familyMismatch: null | {
+    runtimeFamily: AcousticProfileSpec["family"];
+    packageFamily: AcousticProfileSpec["packageFamily"];
+    deferredReason: string;
+    documentation: string;
+  };
+  layers: { roles: string[] };
+  controls: { pitchDriver: string; loadDriver: string };
+  regimes: {
+    drivetrainMode: "virtual-transmission" | "continuous";
+    motionModel: string | null;
+    drivetrainPersonalityId: string | null;
+    phaseKeys: string[];
+    hasForcedInductionDynamics: boolean;
+    realismV2Combustion: boolean;
+  };
+  dsp: { transitionTauSeconds: number; aspiration: string; phases: Record<string, number> };
+  events: { variationDepth: number; minEventCooldownSeconds: number; maxEventVoices: number };
+  loudness: { profileTrim: number; maxGainCeiling: number };
+  sampleBank: { personalityHint: string | null; approvedAssetsPresent: boolean };
+  acceptance: { physics: string; status: string };
 }
 ```
 
@@ -449,6 +488,7 @@ Primary navigation is minimal. Main routes:
 | `/auth/account/callback`            | Email magic-link verification; sets HttpOnly account session cookie                                       |
 | `/auth/account/google/callback`     | Google OAuth Authorization Code callback (server GET exchange + cookie); never expose client secret       |
 | `/about`                            | Product about                                                                                             |
+| `/science`                          | Science of ELCAMOSO: motion-to-music composition model for Symphony Experiences                         |
 | `/legal`                            | Legal hub                                                                                                 |
 | `/legal/impressum`                  | German Impressum (TMG)                                                                                    |
 | `/legal/privacy`                    | Privacy / Datenschutzerklärung (GDPR + US)                                                                |
@@ -504,6 +544,10 @@ Root layout (`__root.tsx`) renders `<Outlet />` and global providers/Toaster. No
 - Bottom sheets for selectors and mixers.
 - Swipeable cards for profile browsing.
 - Persistent mini-player could be added for quick control.
+- Primary header controls use at least 48 px touch targets. Desktop navigation typography and the brand mark are approximately 10% larger than the previous baseline without increasing visual density in the driving view.
+- The home hero stays concise for in-car displays. The product line `Turn motion into sound.` belongs with `Choose your experience`, not above the hero headline.
+- About begins with `Where it started`, followed by the live-or-later product position.
+- World cards do not render decorative placeholder gradients. Reactive energy appears only while a preview is active and must communicate actual motion state.
 
 ---
 
@@ -513,7 +557,8 @@ Root layout (`__root.tsx`) renders `<Outlet />` and global providers/Toaster. No
 - **Routing:** `@tanstack/react-router`. No `react-router-dom`.
 - **Styling:** Tailwind CSS v4 with native CSS `@theme` variables in `src/styles.css`.
 - **State:** localStorage settings (schema v6) plus a Drive session singleton (`src/lib/drive/session.ts`) that owns the single `AudioContext`. UI reads snapshots via `useSyncExternalStore`. Switching Sound Profile while Listen / Demo / Drive is already live crossfades on the existing engine (`listenProfile`); do not stack a second `AudioContext`. Snapshot includes `motion` (`MotionEnergy` UI layer), `productStatus`, and `safetyMode` (above ~5 km/h on Drive/Demo).
-- **Audio:** Web Audio API. Cabin EQ after layer mix; intensity-band gain ceiling on top of the limiter; idle fade-then-suspend; call ducking on `AudioContext` interrupt. Optional Motion lookahead for Bluetooth.
+- **Audio:** Web Audio API. Cabin EQ after layer mix; intensity-band gain ceiling on top of the limiter; idle fade-then-suspend; call ducking on `AudioContext` interrupt. Optional Motion lookahead for Bluetooth. Realism V2 combustion uses sample-rate-aware overlapping pressure tails, DC-blocked excitation, fixed formant/body resonances, and subordinate low engine orders; it must not expose a raw pitched click train at firing cadence.
+- **American Muscle V8 hybrid pilot:** procedural combustion remains continuous and authoritative. Only provenance-complete, license-approved, steady-state recordings may enter its typed bank. Adjacent RPM/load layers use bounded target/source-RPM playback rates and measured linear-amplitude overlap trim; uncovered regions fall back explicitly to procedural sound. Current Engine remains the developer A/B control. See `docs/AMERICAN_V8_HYBRID_PILOT.md`.
 - **Chrome:** Mobile bottom nav Drive / Sounds / Studio / Garage; Demo and Settings via menu. Hide BrandNav, bottom nav, and MiniPlayer during Drive safety mode.
 - Motion: multi-source fusion in `src/lib/motion/sensor-fusion.ts` (GPS, DeviceMotion, phone relay, vehicle telemetry). Delta GPS speed when `GeolocationCoordinates.speed` is null (`src/lib/drive/gps-speed.ts`). Drive context classifier is on-device (`src/lib/drive/context.ts`). Dynamic Drive adds `PowertrainSimulator` + `DynamicDriveSynth` when `settings.dynamicDrive` is on. Demo motion: `src/lib/drive/demo-physics.ts`. Architecture guide: `docs/DYNAMIC_DRIVE_ARCHITECTURE.md`. Drive traces live in IndexedDB, not the service worker cache.
 - **i18n:** EN / DE / RO dictionaries in `src/lib/i18n`, plus metric/imperial units.

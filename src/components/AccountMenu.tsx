@@ -105,7 +105,7 @@ export function AccountMenu({ className, variant = "icon", onNavigate }: Account
         onClick={openAccount}
         data-testid="nav-account"
         className={cn(
-          "inline-flex h-11 w-11 items-center justify-center rounded-full text-foreground transition-colors hover:bg-secondary",
+          "inline-flex h-12 w-12 items-center justify-center rounded-full text-foreground transition-colors hover:bg-secondary",
           isAuthenticated && "ring-1 ring-border",
           className,
         )}
@@ -113,7 +113,7 @@ export function AccountMenu({ className, variant = "icon", onNavigate }: Account
           isAuthenticated ? t(settings.language, "nav.profile") : t(settings.language, "nav.signIn")
         }
       >
-        <AccountUserIcon className="h-5 w-auto" />
+        <AccountUserIcon className="h-[1.375rem] w-auto" />
       </button>
 
       <AccountSignInDialog

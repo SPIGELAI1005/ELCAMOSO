@@ -18,8 +18,7 @@ import {
 import {
   EMPTY_COMBUSTION_SAMPLE_BANKS,
   loadRegionFromDemand,
-  playbackRateForRpm,
-  selectSampleNeighbors,
+  selectSampleMix,
   type CombustionSampleBank,
   type CombustionSampleEntry,
 } from "@/lib/sound/realism/v2/sample-bank";
@@ -27,6 +26,11 @@ import type { StrategyBuses } from "@/lib/sound/realism/types";
 import type { SoundProfile } from "@/lib/sound/profiles";
 import { resolvePersonalityId } from "@/lib/drive/drivetrain-resolve";
 import type { ShiftPhase } from "@/lib/powertrain/types";
+import {
+  profileExperienceConfig,
+  type AudioLayerRole,
+  type ProfileExperienceConfig,
+} from "@/lib/sound/profile-experience-config";
 
 export type RealismEngineMode = "current" | "v2";
 
@@ -38,6 +42,8 @@ export interface HybridCombustionDiagnostics {
   sampleAssisted: boolean;
   supportGain: number;
   combustionGain: number;
+  intakeGain: number;
+  spectralTiltDb: number;
   formantGains: number[];
   shiftPhase: ShiftPhase | "idle";
   load: number;
@@ -45,6 +51,11 @@ export interface HybridCombustionDiagnostics {
   /** Approximate graph size (reused nodes; not per-fire). */
   activeNodeEstimate: number;
   audioContextState: string;
+  sampleState: "unavailable" | "loading" | "ready" | "partial" | "failed";
+  sampleFallbackReason: "none" | "no-approved-assets" | "no-load-bank" | "rate-out-of-range" | "decode-failed";
+  activeSampleIds: string[];
+  eventCounts: { shift: number; overrun: number; boostRelease: number };
+  boostSource: "simulated-powertrain" | "unavailable";
 }
 
 function targetParam(param: AudioParam, value: number, t: number, tau: number) {
@@ -68,6 +79,7 @@ interface SampleVoice {
 export class HybridCombustionSynth {
   private disposed = false;
   private cfg: AcousticEngineConfig | null = null;
+  private experience: ProfileExperienceConfig | null = null;
   private profile: SoundProfile | null = null;
   private ctx: BaseAudioContext | null = null;
   private excitation: CombustionExcitationHandle | null = null;
@@ -94,16 +106,18 @@ export class HybridCombustionSynth {
     spool: number;
   } | null = null;
   private shiftClick: { filter: BiquadFilterNode; gain: GainNode } | null = null;
-  private sampleA: SampleVoice | null = null;
-  private sampleB: SampleVoice | null = null;
+  private sampleVoices = new Map<string, SampleVoice>();
   private sampleBus: GainNode | null = null;
   private sampleBank: CombustionSampleBank | null = null;
   private decodedSamples = new Map<string, AudioBuffer>();
   private lastShifting = false;
   private lastShiftPhase: ShiftPhase | "idle" = "idle";
   private lastOverrun = false;
+  private lastBoostRelease = false;
+  private lastUpdateTime = 0;
   private priorLoad = 0;
   private liftArmed = false;
+  private mutedRoles = new Set<AudioLayerRole>();
   private nodeEstimate = 0;
   private diagnostics: HybridCombustionDiagnostics = {
     realismEngine: "v2",
@@ -113,12 +127,19 @@ export class HybridCombustionSynth {
     sampleAssisted: false,
     supportGain: 0,
     combustionGain: 0,
+    intakeGain: 0,
+    spectralTiltDb: 0,
     formantGains: [],
     shiftPhase: "idle",
     load: 0,
     demand: 0,
     activeNodeEstimate: 0,
     audioContextState: "closed",
+    sampleState: "unavailable",
+    sampleFallbackReason: "no-approved-assets",
+    activeSampleIds: [],
+    eventCounts: { shift: 0, overrun: 0, boostRelease: 0 },
+    boostSource: "unavailable",
   };
 
   build(ctx: BaseAudioContext, profile: SoundProfile, buses: StrategyBuses): boolean {
@@ -127,6 +148,7 @@ export class HybridCombustionSynth {
     const cfg = acousticEngineForProfile(profile.id);
     if (!cfg) return false;
     this.cfg = cfg;
+    this.experience = profileExperienceConfig(profile.id);
     this.profile = profile;
     this.ctx = ctx;
 
@@ -210,7 +232,7 @@ export class HybridCombustionSynth {
       const g = ctx.createGain();
       osc.type = i === 0 ? "triangle" : "sine";
       osc.frequency.value = 40 * ratio;
-      g.gain.value = (cfg.supportWeights[i] ?? 0.1) * 0.14;
+      g.gain.value = (cfg.supportWeights[i] ?? 0.1) * 0.38;
       osc.connect(g);
       g.connect(this.supportBus!);
       osc.start();
@@ -300,7 +322,11 @@ export class HybridCombustionSynth {
 
     this.nodeEstimate = nodes;
     this.diagnostics.cylinders = cfg.cylinders;
-    this.diagnostics.sampleAssisted = this.sampleBank.entries.length > 0;
+    this.diagnostics.sampleAssisted = false;
+    this.diagnostics.sampleState = this.sampleBank.entries.length ? "loading" : "unavailable";
+    this.diagnostics.sampleFallbackReason = this.sampleBank.entries.length
+      ? "decode-failed"
+      : "no-approved-assets";
     this.diagnostics.activeNodeEstimate = nodes;
     this.diagnostics.audioContextState =
       "state" in ctx ? String((ctx as AudioContext).state) : "offline";
@@ -309,12 +335,24 @@ export class HybridCombustionSynth {
 
   setDecodedSamples(map: Map<string, AudioBuffer>) {
     this.decodedSamples = map;
-    this.diagnostics.sampleAssisted = map.size > 0 && (this.sampleBank?.entries.length ?? 0) > 0;
+    const expected = this.sampleBank?.entries.length ?? 0;
+    this.diagnostics.sampleAssisted = map.size > 0 && expected > 0;
+    this.diagnostics.sampleState = expected === 0
+      ? "unavailable"
+      : map.size === 0
+        ? "failed"
+        : map.size < expected
+          ? "partial"
+          : "ready";
+    this.diagnostics.sampleFallbackReason = map.size > 0 ? "none" : expected ? "decode-failed" : "no-approved-assets";
   }
 
   update(state: DriveState, audioTime: number) {
     if (this.disposed || !this.cfg || !this.excitation) return;
     const cfg = this.cfg;
+    const dt = this.lastUpdateTime > 0 ? Math.max(0.001, Math.min(0.1, audioTime - this.lastUpdateTime)) : 1 / 60;
+    this.lastUpdateTime = audioTime;
+    const gate = (role: AudioLayerRole) => (this.mutedRoles.has(role) ? 0.0001 : 1);
     const rpm = Math.max(0, state.rpm || 0);
     const pt = state.powertrain;
     const demand = pt?.driverDemand ?? state.throttle;
@@ -332,6 +370,7 @@ export class HybridCombustionSynth {
     this.diagnostics.shiftPhase = shiftPhase;
     this.diagnostics.load = load;
     this.diagnostics.demand = demand;
+    this.diagnostics.boostSource = pt ? "simulated-powertrain" : "unavailable";
 
     const rpmNorm = Math.min(1, rpm / Math.max(1, cfg.redlineRpm));
     const idleGate = Math.max(0, 1 - rpmNorm * 2.2) * Math.max(0, 1 - demand * 2);
@@ -366,12 +405,17 @@ export class HybridCombustionSynth {
     if (this.spectralTilt) {
       const tiltDb = -4 + load * 5.5 + demand * 2.5 * cfg.highLoadEnrichment;
       targetParam(this.spectralTilt.gain, tiltDb, audioTime, 0.07);
+      this.diagnostics.spectralTiltDb = tiltDb;
     }
 
     this.exhaustFormants.forEach((band, i) => {
       const base = 0.26 / (1 + i * 0.48);
-      const loadLift = 0.45 + load * 0.85 + demand * 0.4;
-      const enrich = 1 + (i > 1 ? load * cfg.highLoadEnrichment * 0.55 : 0);
+      const loadLift =
+        0.38 +
+        load * (0.62 + cfg.loadContrast * 0.42) +
+        demand * (0.22 + cfg.loadContrast * 0.2);
+      const upperRpm = i > 1 ? rpmNorm * cfg.upperRpmEnergy * (0.12 + load * 0.28) : 0;
+      const enrich = 1 + (i > 1 ? load * cfg.highLoadEnrichment * 0.55 + upperRpm : 0);
       const dark = 1 - cfg.bodyBrightness * 0.22;
       targetParam(
         band.gain.gain,
@@ -396,7 +440,9 @@ export class HybridCombustionSynth {
 
     this.intakeFormants.forEach((band, i) => {
       const base = (0.16 * cfg.intakePresence) / (1 + i * 0.42);
-      let intake = demand * 0.9 + load * 0.35;
+      let intake =
+        demand * (0.62 + cfg.intakeLoadResponse * 0.46) +
+        load * (0.18 + cfg.intakeLoadResponse * 0.24);
       if (shifting) {
         if (shiftPhase === "torque_cut" || shiftPhase === "disengage") intake *= 0.35;
         else if (pt?.shiftDirection === "down") intake *= 1.15;
@@ -416,14 +462,17 @@ export class HybridCombustionSynth {
       const ratio = cfg.supportRatios[i] ?? i + 1;
       targetParam(osc.frequency, fund * ratio, audioTime, 0.05);
       const w = cfg.supportWeights[i] ?? 0.1;
-      const density = 0.28 + load * 0.55 + demand * 0.22;
-      const upper = i >= 3 ? load * cfg.highLoadEnrichment : 1;
+      const density = 0.42 + load * 0.48 + demand * 0.18;
+      const upper =
+        i >= 3
+          ? 0.08 + load * cfg.highLoadEnrichment * 0.72 + rpmNorm * cfg.upperRpmEnergy * 0.42
+          : 1;
       const g = this.supportGains[i];
       if (g)
-        targetParam(g.gain, w * 0.11 * density * upper * (shifting ? 0.65 : 1), audioTime, 0.06);
+        targetParam(g.gain, w * 0.32 * density * upper * (shifting ? 0.58 : 1), audioTime, 0.06);
     });
     if (this.supportBus) {
-      targetParam(this.supportBus.gain, 0.08 + load * 0.08, audioTime, 0.08);
+      targetParam(this.supportBus.gain, (0.16 + load * 0.1) * gate("combustion"), audioTime, 0.08);
     }
     if (this.combustionBus) {
       const body = 0.3 + load * 0.32 + demand * 0.14;
@@ -433,22 +482,20 @@ export class HybridCombustionSynth {
           : shiftPhase === "reengage"
             ? 0.9
             : 1;
-      targetParam(this.combustionBus.gain, body * phaseMul * (overrun ? 0.65 : 1), audioTime, 0.06);
+      targetParam(this.combustionBus.gain, body * phaseMul * (overrun ? 0.65 : 1) * gate("combustion"), audioTime, 0.06);
       this.diagnostics.combustionGain = body;
     }
     if (this.intakeBus) {
-      targetParam(
-        this.intakeBus.gain,
-        (0.1 + demand * 0.38) * cfg.intakePresence * (overrun ? 0.12 : 1),
-        audioTime,
-        0.05,
-      );
+      const intakeGain =
+        (0.1 + demand * 0.38) * cfg.intakePresence * (overrun ? 0.12 : 1);
+      targetParam(this.intakeBus.gain, intakeGain * gate("intake"), audioTime, 0.05);
+      this.diagnostics.intakeGain = intakeGain;
     }
 
     if (this.mechanical) {
       targetParam(
         this.mechanical.gain.gain,
-        0.02 * cfg.mechanicalIntensity * (0.35 + rpmNorm + load * 0.55),
+        0.02 * cfg.mechanicalIntensity * (0.35 + rpmNorm + load * 0.55) * gate("mechanical"),
         audioTime,
         0.08,
       );
@@ -468,10 +515,11 @@ export class HybridCombustionSynth {
       const level = on
         ? (0.045 + Math.min(0.07, (rpmNorm - 0.15) * 0.1)) * cfg.overrunCharacter
         : 0.0001;
-      targetParam(this.overrun.gain.gain, level, audioTime, on ? 0.04 : 0.09);
+      targetParam(this.overrun.gain.gain, level * gate("exhaust"), audioTime, on ? 0.04 : 0.09);
       targetParam(this.overrun.filter.frequency, 460 + rpmNorm * 380, audioTime, 0.1);
       if (on && !this.lastOverrun && this.liftArmed && this.shiftClick) {
         this.fireResonantImpulse(audioTime, 0.1 * cfg.overrunCharacter, 680);
+        this.diagnostics.eventCounts.overrun += 1;
         this.liftArmed = false;
       }
     }
@@ -479,24 +527,33 @@ export class HybridCombustionSynth {
     this.priorLoad = this.priorLoad * 0.92 + load * 0.08;
 
     if (this.turbo) {
-      const boostWant =
-        cfg.forcedInduction && demand > 0.32 && rpm > 1600
-          ? Math.min(1, (demand - 0.18) * 0.95 + rpmNorm * 0.22)
-          : 0;
-      // Spool inertia ~0.5 s
-      this.turbo.spool += (boostWant - this.turbo.spool) * Math.min(1, 0.016 / 0.5);
+      const boostWant = pt?.boost ?? 0;
+      // Follow deterministic powertrain boost with profile-specific acoustic lag.
+      const dynamics = this.experience?.aspirationDynamics;
+      const tau = boostWant >= this.turbo.spool
+        ? (dynamics?.attackSeconds || 0.5)
+        : (dynamics?.decaySeconds || 0.38);
+      this.turbo.spool += (boostWant - this.turbo.spool) * (1 - Math.exp(-dt / Math.max(0.04, tau)));
       const spool = this.turbo.spool;
-      targetParam(this.turbo.gain.gain, spool > 0.05 ? spool * 0.075 : 0.0001, audioTime, 0.08);
+      targetParam(this.turbo.gain.gain, (spool > 0.05 ? spool * 0.075 : 0.0001) * gate("boost"), audioTime, 0.08);
       targetParam(this.turbo.filter.frequency, 1500 + spool * 1900 + rpmNorm * 500, audioTime, 0.1);
-      if (overrun && spool > 0.5 && this.priorLoad > 0.4 && this.shiftClick && !this.lastOverrun) {
+      if (
+        pt?.boostRelease &&
+        !this.lastBoostRelease &&
+        this.turbo.spool >= (dynamics?.minimumReleaseState || 0.55) &&
+        this.shiftClick
+      ) {
         this.fireResonantImpulse(audioTime, 0.08, 2300);
+        this.diagnostics.eventCounts.boostRelease += 1;
       }
+      this.lastBoostRelease = Boolean(pt?.boostRelease);
     }
 
     // Shift: RPM/load carry the story; mechanical impulse only at reengage / start
     if (shifting && !this.lastShifting && this.shiftClick) {
       const freq = pt?.shiftDirection === "down" ? 500 : 320;
       this.fireResonantImpulse(audioTime, 0.1, freq);
+      this.diagnostics.eventCounts.shift += 1;
     }
     if (
       shifting &&
@@ -505,6 +562,7 @@ export class HybridCombustionSynth {
       this.shiftClick
     ) {
       this.fireResonantImpulse(audioTime, 0.12, pt?.shiftDirection === "down" ? 440 : 300);
+      this.diagnostics.eventCounts.shift += 1;
     }
     this.lastShifting = shifting;
     this.lastShiftPhase = shiftPhase;
@@ -520,7 +578,7 @@ export class HybridCombustionSynth {
   }
 
   private fireResonantImpulse(t: number, peak: number, freq: number) {
-    if (!this.shiftClick) return;
+    if (!this.shiftClick || this.mutedRoles.has("event")) return;
     const { filter, gain } = this.shiftClick;
     filter.frequency.setValueAtTime(freq, t);
     gain.gain.cancelScheduledValues(t);
@@ -529,25 +587,19 @@ export class HybridCombustionSynth {
     gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.085);
   }
 
-  private ensureSampleVoice(entry: CombustionSampleEntry, slot: "a" | "b"): SampleVoice | null {
+  private ensureSampleVoice(entry: CombustionSampleEntry): SampleVoice | null {
     if (!this.ctx || !this.sampleBus) return null;
     const buf = this.decodedSamples.get(entry.assetId);
     if (!buf) return null;
-    const existing = slot === "a" ? this.sampleA : this.sampleB;
-    if (existing?.entryId === entry.assetId) return existing;
-    if (existing) {
-      try {
-        existing.src.stop();
-      } catch {
-        /* */
-      }
-      existing.src.disconnect();
-      existing.gain.disconnect();
-    }
+    const existing = this.sampleVoices.get(entry.assetId);
+    if (existing) return existing;
     const src = this.ctx.createBufferSource();
     src.buffer = buf;
     src.loop = true;
-    if (entry.loopStart != null && entry.loopEnd != null) {
+    if (entry.loopSeconds) {
+      src.loopStart = entry.loopSeconds.start;
+      src.loopEnd = entry.loopSeconds.end;
+    } else if (entry.loopStart != null && entry.loopEnd != null) {
       src.loopStart = entry.loopStart / buf.sampleRate;
       src.loopEnd = entry.loopEnd / buf.sampleRate;
     }
@@ -555,10 +607,9 @@ export class HybridCombustionSynth {
     gain.gain.value = 0.0001;
     src.connect(gain);
     gain.connect(this.sampleBus);
-    src.start();
+    src.start(0, src.loopStart || 0);
     const voice = { src, gain, entryId: entry.assetId };
-    if (slot === "a") this.sampleA = voice;
-    else this.sampleB = voice;
+    this.sampleVoices.set(entry.assetId, voice);
     this.nodeEstimate += 2;
     return voice;
   }
@@ -568,29 +619,43 @@ export class HybridCombustionSynth {
       if (this.sampleBus) targetParam(this.sampleBus.gain, 0.0001, audioTime, 0.1);
       return;
     }
-    const load = loadRegionFromDemand(demand, overrun);
-    const { a, b, blend } = selectSampleNeighbors(this.sampleBank, rpm, load);
-    if (!a) return;
-
-    const voiceA = this.ensureSampleVoice(a, "a");
-    const voiceB = b ? this.ensureSampleVoice(b, "b") : null;
-    if (!voiceA) return;
-
-    const rateA = playbackRateForRpm(rpm, a.rpmRef);
-    voiceA.src.playbackRate.setTargetAtTime(rateA, audioTime, 0.08);
-    const trimA = a.gain ?? 0.85;
-    if (voiceB && b) {
-      const rateB = playbackRateForRpm(rpm, b.rpmRef);
-      voiceB.src.playbackRate.setTargetAtTime(rateB, audioTime, 0.08);
-      const trimB = b.gain ?? 0.85;
-      targetParam(voiceA.gain.gain, trimA * (1 - blend) * 0.55, audioTime, 0.1);
-      targetParam(voiceB.gain.gain, trimB * blend * 0.55, audioTime, 0.1);
-    } else {
-      targetParam(voiceA.gain.gain, trimA * 0.55, audioTime, 0.1);
-      if (this.sampleB) targetParam(this.sampleB.gain.gain, 0.0001, audioTime, 0.1);
+    const load = loadRegionFromDemand(demand, overrun, rpm);
+    const selection = selectSampleMix(this.sampleBank, rpm, load, demand);
+    const activeIds = new Set(selection.targets.map((target) => target.entry.assetId));
+    for (const [id, voice] of this.sampleVoices) {
+      if (!activeIds.has(id)) targetParam(voice.gain.gain, 0.0001, audioTime, 0.09);
+    }
+    if (!selection.targets.length) {
+      targetParam(this.sampleBus.gain, 0.0001, audioTime, 0.1);
+      this.diagnostics.sampleAssisted = false;
+      this.diagnostics.activeSampleIds = [];
+      this.diagnostics.sampleFallbackReason = selection.fallbackReason;
+      return;
+    }
+    let playable = 0;
+    for (const target of selection.targets) {
+      const voice = this.ensureSampleVoice(target.entry);
+      if (!voice) continue;
+      playable += 1;
+      voice.src.playbackRate.setTargetAtTime(target.playbackRate, audioTime, 0.08);
+      const trim = target.entry.gain ?? 0.85;
+      const overlap = target.entry.overlapGain ?? 0.8;
+      targetParam(voice.gain.gain, trim * overlap * target.weight * 0.55, audioTime, 0.1);
+    }
+    if (!playable) {
+      targetParam(this.sampleBus.gain, 0.0001, audioTime, 0.1);
+      this.diagnostics.sampleAssisted = false;
+      this.diagnostics.activeSampleIds = [];
+      this.diagnostics.sampleFallbackReason = "decode-failed";
+      return;
     }
     // Samples assist under procedural - never fully replace excitation
-    targetParam(this.sampleBus.gain, 0.35, audioTime, 0.12);
+    targetParam(
+      this.sampleBus.gain,
+      0.35 * (this.mutedRoles.has("combustion") ? 0.0001 : 1),
+      audioTime,
+      0.12,
+    );
     if (this.combustionBus) {
       targetParam(
         this.combustionBus.gain,
@@ -600,6 +665,8 @@ export class HybridCombustionSynth {
       );
     }
     this.diagnostics.sampleAssisted = true;
+    this.diagnostics.sampleFallbackReason = "none";
+    this.diagnostics.activeSampleIds = [...activeIds];
   }
 
   getDiagnostics(): HybridCombustionDiagnostics {
@@ -608,15 +675,35 @@ export class HybridCombustionSynth {
 
   listLayers() {
     return [
-      { id: "v2-combustion", muted: false },
-      { id: "v2-intake", muted: false },
-      { id: "v2-body-resonance", muted: false },
-      { id: "v2-support", muted: false },
-      { id: "v2-mechanical", muted: false },
-      { id: "v2-overrun", muted: false },
-      ...(this.turbo ? [{ id: "v2-turbo", muted: false }] : []),
-      ...(this.diagnostics.sampleAssisted ? [{ id: "v2-samples", muted: false }] : []),
-    ];
+      { id: "v2-combustion", role: "combustion" as const },
+      { id: "v2-intake", role: "intake" as const },
+      { id: "v2-body-resonance", role: "combustion" as const },
+      { id: "v2-support", role: "combustion" as const },
+      { id: "v2-mechanical", role: "mechanical" as const },
+      { id: "v2-overrun", role: "exhaust" as const },
+      { id: "v2-events", role: "event" as const },
+      ...(this.turbo ? [{ id: "v2-turbo", role: "boost" as const }] : []),
+      ...(this.diagnostics.sampleAssisted ? [{ id: "v2-samples", role: "combustion" as const }] : []),
+    ].map((layer) => ({ ...layer, muted: this.mutedRoles.has(layer.role) }));
+  }
+
+  setRoleMuted(role: AudioLayerRole, muted: boolean) {
+    if (muted) this.mutedRoles.add(role);
+    else this.mutedRoles.delete(role);
+  }
+
+  setLayerMuted(id: string, muted: boolean) {
+    const layer = this.listLayers().find((candidate) => candidate.id === id);
+    if (layer) this.setRoleMuted(layer.role, muted);
+  }
+
+  setSolo(id: string | null) {
+    const selected = id ? this.listLayers().find((candidate) => candidate.id === id)?.role : null;
+    const roles = new Set(this.listLayers().map((layer) => layer.role));
+    this.mutedRoles.clear();
+    if (selected) {
+      for (const role of roles) if (role !== selected) this.mutedRoles.add(role);
+    }
   }
 
   dispose() {
@@ -689,8 +776,7 @@ export class HybridCombustionSynth {
       this.shiftClick.gain.disconnect();
       this.shiftClick = null;
     }
-    for (const voice of [this.sampleA, this.sampleB]) {
-      if (!voice) continue;
+    for (const voice of this.sampleVoices.values()) {
       try {
         voice.src.stop();
       } catch {
@@ -699,8 +785,8 @@ export class HybridCombustionSynth {
       voice.src.disconnect();
       voice.gain.disconnect();
     }
-    this.sampleA = null;
-    this.sampleB = null;
+    this.sampleVoices.clear();
+    this.decodedSamples.clear();
     this.combustionBus?.disconnect();
     this.intakeBus?.disconnect();
     this.supportBus?.disconnect();
@@ -710,8 +796,11 @@ export class HybridCombustionSynth {
     this.supportBus = null;
     this.sampleBus = null;
     this.cfg = null;
+    this.experience = null;
     this.profile = null;
     this.ctx = null;
     this.nodeEstimate = 0;
+    this.lastUpdateTime = 0;
+    this.mutedRoles.clear();
   }
 }

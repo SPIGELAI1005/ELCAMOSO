@@ -10,8 +10,18 @@ export interface MasterBus {
   input: GainNode;
   output: GainNode;
   setPresence: (amount: number, t: number) => void;
+  getCompressorReductionDb: () => number;
   dispose: () => void;
 }
+
+/** Gentle program control; the final limiter remains the peak safety stage. */
+export const MASTER_COMPRESSOR = {
+  thresholdDb: -10,
+  kneeDb: 6,
+  ratio: 1.8,
+  attackSeconds: 0.018,
+  releaseSeconds: 0.28,
+} as const;
 
 export function createMasterBus(ctx: BaseAudioContext, destination: AudioNode): MasterBus {
   const input = ctx.createGain();
@@ -37,11 +47,11 @@ export function createMasterBus(ctx: BaseAudioContext, destination: AudioNode): 
   air.gain.value = -1.8;
 
   const comp = ctx.createDynamicsCompressor();
-  comp.threshold.value = -16;
-  comp.knee.value = 10;
-  comp.ratio.value = 2.6;
-  comp.attack.value = 0.01;
-  comp.release.value = 0.22;
+  comp.threshold.value = MASTER_COMPRESSOR.thresholdDb;
+  comp.knee.value = MASTER_COMPRESSOR.kneeDb;
+  comp.ratio.value = MASTER_COMPRESSOR.ratio;
+  comp.attack.value = MASTER_COMPRESSOR.attackSeconds;
+  comp.release.value = MASTER_COMPRESSOR.releaseSeconds;
 
   const output = ctx.createGain();
   output.gain.value = MASTER_BUS_OUTPUT_GAIN;
@@ -60,6 +70,9 @@ export function createMasterBus(ctx: BaseAudioContext, destination: AudioNode): 
     setPresence(amount, t) {
       const v = clamp(-0.8 + amount * 2.2, -2.5, 3);
       presence.gain.setTargetAtTime(v, t, 0.2);
+    },
+    getCompressorReductionDb() {
+      return Math.abs(comp.reduction);
     },
     dispose() {
       /* nodes GC with context */

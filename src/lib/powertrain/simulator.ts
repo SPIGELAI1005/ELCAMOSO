@@ -28,6 +28,11 @@ import {
 import type { VirtualPowertrainState } from "@/lib/powertrain/types";
 import { IDLE_POWERTRAIN } from "@/lib/powertrain/types";
 import { resolveDrivingMode } from "@/lib/powertrain/domain/driving-mode";
+import {
+  createBoostModelState,
+  updateBoostModel,
+  type BoostModelState,
+} from "@/lib/powertrain/boost";
 
 export interface PowertrainSimulatorOptions {
   profileId?: string;
@@ -58,6 +63,10 @@ export interface PowertrainSimulatorInternals {
   lastPrimarySource: VehicleMotionState["primarySource"];
   reconnectBlendUntil: number;
   shiftMap: ShiftMap | null;
+  boostState: BoostModelState;
+  lastDisplaySpeedKmh: number;
+  accelerationFilteredMs2: number;
+  accelerationSpeedKmh: number;
 }
 
 /** ~140 ms effective smoothing for mechanical RPM under healthy 50–60 Hz ticks. */
@@ -104,8 +113,18 @@ export class PowertrainSimulator {
     dt: number,
     opts?: { directThrottle?: number; braking?: number; pedalPosition?: number },
   ): VirtualPowertrainState {
-    const dtSafe = Math.min(0.1, Math.max(0.001, dt));
-    const now = motion.timestamp || this.internal.clockMs + dtSafe * 1000;
+    const suppliedDt = Math.min(0.1, Math.max(0.001, dt));
+    const sampleTimestamp = motion.timestamp || 0;
+    const hadPriorClock = this.internal.clockMs > 0;
+    const timestampDt =
+      this.internal.clockMs > 0 && sampleTimestamp > this.internal.clockMs
+        ? (sampleTimestamp - this.internal.clockMs) / 1000
+        : suppliedDt;
+    const dtSafe = Math.min(0.1, Math.max(0.001, timestampDt));
+    const now =
+      sampleTimestamp > this.internal.clockMs
+        ? sampleTimestamp
+        : this.internal.clockMs + dtSafe * 1000;
     this.internal.clockMs = now;
 
     if (
@@ -133,6 +152,40 @@ export class PowertrainSimulator {
     // - mechanicalSpeedKmh: light filter for RPM / driveline
     // - shiftDecisionSpeedKmh: heavier filter for gear selection only
     const displaySpeedKmh = Math.max(0, motion.speedKmh);
+    const gpsOnly =
+      motion.accelerationProvenance === "estimated-speed" ||
+      (motion.accelerationProvenance == null &&
+        !motion.sourceHealth.vehicleTelemetry &&
+        motion.primarySource === "tesla-browser");
+    const priorAccelerationSpeedKmh = this.internal.accelerationSpeedKmh || displaySpeedKmh;
+    this.internal.accelerationSpeedKmh = lowPassToward(
+      priorAccelerationSpeedKmh,
+      displaySpeedKmh,
+      dtSafe,
+      0.7,
+    );
+    const derivedAcceleration = hadPriorClock
+      ? ((this.internal.accelerationSpeedKmh - priorAccelerationSpeedKmh) / 3.6) / dtSafe
+      : 0;
+    const accelerationTarget = holdShifts
+      ? 0
+      : gpsOnly
+        ? Math.max(-5, Math.min(4, derivedAcceleration))
+        : motion.accelerationFiltered;
+    const accelTau = gpsOnly ? 0.42 : 0.18;
+    this.internal.accelerationFilteredMs2 = lowPassToward(
+      this.internal.accelerationFilteredMs2,
+      accelerationTarget,
+      dtSafe,
+      accelTau,
+    );
+    this.internal.lastDisplaySpeedKmh = displaySpeedKmh;
+    const effectiveMotion: VehicleMotionState = {
+      ...motion,
+      accelerationMs2: gpsOnly ? this.internal.accelerationFilteredMs2 : motion.accelerationMs2,
+      accelerationFiltered: this.internal.accelerationFilteredMs2,
+      decelerationMs2: Math.max(0, -this.internal.accelerationFilteredMs2),
+    };
     const mechTau = resilienceBlend ? MECHANICAL_SPEED_TAU * 1.25 : MECHANICAL_SPEED_TAU;
     const decisionTau = resilienceBlend
       ? SHIFT_DECISION_SPEED_TAU * 1.15
@@ -215,7 +268,7 @@ export class PowertrainSimulator {
 
     const rpmNorm = normalizeRpm(rpm, this.profile);
     const throttleResult = updateThrottleModel({
-      motion,
+      motion: effectiveMotion,
       profile: this.profile,
       rpmNormalized: rpmNorm,
       dt: dtSafe,
@@ -323,7 +376,7 @@ export class PowertrainSimulator {
     const overrunResult = updateOverrun({
       throttle: throttleResult.driverDemand,
       previousThrottle: this.internal.previousThrottle,
-      accelerationFiltered: motion.accelerationFiltered,
+      accelerationFiltered: effectiveMotion.accelerationFiltered,
       speedKmh: displaySpeedKmh,
       now,
       profile: this.profile,
@@ -334,10 +387,21 @@ export class PowertrainSimulator {
     const drivingMode = resolveDrivingMode({
       speedKmh: displaySpeedKmh,
       throttle: throttleResult.driverDemand,
-      accel: motion.accelerationFiltered,
+      accel: effectiveMotion.accelerationFiltered,
       shifting: shiftState.active,
       overrun: overrunResult.overrun,
       gear,
+    });
+
+    const boostResult = updateBoostModel({
+      state: this.internal.boostState,
+      profile: this.profile,
+      rpm,
+      engineLoad: load,
+      driverDemand: throttleResult.driverDemand,
+      dtSec: dtSafe,
+      nowMs: now,
+      telemetryStable: !holdShifts && !motion.transitioning,
     });
 
     this.internal = {
@@ -349,6 +413,7 @@ export class PowertrainSimulator {
       overrunState: overrunResult.state,
       previousThrottle: throttleResult.driverDemand,
       queuedTargetGear: desiredGear,
+      boostState: boostResult.state,
     };
 
     const engineRunning =
@@ -372,6 +437,8 @@ export class PowertrainSimulator {
       queuedTargetGear: desiredGear,
       driverDemand: throttleResult.driverDemand,
       engineLoad: load,
+      boost: boostResult.boost,
+      boostRelease: boostResult.releaseTriggered,
       throttle: throttleResult.driverDemand,
       load,
       shifting: shiftState.active,
@@ -390,6 +457,8 @@ export class PowertrainSimulator {
         braking,
         motionSource: motion.primarySource,
         fallbackTier: motion.fallbackTier,
+        accelerationFilteredMs2: effectiveMotion.accelerationFiltered,
+        effectiveDtMs: dtSafe * 1000,
       },
     };
 
@@ -428,6 +497,10 @@ function createPowertrainInternals(): PowertrainSimulatorInternals {
     lastPrimarySource: "simulator",
     reconnectBlendUntil: 0,
     shiftMap: null,
+    boostState: createBoostModelState(),
+    lastDisplaySpeedKmh: 0,
+    accelerationFilteredMs2: 0,
+    accelerationSpeedKmh: 0,
   };
 }
 

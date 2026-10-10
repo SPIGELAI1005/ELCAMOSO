@@ -15,6 +15,7 @@ import { createMasterBus, type MasterBus } from "@/lib/sound/realism/master-bus"
 import { ImprovedSynth } from "@/lib/sound/realism/improved-synth";
 import { loudnessForProfile } from "@/lib/sound/realism/loudness";
 import type { DynamicLayerDebugInfo, SynthesisMode } from "@/lib/sound/realism/types";
+import type { AudioLayerRole } from "@/lib/sound/profile-experience-config";
 import { DynamicDriveSynth } from "@/lib/sound/dynamic-drive/synth";
 import { supportsDynamicDrive } from "@/lib/powertrain/adapters/profile-map";
 import { reportAudioError } from "@/lib/telemetry/crashes";
@@ -33,12 +34,34 @@ import {
 import { isSymphonyProfileId, SymphonySynth } from "@/lib/symphony";
 import { FusionSynth, isFusionProfileId } from "@/lib/fusion";
 import { isWorldProfileId, WorldSynth } from "@/lib/worlds";
+import {
+  decodeManifestAssets,
+  fetchSoundAssetManifest,
+} from "@/lib/sound-assets/client-loader";
 
 export interface MeterReading {
+  prePeak: number;
+  preRms: number;
   peak: number;
   rms: number;
   headroom: number;
   reduction: number;
+  compressorReduction: number;
+}
+
+export interface SoundGainDiagnostics {
+  userVolume: number;
+  profileGain: number;
+  loudnessTrim: number;
+  loadScale: number;
+  effectiveMasterTarget: number;
+  masterNode: number;
+  duck: number;
+  body: number;
+  accents: number;
+  beds: number;
+  wet: number;
+  profileBusOutput: number;
 }
 
 interface TextureNode {
@@ -100,6 +123,8 @@ export class SoundEngine {
   private limiter: DynamicsCompressorNode | null = null;
   private analyser: AnalyserNode | null = null;
   private meterBuffer: Float32Array<ArrayBuffer> | null = null;
+  private preAnalyser: AnalyserNode | null = null;
+  private preMeterBuffer: Float32Array<ArrayBuffer> | null = null;
   private body: GainNode | null = null;
   private accents: GainNode | null = null;
   private beds: GainNode | null = null;
@@ -126,6 +151,8 @@ export class SoundEngine {
   private volume = 0.7;
   /** per-profile balance gain, 0.4..1.6 */
   private profileGain = 1;
+  private lastLoadScale = 1;
+  private lastMasterTarget = 0.0001;
   /** extra ceiling from intensity band, on top of MAX_GAIN */
   static readonly MAX_GAIN = 0.85;
   private intensityCeiling = 0.85;
@@ -141,6 +168,7 @@ export class SoundEngine {
   /** Original (legacy) vs improved multi-layer realism path. */
   private synthesisMode: SynthesisMode = "improved";
   private improved: ImprovedSynth | null = null;
+  private experienceTuningEnabled = true;
   private dynamicDriveEnabled = false;
   private dynamicDrive: DynamicDriveSynth | null = null;
   private symphony: SymphonySynth | null = null;
@@ -150,6 +178,7 @@ export class SoundEngine {
   private realismEngine: RealismEngineMode = "v2";
   private hybrid: HybridCombustionSynth | null = null;
   private profileBus: MasterBus | null = null;
+  private hybridLoadController: AbortController | null = null;
   /** hard ceiling applied before the limiter so no profile can spike */
 
   setSynthesisMode(mode: SynthesisMode) {
@@ -160,6 +189,12 @@ export class SoundEngine {
 
   getSynthesisMode() {
     return this.synthesisMode;
+  }
+
+  /** Dev/offline A/B: bypasses the portfolio phase mixer without changing public profiles. */
+  setExperienceTuningEnabled(enabled: boolean) {
+    this.experienceTuningEnabled = enabled;
+    this.improved?.setExperienceEnabled(enabled);
   }
 
   /** Dev-only: Current Engine vs Realism V2. Not a customer setting. */
@@ -185,6 +220,34 @@ export class SoundEngine {
 
   getDynamicDriveEnabled() {
     return this.dynamicDriveEnabled;
+  }
+
+  /** The strategy that actually owns the current graph, not merely an enabled setting. */
+  getActiveBackend(): string {
+    if (this.fusion) return "fusion";
+    if (this.symphony) return "symphony";
+    if (this.world) return "world";
+    if (this.hybrid) return `realism-v2-${this.hybrid.getDiagnostics().excitationMode}`;
+    if (this.dynamicDrive) return "dynamic-drive";
+    if (this.improved) return "improved";
+    return this.ctx ? "legacy" : "stopped";
+  }
+
+  getGainDiagnostics(): SoundGainDiagnostics {
+    return {
+      userVolume: this.volume,
+      profileGain: this.profileGain,
+      loudnessTrim: this.profile ? loudnessForProfile(this.profile.id) : 1,
+      loadScale: this.lastLoadScale,
+      effectiveMasterTarget: this.lastMasterTarget,
+      masterNode: this.master?.gain.value ?? 0,
+      duck: this.duck?.gain.value ?? 0,
+      body: this.layers.body?.out.gain.value ?? 0,
+      accents: this.layers.accents?.out.gain.value ?? 0,
+      beds: this.layers.beds?.out.gain.value ?? 0,
+      wet: this.wet?.gain.value ?? 0,
+      profileBusOutput: this.profileBus?.output.gain.value ?? 0,
+    };
   }
 
   getDynamicDriveDebug(): DynamicLayerDebugInfo[] {
@@ -248,11 +311,18 @@ export class SoundEngine {
   }
 
   setImprovedLayerMuted(id: string, muted: boolean) {
+    this.hybrid?.setLayerMuted(id, muted);
     this.improved?.setLayerMuted(id, muted);
   }
 
   setImprovedLayerSolo(id: string | null) {
+    this.hybrid?.setSolo(id);
     this.improved?.setSolo(id);
+  }
+
+  setIsolationRoleMuted(role: AudioLayerRole, muted: boolean) {
+    this.hybrid?.setRoleMuted(role, muted);
+    this.improved?.setRoleMuted(role, muted);
   }
 
   triggerImprovedLayer(id: string) {
@@ -316,7 +386,7 @@ export class SoundEngine {
 
   private live(): AudioContext | null {
     const ctx = this.ctx;
-    return ctx && "resume" in ctx ? (ctx as AudioContext) : null;
+    return ctx && ctx instanceof AudioContext ? ctx : null;
   }
 
   private onStateChange = () => {
@@ -371,12 +441,12 @@ export class SoundEngine {
       return;
     }
     const ctx = options?.context ?? new AudioContext();
-    if ("resume" in ctx && typeof ctx.resume === "function" && ctx.state !== "running") {
+    if (ctx instanceof AudioContext && ctx.state !== "running") {
       await ctx.resume();
     }
     this.ctx = ctx;
     // Prefetch combustion worklet for Realism V2 (safe no-op if unavailable).
-    void ensureCombustionWorklet(ctx);
+    await ensureCombustionWorklet(ctx);
 
     this.environment = getEnvironment(options?.environmentId ?? profile.environmentId);
     this.mix = normalizeMix(options?.mix ?? profile.mix);
@@ -384,9 +454,9 @@ export class SoundEngine {
     // Output chain: layers -> tone -> stereo -> (dry + reverb send) -> master
     // -> limiter -> speakers.
     const limiter = ctx.createDynamicsCompressor();
-    limiter.threshold.value = -8;
-    limiter.knee.value = 6;
-    limiter.ratio.value = 20;
+    limiter.threshold.value = -3;
+    limiter.knee.value = 3;
+    limiter.ratio.value = 12;
     limiter.attack.value = 0.003;
     limiter.release.value = 0.25;
     limiter.connect(ctx.destination);
@@ -398,9 +468,14 @@ export class SoundEngine {
     analyser.smoothingTimeConstant = 0.6;
     limiter.connect(analyser);
 
+    const preAnalyser = ctx.createAnalyser();
+    preAnalyser.fftSize = 1024;
+    preAnalyser.smoothingTimeConstant = 0.6;
+
     const duck = ctx.createGain();
     duck.gain.value = 1;
-    duck.connect(limiter);
+    duck.connect(preAnalyser);
+    preAnalyser.connect(limiter);
 
     const master = ctx.createGain();
     master.gain.value = 0.0001;
@@ -480,6 +555,8 @@ export class SoundEngine {
     this.limiter = limiter;
     this.analyser = analyser;
     this.meterBuffer = new Float32Array(analyser.fftSize);
+    this.preAnalyser = preAnalyser;
+    this.preMeterBuffer = new Float32Array(preAnalyser.fftSize);
     this.master = master;
     this.duck = duck;
     this.cabinIn = cabinIn;
@@ -867,6 +944,8 @@ export class SoundEngine {
       return;
     }
     this.teardownVoices();
+    this.hybridLoadController?.abort();
+    this.hybridLoadController = null;
     this.profile = profile;
 
     const busesOk = Boolean(this.body && this.accents && this.beds);
@@ -915,7 +994,14 @@ export class SoundEngine {
     ) {
       this.hybrid = new HybridCombustionSynth();
       const ok = this.hybrid.build(ctx, profile, strategyBuses);
-      if (ok) return;
+      if (ok) {
+        if (profile.id === "american-muscle-v8") {
+          const controller = new AbortController();
+          this.hybridLoadController = controller;
+          void this.prepareAmericanV8PilotSamples(this.hybrid, ctx, controller);
+        }
+        return;
+      }
       this.hybrid.dispose();
       this.hybrid = null;
     }
@@ -936,6 +1022,7 @@ export class SoundEngine {
 
     if (this.synthesisMode === "improved" && strategyBuses) {
       this.improved = new ImprovedSynth();
+      this.improved.setExperienceEnabled(this.experienceTuningEnabled);
       const ok = this.improved.build(ctx, profile, strategyBuses);
       if (ok) return;
       // Fall through to original if no strategy registered.
@@ -1078,9 +1165,12 @@ export class SoundEngine {
   getMeter(): MeterReading | null {
     const analyser = this.analyser;
     const buf = this.meterBuffer;
-    if (!analyser || !buf) return null;
+    const preAnalyser = this.preAnalyser;
+    const preBuf = this.preMeterBuffer;
+    if (!analyser || !buf || !preAnalyser || !preBuf) return null;
     try {
       analyser.getFloatTimeDomainData(buf);
+      preAnalyser.getFloatTimeDomainData(preBuf);
     } catch {
       return null;
     }
@@ -1093,12 +1183,22 @@ export class SoundEngine {
       sum += v * v;
     }
     const rms = Math.sqrt(sum / buf.length);
+    let prePeak = 0;
+    let preSum = 0;
+    for (let i = 0; i < preBuf.length; i += 1) {
+      const v = preBuf[i] ?? 0;
+      prePeak = Math.max(prePeak, Math.abs(v));
+      preSum += v * v;
+    }
     const ceiling = SoundEngine.MAX_GAIN;
     return {
+      prePeak: Math.min(1, prePeak),
+      preRms: Math.min(1, Math.sqrt(preSum / preBuf.length)),
       peak: Math.min(1, peak),
       rms: Math.min(1, rms),
       headroom: Math.max(0, 1 - Math.min(1, peak / ceiling)),
       reduction: this.limiter ? Math.abs(this.limiter.reduction) : 0,
+      compressorReduction: this.profileBus?.getCompressorReductionDb() ?? 0,
     };
   }
 
@@ -1110,6 +1210,28 @@ export class SoundEngine {
       outputLatencyMs: (ctx.outputLatency ?? 0) * 1000,
       currentTime: ctx.currentTime,
     };
+  }
+
+  /** Asset fetch/decode stays outside AudioWorklet.process and cannot block procedural sound. */
+  private async prepareAmericanV8PilotSamples(
+    synth: HybridCombustionSynth,
+    ctx: BaseAudioContext,
+    controller: AbortController,
+  ) {
+    try {
+      const manifest = await fetchSoundAssetManifest({
+        personality: "american-v8",
+        signal: controller.signal,
+      });
+      if (controller.signal.aborted || this.hybrid !== synth) return;
+      const decoded = await decodeManifestAssets(ctx, manifest, controller.signal);
+      if (controller.signal.aborted || this.hybrid !== synth) return;
+      synth.setDecodedSamples(decoded);
+    } catch (error) {
+      if (controller.signal.aborted || this.hybrid !== synth) return;
+      synth.setDecodedSamples(new Map());
+      reportAudioError(error);
+    }
   }
 
   /* ------------------------------------------------------------- per-frame */
@@ -1141,9 +1263,9 @@ export class SoundEngine {
       this.lastThrottle = state.throttle;
       this.lastRegen = state.regen;
       if (this.master) {
-        const target = this.safeVolume(
-          this.volume * this.profileGain * loadAwareMasterScale(state.load, state.regen),
-        );
+        this.lastLoadScale = loadAwareMasterScale(state.load, state.regen);
+        const target = this.safeVolume(this.volume * this.profileGain * this.lastLoadScale);
+        this.lastMasterTarget = target;
         this.master.gain.setTargetAtTime(target, t, 0.12);
       }
       return;
@@ -1192,9 +1314,9 @@ export class SoundEngine {
     this.lastRegen = state.regen;
 
     if (this.master) {
-      const target = this.safeVolume(
-        this.volume * this.profileGain * loadAwareMasterScale(state.load, state.regen),
-      );
+      this.lastLoadScale = loadAwareMasterScale(state.load, state.regen);
+      const target = this.safeVolume(this.volume * this.profileGain * this.lastLoadScale);
+      this.lastMasterTarget = target;
       this.master.gain.setTargetAtTime(target, t, 0.12);
     }
 
@@ -1961,6 +2083,8 @@ export class SoundEngine {
     if (this.swapTimer) clearTimeout(this.swapTimer);
     this.swapTimer = null;
     this.swapping = false;
+    this.hybridLoadController?.abort();
+    this.hybridLoadController = null;
     if (this.master) this.master.gain.setTargetAtTime(0.0001, ctx.currentTime, 0.2);
     await new Promise((r) => setTimeout(r, 380));
     this.stopSnippetBeds();
@@ -1978,6 +2102,8 @@ export class SoundEngine {
     this.limiter = null;
     this.analyser = null;
     this.meterBuffer = null;
+    this.preAnalyser = null;
+    this.preMeterBuffer = null;
     this.body = null;
     this.accents = null;
     this.beds = null;

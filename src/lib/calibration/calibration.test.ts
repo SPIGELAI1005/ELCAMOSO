@@ -11,6 +11,21 @@ import {
 } from "@/lib/calibration";
 
 describe("calibration scenarios", () => {
+  it("full replay deterministically covers every requested phase and gear changes", () => {
+    const scenario = CALIBRATION_SCENARIOS.find((s) => s.id === "full-powertrain-replay")!;
+    const a = runCalibrationScenario(scenario);
+    const b = runCalibrationScenario(scenario);
+    expect(a.samples.map((s) => [s.speedKmh, s.gear, Math.round(s.rpm), s.shifting])).toEqual(
+      b.samples.map((s) => [s.speedKmh, s.gear, Math.round(s.rpm), s.shifting]),
+    );
+    expect(a.samples.some((s) => s.speedKmh === 0)).toBe(true);
+    expect(scenario.drive(300, 0).throttle).toBeGreaterThanOrEqual(0.9);
+    expect(scenario.drive(650, 0).braking).toBeGreaterThanOrEqual(0.7);
+    expect(scenario.drive(520, 0)).toMatchObject({ throttle: 0, braking: 0 });
+    expect(new Set(a.samples.map((s) => s.gear)).size).toBeGreaterThan(2);
+    expect(a.samples.some((s) => s.shifting)).toBe(true);
+  });
+
   it("are deterministic across two runs", () => {
     const a = runCalibrationScenario(CALIBRATION_SCENARIOS.find((s) => s.id === "cruise-80")!);
     const b = runCalibrationScenario(CALIBRATION_SCENARIOS.find((s) => s.id === "cruise-80")!);

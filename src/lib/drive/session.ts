@@ -1843,9 +1843,7 @@ class DriveSession {
 
   private diagnosticsSessionMeta(): DiagnosticsSessionMeta {
     const profile = getProfile(this.config.profileId);
-    const synthesisMode = this.engine?.getDynamicDriveEnabled()
-      ? "dynamic-drive"
-      : (this.engine?.getSynthesisMode() ?? "legacy");
+    const synthesisMode = this.engine?.getActiveBackend() ?? "stopped";
     return {
       profileId: this.config.profileId,
       profileName: profile.name,
@@ -1856,18 +1854,32 @@ class DriveSession {
   }
 
   private collectDriveDiagnosticsFrame(driveState: DriveState): DriveDiagnosticsFrame {
-    const synthesisMode = this.engine?.getDynamicDriveEnabled()
-      ? "dynamic-drive"
-      : (this.engine?.getSynthesisMode() ?? "legacy");
+    const synthesisMode = this.engine?.getActiveBackend() ?? "stopped";
+    const hybrid = this.engine?.getHybridCombustionDiagnostics();
+    const dynamicLayers = this.engine?.getDynamicDriveDebug() ?? [];
+    if (hybrid) {
+      dynamicLayers.push(
+        { id: "v2-combustion", gain: hybrid.combustionGain, playbackRate: 1, fundamentalHz: hybrid.firingHz },
+        { id: "v2-support", gain: hybrid.supportGain, playbackRate: 1, fundamentalHz: hybrid.firingHz },
+        { id: "v2-formants", gain: Math.max(0, ...hybrid.formantGains), playbackRate: 1, fundamentalHz: hybrid.firingHz },
+      );
+      if (hybrid.sampleAssisted) {
+        dynamicLayers.push({ id: "v2-recorded-samples", gain: 1, playbackRate: 1, fundamentalHz: hybrid.firingHz });
+      }
+    }
     return collectDriveDiagnostics({
       sensorFusion: this.sensorFusion,
       vehicleMotion: this.lastVehicleMotion,
       driveState,
       pipeline: this.pipeline.snapshot(Date.now(), this.lastVehicleMotion.fallbackTier),
       synthesisMode,
-      dynamicLayers: this.engine?.getDynamicDriveDebug() ?? [],
+      backend: synthesisMode,
+      sampleState: hybrid?.sampleState ?? null,
+      sampleFallbackReason: hybrid?.sampleFallbackReason ?? null,
+      dynamicLayers,
       meter: this.safeMeter(),
       perf: this.perf,
+      gains: this.engine?.getGainDiagnostics() ?? null,
     });
   }
 

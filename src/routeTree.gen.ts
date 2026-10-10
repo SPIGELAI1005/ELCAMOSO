@@ -24,6 +24,7 @@ import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as PairRouteImport } from './routes/pair'
 import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as ReplayRouteImport } from './routes/replay'
+import { Route as ScienceRouteImport } from './routes/science'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as ShareRouteImport } from './routes/share'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
@@ -133,6 +134,11 @@ const PricingRoute = PricingRouteImport.update({
 const ReplayRoute = ReplayRouteImport.update({
   id: '/replay',
   path: '/replay',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ScienceRoute = ScienceRouteImport.update({
+  id: '/science',
+  path: '/science',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SettingsRoute = SettingsRouteImport.update({
@@ -328,6 +334,7 @@ export interface FileRoutesByFullPath {
   '/pair': typeof PairRoute
   '/pricing': typeof PricingRoute
   '/replay': typeof ReplayRoute
+  '/science': typeof ScienceRoute
   '/settings': typeof SettingsRoute
   '/share': typeof ShareRouteWithChildren
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -379,6 +386,7 @@ export interface FileRoutesByTo {
   '/pair': typeof PairRoute
   '/pricing': typeof PricingRoute
   '/replay': typeof ReplayRoute
+  '/science': typeof ScienceRoute
   '/settings': typeof SettingsRoute
   '/share': typeof ShareRouteWithChildren
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -432,6 +440,7 @@ export interface FileRoutesById {
   '/pair': typeof PairRoute
   '/pricing': typeof PricingRoute
   '/replay': typeof ReplayRoute
+  '/science': typeof ScienceRoute
   '/settings': typeof SettingsRoute
   '/share': typeof ShareRouteWithChildren
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -486,6 +495,7 @@ export interface FileRouteTypes {
     | '/pair'
     | '/pricing'
     | '/replay'
+    | '/science'
     | '/settings'
     | '/share'
     | '/sitemap.xml'
@@ -537,6 +547,7 @@ export interface FileRouteTypes {
     | '/pair'
     | '/pricing'
     | '/replay'
+    | '/science'
     | '/settings'
     | '/share'
     | '/sitemap.xml'
@@ -589,6 +600,7 @@ export interface FileRouteTypes {
     | '/pair'
     | '/pricing'
     | '/replay'
+    | '/science'
     | '/settings'
     | '/share'
     | '/sitemap.xml'
@@ -642,6 +654,7 @@ export interface RootRouteChildren {
   PairRoute: typeof PairRoute
   PricingRoute: typeof PricingRoute
   ReplayRoute: typeof ReplayRoute
+  ScienceRoute: typeof ScienceRoute
   SettingsRoute: typeof SettingsRoute
   ShareRoute: typeof ShareRouteWithChildren
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
@@ -768,6 +781,13 @@ declare module '@tanstack/react-router' {
       path: '/replay'
       fullPath: '/replay'
       preLoaderRoute: typeof ReplayRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/science': {
+      id: '/science'
+      path: '/science'
+      fullPath: '/science'
+      preLoaderRoute: typeof ScienceRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/settings': {
@@ -1110,6 +1130,7 @@ const rootRouteChildren: RootRouteChildren = {
   PairRoute: PairRoute,
   PricingRoute: PricingRoute,
   ReplayRoute: ReplayRoute,
+  ScienceRoute: ScienceRoute,
   SettingsRoute: SettingsRoute,
   ShareRoute: ShareRouteWithChildren,
   SitemapDotxmlRoute: SitemapDotxmlRoute,

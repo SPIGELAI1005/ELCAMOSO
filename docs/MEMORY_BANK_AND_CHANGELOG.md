@@ -3,7 +3,7 @@
 Living document for product context, recent architecture decisions, and a dated changelog.
 Canonical product rules still live in `elcamoso-comprehensive-spec.md`. Update **both** when direction or architecture changes.
 
-**Last updated:** 2026-09-18
+**Last updated:** 2026-10-10
 
 ---
 
@@ -35,7 +35,7 @@ Canonical product rules still live in `elcamoso-comprehensive-spec.md`. Update *
 
 ### Routes
 
-`/`, `/onboarding`, `/drive`, `/explore`, `/demo`, `/sounds`, `/symphony`, `/worlds`, `/fusion`, `/studio`, `/garage`, `/journeys`, `/journeys/$journeyId` (Replay/Remix + separate Drive Song), `/calibrate`, `/settings`, `/about`, `/pricing`, `/legal` (+ impressum, privacy, cookies, terms, accessibility), `/auth/account/callback` (magic link), `/auth/account/google/callback` (Google OAuth, server GET), `/upgrade/$token`, `/pair`, `/pair/$token` (Tesla↔phone QR claim), `/connect/$sessionId` (legacy join), `/share/drive/$shareId` (Drive Song share, noindex + OG), `/api/og` + `/api/og/drive-song/$shareId` (social cards), `/debug` (dev-only; includes `/debug/og` social card preview, `/debug/calibration` road-test lab, `/debug` Realism V2 A/B)
+`/`, `/onboarding`, `/drive`, `/explore`, `/demo`, `/sounds`, `/symphony`, `/worlds`, `/fusion`, `/studio`, `/garage`, `/journeys`, `/journeys/$journeyId` (Replay/Remix + separate Drive Song), `/calibrate`, `/settings`, `/about`, `/science` (Science of ELCAMOSO composition model), `/pricing`, `/legal` (+ impressum, privacy, cookies, terms, accessibility), `/auth/account/callback` (magic link), `/auth/account/google/callback` (Google OAuth, server GET), `/upgrade/$token`, `/pair`, `/pair/$token` (Tesla↔phone QR claim), `/connect/$sessionId` (legacy join), `/share/drive/$shareId` (Drive Song share, noindex + OG), `/api/og` + `/api/og/drive-song/$shareId` (social cards), `/debug` (dev-only; includes `/debug/og` social card preview, `/debug/calibration` road-test lab, `/debug` Realism V2 A/B)
 
 ### SEO / Social cards
 
@@ -57,7 +57,7 @@ Canonical product rules still live in `elcamoso-comprehensive-spec.md`. Update *
 ### Sound architecture (current)
 
 - Web Audio only. Improved strategies + Dynamic Drive layered synth for virtual-transmission profiles.
-- **Realism V2.1 (default for combustion):** continuous worklet combustion excitation → formants/body resonance; Powertrain-authored RPM/load/shift phases. A/B vs Current on `/debug`. See `docs/AUDIO_REALISM_V2.md`.
+- **Realism V2.1 (default for combustion):** continuous, DC-blocked worklet combustion excitation with sample-rate-aware pressure tails → formants/body resonance plus subordinate low engine orders; Powertrain-authored RPM/load/shift phases. A/B vs Current on `/debug`. See `docs/AUDIO_REALISM_V2.md`.
 - Road Feel V3 master gain / perceptual volume remains authoritative for cabin loudness.
 
 - **Built-in Sound Profiles:** **47** (22 original + 25 expansion in `src/lib/sound/profiles-expansion.ts`)
@@ -68,6 +68,9 @@ Canonical product rules still live in `elcamoso-comprehensive-spec.md`. Update *
 - DSP primitives: `src/lib/sound/dsp/` (+ `layers-extra.ts` for expansion)
 - Strategies: `strategies.ts` + `strategies-extra.ts`
 - Loudness balance: `src/lib/sound/realism/loudness.ts`
+- Typed acoustic specs: `src/lib/sound/profile-specs` (`getAcousticProfileSpec`) — metadata only; `family` mirrors runtime routing, `packageFamily` records INDEX intent when mismatched (`docs/FAMILY_CLASSIFICATION_MISMATCHES.md`)
+- Profile experience config + upgrade matrix (worktree; often untracked until committed): `src/lib/sound/profile-experience-config.ts`, `docs/audio/profile-upgrade-matrix.md`
+- Evidence tracking / listening honesty: `docs/audio/ARTIFACTS_AND_TRACKING.md`, `docs/audio/LISTENING_AND_ASSET_STATUS.md` — **0** listening-verified; Muscle pilot **0/9** approved slots
 - Subjective review notes: `docs/SOUND_PROFILE_REVIEW.md`
 - Noise / environments / fidelity: `docs/SOUND_NOISE_AND_FIDELITY.md`
 - Environments: `src/lib/sound/environments.ts` (`textureScale`; **Showroom** mutes beds/hiss)
@@ -136,6 +139,9 @@ Canonical product rules still live in `elcamoso-comprehensive-spec.md`. Update *
 | ---------------------------- | ----------------------------------------------------------------------------------- |
 | Spec                         | `elcamoso-comprehensive-spec.md`                                                    |
 | Profiles                     | `src/lib/sound/profiles.ts`, `profiles-expansion.ts`                                |
+| Acoustic specs               | `src/lib/sound/profile-specs/` (`getAcousticProfileSpec`), `docs/FAMILY_CLASSIFICATION_MISMATCHES.md` |
+| Upgrade matrix / listening   | `docs/audio/profile-upgrade-matrix.md`, `LISTENING_AND_ASSET_STATUS.md`, `ARTIFACTS_AND_TRACKING.md` |
+| Muscle V8 pilot              | `docs/AMERICAN_V8_HYBRID_PILOT.md`, `src/lib/sound/realism/v2/american-v8-pilot-manifest.ts` |
 | Realism                      | `src/lib/sound/realism/*`                                                           |
 | Realism V2                   | `src/lib/sound/realism/v2/`, `docs/AUDIO_REALISM_V2.md`                             |
 | Calibration lab              | `src/lib/calibration/`, `docs/ROAD_TEST_CALIBRATION.md`                             |
@@ -180,6 +186,37 @@ Canonical product rules still live in `elcamoso-comprehensive-spec.md`. Update *
 ---
 
 ## Changelog
+
+### 2026-10-10 (Audio workstreams 1–10 realization follow-up)
+
+- Documented git tracking vs remote-canonical for audio evidence: `docs/audio/ARTIFACTS_AND_TRACKING.md` (matrix, validation, pilot manifest, `profile-experience-config`, `profile-specs`, `artifacts/` are worktree-local until committed).
+- Honest delivery fork recorded in `docs/audio/LISTENING_AND_ASSET_STATUS.md`: Muscle pilot **0/9** approved slots (no invented licenses/WAVs); headphone + Tesla listening checklist **not performed**; **0** profiles promoted to `listening verified`.
+- Cross-links updated on matrix evidence boundary, driving-experience validation, and American V8 pilot handbook. Master gain unchanged.
+
+### 2026-10-10 (Science of ELCAMOSO page)
+
+- Added public `/science` page explaining the motion-to-music composition model (V, A/D, C → M/R/L), Symphony Experiences overview, Journey Edit framing, and privacy posture. Linked from primary nav; SEO indexable.
+
+### 2026-10-10 (Typed AcousticProfileSpec + family mismatch documentation)
+
+- Added `src/lib/sound/profile-specs` with `getAcousticProfileSpec(id)` for all 47 core Sound Profiles: family (+ packageFamily), layers, control mappings, RPM/load/regime descriptors, DSP parameters, event gates/cooldowns, loudness/headroom limits, optional sample-bank hooks, acceptance metadata. Specs validate with safe fallbacks and do not wire into motion/synth routing.
+- Documented runtime vs package family mismatches for `neon-drive`, `dragon`, and `thunder-beast` in `docs/FAMILY_CLASSIFICATION_MISMATCHES.md`. Runtime `designed` assignments preserved because realignment would change motion envelopes (not metadata-only). Specs expose `packageFamily` separately.
+- Integrates existing `profile-experience-config` and catalog fields; does not delete or retune them.
+- Updated product spec §4.1 / §6.2 and sound-profiles INDEX accordingly.
+
+### 2026-09-26 (Combustion excitation body correction)
+
+- Replaced sub-millisecond fixed combustion decay with sample-rate-aware overlapping pressure tails.
+- DC-blocked the procedural pressure waveform to remove the pitched click/bee character.
+- Restored subordinate low engine-order weight and darkened the non-worklet fallback while retaining authoritative Powertrain RPM/load/shift phases.
+
+### 2026-09-18 (Standard sound, speed, and in-car UI recovery)
+
+- Replaced shared drivetrain aliases for Racing V10, Race Car, and Rally Car with dedicated high-rev V10, flat-plane track V8, and rally turbo inline-three personalities. Each now owns its gear count, ratios, redline, shift timing, transients, and Realism V2 acoustic architecture.
+- Raised Flat-Six Sport to its researched 9000 RPM archetype and documented manufacturer-grounded calibration sources in `docs/SOUND_CHARACTER_SPEC.md`.
+- Fixed live speed handling for in-car browsers that expose a permanently zero `coords.speed`: accurate coordinate deltas can now override demonstrably stale zero values while genuine stationary readings remain zero.
+- Reduced home hero density, moved `Turn motion into sound.` into the Experiences section, enlarged header touch targets, reordered the About story, and replaced the Worlds placeholder gradient with a functional preview-only energy indicator.
+- Added regression coverage for profile isolation, gear behavior, stale-zero GPS, home copy placement, About section order, Worlds placeholders, and header touch sizing.
 
 ### 2026-09-18 (Release hardening and traceability)
 
@@ -620,6 +657,36 @@ Canonical product rules still live in `elcamoso-comprehensive-spec.md`. Update *
 - Family-specific models (physical / designed / environmental / musical); notable rebuilds (e.g. Turbine Jet, Speed Boat cavitation, Oide Wiesn hot-bulb).
 
 ---
+
+### 2026-09-26 — Timestamp-aware virtual drivetrain and boost
+
+- Powertrain filtering now derives its effective timestep from monotonic sample timestamps and applies a slow GPS-only acceleration channel before load inference.
+- Added a separate normalized simulated boost state with bounded RPM/time/load tuning, deterministic buildup/release, genuine load-drop arming, cooldown and stale-input suppression.
+- Realism V2 turbo spool follows the powertrain boost state; release events use its protected one-tick edge instead of inferring a random lift event in the audio layer.
+- `/debug/powertrain` now offers optional local audio alongside manual speed (km/h), acceleration (m/s²), simulated pedal/brake (0–1) and profile controls.
+- Overrun eligibility is deterministic and remains profile-gated; direct pedal lift is authoritative while GPS-only inference requires filtered deceleration.
+
+### 2026-09-26 — American Muscle V8 hybrid pilot foundation
+
+- Added a provenance-safe typed recording manifest and an American V8-only asynchronous asset loading path.
+- Added adjacent RPM/load interpolation, bounded playback-rate coverage, separate off-load/overrun selection, linear-amplitude overlap policy, seamless loop metadata, partial-load failure handling and profile-switch cleanup.
+- No approved sample entries ship; extracted V8 research audio remains excluded. Procedural Realism V2 is the active fallback and recorded-sample realism is not claimed.
+- Exact acquisition requirements are documented in `docs/AMERICAN_V8_HYBRID_PILOT.md`.
+
+### 2026-09-26 — Audio routing diagnostics and deterministic replay
+
+- Realism V2 startup now waits for the local combustion worklet before building the profile, preventing an entire session from remaining on the weaker fallback excitation.
+- Developer Drive diagnostics report the backend actually owning playback, measured/estimated/simulated provenance, input age/confidence, virtual powertrain state, active V2 layers, effective gains, approximate pre/post sample peak and RMS, and compressor/limiter reduction.
+- Recorded combustion banks remain explicitly `not-shipped`; the catalog and V2 banks are empty. Current Engine vs Realism V2 remains the reversible developer A/B.
+- Added `full-powertrain-replay`, covering idle, gentle/hard acceleration, cruise, lift-off, braking and virtual gear changes.
+
+### 2026-09-26 — All-profile driving-experience pass
+
+- Added typed phase/role/aspiration configuration for all 57 profiles in current registry order without changing public IDs, ordering or entitlements.
+- Added smooth cruise/load/lift/regeneration role mixing, deterministic event gating and developer-only acoustic-role isolation on `/debug`.
+- Tuned the shared Realism V2 combustion families and electric drive/regen layers while retaining the previous renderer for controlled A/B.
+- Generated `docs/audio/profile-upgrade-matrix.md` from the actual registry, with verified facts separated from sound-design targets and no false recorded-asset claims.
+- Rendered the entire 57-profile portfolio plus representative existing/tuned comparison WAVs through a deterministic production-graph offline harness. Signal checks found zero clipped samples and no material mono cancellation; browser real-time and Tesla listening remain required.
 
 ## How to maintain this file
 

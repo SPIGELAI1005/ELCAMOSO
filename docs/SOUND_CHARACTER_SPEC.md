@@ -2,7 +2,7 @@
 
 **Purpose:** Long-term driving engagement. The same Sound Profile should feel subtly different drive to drive because sound emerges from **driving behavior**, not random effects.
 
-**Last updated:** 2026-09-17
+**Last updated:** 2026-09-18
 
 **Related:** `docs/audio-asset-requirements.md`, `docs/drivetrain-personalities.md`, `docs/DYNAMIC_DRIVE_ARCHITECTURE.md`, `docs/AUDIO_REALISM_V2.md`
 
@@ -29,18 +29,43 @@ A continuous procedural sound impresses for minutes, then the ear learns the env
 ### Realism V2 (combustion)
 
 For GT V8 / American Muscle / Flat-Six / Turbo I6 / Racing V10 / Race Car / Rally Car, prefer **`HybridCombustionSynth`** (dev A/B: Current vs Realism V2) over sawtooth-dominant stacks. See `docs/AUDIO_REALISM_V2.md`. Do not treat oscillator EQ as the realism path.
+
+### Standard combustion archetype calibration (2026-09-18)
+
+These are fictional ELCAMOSO profiles, not recordings or replicas of one branded vehicle. Manufacturer technical data grounds the architecture, usable RPM range, gear count, and shift character. Timbre remains an original procedural interpretation.
+
+| ELCAMOSO profile   | Calibrated identity                                                                          | Transmission behavior                                                      |
+| ------------------ | -------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| GT V8              | Refined cross-plane V8, weighted low and midrange, restrained overrun                        | 6 gears, quick but polished shifts                                         |
+| Racing V10         | Naturally aspirated even-firing V10, intake-led and bright toward 8500 RPM                   | 7-speed dual-clutch character, fast shifts and high gear holds             |
+| Race Car           | Naturally aspirated flat-plane V8, sharp pulse and strong high-load harmonics to 8600 RPM    | 8-speed dual-clutch character with the fastest track shifts                |
+| Rally Car          | Turbo inline-three, coarse odd-cylinder pulse, boost, flutter, wastegate, and strong overrun | 5-speed sequential character with short gearing and pronounced torque cuts |
+| Flat-Six Sport     | Naturally aspirated flat-six, mechanical and intake-rich toward 9000 RPM                     | 7-speed dual-clutch character with crisp rev matching                      |
+| American Muscle V8 | Cross-plane V8 with irregular idle, heavy low-frequency exhaust, and slower inertia          | 5 broad gears with slower shifts and prominent lift-off character          |
+| Turbo Inline-6     | Smooth even-order straight-six with progressive boost and elastic midrange                   | 7 close gears with smooth-fast shifts and turbo lift events                |
+
+Primary calibration references:
+
+- [Porsche 911 GT3 technical data](https://newsroom.porsche.com/dam/jcr%3A15fa49de-7fc3-4770-a09d-1b8bf451ddbd/PAG-992-911GT3-PDK-EN.pdf): naturally aspirated flat-six, 9000 RPM, seven-speed PDK.
+- [Lamborghini Huracan Tecnica](https://www.lamborghini.com/en-en/models/huracan-tecnica): naturally aspirated V10 and seven-speed dual-clutch transmission.
+- [Chevrolet Corvette Z06 specifications](https://media.chevrolet.com/content/dam/Media/images/US/Vehicles/Chevrolet/Cars/Corvette_Z06/2024/2024-Chevrolet-Corvette-Z06-082323.pdf): flat-plane V8, 8600 RPM redline, eight-speed dual-clutch transmission.
+- [Toyota GR Yaris specifications](https://media.toyota.co.uk/wp-content/uploads/sites/5/pdf/260130-GR-Yaris-Tech-Specs.pdf) and [GR Yaris Rally2 homologation](https://media.toyota.co.uk/official-homologation-sets-the-new-gr-yaris-rally2-on-course-for-competition-in-2024/): turbo inline-three basis and five-speed sequential rally transmission.
+- [BMW M3 technical release](https://www.press.bmwgroup.com/usa/article/detail/T0442408EN_US/the-new-2025-bmw-m3): high-rev twin-turbo straight-six with six-speed manual or eight-speed automatic architecture.
+- [Ford Mustang technical specifications](https://media.ford.com/content/dam/fordmedia/Europe/documents/en/2022/2022_Mustang_Tech_Spec_EU.pdf): naturally aspirated 5.0 V8 and multi-gear production transmission reference.
+
+Every standard combustion profile must resolve its own `drivetrainPersonalityId`. Profiles with different engine architectures must not share another profile's gear set, shift schedule, acoustic firing archetype, or redline as a shortcut.
 ---
 
 ## 2. Asset and path reality (2026-08-29)
 
-| Fact                      | Detail                                                                                                                                                                                     |
-| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Sample library**        | **None shipped.** `public/` has no engine `.wav` assets. All 47 profiles are procedural Web Audio.                                                                                         |
-| **Motion-matched path**   | `settings.dynamicDrive` + virtual-transmission profile → `PowertrainSimulator` + `DynamicDriveSynth`.                                                                                      |
-| **Legacy path**           | `computeDriveState` + Improved synth — same profiles, no gear/RPM separation at equal speed.                                                                                               |
-| **Personalities**         | **8** configs in `drivetrain-personalities.ts`: `flat-six-sport`, `american-v8`, `turbo-inline-6`, `gt-v8`, `synthetic-ev`, `motorcycle-inline-4`, `v-twin-cruiser`, `single-cylinder-ag`. |
-| **Variant pools**         | Per-personality procedural shapes via `resolveVariantPools()` — sample filenames reserved in asset doc.                                                                                    |
-| **Continuous load proxy** | `computeSyntheticLoad()` in `motion.ts` — throttle + accel + jerk for profiles without gears.                                                                                              |
+| Fact                      | Detail                                                                                                                                                                |
+| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Sample library**        | **None shipped.** `public/` has no engine `.wav` assets. All 47 profiles are procedural Web Audio.                                                                    |
+| **Motion-matched path**   | `settings.dynamicDrive` + virtual-transmission profile → `PowertrainSimulator` + `DynamicDriveSynth`.                                                                 |
+| **Legacy path**           | `computeDriveState` + Improved synth — same profiles, no gear/RPM separation at equal speed.                                                                          |
+| **Personalities**         | **11** configs in `drivetrain-personalities.ts`. Racing V10, track V8, and rally turbo three use dedicated drivetrain and acoustic personalities rather than aliases. |
+| **Variant pools**         | Per-personality procedural shapes via `resolveVariantPools()` — sample filenames reserved in asset doc.                                                               |
+| **Continuous load proxy** | `computeSyntheticLoad()` in `motion.ts` — throttle + accel + jerk for profiles without gears.                                                                         |
 
 Recorded assets would **materially** improve shift/overrun/turbo identity; procedural fallbacks remain until then.
 
@@ -100,16 +125,19 @@ Source: `src/lib/drive/drivetrain-personalities.ts`. Scheduler defaults in `tran
 
 ### Summary table
 
-| Personality           | Profiles                       | Gears | Idle→Red   | Upshift ms | Overrun     | Turbo      | 30-min                  |
-| --------------------- | ------------------------------ | ----- | ---------- | ---------- | ----------- | ---------- | ----------------------- |
-| `flat-six-sport`      | Flat-Six, Race Car, Racing V10 | 7     | 880–8000   | 110        | Moderate    | —          | 4/5 twisty; 3/5 highway |
-| `american-v8`         | American Muscle                | 5     | 680–6000   | 280        | **Hero**    | —          | 4/5                     |
-| `turbo-inline-6`      | Turbo I6, Rally Car            | 7     | 750–7000   | 130        | Medium      | Flutter/WG | **5/5**                 |
-| `gt-v8`               | GT V8, fallback                | 6     | 900–6500   | 95         | Light       | —          | 4/5                     |
-| `synthetic-ev`        | Electric Hypercar              | 6     | 0–12000    | 75         | Low         | —          | 3/5                     |
-| `motorcycle-inline-4` | Motorcycle Superbike           | 6     | 1200–14000 | 55         | Short rasp  | —          | 4/5                     |
-| `v-twin-cruiser`      | Big Twin                       | 6     | 900–5500   | 240        | Long potato | —          | 4/5                     |
-| `single-cylinder-ag`  | Wiesn Tractor                  | 4     | 280–650    | 380        | Coast stack | —          | 4/5 (slow roads)        |
+| Personality           | Profiles             | Gears | Idle→Red   | Upshift ms | Overrun     | Turbo      | 30-min                  |
+| --------------------- | -------------------- | ----- | ---------- | ---------- | ----------- | ---------- | ----------------------- |
+| `flat-six-sport`      | Flat-Six             | 7     | 880–9000   | 125        | Moderate    | —          | 4/5 twisty; 3/5 highway |
+| `high-rev-v10`        | Racing V10           | 7     | 850–8500   | 85         | Restrained  | —          | 4/5                     |
+| `flat-plane-v8-track` | Race Car             | 8     | 900–8600   | 75         | Sharp       | —          | 4/5                     |
+| `rally-turbo-3`       | Rally Car            | 5     | 950–6800   | 65         | Strong      | Flutter/WG | 5/5                     |
+| `american-v8`         | American Muscle      | 5     | 680–6000   | 280        | **Hero**    | —          | 4/5                     |
+| `turbo-inline-6`      | Turbo I6             | 7     | 750–7000   | 130        | Medium      | Flutter/WG | **5/5**                 |
+| `gt-v8`               | GT V8, fallback      | 6     | 900–6500   | 95         | Light       | —          | 4/5                     |
+| `synthetic-ev`        | Electric Hypercar    | 6     | 0–12000    | 75         | Low         | —          | 3/5                     |
+| `motorcycle-inline-4` | Motorcycle Superbike | 6     | 1200–14000 | 55         | Short rasp  | —          | 4/5                     |
+| `v-twin-cruiser`      | Big Twin             | 6     | 900–5500   | 240        | Long potato | —          | 4/5                     |
+| `single-cylinder-ag`  | Wiesn Tractor        | 4     | 280–650    | 380        | Coast stack | —          | 4/5 (slow roads)        |
 
 ### Per-personality character (Dynamic Drive)
 
@@ -117,7 +145,7 @@ Source: `src/lib/drive/drivetrain-personalities.ts`. Scheduler defaults in `tran
 
 | Dimension          | Spec                                                        |
 | ------------------ | ----------------------------------------------------------- |
-| **RPM**            | Tight mid/high bands; screams upper third; redline 8k       |
+| **RPM**            | Tight mid/high bands; screams upper third; redline 9k       |
 | **Load**           | Threshold 0.4; high-load layer from spirited driving        |
 | **Shift**          | Crisp (0.82), rev-match 0.8, fast aggression                |
 | **Downshift**      | Rev blip + thump; prob ~0.42 gated                          |
@@ -216,21 +244,21 @@ Source: `src/lib/drive/drivetrain-personalities.ts`. Scheduler defaults in `tran
 
 ### Virtual-transmission (17 profiles)
 
-| ID                     | Name                 | Personality         | DD  | Eng   | Same-speed | RPM                       | Load        | Shift         | Overrun      | Turbo          | Cruise gap           |
-| ---------------------- | -------------------- | ------------------- | --- | ----- | ---------- | ------------------------- | ----------- | ------------- | ------------ | -------------- | -------------------- |
-| `gt-v8`                | GT V8                | gt-v8               | ✓   | 4     | ✓          | mid warm                  | 0.42 thresh | quick refined | light        | —              | highway monotone     |
-| `flat-six-sport`       | Flat-Six Sport       | flat-six-sport      | ✓   | 4     | ✓          | high raspy                | 0.4         | crisp         | moderate     | —              | needs samples        |
-| `american-muscle-v8`   | American Muscle V8   | american-v8         | ✓   | 4     | ✓          | low lope                  | 0.48        | lazy          | **hero**     | —              | lope repeats         |
-| `turbo-inline-6`       | Turbo Inline-6       | turbo-inline-6      | ✓   | **5** | ✓          | elastic                   | 0.42+       | smooth-fast   | medium       | **flutter/WG** | best VT              |
-| `electric-hypercar`    | Electric Hypercar    | synthetic-ev        | ✓   | 3     | ✓          | motor whine               | inverter    | click         | regen bias   | —              | whine wears          |
-| `racing-v10`           | Racing V10           | flat-six-sport      | ✓   | 4     | ✓          | bright voice              | shared      | shared        | shared       | —              | timbre only diff     |
-| `race-car`             | Race Car             | flat-six-sport      | ✓   | 4     | ✓          | track voice               | shared      | shared        | shared       | —              | same                 |
-| `rally-car`            | Rally Car            | turbo-inline-6      | ✓   | **5** | ✓          | + gravel/antilag strategy | boost       | rally         | medium       | antilag        | **best overall**     |
-| `motorcycle-superbike` | Motorcycle Superbike | motorcycle-inline-4 | ✓   | 4     | ✓          | 14k                       | 0.34        | 55 ms         | short        | —              | samples help         |
-| `big-twin`             | Big Twin             | v-twin-cruiser      | ✓   | 4     | ✓          | lope                      | 0.5         | lazy          | long         | —              | overrun carries      |
-| `wiesn-tractor`        | Oide Wiesn Tractor   | single-cylinder-ag  | ✓   | 4     | ✓          | stroke-rate               | 0.52        | slow          | coast        | —              | chuff samples        |
-| `farting-car`          | Farting Car          | **gt-v8 fallback**  | ✓   | 3     | ~          | comedy rhythm             | parody      | wrong physics | strategy gas | —              | map to playful       |
-| `kazoo-kart`           | Kazoo Kart           | **gt-v8 fallback**  | ✓   | 3     | ~          | kazoo bed                 | —           | mismatched    | —            | —              | map to turbo/playful |
+| ID                     | Name                 | Personality         | DD  | Eng   | Same-speed | RPM                  | Load        | Shift         | Overrun      | Turbo          | Cruise gap           |
+| ---------------------- | -------------------- | ------------------- | --- | ----- | ---------- | -------------------- | ----------- | ------------- | ------------ | -------------- | -------------------- |
+| `gt-v8`                | GT V8                | gt-v8               | ✓   | 4     | ✓          | mid warm             | 0.42 thresh | quick refined | light        | —              | highway monotone     |
+| `flat-six-sport`       | Flat-Six Sport       | flat-six-sport      | ✓   | 4     | ✓          | high raspy           | 0.4         | crisp         | moderate     | —              | needs samples        |
+| `american-muscle-v8`   | American Muscle V8   | american-v8         | ✓   | 4     | ✓          | low lope             | 0.48        | lazy          | **hero**     | —              | lope repeats         |
+| `turbo-inline-6`       | Turbo Inline-6       | turbo-inline-6      | ✓   | **5** | ✓          | elastic              | 0.42+       | smooth-fast   | medium       | **flutter/WG** | best VT              |
+| `electric-hypercar`    | Electric Hypercar    | synthetic-ev        | ✓   | 3     | ✓          | motor whine          | inverter    | click         | regen bias   | —              | whine wears          |
+| `racing-v10`           | Racing V10           | high-rev-v10        | ✓   | 4     | ✓          | even-firing high-rev | 0.36        | 7-speed DCT   | restrained   | —              | intake-led           |
+| `race-car`             | Race Car             | flat-plane-v8-track | ✓   | 4     | ✓          | sharp flat-plane V8  | 0.34        | 8-speed DCT   | sharp        | —              | track focused        |
+| `rally-car`            | Rally Car            | rally-turbo-3       | ✓   | **5** | ✓          | I3 + gravel/antilag  | 0.32        | 5-speed seq.  | strong       | antilag        | **best overall**     |
+| `motorcycle-superbike` | Motorcycle Superbike | motorcycle-inline-4 | ✓   | 4     | ✓          | 14k                  | 0.34        | 55 ms         | short        | —              | samples help         |
+| `big-twin`             | Big Twin             | v-twin-cruiser      | ✓   | 4     | ✓          | lope                 | 0.5         | lazy          | long         | —              | overrun carries      |
+| `wiesn-tractor`        | Oide Wiesn Tractor   | single-cylinder-ag  | ✓   | 4     | ✓          | stroke-rate          | 0.52        | slow          | coast        | —              | chuff samples        |
+| `farting-car`          | Farting Car          | **gt-v8 fallback**  | ✓   | 3     | ~          | comedy rhythm        | parody      | wrong physics | strategy gas | —              | map to playful       |
+| `kazoo-kart`           | Kazoo Kart           | **gt-v8 fallback**  | ✓   | 3     | ~          | kazoo bed            | —           | mismatched    | —            | —              | map to turbo/playful |
 
 ### Continuous (30 profiles)
 

@@ -35,6 +35,9 @@ export interface FusionDiagnostics {
   primarySource: SensorSource;
   fallbackTier: MotionFallbackTier;
   transitioning: boolean;
+  inputAgeMs: number | null;
+  speedProvenance: "measured" | "estimated" | "simulated";
+  accelerationProvenance: "measured" | "estimated" | "simulated";
 }
 
 export interface PowertrainDiagnostics {
@@ -62,6 +65,9 @@ export interface PowertrainDiagnostics {
   motionSource: string | null;
   fallbackTier: string | null;
   drivingMode: string | null;
+  valueProvenance: "estimated" | "simulated";
+  boost: number | null;
+  boostProvenance: "simulated" | "unavailable";
 }
 
 export interface AudioLayerDiagnostics {
@@ -72,19 +78,40 @@ export interface AudioLayerDiagnostics {
 }
 
 export interface AudioDiagnostics {
+  backend: string;
+  recordedSampleBank: "active" | "not-shipped" | "not-applicable";
+  sampleState: string | null;
+  sampleFallbackReason: string | null;
   synthesisMode: string;
   /** Full Dynamic Drive layer telemetry when motion-matched audio is active. */
   dynamicLayers: AudioLayerDiagnostics[];
   activeLayers: AudioLayerDiagnostics[];
   transients: AudioLayerDiagnostics[];
   master: {
+    prePeak: number;
+    preRms: number;
     peak: number;
     rms: number;
     headroom: number;
     reduction: number;
+    compressorReduction: number;
     underruns: number;
     /** Estimated output latency (ms). */
     outputLatencyMs: number | null;
+  } | null;
+  gains: {
+    userVolume: number;
+    profileGain: number;
+    loudnessTrim: number;
+    loadScale: number;
+    effectiveMasterTarget: number;
+    masterNode: number;
+    duck: number;
+    body: number;
+    accents: number;
+    beds: number;
+    wet: number;
+    profileBusOutput: number;
   } | null;
 }
 
