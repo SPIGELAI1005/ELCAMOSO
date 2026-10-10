@@ -89,7 +89,11 @@ import {
 } from "@/lib/powertrain/adapters/profile-map";
 import { vehicleMotionFromDrive } from "@/lib/powertrain/adapters/vehicle-motion";
 import { PowertrainSimulator } from "@/lib/powertrain/simulator";
-import { shouldUseDynamicPowertrainFromSessionConfig } from "@/lib/powertrain/dynamic-powertrain-gate";
+import {
+  dynamicDriveExtrasActive,
+  shouldUseDynamicPowertrainFromSessionConfig,
+} from "@/lib/powertrain/dynamic-powertrain-gate";
+import type { PowertrainProfile } from "@/lib/powertrain/types-config";
 import type { ProfileTuning, Playlist } from "@/lib/drive/settings";
 import { DEFAULT_LAYER_MIX, normalizeMix, type LayerMix } from "@/lib/sound/environments";
 import type { SoundSnippet } from "@/lib/sound/snippets";
@@ -214,8 +218,13 @@ export interface SessionConfig {
   profileRules: Record<string, ProfileRule[]>;
   /** rules attached to the active custom sound */
   activeProfileRules: ProfileRule[];
-  /** Dynamic Drive powertrain + layered audio (Legacy transmission when false) */
+  /** Dynamic Drive premium extras: rev-match, overrun / turbo / pop transients, shift feel. */
   dynamicDrive: boolean;
+  /**
+   * FREE virtual_transmission entitlement: PowertrainSimulator gears + RPM on live Drive
+   * even without Dynamic Drive. Legacy computeDriveState only when both flags are false.
+   */
+  virtualTransmission: boolean;
   /** Tesla Fleet Telemetry adapter (optional server bridge). */
   teslaFleetTelemetry: boolean;
   /** live | capture | live-and-capture */
@@ -245,6 +254,7 @@ function configFingerprint(c: SessionConfig): string {
     profileRules: c.profileRules,
     activeProfileRules: c.activeProfileRules,
     dynamicDrive: c.dynamicDrive,
+    virtualTransmission: c.virtualTransmission,
     teslaFleetTelemetry: c.teslaFleetTelemetry,
     driveOutputMode: c.driveOutputMode,
     captureQuality: c.captureQuality,
@@ -337,6 +347,7 @@ class DriveSession {
     profileRules: {},
     activeProfileRules: [],
     dynamicDrive: false,
+    virtualTransmission: false,
     teslaFleetTelemetry: false,
     driveOutputMode: "live",
     captureQuality: "balanced",
@@ -364,13 +375,40 @@ class DriveSession {
   /** AudioContext created/resumed during pointerdown; handed to the next begin(). */
   private gestureAudioContext: AudioContext | null = null;
 
-  /** Dynamic Drive powertrain sim - also used for Demo (simulated gears at realistic speeds). */
+  /** PowertrainSimulator gears - FREE virtual transmission, Dynamic Drive, and Demo. */
   private powertrainSimActive(profile: ReturnType<typeof getProfile>): boolean {
     return shouldUseDynamicPowertrainFromSessionConfig({
       supportsVirtualTransmission: supportsDynamicDrive(profile),
       configDynamicDrive: this.config.dynamicDrive,
+      configVirtualTransmission: this.config.virtualTransmission,
       sessionKind: this.kind,
     });
+  }
+
+  /** Premium Dynamic Drive extras (rev-match, overrun / turbo transients). Demo previews them. */
+  private dynamicDriveExtrasActive(): boolean {
+    return dynamicDriveExtrasActive({
+      configDynamicDrive: this.config.dynamicDrive,
+      sessionKind: this.kind,
+    });
+  }
+
+  /** Powertrain profile for the simulator - rev-match is a Drive+ extra on live Drive. */
+  private powertrainProfileForSession(profile: ReturnType<typeof getProfile>): PowertrainProfile {
+    const base = powertrainProfileForSound(profile);
+    if (this.dynamicDriveExtrasActive()) return base;
+    return {
+      ...base,
+      transmission: {
+        ...base.transmission,
+        shift: { ...base.transmission.shift, revMatchEnabled: false },
+      },
+    };
+  }
+
+  private syncEngineDriveTier(profile: ReturnType<typeof getProfile>) {
+    this.engine?.setDynamicDriveEnabled(this.powertrainSimActive(profile));
+    this.engine?.setAdvancedTransientsEnabled(this.dynamicDriveExtrasActive());
   }
 
   /**
@@ -614,13 +652,12 @@ class DriveSession {
     if (next.mix) this.engine?.setMix(next.mix);
     if (next.snippets) void this.engine?.setSnippets(next.snippets);
     if (next.cabinEq) this.engine?.setCabinEq(next.cabinEq);
-    if (next.dynamicDrive !== undefined) {
+    if (next.dynamicDrive !== undefined || next.virtualTransmission !== undefined) {
       const profile = getProfile(this.config.profileId);
-      this.engine?.setDynamicDriveEnabled(this.powertrainSimActive(profile));
-      if (!this.powertrainSimActive(profile)) {
-        this.powertrainSim = null;
-        this.powertrainSoundProfileId = null;
-      }
+      this.syncEngineDriveTier(profile);
+      // Rebuild the simulator so the rev-match tier matches the new flags.
+      this.powertrainSim = null;
+      this.powertrainSoundProfileId = null;
     }
     if (next.teslaFleetTelemetry !== undefined) {
       this.syncVehicleTelemetryProvider();
@@ -1266,6 +1303,7 @@ class DriveSession {
       engine.setIntensityCeiling(cappedGain(1, 1, profile));
       engine.setVolume(cappedGain(this.config.volume, this.config.profileGain, profile));
       engine.setDynamicDriveEnabled(this.powertrainSimActive(profile));
+      engine.setAdvancedTransientsEnabled(this.dynamicDriveExtrasActive());
       this.engine = engine;
     } catch (error) {
       reportAudioError(error);
@@ -1512,7 +1550,7 @@ class DriveSession {
     if (this.powertrainSimActive(profile)) {
       if (!this.powertrainSim || this.powertrainSoundProfileId !== profile.id) {
         this.powertrainSim = new PowertrainSimulator({
-          profile: powertrainProfileForSound(profile),
+          profile: this.powertrainProfileForSession(profile),
         });
         this.powertrainSoundProfileId = profile.id;
       }

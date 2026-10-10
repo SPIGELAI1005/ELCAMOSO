@@ -1,10 +1,10 @@
 import { chromium } from "@playwright/test";
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { createServer } from "vite";
 
-const profiles = [
+const allProfiles = [
   "american-muscle-v8",
   "gt-v8",
   "flat-six-sport",
@@ -17,9 +17,43 @@ const profiles = [
   "big-twin",
   "wiesn-tractor",
 ];
-const variants = ["existing", "tuned"];
-const outputDir = path.resolve("artifacts/audio-comparisons/2026-09-26");
+const allVariants = ["existing", "tuned"];
+// Narrow a calibration pass: AUDIO_COMPARE_PROFILES=gt-v8,big-twin AUDIO_COMPARE_VARIANTS=tuned
+const envList = (name) =>
+  (process.env[name] ?? "")
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean);
+const requestedProfiles = envList("AUDIO_COMPARE_PROFILES");
+const requestedVariants = envList("AUDIO_COMPARE_VARIANTS");
+const profiles = requestedProfiles.length
+  ? allProfiles.filter((id) => requestedProfiles.includes(id))
+  : allProfiles;
+const variants = requestedVariants.length
+  ? allVariants.filter((id) => requestedVariants.includes(id))
+  : allVariants;
+const isPartialPass =
+  profiles.length < allProfiles.length || variants.length < allVariants.length;
+// Override with AUDIO_COMPARE_OUT=artifacts/audio-comparisons/<date> for a fresh pass.
+const outputDir = path.resolve(
+  process.env.AUDIO_COMPARE_OUT ?? "artifacts/audio-comparisons/2026-09-26",
+);
 const targetLufs = -20;
+
+function resultKey(row) {
+  return `${row.profileId}::${row.variant}`;
+}
+
+/** Partial passes merge into an existing analysis.json so calibration does not wipe siblings. */
+async function loadPriorResults() {
+  if (!isPartialPass) return [];
+  try {
+    const prior = JSON.parse(await readFile(path.join(outputDir, "analysis.json"), "utf8"));
+    return Array.isArray(prior.results) ? prior.results : [];
+  } catch {
+    return [];
+  }
+}
 
 function applyGainToPcm16(wav, gainDb) {
   const output = Buffer.from(wav);
@@ -49,7 +83,13 @@ try {
   await page.goto(origin, { waitUntil: "domcontentloaded" });
   await mkdir(outputDir, { recursive: true });
 
-  const results = [];
+  const priorResults = await loadPriorResults();
+  const resultsByKey = new Map(priorResults.map((row) => [resultKey(row), row]));
+  if (isPartialPass && priorResults.length) {
+    process.stdout.write(
+      `Merging ${profiles.length}×${variants.length} renders into ${priorResults.length} prior results\n`,
+    );
+  }
   for (const profileId of profiles) {
     for (const variant of variants) {
       const result = await page.evaluate(
@@ -70,7 +110,7 @@ try {
         path.join(outputDir, `${stem}-loudness-matched.wav`),
         applyGainToPcm16(wav, matchedGainDb),
       );
-      results.push({
+      resultsByKey.set(resultKey(result), {
         ...result,
         matchedGainDb: round(matchedGainDb),
         matchedApproximateLufs: round(result.stats.approximateIntegratedLufs + matchedGainDb),
@@ -79,6 +119,16 @@ try {
       process.stdout.write(`${stem}: ${result.backend}, ${round(result.renderElapsedMs)} ms\n`);
     }
   }
+  // Keep catalog order for full passes; preserve prior order then append unknowns for merges.
+  const catalogOrder = allProfiles.flatMap((profileId) =>
+    allVariants.map((variant) => resultKey({ profileId, variant })),
+  );
+  const results = [
+    ...catalogOrder.map((key) => resultsByKey.get(key)).filter(Boolean),
+    ...[...resultsByKey.entries()]
+      .filter(([key]) => !catalogOrder.includes(key))
+      .map(([, row]) => row),
+  ];
 
   const heap = await page.evaluate(() => {
     const memory = performance.memory;

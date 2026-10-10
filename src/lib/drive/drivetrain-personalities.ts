@@ -10,6 +10,7 @@ import type {
   TransientAspiration,
   TransientSchedulerProfile,
 } from "@/lib/sound/dynamic-drive/transient-scheduler";
+import { DEMAND_BREAKPOINTS, scheduleUpshiftRpmForDemand } from "@/lib/powertrain/shift-map";
 
 type DeepPartial<T> = {
   [P in keyof T]?: T[P] extends object ? DeepPartial<T[P]> : T[P];
@@ -143,11 +144,12 @@ export interface DrivetrainPersonalityConfig {
   transient: TransientAudioConfig;
   motion: DrivetrainMotionTuning;
 
-  /** Legacy sound-engine shift smoothing (0..1) for computeDriveState when Dynamic Drive is off. */
+  /**
+   * Legacy sound-engine shift smoothing (0..1) for computeDriveState when Dynamic Drive is off.
+   * Gear slopes are derived from `transmission` (see personalityLegacyTransmission).
+   */
   legacy: {
     shiftSmoothing: number;
-    /** kmh→RPM slope per gear for legacy computeDriveState (not physical ratios). */
-    gearRatios: number[];
   };
 }
 
@@ -251,13 +253,37 @@ export function personalityToPowertrain(c: DrivetrainPersonalityConfig): Powertr
   };
 }
 
-/** Legacy transmission block on SoundProfile (computeDriveState path). */
+/**
+ * Physical RPM-per-km/h slope for one gear: rpm = kmh × slope.
+ * rpm = (kmh / 3.6) / circumference × 60 × gear × final.
+ */
+export function rpmPerKmhForGear(
+  gearRatio: number,
+  finalDrive: number,
+  wheelCircumferenceM: number,
+): number {
+  return (gearRatio * finalDrive * 60) / (3.6 * Math.max(0.5, wheelCircumferenceM));
+}
+
+/**
+ * Legacy transmission block on SoundProfile (computeDriveState path).
+ * Slopes are derived from the physical gear set so the fallback gearbox shifts at
+ * real road speeds (≈ 95-130 rpm per km/h in 1st) instead of the hand-tuned
+ * `legacy.gearRatios`, which were ~7-8x too flat and held 1st gear to >350 km/h.
+ */
 export function personalityLegacyTransmission(c: DrivetrainPersonalityConfig) {
+  const powertrain = personalityToPowertrain(c);
   return {
-    gearRatios: c.legacy.gearRatios,
+    gearRatios: c.transmission.gearRatios.map((ratio) =>
+      rpmPerKmhForGear(ratio, c.transmission.finalDrive, c.wheelCircumferenceM),
+    ),
     idleRpm: c.engine.idleRpm,
     redlineRpm: c.engine.redlineRpm,
     shiftSmoothing: c.legacy.shiftSmoothing,
+    upshiftRpmByDemand: DEMAND_BREAKPOINTS.map((demand) =>
+      scheduleUpshiftRpmForDemand(demand, powertrain),
+    ),
+    downshiftRpm: c.transmission.downshiftBaseRpm,
   };
 }
 
@@ -388,7 +414,7 @@ const BASE_DRIVETRAIN_PERSONALITIES: DrivetrainPersonalityConfig[] = [
       pitchTauRevMatchExtra: 0.04,
       speedSlowTau: 0.52,
     },
-    legacy: { shiftSmoothing: 0.11, gearRatios: [14.5, 9.2, 6.8, 5.2, 4.2, 3.5, 3.0] },
+    legacy: { shiftSmoothing: 0.11 },
   },
   {
     id: "american-v8",
@@ -495,7 +521,7 @@ const BASE_DRIVETRAIN_PERSONALITIES: DrivetrainPersonalityConfig[] = [
       pitchTauRevMatchExtra: 0.02,
       speedSlowTau: 0.62,
     },
-    legacy: { shiftSmoothing: 0.28, gearRatios: [12.5, 7.8, 5.2, 3.9, 3.1] },
+    legacy: { shiftSmoothing: 0.28 },
   },
   {
     id: "turbo-inline-6",
@@ -608,7 +634,7 @@ const BASE_DRIVETRAIN_PERSONALITIES: DrivetrainPersonalityConfig[] = [
       pitchTauRevMatchExtra: 0.035,
       speedSlowTau: 0.55,
     },
-    legacy: { shiftSmoothing: 0.14, gearRatios: [13.8, 8.6, 6.2, 4.8, 3.9, 3.3, 2.9] },
+    legacy: { shiftSmoothing: 0.14 },
   },
   {
     id: "gt-v8",
@@ -705,7 +731,7 @@ const BASE_DRIVETRAIN_PERSONALITIES: DrivetrainPersonalityConfig[] = [
       pitchTauRevMatchExtra: 0.03,
       speedSlowTau: 0.55,
     },
-    legacy: { shiftSmoothing: 0.16, gearRatios: [13.2, 8.1, 5.6, 4.1, 3.2, 2.6] },
+    legacy: { shiftSmoothing: 0.16 },
   },
   {
     id: "synthetic-ev",
@@ -788,7 +814,7 @@ const BASE_DRIVETRAIN_PERSONALITIES: DrivetrainPersonalityConfig[] = [
       pitchTauRevMatchExtra: 0,
       speedSlowTau: 0.48,
     },
-    legacy: { shiftSmoothing: 0.08, gearRatios: [16, 10.5, 7.2, 5.1, 3.8, 3.0] },
+    legacy: { shiftSmoothing: 0.08 },
   },
   {
     id: "motorcycle-inline-4",
@@ -886,7 +912,7 @@ const BASE_DRIVETRAIN_PERSONALITIES: DrivetrainPersonalityConfig[] = [
       pitchTauRevMatchExtra: 0.055,
       speedSlowTau: 0.44,
     },
-    legacy: { shiftSmoothing: 0.05, gearRatios: [18, 13, 10.2, 8.4, 7.2, 6.4] },
+    legacy: { shiftSmoothing: 0.05 },
   },
   {
     id: "v-twin-cruiser",
@@ -978,7 +1004,7 @@ const BASE_DRIVETRAIN_PERSONALITIES: DrivetrainPersonalityConfig[] = [
       pitchTauRevMatchExtra: 0.015,
       speedSlowTau: 0.68,
     },
-    legacy: { shiftSmoothing: 0.22, gearRatios: [14, 9.5, 7.0, 5.5, 4.5, 3.8] },
+    legacy: { shiftSmoothing: 0.22 },
   },
   {
     id: "single-cylinder-ag",
@@ -1076,7 +1102,7 @@ const BASE_DRIVETRAIN_PERSONALITIES: DrivetrainPersonalityConfig[] = [
       pitchTauRevMatchExtra: 0,
       speedSlowTau: 0.75,
     },
-    legacy: { shiftSmoothing: 0.55, gearRatios: [22, 14, 10, 7.5] },
+    legacy: { shiftSmoothing: 0.55 },
   },
 ];
 
@@ -1170,10 +1196,7 @@ const HIGH_REV_V10_PERSONALITY: DrivetrainPersonalityConfig = {
     pitchTauRevMatchExtra: 0.05,
     speedSlowTau: 0.46,
   },
-  legacy: {
-    shiftSmoothing: 0.075,
-    gearRatios: [16.5, 11.7, 8.6, 6.8, 5.55, 4.7, 4.05],
-  },
+  legacy: { shiftSmoothing: 0.075 },
 };
 
 const FLAT_PLANE_V8_TRACK_PERSONALITY: DrivetrainPersonalityConfig = {
@@ -1258,10 +1281,7 @@ const FLAT_PLANE_V8_TRACK_PERSONALITY: DrivetrainPersonalityConfig = {
     pitchTauRevMatchExtra: 0.055,
     speedSlowTau: 0.42,
   },
-  legacy: {
-    shiftSmoothing: 0.06,
-    gearRatios: [16.8, 11.8, 8.8, 7, 5.8, 4.9, 4.2, 3.65],
-  },
+  legacy: { shiftSmoothing: 0.06 },
 };
 
 const RALLY_TURBO_3_PERSONALITY: DrivetrainPersonalityConfig = {
@@ -1354,7 +1374,7 @@ const RALLY_TURBO_3_PERSONALITY: DrivetrainPersonalityConfig = {
     pitchTauRevMatchExtra: 0.04,
     speedSlowTau: 0.4,
   },
-  legacy: { shiftSmoothing: 0.065, gearRatios: [15, 9.8, 7.2, 5.8, 4.9] },
+  legacy: { shiftSmoothing: 0.065 },
 };
 
 export const DRIVETRAIN_PERSONALITIES: DrivetrainPersonalityConfig[] = [

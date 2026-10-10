@@ -364,7 +364,7 @@ function SoundWorkspace({
       {virtualTx ? (
         <PremiumFeatureGate
           context="dynamic_drive"
-          entitlement="virtual_transmission"
+          entitlement="advanced_controls"
           promptTitle="Gear-shift feel"
         >
           <Block title="Gear-shift feel">

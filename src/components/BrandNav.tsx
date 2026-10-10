@@ -52,14 +52,15 @@ const MENU_LINKS: NavLink[] = [
   { to: "/science", key: "nav.science" },
 ];
 
-function navLinkClassName(accent?: boolean) {
-  return accent
-    ? "text-[#e53935] transition-colors hover:text-[#ff5252]"
-    : "text-muted-foreground transition-colors hover:text-foreground";
+function isNavLinkActive(pathname: string, to: string) {
+  if (to === "/") return pathname === "/";
+  return pathname === to || pathname.startsWith(`${to}/`);
 }
 
-function navLinkActiveClassName(accent?: boolean) {
-  return accent ? "text-[#e53935]" : "text-foreground";
+function navLinkClassName(active: boolean, accent?: boolean) {
+  if (active) return "text-foreground transition-colors";
+  if (accent) return "text-[#e53935] transition-colors hover:text-foreground";
+  return "text-muted-foreground transition-colors hover:text-foreground";
 }
 
 export function BrandNav() {
@@ -90,19 +91,22 @@ export function BrandNav() {
           className="hidden min-w-0 items-center gap-3 text-xs tracking-[0.14em] uppercase lg:flex xl:gap-4 xl:text-[13px]"
           aria-label="Primary"
         >
-          {DESKTOP_LINKS.map((link) => (
-            <Link
-              key={link.to}
-              to={link.to}
-              className={cn(
-                "inline-flex min-h-12 items-center px-1.5",
-                navLinkClassName(link.accent),
-              )}
-              activeProps={{ className: navLinkActiveClassName(link.accent) }}
-            >
-              {t(settings.language, link.key)}
-            </Link>
-          ))}
+          {DESKTOP_LINKS.map((link) => {
+            const active = isNavLinkActive(pathname, link.to);
+            return (
+              <Link
+                key={link.to}
+                to={link.to}
+                aria-current={active ? "page" : undefined}
+                className={cn(
+                  "inline-flex min-h-12 items-center px-1.5",
+                  navLinkClassName(active, link.accent),
+                )}
+              >
+                {t(settings.language, link.key)}
+              </Link>
+            );
+          })}
           <AccountMenu className="ml-1" />
         </nav>
 
@@ -138,20 +142,23 @@ export function BrandNav() {
                 </SheetDescription>
               </SheetHeader>
               <nav className="flex flex-col px-2 py-4" aria-label="Mobile">
-                {MENU_LINKS.map((link) => (
-                  <SheetClose asChild key={link.to}>
-                    <Link
-                      to={link.to}
-                      className={cn(
-                        "px-4 py-4 text-sm tracking-[0.2em] uppercase transition-colors",
-                        navLinkClassName(link.accent),
-                      )}
-                      activeProps={{ className: navLinkActiveClassName(link.accent) }}
-                    >
-                      {t(settings.language, link.key)}
-                    </Link>
-                  </SheetClose>
-                ))}
+                {MENU_LINKS.map((link) => {
+                  const active = isNavLinkActive(pathname, link.to);
+                  return (
+                    <SheetClose asChild key={link.to}>
+                      <Link
+                        to={link.to}
+                        aria-current={active ? "page" : undefined}
+                        className={cn(
+                          "px-4 py-4 text-sm tracking-[0.2em] uppercase",
+                          navLinkClassName(active, link.accent),
+                        )}
+                      >
+                        {t(settings.language, link.key)}
+                      </Link>
+                    </SheetClose>
+                  );
+                })}
                 <AccountMenu variant="row" />
               </nav>
               <div className="mt-auto border-t border-border px-6 py-6">

@@ -30,7 +30,7 @@ Baseline: Vercel TanStack Start + Motion Experiences; commit `18606f3` and subse
 ## Environment variables
 
 - [ ] Tesla OAuth production client + redirect URI
-- [ ] Google account OAuth production client + redirect (server-only)
+- [ ] Google account OAuth production client + redirect (server-only); Console **Authorized redirect URIs** must include exact `https://www.elcamoso.com/auth/account/google/callback` (see `docs/account-google-oauth.md`)
 - [ ] Stripe keys + webhook + price IDs (server-only; `MONETIZATION_ENABLED` intentional)
 - [ ] `DATABASE_URL` / Cloud as required (never expose as `VITE_`)
 - [ ] `SOUND_ASSET_SIGNING_SECRET` if premium WAVs

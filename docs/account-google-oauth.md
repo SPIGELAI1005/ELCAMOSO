@@ -25,10 +25,36 @@ When all three are set, the account sign-in dialog shows **Continue with Google*
 
 1. Create or select a Google Cloud project.
 2. Configure the **OAuth consent screen** (External or Internal). Add scopes: `openid`, `email`, `profile`.
-3. Create credentials → **OAuth client ID** → Application type **Web application**.
-4. Authorized JavaScript origins (local): `http://localhost:5173`
-5. Authorized redirect URIs: register both local and production callbacks above.
-6. Copy Client ID and Client Secret into `.env.local` (or Vercel env).
+3. Create credentials → **OAuth client ID** → Application type **Web application** (Desktop / iOS clients cannot register HTTPS redirect URIs).
+4. **Authorized JavaScript origins** (exact host only, no path):
+   - `https://www.elcamoso.com`
+   - `https://elcamoso.com` (optional; only needed if the non-www origin serves the app without redirecting)
+   - `http://localhost:5173`
+5. **Authorized redirect URIs** (must match the env value character-for-character):
+   - `https://www.elcamoso.com/auth/account/google/callback`
+   - `http://localhost:5173/auth/account/google/callback`
+6. Copy Client ID and Client Secret into `.env.local` (or Vercel env). Production must also set `ELCAMOSO_ENV=production` so the server enforces the www production redirect URI.
+7. Save. Google may take a few minutes (rarely up to a few hours) before the new URI is accepted.
+
+### Production Console checklist (verified 2026-10-10)
+
+Live production sends `redirect_uri=https://www.elcamoso.com/auth/account/google/callback` with client id `40511295281-…apps.googleusercontent.com`. That exact string must appear under **Authorized redirect URIs** on the same Web client. After registering it, Google sign-in reaches the account picker instead of Error 400.
+
+## Troubleshooting: `Error 400: redirect_uri_mismatch`
+
+Google rejects the authorize request **before** consent when the `redirect_uri` query param is not an exact registered value. Typical causes:
+
+| Symptom / cause | Fix |
+| --------------- | --- |
+| Production env has the correct www callback, but Console is missing it | Add `https://www.elcamoso.com/auth/account/google/callback` to the Web client |
+| Trailing slash, `http` vs `https`, or non-www host | Register the **exact** string the app sends (code expects www in production) |
+| Wrong OAuth client (different Client ID than `GOOGLE_CLIENT_ID`) | Edit the client whose ID matches Vercel / `.env` |
+| Client type is Desktop / iOS / Android | Create a **Web application** client and update env secrets |
+| Just saved in Console | Wait a few minutes, then retry from a fresh tab (old error pages can be cached on phones) |
+
+Decode the failing authorize URL (or Google’s `authError` payload) and confirm `redirect_uri=` matches Console and `GOOGLE_REDIRECT_URI` / `GOOGLE_REDIRECT_URI_PRODUCTION`. No app code change fixes a Console mismatch.
+
+The production callback route itself is live (`GET /auth/account/google/callback` → redirect when `code` is missing). A mismatch error means Google never called that route.
 
 ## Security model
 

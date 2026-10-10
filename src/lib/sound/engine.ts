@@ -170,6 +170,8 @@ export class SoundEngine {
   private improved: ImprovedSynth | null = null;
   private experienceTuningEnabled = true;
   private dynamicDriveEnabled = false;
+  /** Premium transient tier for Realism V2 (demo / Drive+). Core shifts always render. */
+  private advancedTransientsEnabled = true;
   private dynamicDrive: DynamicDriveSynth | null = null;
   private symphony: SymphonySynth | null = null;
   private fusion: FusionSynth | null = null;
@@ -220,6 +222,20 @@ export class SoundEngine {
 
   getDynamicDriveEnabled() {
     return this.dynamicDriveEnabled;
+  }
+
+  /**
+   * Drive+ Dynamic Drive extras: rev-match blips, overrun pops, turbo flutter / wastegate.
+   * Core upshift / downshift mechanics always render once gears are active.
+   */
+  setAdvancedTransientsEnabled(enabled: boolean) {
+    if (this.advancedTransientsEnabled === enabled) return;
+    this.advancedTransientsEnabled = enabled;
+    this.hybrid?.setAdvancedTransientsEnabled(enabled);
+  }
+
+  getAdvancedTransientsEnabled() {
+    return this.advancedTransientsEnabled;
   }
 
   /** The strategy that actually owns the current graph, not merely an enabled setting. */
@@ -995,6 +1011,7 @@ export class SoundEngine {
       this.hybrid = new HybridCombustionSynth();
       const ok = this.hybrid.build(ctx, profile, strategyBuses);
       if (ok) {
+        this.hybrid.setAdvancedTransientsEnabled(this.advancedTransientsEnabled);
         if (profile.id === "american-muscle-v8") {
           const controller = new AbortController();
           this.hybridLoadController = controller;

@@ -52,12 +52,14 @@ Canonical product rules still live in `elcamoso-comprehensive-spec.md`. Update *
 - Session: HttpOnly cookie `elcamoso_account_session` (Secure in production, SameSite=Lax). Profile UX in localStorage is `{ userId, email, expiresAt }` only — no session token, no Google tokens.
 - Server-only env: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI` (never `VITE_*`). Docs: `docs/account-google-oauth.md`.
 - **Continue with Google** only when all three Google env vars are set; partial config fails startup validation in `src/server.ts`.
+- Production redirect URI is fixed: `https://www.elcamoso.com/auth/account/google/callback`. That exact string must be listed under Google Cloud Console → OAuth **Web application** client → Authorized redirect URIs (`redirect_uri_mismatch` = Console gap, not app code).
 - Tesla vehicle OAuth remains separate (`docs/dynamic-drive/tesla-oauth-env.md`).
 
 ### Sound architecture (current)
 
 - Web Audio only. Improved strategies + Dynamic Drive layered synth for virtual-transmission profiles.
-- **Realism V2.1 (default for combustion):** continuous, DC-blocked worklet combustion excitation with sample-rate-aware pressure tails → formants/body resonance plus subordinate low engine orders; Powertrain-authored RPM/load/shift phases. A/B vs Current on `/debug`. See `docs/AUDIO_REALISM_V2.md`.
+- **Realism V2.2 (default for combustion):** continuous, DC-blocked worklet combustion excitation with per-cycle jitter, per-fire noise burst and rate compensation → formants/body resonance + RPM-tracking engine-order resonators + 70 ms decorrelated pipe IR; Powertrain-authored RPM/load/shift phases plus the shared Dynamic Drive transient scheduler (torque cut → thump → reengage bark; rev-match / overrun / turbo on the full tier). Worklet readiness is **per AudioContext** (`WeakSet`) - a global flag used to drop every later context to the fallback. A/B vs Current on `/debug`. See `docs/AUDIO_REALISM_V2.md`.
+- Loudness staging rule for V2: the excitation carries timbre, the combustion bus carries load loudness; cruise → full-load span target 12–16 dB. Do not compound load gains across stages.
 - Road Feel V3 master gain / perceptual volume remains authoritative for cabin loudness.
 
 - **Built-in Sound Profiles:** **47** (22 original + 25 expansion in `src/lib/sound/profiles-expansion.ts`)
@@ -80,6 +82,8 @@ Canonical product rules still live in `elcamoso-comprehensive-spec.md`. Update *
 - Powertrain Calibration V2: demand bands, dual speed filters, kickdown queue — `docs/POWERTRAIN_CALIBRATION_V2.md`
 - **Road Feel V3 (Tesla cabin):** earlier light/normal shift maps for mainstream combustion; phase-aware shift load in Dynamic Drive synth; perceptual volume + coherent master gain staging; Tesla Road Test HUD (`?roadTest=1` or Drive debug diagnostics)
 - Regen calibration tables: `npx tsx scripts/generate-powertrain-calibration-v2.ts`
+- **Legacy gearbox (`computeDriveState`)** derives physical rpm/km·h slopes from the personality (`personalityLegacyTransmission`) and samples the simulator's `scheduleUpshiftRpmForDemand` table, so non-simulator sessions shift at road speeds (GT V8 1→2 ≈ 30 km/h relaxed, ≈ 62 km/h flat out). Legacy `gearRatios` on personalities were removed; `src/lib/drive/legacy-gearbox.test.ts` guards it.
+- **Gate:** `virtual_transmission` is a FREE entitlement (simulator + core shift transients on live drives). `dynamic_drive` (rev-match, overrun, turbo, shift-feel tuning) stays Drive+ / trial / Demo - `dynamicDriveExtrasActive`, `SessionConfig.virtualTransmission`, `SoundEngine.setAdvancedTransientsEnabled`.
 - Road-test calibration lab: `/debug/calibration` — capture/replay traces without GPS routes — `docs/ROAD_TEST_CALIBRATION.md`, `src/lib/calibration/`
 
 ### Session / audition pitfalls (fixed)
@@ -186,6 +190,35 @@ Canonical product rules still live in `elcamoso-comprehensive-spec.md`. Update *
 ---
 
 ## Changelog
+
+### 2026-10-10 (Google OAuth redirect URI Console fix)
+
+- Production sign-in failed with Google `Error 400: redirect_uri_mismatch` while the app correctly sent `redirect_uri=https://www.elcamoso.com/auth/account/google/callback`.
+- Root cause: that exact URI was missing from the Google Cloud OAuth **Web application** client’s Authorized redirect URIs (env and callback route were already correct).
+- Console now registers www production + localhost callbacks (and www / non-www / localhost JS origins). Live flow reaches Google’s account picker. Docs: `docs/account-google-oauth.md` troubleshooting section.
+
+### 2026-10-10 (American Muscle V8 pilot review)
+
+- Review packet: `docs/audio/AMERICAN_MUSCLE_V8_PILOT_REVIEW.md` + research inventory JSON. Profile `american-muscle-v8` kept; sample bank still **0** approved slots. TikTok-labeled `V8_source-*.wav` extracts inventoried with SHA-256 / levels only — **not** registered (no license, no RPM, weak steady-loop autocorrelation).
+- Sample coverage diagnostics: `reportAmericanV8SampleCoverage` → `uncoveredOperatingRegions` on HybridCombustion diagnostics (all nine when empty).
+- Procedural Muscle acoustic design tweaks (lope / formants / overrun) marked as design choices, not vehicle match.
+- Comparison script: `scripts/render-muscle-pilot-comparisons.mjs` → local `artifacts/audio-comparisons/american-muscle-v8-pilot-2026-10-10/`. Gates: implemented yes · technically verified via render · reference-compared **no** · listening approved **no**.
+
+### 2026-10-10 (Motorcycle city shift map)
+
+- `motorcycle-inline-4` light-demand factor 0.82 → 0.2 so 1→2 under cruise demand is ~40–55 km/h (was ~110–125). WOT map unchanged (~208 km/h). Offline 16.5 s replay now produces gear changes; guarded by `road-feel-v3` tests. Fresh comparison: motorcycle V2 fires 2 upshifts + 2 downshifts + thumps (`artifacts/audio-comparisons/2026-10-10/`).
+- `scripts/render-audio-comparisons.mjs` partial passes (`AUDIO_COMPARE_PROFILES` / `VARIANTS`) now merge into existing `analysis.json` instead of wiping sibling profiles.
+
+### 2026-10-10 (Engine realism fix plan P1–P6)
+
+- **P1 Legacy gearbox:** `computeDriveState` now uses physically scaled rpm/km·h slopes and the simulator's demand-based upshift table instead of hand-typed ratios that only shifted far above road speeds. GT / Race box constants in `profiles.ts` rescaled; audio regression goldens regenerated.
+- **P2 Gate:** FREE gains `virtual_transmission` (simulator + core shift transients on live drives). Rev-match, overrun, turbo and shift-feel tuning remain `dynamic_drive` (Drive+ / trial / Demo). Settings "Gear-shift feel" gate moved to `advanced_controls`; Dynamic Drive upsell copy rewritten.
+- **P3 V2 transients:** `HybridCombustionSynth` runs the Dynamic Drive transient scheduler and variant pools; four persistent voices (shift / thump / pop / turbo) with scheduled envelopes; reengage bark; legacy choreography when no powertrain state; core vs full tier.
+- **P4 De-synth:** worklet V2.2 - per-cycle timing / amplitude jitter at all RPM, per-fire band-limited burst, body wander, rate compensation; sine / triangle support oscillators replaced by excitation-fed engine-order resonators (½, 1, 2 × firing order).
+- **P5 Space:** 70 ms exhaust-pipe / cabin impulse with decorrelated L/R (feature-detected convolver); cruise L/R correlation 0.31–0.83.
+- **Worklet bug:** readiness was a global flag, so every AudioContext after the first (Stop → Play, offline renders) silently fell back to the AM-brown excitation. Now per-context.
+- **P6 Listening pass (technical only):** `artifacts/audio-comparisons/2026-10-10/` - 22 renders, 0 clipped samples, all combustion V2 renders on the real worklet, cruise → hard contrast calibrated from 18.5–25 dB down to 11.8–14.7 dB, shift peak lift +4.6 to +8.8 dB. Human headphone / vehicle listening **still not performed**; 0 profiles `listening verified`. `offline-comparison.ts` gained shift-lift and stereo-correlation metrics; render script accepts `AUDIO_COMPARE_OUT` / `AUDIO_COMPARE_PROFILES` / `AUDIO_COMPARE_VARIANTS`.
+- Also: `__root.tsx` ErrorComponent accepts `unknown` errors (router upgrade typing).
 
 ### 2026-10-10 (Audio workstreams 1–10 realization follow-up)
 

@@ -37,6 +37,8 @@ The loudness-matched files target an approximate -20 integrated value and are ca
 
 Chrome `OfflineAudioContext` exercised the production buses, profile strategies, drivetrain state and output protection. In this environment it did not consistently expose the production AudioWorklet across repeated profile renders, so Realism V2 comparison files use the documented main-thread fallback excitation except where `analysis.json` explicitly reports `realism-v2-worklet`. Real-time scheduling, device DAC/output EQ, cabin acoustics, browser background throttling and vehicle speakers are not represented.
 
+**Correction (2026-10-10):** the inconsistent worklet exposure was not an OfflineAudioContext limitation. `ensureCombustionWorklet` cached readiness in a single global flag, so only the first AudioContext per page ever ran the worklet; every later context (each Stop → Play in the app, every offline render after the first) silently used the fallback. Readiness is now tracked per context. The 2026-10-10 set (`artifacts/audio-comparisons/2026-10-10/`, rendered with `AUDIO_COMPARE_OUT`) reports `realism-v2-worklet` for all nine combustion V2 profiles and adds `meanShiftEventLiftDb`, `meanShiftPeakLiftDb` and `cruiseStereoCorrelation` to `analysis.json`. Measured results and the still-open listening gate are summarised in `LISTENING_AND_ASSET_STATUS.md`. `scripts/render-audio-comparisons.mjs` accepts `AUDIO_COMPARE_PROFILES` / `AUDIO_COMPARE_VARIANTS` for narrow calibration passes.
+
 ## Listening checklist
 
 Use the matched files to compare character and the untouched files to judge dynamics. Keep the same device and volume/EQ settings between every pair.

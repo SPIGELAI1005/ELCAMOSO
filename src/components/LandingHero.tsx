@@ -135,8 +135,6 @@ export function LandingHero() {
             More Emotion.
           </h1>
           <p className="mt-3 max-w-md text-[0.9375rem] text-muted-foreground sm:mt-6 sm:text-base">
-            Engines. Music. Worlds.
-            <br />
             Feel the e-motion in your electrical motion.
           </p>
         </div>

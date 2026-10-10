@@ -243,3 +243,69 @@ export const EMPTY_COMBUSTION_SAMPLE_BANKS: Record<string, CombustionSampleBank>
   "motorcycle-inline-4": { personalityId: "motorcycle-inline-4", entries: [] },
   "v-twin-cruiser": { personalityId: "v-twin-cruiser", entries: [] },
 };
+
+/** Operating regions the American Muscle V8 pilot must cover before sample realism can be claimed. */
+export const AMERICAN_V8_REQUIRED_REGIONS = [
+  "idle",
+  "on-load-low",
+  "on-load-mid",
+  "on-load-high",
+  "off-load-low",
+  "off-load-mid",
+  "off-load-high",
+  "overrun-low",
+  "overrun-high",
+] as const;
+
+export type AmericanV8RequiredRegion = (typeof AMERICAN_V8_REQUIRED_REGIONS)[number];
+
+function regionForPilotEntry(entry: CombustionSampleEntry): AmericanV8RequiredRegion | null {
+  if (entry.character === "idle" || entry.load === "idle") return "idle";
+  if (entry.character === "overrun" || entry.load === "overrun") {
+    return (entry.rpmRef ?? 0) < 2800 ? "overrun-low" : "overrun-high";
+  }
+  if (entry.character === "off-load" || entry.load === "off-load") {
+    if ((entry.loadAnchor ?? 0) < 0.35 && entry.rpmRef < 2200) return "off-load-low";
+    if (entry.rpmRef < 3800) return "off-load-mid";
+    return "off-load-high";
+  }
+  const anchor = entry.loadAnchor ?? (entry.load === "low" ? 0.25 : entry.load === "medium" ? 0.5 : 0.8);
+  if (anchor < 0.35) return "on-load-low";
+  if (anchor < 0.65) return "on-load-mid";
+  return "on-load-high";
+}
+
+/**
+ * Report which required Muscle pilot regions have at least one approved bank entry.
+ * Empty / unapproved banks report every region uncovered - procedural stays authoritative.
+ */
+export function reportAmericanV8SampleCoverage(bank: CombustionSampleBank | null | undefined): {
+  covered: AmericanV8RequiredRegion[];
+  uncovered: AmericanV8RequiredRegion[];
+} {
+  const covered = new Set<AmericanV8RequiredRegion>();
+  for (const entry of bank?.entries ?? []) {
+    const region = regionForPilotEntry(entry);
+    if (region) covered.add(region);
+  }
+  const uncovered = AMERICAN_V8_REQUIRED_REGIONS.filter((region) => !covered.has(region));
+  return { covered: [...covered], uncovered: [...uncovered] };
+}
+
+/**
+ * Whether a target RPM sits inside any entry's permitted transposition window.
+ * Used by diagnostics when the bank is partial so uncovered RPM bands stay visible.
+ */
+export function sampleCoverageAtRpm(
+  bank: CombustionSampleBank,
+  rpm: number,
+  load: SampleLoadRegion,
+  demand: number,
+): { covered: boolean; reason: SampleMixSelection["fallbackReason"]; activeIds: string[] } {
+  const selection = selectSampleMix(bank, rpm, load, demand);
+  return {
+    covered: selection.targets.length > 0,
+    reason: selection.fallbackReason,
+    activeIds: selection.targets.map((t) => t.entry.assetId),
+  };
+}

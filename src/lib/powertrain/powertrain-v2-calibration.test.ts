@@ -5,7 +5,12 @@ import {
   roadLoadEstimate,
   updateDriverDemand,
 } from "@/lib/powertrain/driver-demand";
-import { shouldUseDynamicPowertrain } from "@/lib/powertrain/dynamic-powertrain-gate";
+import {
+  dynamicDriveExtrasActive,
+  shouldUseDynamicPowertrain,
+  shouldUseDynamicPowertrainFromSessionConfig,
+} from "@/lib/powertrain/dynamic-powertrain-gate";
+import { FREE_ENTITLEMENTS } from "@/lib/entitlements/plans";
 import { reconcileKickdownQueue } from "@/lib/powertrain/kickdown-queue";
 import { getPowertrainProfile } from "@/lib/powertrain/profiles";
 import { rpmFromSpeedAndGear } from "@/lib/powertrain/rpm-model";
@@ -474,6 +479,50 @@ describe("dynamic powertrain entitlement gate", () => {
         sessionKind: "drive",
       }),
     ).toBe(true);
+  });
+
+  it("FREE virtual_transmission runs the simulator on live drive without Dynamic Drive", () => {
+    expect(
+      shouldUseDynamicPowertrain({
+        supportsVirtualTransmission: true,
+        settingsDynamicDrive: false,
+        hasDynamicDriveEntitlement: false,
+        hasVirtualTransmissionEntitlement: true,
+        sessionKind: "drive",
+      }),
+    ).toBe(true);
+    expect(
+      shouldUseDynamicPowertrain({
+        supportsVirtualTransmission: false,
+        settingsDynamicDrive: false,
+        hasDynamicDriveEntitlement: false,
+        hasVirtualTransmissionEntitlement: true,
+        sessionKind: "drive",
+      }),
+    ).toBe(false);
+    expect(
+      shouldUseDynamicPowertrainFromSessionConfig({
+        supportsVirtualTransmission: true,
+        configDynamicDrive: false,
+        configVirtualTransmission: true,
+        sessionKind: "drive",
+      }),
+    ).toBe(true);
+  });
+
+  it("premium extras stay off for FREE live drive but preview in demo", () => {
+    expect(dynamicDriveExtrasActive({ configDynamicDrive: false, sessionKind: "drive" })).toBe(
+      false,
+    );
+    expect(dynamicDriveExtrasActive({ configDynamicDrive: true, sessionKind: "drive" })).toBe(true);
+    expect(dynamicDriveExtrasActive({ configDynamicDrive: false, sessionKind: "demo" })).toBe(true);
+  });
+
+  it("FREE plan carries virtual_transmission but not the Dynamic Drive extras", () => {
+    expect(FREE_ENTITLEMENTS).toContain("virtual_transmission");
+    expect(FREE_ENTITLEMENTS).not.toContain("dynamic_drive");
+    expect(FREE_ENTITLEMENTS).not.toContain("rev_match");
+    expect(FREE_ENTITLEMENTS).not.toContain("advanced_transients");
   });
 });
 

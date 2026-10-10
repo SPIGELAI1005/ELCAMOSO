@@ -135,10 +135,18 @@ export interface SoundProfile {
    */
   drivetrainPersonalityId?: string;
   transmission?: {
+    /** rpm-per-km/h slope per gear (rpm = kmh × slope). */
     gearRatios: number[];
     idleRpm: number;
     redlineRpm: number;
     shiftSmoothing: number;
+    /**
+     * Optional upshift RPM sampled at demand breakpoints 0, 0.15, 0.35, 0.6, 0.8, 1
+     * (same curve as the Dynamic Drive simulator). Falls back to a generic curve when absent.
+     */
+    upshiftRpmByDemand?: number[];
+    /** Optional RPM below which the box drops a gear on coast. */
+    downshiftRpm?: number;
   };
   /** true for user-made profiles created in the Studio */
   custom?: boolean;
@@ -153,15 +161,18 @@ export interface SoundProfile {
   access?: SoundProfileAccess;
 }
 
+// Fallback legacy boxes for virtual-transmission profiles without a drivetrain personality.
+// gearRatios are physical rpm-per-km/h slopes (rpm = kmh × slope), matching
+// personalityLegacyTransmission - 1st gear ≈ 100-115 rpm/kmh so shifts land at road speeds.
 const GT_BOX = {
-  gearRatios: [13.2, 8.1, 5.6, 4.1, 3.2, 2.6],
+  gearRatios: [98, 62, 43, 32, 26, 22],
   idleRpm: 700,
   redlineRpm: 6600,
   shiftSmoothing: 0.16,
 };
 
 const RACE_BOX = {
-  gearRatios: [16, 11.2, 8.4, 6.6, 5.4, 4.6],
+  gearRatios: [114, 80, 58, 46, 38, 32],
   idleRpm: 850,
   redlineRpm: 8500,
   shiftSmoothing: 0.09,

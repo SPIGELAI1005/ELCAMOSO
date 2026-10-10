@@ -11,6 +11,7 @@ import {
   runPowertrainScenario,
   validatePowertrainTrace,
 } from "@/lib/powertrain/scenarios";
+import { PowertrainSimulator } from "@/lib/powertrain/simulator";
 import { cappedGain, BAND_CEILING, intensityCeiling } from "@/lib/drive/safety";
 import { getProfile } from "@/lib/sound/profiles";
 import {
@@ -21,6 +22,7 @@ import {
   STARTUP_VOLUME_SCALE,
 } from "@/lib/sound/perceptual-volume";
 import { loudnessForProfile } from "@/lib/sound/realism/loudness";
+import { comparisonReplayInput } from "@/lib/sound/validation/offline-comparison";
 
 /** Previous Flat-Six Sport 1→2 schedule (Road Feel V2) for regression contrast. */
 const PREV_FLAT_SIX_1_2 = { 0.1: 42.9, 0.25: 51.7, 0.5: 67.2, 0.75: 79.5, 1: 85.2 };
@@ -58,7 +60,60 @@ describe("Road Feel V3 shift map targets", () => {
     const moto = resolveShiftMap(getPowertrainProfile("motorcycle-inline-4"))
       .upshiftSpeedKmh[0]![1]!;
     expect(am).toBeLessThan(fs);
-    expect(moto).toBeGreaterThan(fs * 2);
+    // Motorcycle stays taller than cars, but still city-usable (offline replay
+    // peaks at 65 km/h; light 1→2 belongs in the ~40–55 band after hysteresis).
+    expect(moto).toBeGreaterThan(fs + 8);
+    expect(moto).toBeGreaterThanOrEqual(38);
+    expect(moto).toBeLessThanOrEqual(55);
+  });
+
+  it("motorcycle superbike shifts inside the offline city/suburban replay", () => {
+    const moto = resolveShiftMap(getPowertrainProfile("motorcycle-inline-4"));
+    // Cruise demand in the 16.5 s offline replay is ~0.24–0.25; peak speed 65 km/h.
+    // Leave headroom for schedule hysteresis (~3.5 km/h) and decision-speed lag.
+    const cruiseUp = moto.upshiftSpeedKmh[0]![1]!; // demand breakpoint 0.15
+    expect(cruiseUp).toBeLessThanOrEqual(55);
+    // Hard pull still holds 1st well past the replay top speed.
+    const wotUp = moto.upshiftSpeedKmh[0]![5]!; // demand 1.0
+    expect(wotUp).toBeGreaterThan(120);
+  });
+
+  it("motorcycle-inline-4 actually changes gear during the offline 16.5 s replay", () => {
+    const sim = new PowertrainSimulator({ profileId: "motorcycle-inline-4" });
+    const dt = 1 / 60;
+    let prevGear = 0;
+    const shifts: Array<{ t: number; from: number; to: number; speedKmh: number }> = [];
+    for (let i = 0; i < Math.round(16.5 / dt); i += 1) {
+      const t = i * dt;
+      const input = comparisonReplayInput(t);
+      const pt = sim.tick(
+        {
+          timestamp: t * 1000,
+          speedKmh: input.speedKmh,
+          accelerationMs2: input.accelerationMs2,
+          accelerationFiltered: input.accelerationMs2,
+          decelerationMs2: Math.max(0, -input.accelerationMs2),
+          inferredThrottle: input.throttle,
+          motionConfidence: 1,
+          primarySource: "simulator",
+          sourceHealth: { phone: false, browser: false, vehicleTelemetry: true },
+          fallbackTier: "vehicle-telemetry",
+          transitioning: false,
+        },
+        dt,
+        {
+          directThrottle: input.throttle,
+          braking: input.braking,
+          pedalPosition: input.throttle,
+        },
+      );
+      if (pt.gear !== prevGear && prevGear > 0 && pt.gear > 0) {
+        shifts.push({ t, from: prevGear, to: pt.gear, speedKmh: input.speedKmh });
+      }
+      prevGear = pt.gear;
+    }
+    expect(shifts.some((s) => s.to === s.from + 1)).toBe(true);
+    expect(shifts[0]!.speedKmh).toBeLessThanOrEqual(70);
   });
 
   it("validates every personality map after Road Feel V3", () => {

@@ -24,6 +24,21 @@ export interface OfflineRenderStats {
     mid500To2500Hz: number;
     highAbove2500Hz: number;
   };
+  /** Pearson correlation of L/R over the cruise window (1 = mono, ~0.6-0.9 = natural width). */
+  cruiseStereoCorrelation: number;
+  /** Seconds at which the powertrain started a gear change during the replay. */
+  shiftStartSeconds: number[];
+  /**
+   * Mean RMS lift (dB) of the 180 ms after each shift start vs the 300 ms before it.
+   * Positive values mean the shift is audible as an event rather than a dip only.
+   */
+  meanShiftEventLiftDb: number | null;
+  /**
+   * Mean of the loudest 20 ms slice (dB) inside the 250 ms after each shift start vs
+   * the 300 ms bed before it. Captures the thump / bark even when the torque cut
+   * lowers the average level of the window.
+   */
+  meanShiftPeakLiftDb: number | null;
 }
 
 export interface OfflineComparisonRender {
@@ -37,6 +52,13 @@ export interface OfflineComparisonRender {
   excitationMode: string | null;
   activeNodeEstimate: number | null;
   renderElapsedMs: number;
+  /** Realism V2 transient bookkeeping, when that backend rendered. */
+  v2?: {
+    transientTier: "core" | "full";
+    spaceMode: "pipe-ir" | "dry";
+    eventCounts: { shift: number; overrun: number; boostRelease: number };
+    transientCounts: Record<string, number>;
+  };
 }
 
 const SAMPLE_RATE = 48_000;
@@ -190,7 +212,63 @@ function approximateIntegratedLufs(channels: Float32Array[]) {
   return loudness(relative.reduce((sum, value) => sum + value, 0) / relative.length);
 }
 
-function analyse(channels: Float32Array[]): OfflineRenderStats {
+function pearson(a: Float32Array, b: Float32Array, start: number, end: number) {
+  let sa = 0;
+  let sb = 0;
+  let n = 0;
+  for (let i = start; i < end; i += 1) {
+    sa += a[i] ?? 0;
+    sb += b[i] ?? 0;
+    n += 1;
+  }
+  const ma = sa / Math.max(1, n);
+  const mb = sb / Math.max(1, n);
+  let cov = 0;
+  let va = 0;
+  let vb = 0;
+  for (let i = start; i < end; i += 1) {
+    const da = (a[i] ?? 0) - ma;
+    const dbb = (b[i] ?? 0) - mb;
+    cov += da * dbb;
+    va += da * da;
+    vb += dbb * dbb;
+  }
+  const denom = Math.sqrt(va * vb);
+  return denom > 0 ? cov / denom : 1;
+}
+
+function shiftEventLiftDb(channels: Float32Array[], shiftStartSeconds: number[]): number | null {
+  if (!shiftStartSeconds.length) return null;
+  const lifts = shiftStartSeconds.map((at) => {
+    const idx = Math.round(at * SAMPLE_RATE);
+    const before = segmentRms(channels, Math.max(0, idx - Math.round(0.3 * SAMPLE_RATE)), idx);
+    const after = segmentRms(
+      channels,
+      idx,
+      Math.min(channels[0]!.length, idx + Math.round(0.18 * SAMPLE_RATE)),
+    );
+    return db(after) - db(before);
+  });
+  return lifts.reduce((sum, v) => sum + v, 0) / lifts.length;
+}
+
+function shiftPeakLiftDb(channels: Float32Array[], shiftStartSeconds: number[]): number | null {
+  if (!shiftStartSeconds.length) return null;
+  const slice = Math.round(0.02 * SAMPLE_RATE);
+  const lifts = shiftStartSeconds.map((at) => {
+    const idx = Math.round(at * SAMPLE_RATE);
+    const before = segmentRms(channels, Math.max(0, idx - Math.round(0.3 * SAMPLE_RATE)), idx);
+    const end = Math.min(channels[0]!.length, idx + Math.round(0.25 * SAMPLE_RATE));
+    let loudest = 0;
+    for (let start = idx; start + slice <= end; start += slice) {
+      loudest = Math.max(loudest, segmentRms(channels, start, start + slice));
+    }
+    return db(loudest) - db(before);
+  });
+  return lifts.reduce((sum, v) => sum + v, 0) / lifts.length;
+}
+
+function analyse(channels: Float32Array[], shiftStartSeconds: number[] = []): OfflineRenderStats {
   let peak = 0;
   let sum = 0;
   let count = 0;
@@ -252,6 +330,10 @@ function analyse(channels: Float32Array[]): OfflineRenderStats {
       mid500To2500Hz: db(bandEnergy(500, 2500)) - db(rms),
       highAbove2500Hz: db(bandEnergy(2500, 0)) - db(rms),
     },
+    cruiseStereoCorrelation: pearson(channels[0]!, channels[1]!, cruiseStart, cruiseEnd),
+    shiftStartSeconds,
+    meanShiftEventLiftDb: shiftEventLiftDb(channels, shiftStartSeconds),
+    meanShiftPeakLiftDb: shiftPeakLiftDb(channels, shiftStartSeconds),
   };
 }
 
@@ -308,9 +390,14 @@ export async function renderOfflineComparison(
   engine.setVolume(0.7);
   await engine.start(profile, { context, signature: false, seed: 0x454c4341 });
   const simulator = new PowertrainSimulator({ profileId: resolvePersonalityId(profile) });
+  const shiftStartSeconds: number[] = [];
+  let wasShifting = false;
   for (let time = 0; time < DURATION_SECONDS; time += STEP_SECONDS) {
     engine.setRenderTime(time);
-    engine.update(driveStateFromInput(comparisonReplayInput(time), Math.round(time * 1000), simulator));
+    const state = driveStateFromInput(comparisonReplayInput(time), Math.round(time * 1000), simulator);
+    if (state.isShifting && !wasShifting) shiftStartSeconds.push(Number(time.toFixed(3)));
+    wasShifting = state.isShifting;
+    engine.update(state);
   }
   const backend = engine.getActiveBackend();
   const hybrid = engine.getHybridCombustionDiagnostics();
@@ -322,11 +409,23 @@ export async function renderOfflineComparison(
     sampleRate: SAMPLE_RATE,
     durationSeconds: DURATION_SECONDS,
     wavBase64: encodeWav(channels, SAMPLE_RATE),
-    stats: analyse(channels),
+    stats: analyse(channels, shiftStartSeconds),
     backend,
     excitationMode: hybrid?.excitationMode ?? null,
     activeNodeEstimate: hybrid?.activeNodeEstimate ?? null,
     renderElapsedMs: performance.now() - started,
+    ...(hybrid
+      ? {
+          v2: {
+            transientTier: hybrid.transientTier,
+            spaceMode: hybrid.spaceMode,
+            eventCounts: hybrid.eventCounts,
+            transientCounts: Object.fromEntries(
+              Object.entries(hybrid.transientCounts).map(([k, v]) => [k, v ?? 0]),
+            ),
+          },
+        }
+      : {}),
   };
 }
 

@@ -1,6 +1,6 @@
-# Audio Realism V2.1
+# Audio Realism V2.2
 
-**Status:** Implemented (procedural-first). Sample-assisted path is wired for dual-player crossfade when buffers are injected; no combustion WAVs ship yet.
+**Status:** Implemented (procedural-first). Sample-assisted path is wired for dual-player crossfade when buffers are injected; no combustion WAVs ship yet. V2.2 (2026-10-10) adds shift / overrun / turbo transient choreography, de-synthesised excitation, engine-order resonators and pipe / cabin space on top of V2.1 - see "V2.2 additions" below. Human listening approval is still outstanding (`docs/audio/LISTENING_AND_ASSET_STATUS.md`).
 
 **Related:** `docs/SOUND_CHARACTER_SPEC.md`, `docs/audio-asset-requirements.md`, `docs/SOUND_NOISE_AND_FIDELITY.md`, `docs/DYNAMIC_DRIVE_ARCHITECTURE.md`, `docs/POWERTRAIN_CALIBRATION_V2.md`
 
@@ -45,10 +45,13 @@ DriveState (+ VirtualPowertrainState)
        │     → body / structure peaking resonances (mostly stationary)
        │     → spectral tilt (load → timbre)
        │     → intake formants → beds
-       ├─ triangle/sine support harmonics (subordinate, order-linked)
+       ├─ engine-order resonators (½, 1, 2 × firing order) fed by the excitation
+       │     (V2.2 - replaces the V2.1 triangle/sine support oscillators)
        ├─ mechanical bandpass (restrained)
        ├─ overrun / turbo (state-gated, spool inertia)
-       ├─ shift: Powertrain shiftLoadMultiplier + phase; resonant engagement only
+       ├─ shift: Powertrain shiftLoadMultiplier + phase (torque cut) + transient
+       │     choreography (thump → reengage bark; rev-match flare on downshifts)
+       ├─ pipe / cabin impulse (70 ms decorrelated L/R convolution send)
        └─ optional sample A/B crossfade (0.85–1.18 rate) under procedural
   → body / accents / beds → cabin EQ → MasterBus (Road Feel V3 gains) → limiter
 ```
@@ -126,7 +129,60 @@ Uses Powertrain phases + `shiftLoadMultiplier`:
 | reengage               | Short resonant engagement impulse |
 | settle                 | Load restores                     |
 
-Primary cue = **RPM + load interruption**, not a white-noise transient.
+Primary cue = **RPM + load interruption**, not a white-noise transient. V2.2 layers the
+Dynamic Drive transient scheduler on top of that cue (below).
+
+---
+
+## V2.2 additions (2026-10-10)
+
+### Transient choreography
+
+`HybridCombustionSynth.tickTransients` runs the shared Dynamic Drive scheduler
+(`tickTransientScheduler` + `resolveVariantPools`) whenever a `VirtualPowertrainState`
+is present, so V2 fires the same probability / cooldown / variant-pool events as the
+Current engine: upshift, downshift, rev-match, overrun crackle, exhaust pop, turbo
+flutter, wastegate, drivetrain thump. Four persistent noise voices (`shift`, `thump`,
+`pop`, `turbo`) are shaped by scheduled `AudioParam` envelopes - no per-event nodes.
+
+A shift is: torque cut (powertrain `shiftLoadMultiplier` on excitation intensity and
+combustion bus) → mechanical thump → reengage bark (`barkLevel`, ~160 ms, lifts
+excitation intensity, sharpness, intake and the combustion bus). Downshifts add the
+rev-match flare from the scheduler. Without a powertrain state (legacy
+`computeDriveState` path) a fixed upshift / downshift + thump + bark choreography is
+fired from the `isShifting` edge.
+
+Tiers: `setAdvancedTransientsEnabled(false)` keeps only `CORE_TRANSIENT_KINDS`
+(upshift, downshift, drivetrain-thump). FREE live drives run the core tier;
+Drive+ / trial / Demo run the full tier (`dynamicDriveExtrasActive`).
+
+### De-synthesised excitation (`combustion-processor.js`)
+
+- Per-cycle timing jitter (`intervalScale`) and per-fire amplitude spread at **all**
+  RPM, with the spread growing at light load.
+- A short band-limited noise burst per fire (one-pole LP that opens with load and
+  sharpness, DC-tracking HP) so a pressure event is gas rush, not a click.
+- Slow 0.5–2 Hz body wander so cruise is never a frozen waveform.
+- Rate compensation (`(100 / firingHz)^0.35`, clamped 0.6–2) so idle does not vanish
+  when fewer events per second fire; the formant chain still adds RPM / load energy.
+- Loudness is kept out of the excitation as far as possible (intensity mostly steers
+  punch, brightness and burst); the combustion bus is the one stage where loudness
+  follows load. Target cruise-to-full-load span: 12–16 dB (measured 11.8–14.7 dB).
+
+### Space
+
+`buildPipeImpulse` builds a 70 ms exhaust-pipe / cabin impulse per profile with
+decorrelated L/R tails; the `pipeSend` grows with load and on overrun. Feature-detected
+via `createConvolver`; diagnostics report `spaceMode: "pipe-ir" | "none"`. Cruise L/R
+correlation measured 0.31–0.83 (Current engine: 1.00).
+
+### Worklet loading
+
+Worklet modules register **per AudioContext**. V2.1 marked the module loaded globally
+after the first context, so every later context (Stop → Play, every offline render)
+silently fell back to the AM-brown excitation. V2.2 tracks readiness per context
+(`WeakSet`) - every V2 render in `artifacts/audio-comparisons/2026-10-10/` now reports
+`realism-v2-worklet`.
 
 ---
 
@@ -147,7 +203,7 @@ Empty banks → 100% procedural.
 
 - Reuse a fixed node graph (~tens of nodes, not hundreds/sec)
 - Prefer AudioWorklet for excitation
-- Diagnostics: `getHybridCombustionDiagnostics()` → excitationMode, firingHz, shiftPhase, activeNodeEstimate, audioContextState
+- Diagnostics: `getHybridCombustionDiagnostics()` → excitationMode, firingHz, shiftPhase, activeNodeEstimate, audioContextState, transientTier, transientCounts, spaceMode, orderHz
 - Road Feel V3 master gain chain unchanged
 
 ---
@@ -190,4 +246,4 @@ Use the **same** prerecorded / scenario trace. Match loudness (Road Feel V3 stag
 - Shift / rev-match / overrun one-shots
 - Turbo BOV / wastegate character samples
 
-Procedural V2.1 is the production path until those exist.
+Procedural V2.2 is the production path until those exist.

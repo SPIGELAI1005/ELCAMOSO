@@ -37,7 +37,11 @@ export interface ShiftMapOverrides {
  *
  * Road Feel V3: mainstream combustion personalities shift much earlier under
  * light/normal demand so 1→2 is ~25–32 km/h, not ~45–50 km/h. High-RPM
- * personalities (motorcycle, ag) stay intentionally tall.
+ * personalities keep a taller street map than cars, but must still shift inside
+ * ordinary city / suburban speeds (motorcycle light 1→2 ≈ 50–65 km/h) so
+ * Drive and the 16.5 s offline replay actually hear gears. WOT still holds to
+ * the published low/medium/high sound-character anchors. Ag stays intentionally
+ * tall (tractor character).
  */
 const LIGHT_DEMAND_FACTOR: Record<string, number> = {
   "gt-v8": 0.48,
@@ -47,7 +51,10 @@ const LIGHT_DEMAND_FACTOR: Record<string, number> = {
   "flat-plane-v8-track": 0.32,
   "rally-turbo-3": 0.38,
   "turbo-inline-6": 0.36,
-  "motorcycle-inline-4": 0.82,
+  // Was 0.82 (1→2 ≈ 110–125 km/h under light demand - never shifted in city
+  // replay). Street early, scream late: light 1→2 ~45–55 km/h so the 65 km/h
+  // offline cruise clears schedule + hysteresis (~3.5 km/h); WOT still ~140+.
+  "motorcycle-inline-4": 0.2,
   "v-twin-cruiser": 0.5,
   "single-cylinder-ag": 0.88,
   "synthetic-ev": 0.42,

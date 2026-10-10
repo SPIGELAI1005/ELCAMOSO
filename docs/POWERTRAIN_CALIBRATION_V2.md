@@ -438,7 +438,10 @@ Generated from physical gear ratios, final drive, wheel circumference, and recal
 | Kickdown | threshold 0.72, maxSteps 2 |
 | Torque converter slip | no |
 | Shift map valid | yes |
-| Schedule RPM @10/50/100% | 7212 / 8844 / 13382 |
+| Schedule RPM @10/50/100% | (Road Feel light factor 0.2) street-early / scream-late |
+| Light-demand factor | **0.2** (was 0.82 - 1→2 sat near 110–125 km/h and never shifted in the 16.5 s city replay) |
+
+Physical ratios and WOT anchors are unchanged. Only the light/normal demand remap moved so 1→2 under cruise demand lands ~40–55 km/h (clears the 65 km/h offline cruise after hysteresis). WOT 1→2 remains ~208 km/h.
 
 ### Road-speed range per gear (idle → redline)
 
@@ -453,13 +456,7 @@ Generated from physical gear ratios, final drive, wheel circumference, and recal
 
 ### Upshift speeds by demand (km/h)
 
-| From gear | 10% | 25% | 50% | 75% | 100% |
-|---|---:|---:|---:|---:|---:|
-| 1→2 | 112.4 | 126.3 | 137.8 | 153.1 | 208.5 |
-| 2→3 | 156.2 | 175.5 | 191.6 | 212.8 | 289.9 |
-| 3→4 | 202.7 | 227.8 | 248.6 | 276.2 | 376.1 |
-| 4→5 | 242.6 | 272.6 | 297.5 | 330.5 | 450.2 |
-| 5→6 | 281.0 | 315.7 | 344.5 | 382.7 | 521.3 |
+Regenerate the full table with `npx tsx scripts/generate-powertrain-calibration-v2.ts` after pulling. Approximate 1→2 after the 2026-10-10 street remap: ~39 / 43 / 61 / 82 / 150 / 208 km/h across the demand breakpoints.
 
 ### Downshift speeds by demand (km/h)
 

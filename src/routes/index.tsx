@@ -3,7 +3,6 @@ import { createSeoHeadFromPath } from "@/lib/seo";
 import { LandingHero } from "@/components/LandingHero";
 import { LandingPlansSection } from "@/components/LandingPlansSection";
 import { ExperienceFamilyGrid } from "@/components/experiences/ExperienceFamilyGrid";
-import { MotionIntentDiagram } from "@/components/experiences/MotionIntentDiagram";
 import { ElcamosoMark } from "@/components/ElcamosoLogo";
 import { EXPERIENCE_FAMILIES, isDriveSongEnabled } from "@/lib/experiences";
 import { useReducedMotion } from "@/lib/drive/useReducedMotion";
@@ -76,34 +75,6 @@ function Landing() {
                 through the experience you choose.
               </p>
             </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="px-6 py-20 sm:px-12">
-        <div className="mx-auto max-w-3xl">
-          <h2 className="text-center text-3xl font-light tracking-tight sm:text-4xl">
-            Your driving becomes the arrangement.
-          </h2>
-          <div className="mt-10 flex flex-wrap justify-center gap-x-6 gap-y-2 text-[10px] tracking-[0.28em] text-muted-foreground uppercase">
-            {["Drums", "Bass", "Guitar", "Strings", "Motion"].map((label) => (
-              <span key={label}>{label}</span>
-            ))}
-          </div>
-          <div className="mt-12">
-            <MotionIntentDiagram />
-          </div>
-          <p className="mx-auto mt-10 max-w-md text-center text-sm text-muted-foreground">
-            Accelerate and the arrangement builds. Cruise and it settles. Lift and it breathes. No
-            two drives play exactly the same.
-          </p>
-          <div className="mt-8 text-center">
-            <Link
-              to="/symphony"
-              className="text-[10px] tracking-[0.24em] text-muted-foreground uppercase hover:text-foreground"
-            >
-              Drive Symphony
-            </Link>
           </div>
         </div>
       </section>

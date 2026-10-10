@@ -60,11 +60,18 @@ export function SessionBridge() {
       profileRules: settings.profileRules,
       activeProfileRules: activeCustom?.rules ?? [],
       dynamicDrive,
+      virtualTransmission: access.virtualTransmission,
       teslaFleetTelemetry: settings.teslaFleetTelemetry,
       driveOutputMode: settings.driveOutputMode,
       captureQuality: settings.captureQuality,
     });
-  }, [settings, activeCustom, access.advancedControls, access.dynamicDrive]);
+  }, [
+    settings,
+    activeCustom,
+    access.advancedControls,
+    access.dynamicDrive,
+    access.virtualTransmission,
+  ]);
 
   useEffect(() => {
     const prevSessionProfileId = lastSessionProfileIdRef.current;

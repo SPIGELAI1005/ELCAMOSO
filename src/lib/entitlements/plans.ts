@@ -35,6 +35,12 @@ export const ALL_ENTITLEMENTS: readonly Entitlement[] = [
 export const FREE_ENTITLEMENTS: readonly Entitlement[] = [
   "basic_drive",
   "basic_sound_profiles",
+  /**
+   * Motion-matched gear shifts (PowertrainSimulator) for every virtual-transmission
+   * Sound Profile the user can drive. Rev-match, overrun/turbo transients and shift-feel
+   * tuning stay in Drive+ (`dynamic_drive`, `rev_match`, `advanced_transients`).
+   */
+  "virtual_transmission",
   /** Basic Tesla ↔ phone QR pairing + sensor relay (not premium telemetry). */
   "phone_sensor",
   "symphony_essential",

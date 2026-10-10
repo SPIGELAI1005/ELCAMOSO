@@ -2,6 +2,8 @@
 
 Status: integration complete; recorded-sample realism not delivered.
 
+**Pilot review packet (target, gaps, gates, checklist):** [`docs/audio/AMERICAN_MUSCLE_V8_PILOT_REVIEW.md`](./audio/AMERICAN_MUSCLE_V8_PILOT_REVIEW.md).
+
 The `american-muscle-v8` Realism V2 path always starts with continuous procedural combustion, intake/body resonances, valvetrain texture, overrun and shift events. The Current renderer remains available on `/debug` for controlled A/B comparison.
 
 The typed source-of-truth is `src/lib/sound/realism/v2/american-v8-pilot-manifest.ts`. Every candidate must have an approved source and license record, confirmed American Muscle V8 identity, a consistent recording perspective, steady RPM and load anchors with confidence, verified loop boundaries, gain trim, overlap trim and a permitted playback-rate range. A changing-RPM rev sweep is not accepted as a steady loop.

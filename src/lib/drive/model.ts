@@ -55,6 +55,22 @@ export const IDLE_STATE: DriveState = {
 
 const clamp = (v: number, min = 0, max = 1) => Math.min(max, Math.max(min, v));
 
+/** Demand breakpoints shared with the powertrain shift map (see shift-map.ts). */
+const LEGACY_DEMAND_BREAKPOINTS = [0, 0.15, 0.35, 0.6, 0.8, 1] as const;
+
+function sampleDemandTable(table: number[], demand: number): number {
+  const d = clamp(demand);
+  for (let i = 0; i < LEGACY_DEMAND_BREAKPOINTS.length - 1 && i < table.length - 1; i++) {
+    const a = LEGACY_DEMAND_BREAKPOINTS[i]!;
+    const b = LEGACY_DEMAND_BREAKPOINTS[i + 1]!;
+    if (d <= b) {
+      const t = (d - a) / Math.max(0.001, b - a);
+      return table[i]! + (table[i + 1]! - table[i]!) * t;
+    }
+  }
+  return table[table.length - 1]!;
+}
+
 export interface ModelInput {
   speed: number;
   acceleration: number;
@@ -108,27 +124,37 @@ export function computeDriveState({
 
   const t = profile.transmission!;
   const kmh = speed * 3.6;
-  // Prefer staying in previous gear when still valid (hysteresis vs hunting).
-  let gear = previous.gear >= 1 ? previous.gear : 1;
-  const pickGear = (candidate: number) => {
-    const rpmAt = t.idleRpm + kmh * t.gearRatios[candidate - 1]!;
-    return rpmAt < t.redlineRpm * 0.85;
-  };
-  if (gear > t.gearRatios.length) gear = t.gearRatios.length;
-  // Upshift only when clearly past threshold; downshift with margin.
-  while (gear < t.gearRatios.length && !pickGear(gear)) gear += 1;
+  const topGear = t.gearRatios.length;
+  const span = t.redlineRpm - t.idleRpm;
+  // Slopes are physical rpm-per-km/h (see personalityLegacyTransmission): rpm = kmh × slope,
+  // floored at idle because a slipping clutch / converter never lets the engine stall.
+  const rpmInGear = (candidate: number) =>
+    Math.max(t.idleRpm, kmh * t.gearRatios[candidate - 1]!);
+  // Demand-dependent shift points. Personalities provide the same demand → RPM curve the
+  // Dynamic Drive simulator uses; otherwise a generic curve (relaxed ≈ 38 % of the rev span,
+  // flat out ≈ 92 %). Downshift line sits below the post-upshift drop so the box does not hunt.
+  const upshiftRpm = t.upshiftRpmByDemand
+    ? sampleDemandTable(t.upshiftRpmByDemand, throttle)
+    : t.idleRpm + span * clamp(0.38 + throttle * 0.54, 0.38, 0.92);
+  const downshiftRpm = Math.min(
+    upshiftRpm - span * 0.12,
+    t.downshiftRpm ?? t.idleRpm + span * 0.17,
+  );
+  const kickdownWanted = throttle > 0.78;
+
+  let gear = previous.gear >= 1 ? Math.min(previous.gear, topGear) : 1;
+  while (gear < topGear && rpmInGear(gear) > upshiftRpm) gear += 1;
   while (gear > 1) {
-    const rpmHere = t.idleRpm + kmh * t.gearRatios[gear - 1]!;
-    const downLine = t.idleRpm + (t.redlineRpm - t.idleRpm) * 0.28;
-    if (rpmHere < downLine && pickGear(gear - 1)) gear -= 1;
+    const lowerRpm = rpmInGear(gear - 1);
+    const coastDown = rpmInGear(gear) < downshiftRpm && lowerRpm < upshiftRpm - span * 0.08;
+    const kickDown =
+      kickdownWanted && rpmInGear(gear) < t.idleRpm + span * 0.5 && lowerRpm < t.redlineRpm * 0.8;
+    if (coastDown || kickDown) gear -= 1;
     else break;
   }
-  // Mechanical-ish RPM from legacy slope - no throttle×900 wander at cruise.
+  // Mechanical RPM from the physical slope - launch slip only below walking pace.
   const launchSlip = kmh < 8 ? throttle * 450 : throttle * 40;
-  const targetRpm = Math.min(
-    t.redlineRpm,
-    Math.max(t.idleRpm * 0.9, t.idleRpm + kmh * t.gearRatios[gear - 1]! + launchSlip),
-  );
+  const targetRpm = Math.min(t.redlineRpm, Math.max(t.idleRpm * 0.9, rpmInGear(gear) + launchSlip));
   const shiftWindow = Math.max(0.04, (feel.shiftMs / 1000) * (1.15 - feel.revMatch * 0.5));
   const shift = clamp(dt / (t.shiftSmoothing * (shiftWindow / 0.16)), 0, 1);
   const rpm = previous.rpm + (targetRpm - previous.rpm) * shift;

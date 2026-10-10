@@ -187,6 +187,14 @@ describe("American V8 pilot manifest", () => {
     expect(AMERICAN_V8_PILOT_MANIFEST.every((entry) => !isPilotEntryApproved(entry))).toBe(true);
     expect(missingPilotRecordingRequirements()).toHaveLength(9);
   });
+
+  it("reports all nine operating regions uncovered when the pilot bank is empty", async () => {
+    const { reportAmericanV8SampleCoverage, buildAmericanV8PilotBank, AMERICAN_V8_REQUIRED_REGIONS } =
+      await import("@/lib/sound/realism/v2/sample-bank");
+    const coverage = reportAmericanV8SampleCoverage(buildAmericanV8PilotBank());
+    expect(coverage.covered).toEqual([]);
+    expect(coverage.uncovered).toEqual([...AMERICAN_V8_REQUIRED_REGIONS]);
+  });
 });
 
 describe("HybridCombustionSynth phase + load", () => {
@@ -419,6 +427,149 @@ describe("HybridCombustionSynth phase + load", () => {
       overrun: 0,
       boostRelease: 1,
     });
+    synth.dispose();
+  });
+
+  function buildGt(ctx = mockCtx()) {
+    const synth = new HybridCombustionSynth();
+    const body = mockNode() as unknown as GainNode;
+    synth.build(ctx, getProfile("gt-v8"), {
+      body,
+      accents: mockNode() as unknown as GainNode,
+      beds: mockNode() as unknown as GainNode,
+      profile: body,
+    });
+    return synth;
+  }
+
+  function shiftFrames(direction: "up" | "down", fromGear: number) {
+    const base = {
+      ...IDLE_POWERTRAIN,
+      rpm: 3400,
+      mechanicalRpm: 3400,
+      driverDemand: 0.55,
+      engineLoad: 0.6,
+      throttle: 0.55,
+      load: 0.6,
+      normalizedRpm: 0.45,
+      gear: fromGear,
+      targetGear: direction === "up" ? fromGear + 1 : fromGear - 1,
+    };
+    return [
+      state({ rpm: 3400, throttle: 0.55, load: 0.6, speed: 14, powertrain: { ...base } }),
+      state({
+        rpm: 3400,
+        throttle: 0.55,
+        load: 0.6,
+        speed: 14,
+        powertrain: {
+          ...base,
+          shifting: true,
+          shiftDirection: direction,
+          shiftPhase: "torque_cut",
+          shiftProgress: 0.05,
+          shiftLoadMultiplier: 0.4,
+        },
+      }),
+      state({
+        rpm: 2600,
+        throttle: 0.55,
+        load: 0.6,
+        speed: 14,
+        powertrain: {
+          ...base,
+          gear: direction === "up" ? fromGear + 1 : fromGear - 1,
+          shifting: true,
+          shiftDirection: direction,
+          shiftPhase: "reengage",
+          shiftProgress: 0.8,
+          shiftLoadMultiplier: 0.8,
+        },
+      }),
+      state({ rpm: 2600, throttle: 0.55, load: 0.6, speed: 14, powertrain: { ...base, gear: fromGear + 1 } }),
+    ];
+  }
+
+  it("always renders a mechanical upshift pulse when the powertrain starts a shift", () => {
+    const synth = buildGt();
+    shiftFrames("up", 2).forEach((frame, i) => synth.update(frame, 0.1 + i * 0.05));
+    const d = synth.getDiagnostics();
+    expect((d.transientCounts.upshift ?? 0) + (d.transientCounts.downshift ?? 0)).toBeGreaterThan(0);
+    expect(d.eventCounts.shift).toBe(2);
+    expect(d.transientTier).toBe("full");
+    synth.dispose();
+  });
+
+  it("core tier keeps shift mechanics but drops Drive+ extras", () => {
+    const synth = buildGt();
+    synth.setAdvancedTransientsEnabled(false);
+    expect(synth.getDiagnostics().transientTier).toBe("core");
+    shiftFrames("up", 2).forEach((frame, i) => synth.update(frame, 0.1 + i * 0.05));
+    // Arm + lift for overrun.
+    for (let i = 0; i < 30; i += 1) {
+      synth.update(
+        state({
+          rpm: 4200,
+          throttle: 0.8,
+          load: 0.85,
+          speed: 20,
+          powertrain: { ...IDLE_POWERTRAIN, rpm: 4200, mechanicalRpm: 4200, gear: 3, throttle: 0.8, load: 0.85, driverDemand: 0.8, engineLoad: 0.85 },
+        }),
+        1 + i * 0.02,
+      );
+    }
+    synth.update(
+      state({
+        rpm: 4000,
+        throttle: 0.02,
+        load: 0.05,
+        regen: 0.5,
+        speed: 20,
+        powertrain: { ...IDLE_POWERTRAIN, rpm: 4000, mechanicalRpm: 4000, gear: 3, throttle: 0.02, load: 0.05, driverDemand: 0.02, engineLoad: 0.05, overrun: true },
+      }),
+      1.7,
+    );
+    const d = synth.getDiagnostics();
+    expect((d.transientCounts.upshift ?? 0) + (d.transientCounts["drivetrain-thump"] ?? 0)).toBeGreaterThan(0);
+    expect(d.transientCounts.overrun ?? 0).toBe(0);
+    expect(d.transientCounts["exhaust-pop"] ?? 0).toBe(0);
+    expect(d.transientCounts["rev-match"] ?? 0).toBe(0);
+    synth.dispose();
+  });
+
+  it("choreographs legacy (no powertrain) gear changes as pulse + thump", () => {
+    const synth = buildGt();
+    synth.update(state({ rpm: 3200, gear: 1, speed: 8, throttle: 0.4, load: 0.4 }), 0.1);
+    synth.update(
+      state({ rpm: 2200, gear: 2, speed: 8.2, throttle: 0.4, load: 0.3, isShifting: true }),
+      0.15,
+    );
+    synth.update(state({ rpm: 2300, gear: 2, speed: 8.4, throttle: 0.4, load: 0.3 }), 0.2);
+    const d = synth.getDiagnostics();
+    expect(d.transientCounts.upshift).toBe(1);
+    expect(d.transientCounts["drivetrain-thump"]).toBe(1);
+    expect(d.eventCounts.shift).toBe(1);
+    synth.dispose();
+  });
+
+  it("tracks engine orders with RPM and builds the pipe space when a convolver exists", () => {
+    const ctx = mockCtx();
+    (ctx as unknown as { createConvolver: () => unknown }).createConvolver = () => ({
+      ...mockNode(),
+      normalize: true,
+    });
+    const synth = buildGt(ctx);
+    expect(synth.getDiagnostics().spaceMode).toBe("pipe-ir");
+    synth.update(state({ rpm: 1500, throttle: 0.3, load: 0.3 }), 0.1);
+    const low = synth.getDiagnostics().orderHz;
+    synth.update(state({ rpm: 4500, throttle: 0.3, load: 0.3 }), 0.2);
+    const high = synth.getDiagnostics().orderHz;
+    expect(low).toHaveLength(3);
+    // V8: half order, firing order (4/rev) and 2× firing order.
+    expect(low[1]).toBeCloseTo((1500 / 60) * 4, 1);
+    expect(high[1]).toBeCloseTo((4500 / 60) * 4, 1);
+    expect(high[0]).toBeLessThan(high[1]!);
+    expect(high[2]).toBeGreaterThan(high[1]!);
     synth.dispose();
   });
 

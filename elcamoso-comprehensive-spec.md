@@ -557,10 +557,10 @@ Root layout (`__root.tsx`) renders `<Outlet />` and global providers/Toaster. No
 - **Routing:** `@tanstack/react-router`. No `react-router-dom`.
 - **Styling:** Tailwind CSS v4 with native CSS `@theme` variables in `src/styles.css`.
 - **State:** localStorage settings (schema v6) plus a Drive session singleton (`src/lib/drive/session.ts`) that owns the single `AudioContext`. UI reads snapshots via `useSyncExternalStore`. Switching Sound Profile while Listen / Demo / Drive is already live crossfades on the existing engine (`listenProfile`); do not stack a second `AudioContext`. Snapshot includes `motion` (`MotionEnergy` UI layer), `productStatus`, and `safetyMode` (above ~5 km/h on Drive/Demo).
-- **Audio:** Web Audio API. Cabin EQ after layer mix; intensity-band gain ceiling on top of the limiter; idle fade-then-suspend; call ducking on `AudioContext` interrupt. Optional Motion lookahead for Bluetooth. Realism V2 combustion uses sample-rate-aware overlapping pressure tails, DC-blocked excitation, fixed formant/body resonances, and subordinate low engine orders; it must not expose a raw pitched click train at firing cadence.
+- **Audio:** Web Audio API. Cabin EQ after layer mix; intensity-band gain ceiling on top of the limiter; idle fade-then-suspend; call ducking on `AudioContext` interrupt. Optional Motion lookahead for Bluetooth. Realism V2 combustion uses sample-rate-aware overlapping pressure tails, DC-blocked excitation with per-cycle jitter and a per-fire noise burst, fixed formant/body resonances, RPM-tracking engine-order resonators, a short decorrelated pipe/cabin impulse, and the shared transient scheduler for shifts (torque cut → thump → reengage bark); it must not expose a raw pitched click train at firing cadence. Load loudness lives on the combustion bus (cruise → full load 12–16 dB); stages before it shape timbre. Worklet readiness is tracked per AudioContext. See `docs/AUDIO_REALISM_V2.md`.
 - **American Muscle V8 hybrid pilot:** procedural combustion remains continuous and authoritative. Only provenance-complete, license-approved, steady-state recordings may enter its typed bank. Adjacent RPM/load layers use bounded target/source-RPM playback rates and measured linear-amplitude overlap trim; uncovered regions fall back explicitly to procedural sound. Current Engine remains the developer A/B control. See `docs/AMERICAN_V8_HYBRID_PILOT.md`.
 - **Chrome:** Mobile bottom nav Drive / Sounds / Studio / Garage; Demo and Settings via menu. Hide BrandNav, bottom nav, and MiniPlayer during Drive safety mode.
-- Motion: multi-source fusion in `src/lib/motion/sensor-fusion.ts` (GPS, DeviceMotion, phone relay, vehicle telemetry). Delta GPS speed when `GeolocationCoordinates.speed` is null (`src/lib/drive/gps-speed.ts`). Drive context classifier is on-device (`src/lib/drive/context.ts`). Dynamic Drive adds `PowertrainSimulator` + `DynamicDriveSynth` when `settings.dynamicDrive` is on. Demo motion: `src/lib/drive/demo-physics.ts`. Architecture guide: `docs/DYNAMIC_DRIVE_ARCHITECTURE.md`. Drive traces live in IndexedDB, not the service worker cache.
+- Motion: multi-source fusion in `src/lib/motion/sensor-fusion.ts` (GPS, DeviceMotion, phone relay, vehicle telemetry). Delta GPS speed when `GeolocationCoordinates.speed` is null (`src/lib/drive/gps-speed.ts`). Drive context classifier is on-device (`src/lib/drive/context.ts`). `PowertrainSimulator` runs for every virtual-transmission profile on live drives (`virtual_transmission` is FREE); Dynamic Drive (`settings.dynamicDrive` + `dynamic_drive` entitlement, or Demo) unlocks rev-match and the advanced transient tier (`shouldUseDynamicPowertrain`, `dynamicDriveExtrasActive`). Demo motion: `src/lib/drive/demo-physics.ts`. Architecture guide: `docs/DYNAMIC_DRIVE_ARCHITECTURE.md`. Drive traces live in IndexedDB, not the service worker cache.
 - **i18n:** EN / DE / RO dictionaries in `src/lib/i18n`, plus metric/imperial units.
 - **Auth / Cloud:** Opt-in **ELCAMOSO Cloud** via thin `createServerFn` wrappers in `src/lib/cloud/server-fns.ts`. Keys stay on the server. User-facing name is ELCAMOSO Cloud, never Supabase.
 - **Telemetry:** Opt-in usage insights and on-device crash log. Ingest via `ingestTelemetryFn`. Share codes via `createShareFn` / `loadShareFn` (payload URLs are the durable share path).
@@ -587,6 +587,11 @@ Root layout (`__root.tsx`) renders `<Outlet />` and global providers/Toaster. No
 - Product access is capability-based. `FREE` preserves every legacy grant and adds the minimum
   creative loop: essential Engine, one Symphony experience when approved assets exist, Worlds
   sampler, Drive DNA, local Journey history, basic Drive Song, basic sharing, and phone pairing.
+- `FREE` includes the virtual transmission for combustion profiles on live drives
+  (`virtual_transmission`: PowertrainSimulator gears plus the core shift transients - upshift,
+  downshift, drivetrain thump). Rev-match, overrun crackle, turbo breath and shift-feel tuning are
+  Dynamic Drive (`dynamic_drive`): Drive+, trial, or Demo. Motion-matched gear shifts must never
+  be degraded to upsell; only the extras are gated.
 - `DRIVE_PLUS` grants the complete catalog, Fusion, full Journey history, remixes, Drive Reel,
   advanced Studio, premium presets, and future Experience Drops. Existing subscription records are
   never rewritten merely because packaging changes.
@@ -639,7 +644,7 @@ Shipped on the current app (session spine first):
 4. Media Session; screen wake lock for live Drive (re-acquired on resume); Drive visibility hide grace (~2.8 s) before idle suspend; call ducking.
 5. IndexedDB drive traces, replay, and 15 s render-to-audio clips.
 6. Auto Sound Profile rules (speed band, hour, drive minutes).
-7. Virtual-transmission gear-shift feel (legacy path) plus Dynamic Drive shift transients (scheduler: probability, cooldown, variant pools, aspiration gates — see `docs/dynamic-drive-transients.md`).
+7. Virtual-transmission gear shifts for every user (simulator on live drives; legacy `computeDriveState` fallback shifts at road speeds from physically scaled personality ratios) plus Dynamic Drive transients (scheduler: probability, cooldown, variant pools, aspiration gates — see `docs/dynamic-drive-transients.md`) in both the Current and Realism V2 engines; the full transient tier is Drive+ / trial / Demo.
 8. Persistent mini-player, Sounds search/cards/A/B/packs, Studio undo and presets.
 9. EN/DE/RO, units, settings search, restore recommended, a11y focus and 44 px sliders.
 10. Opt-in ELCAMOSO Cloud sync, prompt-to-sound recipes, and aggregate-only drive coach (confirm before switching while driving).

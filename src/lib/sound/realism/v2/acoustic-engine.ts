@@ -100,29 +100,38 @@ const GT_V8: AcousticEngineConfig = {
   redlineRpm: 6500,
 };
 
+/**
+ * American Muscle V8 acoustic defaults (design choices, not a named vehicle).
+ * Aligned with drivetrain personality idle lope; deep exhaust formants; NA.
+ * Sample-assisted realism still requires approved steady-state loops - see
+ * docs/audio/AMERICAN_MUSCLE_V8_PILOT_REVIEW.md.
+ */
 const AMERICAN_V8: AcousticEngineConfig = {
   cylinders: 8,
   stroke: "four-stroke",
   architecture: "cross-plane-v8-lope",
   banks: "v90",
   architectureCode: 1,
-  idleIrregularity: 0.32,
-  exhaustPulse: 0.96,
-  intakePresence: 0.28,
-  mechanicalIntensity: 0.22,
-  combustionSharpness: 0.56,
-  highLoadEnrichment: 0.6,
-  loadContrast: 0.82,
-  upperRpmEnergy: 0.34,
-  intakeLoadResponse: 0.62,
-  overrunCharacter: 0.42,
-  exhaustFormantsHz: [84, 168, 335, 630],
-  intakeFormantsHz: [390, 880, 1480],
-  bodyResonanceHz: [92, 185, 410],
+  // Design: stronger idle lope than GT; matches personality acoustic hint (~0.42).
+  idleIrregularity: 0.4,
+  exhaustPulse: 0.98,
+  intakePresence: 0.26,
+  mechanicalIntensity: 0.2,
+  // Design: slightly softer edge so body/exhaust dominate over metallic grit.
+  combustionSharpness: 0.5,
+  highLoadEnrichment: 0.66,
+  loadContrast: 0.86,
+  upperRpmEnergy: 0.3,
+  intakeLoadResponse: 0.58,
+  // Design: more lift-off character than GT (burble-adjacent, still NA).
+  overrunCharacter: 0.55,
+  exhaustFormantsHz: [78, 156, 312, 580],
+  intakeFormantsHz: [360, 820, 1380],
+  bodyResonanceHz: [86, 172, 390],
   supportRatios: [1, 2, 2.5, 3, 4],
-  supportWeights: [0.82, 0.62, 0.16, 0.34, 0.13],
+  supportWeights: [0.88, 0.66, 0.14, 0.3, 0.11],
   forcedInduction: false,
-  bodyBrightness: 0.41,
+  bodyBrightness: 0.36,
   redlineRpm: 6000,
 };
 

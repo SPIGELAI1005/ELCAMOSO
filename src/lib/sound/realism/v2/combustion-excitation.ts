@@ -23,29 +23,38 @@ export interface CombustionExcitationHandle {
   mode: "worklet" | "fallback";
 }
 
-let workletReady = false;
-let workletLoadPromise: Promise<boolean> | null = null;
+/**
+ * Worklet modules are registered per AudioContext. A single global flag used to mark the
+ * module as loaded after the first context, so every later context (each Stop → Play
+ * creates a new AudioContext; every OfflineAudioContext render too) silently fell back to
+ * the procedural noise excitation. Track readiness per context instead.
+ */
+const readyContexts = new WeakSet<BaseAudioContext>();
+const loadPromises = new WeakMap<BaseAudioContext, Promise<boolean>>();
 
-export function isCombustionWorkletReady() {
-  return workletReady;
+export function isCombustionWorkletReady(ctx?: BaseAudioContext) {
+  return ctx ? readyContexts.has(ctx) : false;
 }
 
 export function ensureCombustionWorklet(ctx: BaseAudioContext): Promise<boolean> {
   if (!("audioWorklet" in ctx) || !ctx.audioWorklet) return Promise.resolve(false);
-  if (workletReady) return Promise.resolve(true);
-  if (workletLoadPromise) return workletLoadPromise;
-  workletLoadPromise = (async () => {
+  if (readyContexts.has(ctx)) return Promise.resolve(true);
+  const pending = loadPromises.get(ctx);
+  if (pending) return pending;
+  const promise = (async () => {
     try {
       if (!ctx.audioWorklet) return false;
       await ctx.audioWorklet.addModule("/audio/combustion-processor.js");
-      workletReady = true;
+      readyContexts.add(ctx);
       return true;
     } catch {
-      workletReady = false;
       return false;
+    } finally {
+      loadPromises.delete(ctx);
     }
   })();
-  return workletLoadPromise;
+  loadPromises.set(ctx, promise);
+  return promise;
 }
 
 function createFallbackExcitation(ctx: BaseAudioContext): CombustionExcitationHandle {
@@ -170,7 +179,7 @@ function createWorkletExcitation(ctx: BaseAudioContext): CombustionExcitationHan
 
 /** Synchronous factory - prefers worklet when already loaded. */
 export function createCombustionExcitation(ctx: BaseAudioContext): CombustionExcitationHandle {
-  if (workletReady && "audioWorklet" in ctx) {
+  if (readyContexts.has(ctx) && "audioWorklet" in ctx) {
     const worklet = createWorkletExcitation(ctx);
     if (worklet) return worklet;
   }
