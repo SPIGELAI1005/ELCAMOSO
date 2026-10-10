@@ -10,7 +10,9 @@ is `src/routes/__root.tsx`.
 | File                     | URL                                                     |
 | ------------------------ | ------------------------------------------------------- |
 | `index.tsx`              | `/`                                                     |
-| `about.tsx`              | `/about`                                                |
+| `story.tsx`              | `/story` (product story; About menu)                    |
+| `about.tsx`              | `/about` → redirects to `/story`                        |
+| `science.tsx`            | `/science`                                              |
 | `users/index.tsx`        | `/users`                                                |
 | `users/$id.tsx`          | `/users/:id` (dynamic - bare `$`, no curly braces)      |
 | `posts/{-$category}.tsx` | `/posts/:category?` (optional segment)                  |

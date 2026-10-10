@@ -2,7 +2,6 @@ import {
   forwardRef,
   memo,
   useEffect,
-  useLayoutEffect,
   useRef,
   useState,
   type CSSProperties,
@@ -74,10 +73,6 @@ function markRadiateAnimation(index: number, cycleMs: number, phaseOffsetMs = 0)
   return `wave-radiate ${cycleMs}ms ease-out ${delayMs}ms infinite`;
 }
 
-function markHeroRadiateAnimation(index: number, cycleMs: number) {
-  return markRadiateAnimation(index, cycleMs, -cycleMs * WAVE_RADIATE_PEAK_OFFSET);
-}
-
 export function useHeroWavePhase(): { phase: HeroWavePhase; reducedMotion: boolean } {
   const reducedMotion = useReducedMotion();
   const [phase, setPhase] = useState<HeroWavePhase>(() => (reducedMotion ? "radiate" : "intro"));
@@ -144,10 +139,9 @@ export const ElcamosoMark = memo(function ElcamosoMark({
   const drive = Math.min(1, Math.max(0, throttle));
   const brake = Math.min(1, Math.max(0, regen));
   const dirIn = direction === "inward" || (direction !== "outward" && brake > drive);
+  const heroMotion = Boolean(heroPhase) && !reducedMotion;
   const live = !heroPhase && !reducedMotion && (drive > 0.02 || brake > 0.02 || intensity > 0.08);
-  const animateIn = !reducedMotion && (heroPhase === "intro" || (animate && !heroPhase));
-  const heroHold = heroPhase === "hold";
-  const heroRadiate = heroPhase === "radiate" && !reducedMotion;
+  const animateIn = !reducedMotion && !heroPhase && animate;
   const cycleMs = markRadiateCycleMs(intensity, waveResponse, drive);
   const cycleRef = useRef(cycleMs);
   if (Math.abs(cycleMs - cycleRef.current) >= 40) cycleRef.current = cycleMs;
@@ -167,11 +161,9 @@ export const ElcamosoMark = memo(function ElcamosoMark({
         stroke="currentColor"
         strokeWidth="3.4"
         style={
-          animateIn
+          heroMotion || animateIn
             ? { animation: `wave-in ${WAVE_IN_MS}ms ease-out both` }
-            : heroHold || heroRadiate
-              ? { opacity: 1, transform: "translateX(0)" }
-              : undefined
+            : undefined
         }
       />
       {WAVES.map((wave, i) => {
@@ -182,12 +174,17 @@ export const ElcamosoMark = memo(function ElcamosoMark({
           : brake * (1.2 + i * 0.9);
         const shift = reducedMotion ? 0 : out - inn;
         const waveScale = 1 + intensity * 0.04 * (i + 1);
-        const waveOpacity = heroHold ? 1 : (0.08 + lit * 0.92) * (1 - brake * 0.45);
+        const waveOpacity = (0.08 + lit * 0.92) * (1 - brake * 0.45);
         const waveTransform = heroPhase
           ? `translateX(0px) scale(${waveScale})`
           : `translateX(${shift}px) scale(${waveScale})`;
+        const introDelay = WAVE_IN_LEAD_MS + i * WAVE_IN_STAGGER_MS;
+        const radiateDelay =
+          HERO_RADIATE_AT_MS +
+          i * WAVE_RADIATE_STAGGER_MS -
+          MARK_IDLE_RADIATE_CYCLE_MS * WAVE_RADIATE_PEAK_OFFSET;
         const waveTransition =
-          animateIn || heroRadiate
+          heroMotion || animateIn || live
             ? undefined
             : reducedMotion
               ? "opacity 400ms ease-out"
@@ -205,21 +202,23 @@ export const ElcamosoMark = memo(function ElcamosoMark({
               transform: waveTransform,
               transformOrigin: "20px 36px",
               transition: waveTransition,
-              ...(animateIn
+              ...(heroMotion
                 ? {
-                    animation: `wave-in ${WAVE_IN_MS}ms ease-out ${WAVE_IN_LEAD_MS + i * WAVE_IN_STAGGER_MS}ms both`,
+                    // Intro then idle pulse in one CSS timeline (no React phase handoff required).
+                    animation: [
+                      `wave-in ${WAVE_IN_MS}ms ease-out ${introDelay}ms both`,
+                      `wave-radiate ${MARK_IDLE_RADIATE_CYCLE_MS}ms ease-out ${radiateDelay}ms infinite`,
+                    ].join(", "),
                   }
-                : heroHold
-                  ? {}
-                  : heroRadiate
+                : animateIn
+                  ? {
+                      animation: `wave-in ${WAVE_IN_MS}ms ease-out ${introDelay}ms both`,
+                    }
+                  : live
                     ? {
-                        animation: markHeroRadiateAnimation(i, MARK_IDLE_RADIATE_CYCLE_MS),
+                        animation: markRadiateAnimation(i, cycle),
                       }
-                    : live
-                      ? {
-                          animation: markRadiateAnimation(i, cycle),
-                        }
-                      : {}),
+                    : {}),
             }}
           />
         );
@@ -230,6 +229,14 @@ export const ElcamosoMark = memo(function ElcamosoMark({
 
 const WORDMARK_LETTERS = ["E", "L", "C", "A", "M", "O", "S", "O"] as const;
 
+/** Intro hold + idle radiate start, matching useHeroWavePhase timing. */
+const HERO_RADIATE_AT_MS =
+  MARK_WAVE_IN_DURATION_MS + HERO_WAVE_HANDOFF_MS + HERO_MARK_RADIATE_DELAY_MS;
+
+/**
+ * CSS-chained intro → idle pulse so MOSO keeps radiating even if React phase
+ * timers never advance (e.g. delayed hydration).
+ */
 function mosoLetterStyle(
   heroPhase: HeroWavePhase | "off" | undefined,
   mosoIndex: number,
@@ -237,22 +244,18 @@ function mosoLetterStyle(
 ): CSSProperties | undefined {
   if (!heroPhase || heroPhase === "off" || reducedMotion) return undefined;
 
-  const display = { display: "inline-block" as const };
-
-  if (heroPhase === "intro") {
-    return {
-      ...display,
-      animation: `wordmark-letter-in ${WAVE_IN_MS}ms ease-out ${WAVE_IN_LEAD_MS + mosoIndex * WAVE_IN_STAGGER_MS}ms both`,
-    };
-  }
-
-  if (heroPhase === "hold") {
-    return { ...display, opacity: 1 };
-  }
+  const introDelay = WAVE_IN_LEAD_MS + mosoIndex * WAVE_IN_STAGGER_MS;
+  const radiateDelay =
+    HERO_RADIATE_AT_MS +
+    mosoIndex * WAVE_RADIATE_STAGGER_MS -
+    MARK_IDLE_RADIATE_CYCLE_MS * WAVE_RADIATE_PEAK_OFFSET;
 
   return {
-    ...display,
-    animation: markHeroRadiateAnimation(mosoIndex, MARK_IDLE_RADIATE_CYCLE_MS),
+    display: "inline-block",
+    animation: [
+      `wordmark-letter-in ${WAVE_IN_MS}ms ease-out ${introDelay}ms both`,
+      `wave-radiate ${MARK_IDLE_RADIATE_CYCLE_MS}ms ease-out ${radiateDelay}ms infinite`,
+    ].join(", "),
   };
 }
 
@@ -292,67 +295,46 @@ export const ElcamosoWordmark = forwardRef<
 
 const WORDMARK_EXPANSION_WORDS = ["ELECTRIC", "CAR", "MOTION", "SOUND"] as const;
 
-const WORDMARK_EXPANSION_INLINE_TEXT = WORDMARK_EXPANSION_WORDS.map((word) =>
-  word.split("").join("\u00a0"),
-).join("\u00a0\u00a0");
+/** Letter + word-gap tokens so the line can flex to the ELCAMOSO width. */
+const WORDMARK_EXPANSION_TOKENS = WORDMARK_EXPANSION_WORDS.flatMap((word, wordIndex) => {
+  const letters = [...word].map((letter, letterIndex) => ({
+    key: `${word}-${letterIndex}`,
+    kind: "letter" as const,
+    letter,
+  }));
+  if (wordIndex >= WORDMARK_EXPANSION_WORDS.length - 1) return letters;
+  return [
+    ...letters,
+    { key: `gap-${wordIndex}`, kind: "gap" as const, letter: "\u00a0" },
+  ];
+});
 
-function useFitExpansionWidth(targetWidth: number | undefined, enabled: boolean) {
-  const ref = useRef<HTMLParagraphElement>(null);
-
-  useLayoutEffect(() => {
-    const el = ref.current;
-    if (!el || !enabled || !targetWidth) return;
-
-    const fit = () => {
-      el.style.width = "auto";
-      el.style.minWidth = "0";
-      el.style.maxWidth = "none";
-      el.style.letterSpacing = "0px";
-
-      const naturalWidth = el.offsetWidth;
-      el.style.width = `${targetWidth}px`;
-      el.style.minWidth = `${targetWidth}px`;
-      el.style.maxWidth = `${targetWidth}px`;
-
-      if (naturalWidth >= targetWidth - 0.5 || WORDMARK_EXPANSION_INLINE_TEXT.length < 2) {
-        el.style.letterSpacing = "0px";
-        return;
-      }
-
-      const spacing = (targetWidth - naturalWidth) / (WORDMARK_EXPANSION_INLINE_TEXT.length - 1);
-      el.style.letterSpacing = `${spacing}px`;
-    };
-
-    fit();
-    const observer = new ResizeObserver(fit);
-    observer.observe(el);
-    if (el.parentElement) observer.observe(el.parentElement);
-    return () => observer.disconnect();
-  }, [targetWidth, enabled]);
-
-  return ref;
-}
-
+/**
+ * Expansion line under ELCAMOSO. Parent must be the wordmark-width lockup
+ * (`w-fit` from the wordmark); this row is `w-full` + flex space-between so
+ * its length always matches the logo text on web and mobile (no JS measure).
+ */
 export const WordmarkExpansion = memo(function WordmarkExpansion({
   className,
   ariaHidden,
-  width,
 }: {
   className?: string;
   ariaHidden?: boolean;
-  width?: number;
 }) {
-  const ref = useFitExpansionWidth(width, Boolean(width));
-
-  if (!width) return null;
-
   return (
     <p
-      ref={ref}
-      className={cn("wordmark-expansion wordmark-expansion--inline block", className)}
+      className={cn("wordmark-expansion", className)}
       aria-hidden={ariaHidden ? true : undefined}
     >
-      {WORDMARK_EXPANSION_INLINE_TEXT}
+      {WORDMARK_EXPANSION_TOKENS.map((token) =>
+        token.kind === "gap" ? (
+          <span key={token.key} className="wordmark-expansion__gap" aria-hidden="true">
+            {token.letter}
+          </span>
+        ) : (
+          <span key={token.key}>{token.letter}</span>
+        ),
+      )}
     </p>
   );
 });

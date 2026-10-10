@@ -124,6 +124,28 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   errorComponent: ErrorComponent,
 });
 
+/** Closes header <details> menus on outside click / Escape even before React hydrates. */
+const DESKTOP_NAV_DISMISS_SCRIPT = `(function(){
+  if (window.__elcamosoDesktopNavDismiss) return;
+  function close(except){
+    document.querySelectorAll("details[data-nav-group]").forEach(function(node){
+      if (except && node === except) return;
+      node.open = false;
+    });
+  }
+  var onPointerDown = function(event){
+    var target = event.target;
+    if (!(target instanceof Element)) return;
+    close(target.closest("details[data-nav-group]"));
+  };
+  var onKeyDown = function(event){
+    if (event.key === "Escape") close(null);
+  };
+  document.addEventListener("pointerdown", onPointerDown, true);
+  document.addEventListener("keydown", onKeyDown);
+  window.__elcamosoDesktopNavDismiss = { onPointerDown: onPointerDown, onKeyDown: onKeyDown };
+})();`;
+
 function RootShell({ children }: { children: ReactNode }) {
   return (
     <html lang={seoHtmlLang()}>
@@ -132,6 +154,7 @@ function RootShell({ children }: { children: ReactNode }) {
       </head>
       <body>
         {children}
+        <script dangerouslySetInnerHTML={{ __html: DESKTOP_NAV_DISMISS_SCRIPT }} />
         <Scripts />
       </body>
     </html>

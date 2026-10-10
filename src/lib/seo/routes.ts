@@ -104,8 +104,21 @@ export const INDEXABLE_ROUTE_POLICIES: SeoRoutePolicy[] = [
     ],
   },
   {
-    path: "/about",
+    path: "/story",
     indexable: true,
+    title: "Story - ELCAMOSO",
+    description:
+      "ELCAMOSO turns motion into sound live or after you arrive. Discover responsive EV experiences and private, silence-first journey capture.",
+    image: IMG,
+    imageAlt: ALT,
+    breadcrumbs: [
+      { name: "Home", path: "/" },
+      { name: "Story", path: "/story" },
+    ],
+  },
+  {
+    path: "/about",
+    indexable: false,
     title: "About ELCAMOSO",
     description:
       "ELCAMOSO turns motion into sound live or after you arrive. Discover responsive EV experiences and private, silence-first journey capture.",
@@ -113,7 +126,7 @@ export const INDEXABLE_ROUTE_POLICIES: SeoRoutePolicy[] = [
     imageAlt: ALT,
     breadcrumbs: [
       { name: "Home", path: "/" },
-      { name: "About", path: "/about" },
+      { name: "Story", path: "/story" },
     ],
   },
   {

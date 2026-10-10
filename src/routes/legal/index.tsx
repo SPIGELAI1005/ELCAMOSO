@@ -24,8 +24,8 @@ function LegalIndex() {
             </li>
           ))}
           <li>
-            <Link to="/about" className="text-foreground underline-offset-2 hover:underline">
-              About ELCAMOSO
+            <Link to="/story" className="text-foreground underline-offset-2 hover:underline">
+              Story
             </Link>
           </li>
         </ul>

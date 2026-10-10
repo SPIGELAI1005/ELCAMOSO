@@ -776,10 +776,16 @@ function AboutWorkspace({
         <p className="mt-2 text-sm text-muted-foreground">Your EV. Your Sound.</p>
         <div className="mt-5 flex flex-wrap gap-x-5 gap-y-2">
           <Link
-            to="/about"
+            to="/story"
             className="text-xs tracking-[0.24em] text-muted-foreground uppercase hover:text-foreground"
           >
-            About
+            Story
+          </Link>
+          <Link
+            to="/science"
+            className="text-xs tracking-[0.24em] text-muted-foreground uppercase hover:text-foreground"
+          >
+            Science
           </Link>
           <Link
             to="/legal/privacy"

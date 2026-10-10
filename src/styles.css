@@ -166,6 +166,11 @@
 
 .wordmark-expansion {
   box-sizing: border-box;
+  display: flex;
+  width: 100%;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0;
   margin-inline: auto;
   font-family: var(--font-display);
   font-weight: 300;
@@ -175,9 +180,16 @@
   color: var(--foreground-secondary);
 }
 
-.wordmark-expansion--inline {
+.wordmark-expansion > span {
+  flex: 0 0 auto;
+  min-width: 0;
   white-space: nowrap;
-  overflow: visible;
+}
+
+/** Extra flex slot between words so word gaps read wider than letter gaps. */
+.wordmark-expansion__gap {
+  flex: 0 0 0.35em;
+  width: 0.35em;
 }
 
 /** Native range control: track + thumb styled in base; keep touch height in className. */

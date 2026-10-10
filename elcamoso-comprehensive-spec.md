@@ -487,8 +487,9 @@ Primary navigation is minimal. Main routes:
 | `/connect/$sessionId`               | Legacy phone join path (still supported)                                                                  |
 | `/auth/account/callback`            | Email magic-link verification; sets HttpOnly account session cookie                                       |
 | `/auth/account/google/callback`     | Google OAuth Authorization Code callback (server GET exchange + cookie); never expose client secret       |
-| `/about`                            | Product about                                                                                             |
-| `/science`                          | Science of ELCAMOSO: motion-to-music composition model for Symphony Experiences                         |
+| `/story`                            | Product story (About menu → Story); origin narrative and product positioning                              |
+| `/about`                            | Legacy redirect → `/story`                                                                                |
+| `/science`                          | Science of ELCAMOSO: motion-to-music composition model (About menu → Science)                             |
 | `/legal`                            | Legal hub                                                                                                 |
 | `/legal/impressum`                  | German Impressum (TMG)                                                                                    |
 | `/legal/privacy`                    | Privacy / Datenschutzerklärung (GDPR + US)                                                                |
@@ -498,6 +499,14 @@ Primary navigation is minimal. Main routes:
 | `/debug` (dev-only)                 | Diagnostics panel; Original/Improved/Realism V2 A/B                                                       |
 | `/debug/symphony-assets` (dev-only) | Pack BPM/bars/license audit; missing WAV placeholders; misaligned BPM/bars                                |
 | `/debug/calibration` (dev-only)     | Road-test calibration lab: capture/replay traces, Current vs V2, Dynamic vs Legacy                        |
+
+**Header menu hierarchy (desktop dropdowns + mobile hamburger accordion):**
+- **Explore** → Explore, Demo
+- **Sounds** → Sounds, Studio, Garage
+- **About** → Story, Science
+- Top-level: Drive, Pricing, Settings (plus Home in the mobile sheet)
+
+Selecting a submenu item closes the desktop dropdown and the mobile sheet. Bottom chrome remains Drive · Explore · Studio · Garage for one-tap access while driving.
 
 Site footer (`SiteFooter`) and cookie consent bar (`CookieConsent`) render from the root layout. Operator details live in `src/lib/legal/operator.ts` (replace PLACEHOLDERs before public DE/EU launch).
 
@@ -559,7 +568,7 @@ Root layout (`__root.tsx`) renders `<Outlet />` and global providers/Toaster. No
 - **State:** localStorage settings (schema v6) plus a Drive session singleton (`src/lib/drive/session.ts`) that owns the single `AudioContext`. UI reads snapshots via `useSyncExternalStore`. Switching Sound Profile while Listen / Demo / Drive is already live crossfades on the existing engine (`listenProfile`); do not stack a second `AudioContext`. Snapshot includes `motion` (`MotionEnergy` UI layer), `productStatus`, and `safetyMode` (above ~5 km/h on Drive/Demo).
 - **Audio:** Web Audio API. Cabin EQ after layer mix; intensity-band gain ceiling on top of the limiter; idle fade-then-suspend; call ducking on `AudioContext` interrupt. Optional Motion lookahead for Bluetooth. Realism V2 combustion uses sample-rate-aware overlapping pressure tails, DC-blocked excitation with per-cycle jitter and a per-fire noise burst, fixed formant/body resonances, RPM-tracking engine-order resonators, a short decorrelated pipe/cabin impulse, and the shared transient scheduler for shifts (torque cut → thump → reengage bark); it must not expose a raw pitched click train at firing cadence. Load loudness lives on the combustion bus (cruise → full load 12–16 dB); stages before it shape timbre. Worklet readiness is tracked per AudioContext. See `docs/AUDIO_REALISM_V2.md`.
 - **American Muscle V8 hybrid pilot:** procedural combustion remains continuous and authoritative. Only provenance-complete, license-approved, steady-state recordings may enter its typed bank. Adjacent RPM/load layers use bounded target/source-RPM playback rates and measured linear-amplitude overlap trim; uncovered regions fall back explicitly to procedural sound. Current Engine remains the developer A/B control. See `docs/AMERICAN_V8_HYBRID_PILOT.md`.
-- **Chrome:** Mobile bottom nav Drive / Sounds / Studio / Garage; Demo and Settings via menu. Hide BrandNav, bottom nav, and MiniPlayer during Drive safety mode.
+- **Chrome:** Mobile bottom nav Drive / Explore / Studio / Garage; Demo under Explore in the header menu, Studio/Garage also under Sounds. Hide BrandNav, bottom nav, and MiniPlayer during Drive safety mode.
 - Motion: multi-source fusion in `src/lib/motion/sensor-fusion.ts` (GPS, DeviceMotion, phone relay, vehicle telemetry). Delta GPS speed when `GeolocationCoordinates.speed` is null (`src/lib/drive/gps-speed.ts`). Drive context classifier is on-device (`src/lib/drive/context.ts`). `PowertrainSimulator` runs for every virtual-transmission profile on live drives (`virtual_transmission` is FREE); Dynamic Drive (`settings.dynamicDrive` + `dynamic_drive` entitlement, or Demo) unlocks rev-match and the advanced transient tier (`shouldUseDynamicPowertrain`, `dynamicDriveExtrasActive`). Demo motion: `src/lib/drive/demo-physics.ts`. Architecture guide: `docs/DYNAMIC_DRIVE_ARCHITECTURE.md`. Drive traces live in IndexedDB, not the service worker cache.
 - **i18n:** EN / DE / RO dictionaries in `src/lib/i18n`, plus metric/imperial units.
 - **Auth / Cloud:** Opt-in **ELCAMOSO Cloud** via thin `createServerFn` wrappers in `src/lib/cloud/server-fns.ts`. Keys stay on the server. User-facing name is ELCAMOSO Cloud, never Supabase.

@@ -67,7 +67,7 @@ See `docs/FUSION_AUDIO.md`. Flag: `FUSION_ENABLED` (default on).
 | `/garage`   | Tabs: Sounds · Experiences · Songs · Journeys                |
 | `/studio`   | Unchanged                                                    |
 
-Primary nav: **Drive · Explore · Studio · Garage**. `/sounds` remains linked from Explore and desktop menu.
+Bottom chrome: **Drive · Explore · Studio · Garage**. Header groups Explore (Explore, Demo), Sounds (Sounds, Studio, Garage), and About (Story, Science). `/sounds` remains a first-class route.
 
 ---
 

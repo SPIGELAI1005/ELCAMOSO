@@ -141,7 +141,8 @@ function Landing() {
               ["/worlds", "Worlds"],
               ["/fusion", "Fusion"],
               ["/pricing", "Pricing"],
-              ["/about", "About"],
+              ["/story", "Story"],
+              ["/science", "Science"],
             ] as const
           ).map(([to, label]) => (
             <Link

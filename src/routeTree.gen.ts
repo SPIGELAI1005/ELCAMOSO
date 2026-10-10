@@ -29,6 +29,7 @@ import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as ShareRouteImport } from './routes/share'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as SoundsRouteImport } from './routes/sounds'
+import { Route as StoryRouteImport } from './routes/story'
 import { Route as StudioRouteImport } from './routes/studio'
 import { Route as SymphonyRouteImport } from './routes/symphony'
 import { Route as WorldsRouteImport } from './routes/worlds'
@@ -159,6 +160,11 @@ const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
 const SoundsRoute = SoundsRouteImport.update({
   id: '/sounds',
   path: '/sounds',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StoryRoute = StoryRouteImport.update({
+  id: '/story',
+  path: '/story',
   getParentRoute: () => rootRouteImport,
 } as any)
 const StudioRoute = StudioRouteImport.update({
@@ -339,6 +345,7 @@ export interface FileRoutesByFullPath {
   '/share': typeof ShareRouteWithChildren
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/sounds': typeof SoundsRoute
+  '/story': typeof StoryRoute
   '/studio': typeof StudioRoute
   '/symphony': typeof SymphonyRoute
   '/worlds': typeof WorldsRoute
@@ -391,6 +398,7 @@ export interface FileRoutesByTo {
   '/share': typeof ShareRouteWithChildren
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/sounds': typeof SoundsRoute
+  '/story': typeof StoryRoute
   '/studio': typeof StudioRoute
   '/symphony': typeof SymphonyRoute
   '/worlds': typeof WorldsRoute
@@ -445,6 +453,7 @@ export interface FileRoutesById {
   '/share': typeof ShareRouteWithChildren
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/sounds': typeof SoundsRoute
+  '/story': typeof StoryRoute
   '/studio': typeof StudioRoute
   '/symphony': typeof SymphonyRoute
   '/worlds': typeof WorldsRoute
@@ -500,6 +509,7 @@ export interface FileRouteTypes {
     | '/share'
     | '/sitemap.xml'
     | '/sounds'
+    | '/story'
     | '/studio'
     | '/symphony'
     | '/worlds'
@@ -552,6 +562,7 @@ export interface FileRouteTypes {
     | '/share'
     | '/sitemap.xml'
     | '/sounds'
+    | '/story'
     | '/studio'
     | '/symphony'
     | '/worlds'
@@ -605,6 +616,7 @@ export interface FileRouteTypes {
     | '/share'
     | '/sitemap.xml'
     | '/sounds'
+    | '/story'
     | '/studio'
     | '/symphony'
     | '/worlds'
@@ -659,6 +671,7 @@ export interface RootRouteChildren {
   ShareRoute: typeof ShareRouteWithChildren
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   SoundsRoute: typeof SoundsRoute
+  StoryRoute: typeof StoryRoute
   StudioRoute: typeof StudioRoute
   SymphonyRoute: typeof SymphonyRoute
   WorldsRoute: typeof WorldsRoute
@@ -816,6 +829,13 @@ declare module '@tanstack/react-router' {
       path: '/sounds'
       fullPath: '/sounds'
       preLoaderRoute: typeof SoundsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/story': {
+      id: '/story'
+      path: '/story'
+      fullPath: '/story'
+      preLoaderRoute: typeof StoryRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/studio': {
@@ -1135,6 +1155,7 @@ const rootRouteChildren: RootRouteChildren = {
   ShareRoute: ShareRouteWithChildren,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   SoundsRoute: SoundsRoute,
+  StoryRoute: StoryRoute,
   StudioRoute: StudioRoute,
   SymphonyRoute: SymphonyRoute,
   WorldsRoute: WorldsRoute,

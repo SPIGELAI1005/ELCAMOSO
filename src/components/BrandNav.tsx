@@ -1,12 +1,19 @@
 "use client";
 
 import { Link, useRouterState } from "@tanstack/react-router";
+import { ChevronDown } from "lucide-react";
+import { useEffect, useState } from "react";
+
 import { AccountMenu } from "@/components/AccountMenu";
 import { ElcamosoLogo, ElcamosoMark } from "@/components/ElcamosoLogo";
 import { WaveMenuIcon } from "@/components/WaveMenuIcon";
 import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import {
   Sheet,
-  SheetClose,
   SheetContent,
   SheetDescription,
   SheetHeader,
@@ -18,43 +25,72 @@ import { useSessionSelector } from "@/lib/store/session-store";
 import { t } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
-type NavLink = {
+type NavLeaf = {
   to: string;
   key: string;
   accent?: boolean;
 };
 
-/** Desktop primary navigation. */
-const DESKTOP_LINKS: NavLink[] = [
-  { to: "/drive", key: "nav.drive", accent: true },
-  { to: "/explore", key: "nav.explore" },
-  { to: "/studio", key: "nav.studio" },
-  { to: "/garage", key: "nav.garage" },
-  { to: "/sounds", key: "nav.sounds" },
-  { to: "/demo", key: "nav.demo" },
-  { to: "/pricing", key: "nav.pricing" },
-  { to: "/about", key: "nav.about", accent: true },
-  { to: "/science", key: "nav.science" },
-  { to: "/settings", key: "nav.settings" },
+type NavGroup = {
+  kind: "group";
+  id: string;
+  key: string;
+  accent?: boolean;
+  items: NavLeaf[];
+};
+
+type NavLinkItem = NavLeaf & { kind: "link" };
+
+type NavEntry = NavLinkItem | NavGroup;
+
+/** Desktop + mobile primary navigation (groups render as dropdown / accordion). */
+const NAV_ENTRIES: NavEntry[] = [
+  { kind: "link", to: "/", key: "nav.home" },
+  { kind: "link", to: "/drive", key: "nav.drive", accent: true },
+  {
+    kind: "group",
+    id: "explore",
+    key: "nav.explore",
+    items: [
+      { to: "/explore", key: "nav.explore" },
+      { to: "/demo", key: "nav.demo" },
+    ],
+  },
+  {
+    kind: "group",
+    id: "sounds",
+    key: "nav.sounds",
+    items: [
+      { to: "/sounds", key: "nav.sounds" },
+      { to: "/studio", key: "nav.studio" },
+      { to: "/garage", key: "nav.garage" },
+    ],
+  },
+  { kind: "link", to: "/pricing", key: "nav.pricing" },
+  {
+    kind: "group",
+    id: "about",
+    key: "nav.about",
+    accent: true,
+    items: [
+      { to: "/story", key: "nav.story" },
+      { to: "/science", key: "nav.science" },
+    ],
+  },
+  { kind: "link", to: "/settings", key: "nav.settings" },
 ];
 
-const MENU_LINKS: NavLink[] = [
-  { to: "/", key: "nav.home" },
-  { to: "/drive", key: "nav.drive", accent: true },
-  { to: "/explore", key: "nav.explore" },
-  { to: "/studio", key: "nav.studio" },
-  { to: "/garage", key: "nav.garage" },
-  { to: "/sounds", key: "nav.sounds" },
-  { to: "/demo", key: "nav.demo" },
-  { to: "/pricing", key: "nav.pricing" },
-  { to: "/settings", key: "nav.settings" },
-  { to: "/about", key: "nav.about", accent: true },
-  { to: "/science", key: "nav.science" },
-];
+const DESKTOP_ENTRIES = NAV_ENTRIES.filter(
+  (entry) => !(entry.kind === "link" && entry.to === "/"),
+);
 
 function isNavLinkActive(pathname: string, to: string) {
   if (to === "/") return pathname === "/";
   return pathname === to || pathname.startsWith(`${to}/`);
+}
+
+function isGroupActive(pathname: string, items: NavLeaf[]) {
+  return items.some((item) => isNavLinkActive(pathname, item.to));
 }
 
 function navLinkClassName(active: boolean, accent?: boolean) {
@@ -63,16 +99,154 @@ function navLinkClassName(active: boolean, accent?: boolean) {
   return "text-muted-foreground transition-colors hover:text-foreground";
 }
 
+function closeDesktopNavGroups(except?: Element | null) {
+  document.querySelectorAll("details[data-nav-group]").forEach((node) => {
+    if (except && node === except) return;
+    (node as HTMLDetailsElement).open = false;
+  });
+}
+
+function DesktopNavGroup({
+  group,
+  pathname,
+  language,
+}: {
+  group: NavGroup;
+  pathname: string;
+  language: Parameters<typeof t>[0];
+}) {
+  const groupActive = isGroupActive(pathname, group.items);
+
+  return (
+    <details data-nav-group={group.id} className="group/nav relative">
+      <summary
+        className={cn(
+          "inline-flex min-h-12 cursor-pointer list-none items-center gap-1 px-1.5 text-xs tracking-[0.14em] uppercase outline-none xl:text-[13px]",
+          "[&::-webkit-details-marker]:hidden",
+          navLinkClassName(groupActive, group.accent),
+          "group-open/nav:text-foreground",
+        )}
+      >
+        {t(language, group.key)}
+        <ChevronDown
+          className="h-3.5 w-3.5 opacity-70 transition-transform duration-200 group-open/nav:rotate-180"
+          aria-hidden="true"
+        />
+      </summary>
+      <div
+        id={`nav-submenu-${group.id}`}
+        role="menu"
+        className="absolute top-full left-0 z-[60] mt-1 min-w-[11.5rem] border border-border/70 bg-background/95 p-1.5 tracking-[0.14em] uppercase shadow-lg backdrop-blur-md"
+      >
+        {group.items.map((item) => {
+          const active = isNavLinkActive(pathname, item.to);
+          return (
+            <Link
+              key={item.to}
+              role="menuitem"
+              to={item.to}
+              aria-current={active ? "page" : undefined}
+              onClick={() => closeDesktopNavGroups()}
+              className={cn(
+                "block rounded-sm px-3 py-3 text-xs transition-colors hover:bg-secondary hover:text-foreground",
+                navLinkClassName(active, item.accent),
+              )}
+            >
+              {t(language, item.key)}
+            </Link>
+          );
+        })}
+      </div>
+    </details>
+  );
+}
+
+function MobileNavGroup({
+  group,
+  pathname,
+  language,
+  open,
+  onOpenChange,
+  onNavigate,
+}: {
+  group: NavGroup;
+  pathname: string;
+  language: Parameters<typeof t>[0];
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onNavigate: () => void;
+}) {
+  const groupActive = isGroupActive(pathname, group.items);
+
+  return (
+    <Collapsible open={open} onOpenChange={onOpenChange}>
+      <CollapsibleTrigger
+        className={cn(
+          "flex w-full items-center justify-between px-4 py-4 text-left text-sm tracking-[0.2em] uppercase outline-none",
+          navLinkClassName(groupActive, group.accent),
+        )}
+      >
+        <span>{t(language, group.key)}</span>
+        <ChevronDown
+          className={cn(
+            "h-4 w-4 opacity-70 transition-transform duration-200",
+            open && "rotate-180",
+          )}
+          aria-hidden="true"
+        />
+      </CollapsibleTrigger>
+      <CollapsibleContent className="border-l border-border/50 ml-4">
+        {group.items.map((item) => {
+          const active = isNavLinkActive(pathname, item.to);
+          return (
+            <Link
+              key={item.to}
+              to={item.to}
+              aria-current={active ? "page" : undefined}
+              onClick={onNavigate}
+              className={cn(
+                "block px-4 py-3.5 text-sm tracking-[0.2em] uppercase",
+                navLinkClassName(active, item.accent ?? group.accent),
+              )}
+            >
+              {t(language, item.key)}
+            </Link>
+          );
+        })}
+      </CollapsibleContent>
+    </Collapsible>
+  );
+}
+
 export function BrandNav() {
   const { settings } = useSettings();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { safetyMode } = useSessionSelector((snap) => ({ safetyMode: snap.safetyMode }));
   const onDrive = pathname === "/drive" || pathname.startsWith("/drive/");
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [mobileOpenGroups, setMobileOpenGroups] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    if (!sheetOpen) setMobileOpenGroups({});
+  }, [sheetOpen]);
+
+  useEffect(() => {
+    closeDesktopNavGroups();
+  }, [pathname]);
+
   if (safetyMode && onDrive) return null;
 
+  function closeSheet() {
+    setSheetOpen(false);
+  }
+
+  function setGroupOpen(id: string, next: boolean) {
+    setMobileOpenGroups((prev) => ({ ...prev, [id]: next }));
+  }
+
   return (
-    <header className="fixed inset-x-0 top-0 z-50 border-b border-border/60 bg-background/95 pt-[env(safe-area-inset-top,0px)] backdrop-blur-md supports-[backdrop-filter]:bg-background/80">
-      <div className="flex h-[3.85rem] items-center justify-between gap-3 px-4 sm:h-[4.4rem] sm:px-6 lg:gap-4 lg:px-8">
+    <header className="fixed inset-x-0 top-0 z-50 overflow-visible border-b border-border/60 bg-background/95 pt-[env(safe-area-inset-top,0px)] backdrop-blur-md supports-[backdrop-filter]:bg-background/80">
+      <div className="flex h-[3.85rem] items-center justify-between gap-3 overflow-visible px-4 sm:h-[4.4rem] sm:px-6 lg:gap-4 lg:px-8">
         <Link
           to="/"
           aria-label="ELCAMOSO home"
@@ -88,22 +262,32 @@ export function BrandNav() {
         <div className="flex-1 lg:hidden" aria-hidden="true" />
 
         <nav
-          className="hidden min-w-0 items-center gap-3 text-xs tracking-[0.14em] uppercase lg:flex xl:gap-4 xl:text-[13px]"
+          className="hidden min-w-0 items-center gap-3 overflow-visible text-xs tracking-[0.14em] uppercase lg:flex xl:gap-4 xl:text-[13px]"
           aria-label="Primary"
         >
-          {DESKTOP_LINKS.map((link) => {
-            const active = isNavLinkActive(pathname, link.to);
+          {DESKTOP_ENTRIES.map((entry) => {
+            if (entry.kind === "group") {
+              return (
+                <DesktopNavGroup
+                  key={entry.id}
+                  group={entry}
+                  pathname={pathname}
+                  language={settings.language}
+                />
+              );
+            }
+            const active = isNavLinkActive(pathname, entry.to);
             return (
               <Link
-                key={link.to}
-                to={link.to}
+                key={entry.to}
+                to={entry.to}
                 aria-current={active ? "page" : undefined}
                 className={cn(
                   "inline-flex min-h-12 items-center px-1.5",
-                  navLinkClassName(active, link.accent),
+                  navLinkClassName(active, entry.accent),
                 )}
               >
-                {t(settings.language, link.key)}
+                {t(settings.language, entry.key)}
               </Link>
             );
           })}
@@ -112,15 +296,16 @@ export function BrandNav() {
 
         <div className="flex items-center gap-1 lg:hidden">
           <AccountMenu />
-          <Sheet>
+          <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
             <SheetTrigger asChild>
               <button
                 type="button"
                 data-testid="nav-menu"
                 className="inline-flex h-12 w-12 items-center justify-center rounded-full text-foreground transition-colors hover:bg-secondary"
                 aria-label={t(settings.language, "nav.menu")}
+                aria-expanded={sheetOpen}
               >
-                <WaveMenuIcon open={false} />
+                <WaveMenuIcon open={sheetOpen} />
               </button>
             </SheetTrigger>
 
@@ -142,24 +327,37 @@ export function BrandNav() {
                 </SheetDescription>
               </SheetHeader>
               <nav className="flex flex-col px-2 py-4" aria-label="Mobile">
-                {MENU_LINKS.map((link) => {
-                  const active = isNavLinkActive(pathname, link.to);
+                {NAV_ENTRIES.map((entry) => {
+                  if (entry.kind === "group") {
+                    return (
+                      <MobileNavGroup
+                        key={entry.id}
+                        group={entry}
+                        pathname={pathname}
+                        language={settings.language}
+                        open={Boolean(mobileOpenGroups[entry.id])}
+                        onOpenChange={(next) => setGroupOpen(entry.id, next)}
+                        onNavigate={closeSheet}
+                      />
+                    );
+                  }
+                  const active = isNavLinkActive(pathname, entry.to);
                   return (
-                    <SheetClose asChild key={link.to}>
-                      <Link
-                        to={link.to}
-                        aria-current={active ? "page" : undefined}
-                        className={cn(
-                          "px-4 py-4 text-sm tracking-[0.2em] uppercase",
-                          navLinkClassName(active, link.accent),
-                        )}
-                      >
-                        {t(settings.language, link.key)}
-                      </Link>
-                    </SheetClose>
+                    <Link
+                      key={entry.to}
+                      to={entry.to}
+                      aria-current={active ? "page" : undefined}
+                      onClick={closeSheet}
+                      className={cn(
+                        "px-4 py-4 text-sm tracking-[0.2em] uppercase",
+                        navLinkClassName(active, entry.accent),
+                      )}
+                    >
+                      {t(settings.language, entry.key)}
+                    </Link>
                   );
                 })}
-                <AccountMenu variant="row" />
+                <AccountMenu variant="row" onNavigate={closeSheet} />
               </nav>
               <div className="mt-auto border-t border-border px-6 py-6">
                 <p className="text-[10px] tracking-[0.24em] text-muted-foreground uppercase">
@@ -169,31 +367,21 @@ export function BrandNav() {
                   aria-label="Legal"
                   className="mt-4 flex flex-col gap-3 text-xs tracking-[0.16em] text-muted-foreground uppercase"
                 >
-                  <SheetClose asChild>
-                    <Link to="/legal/impressum" className="hover:text-foreground">
-                      Impressum
-                    </Link>
-                  </SheetClose>
-                  <SheetClose asChild>
-                    <Link to="/legal/privacy" className="hover:text-foreground">
-                      Privacy
-                    </Link>
-                  </SheetClose>
-                  <SheetClose asChild>
-                    <Link to="/legal/cookies" className="hover:text-foreground">
-                      Cookies
-                    </Link>
-                  </SheetClose>
-                  <SheetClose asChild>
-                    <Link to="/legal/terms" className="hover:text-foreground">
-                      Terms
-                    </Link>
-                  </SheetClose>
-                  <SheetClose asChild>
-                    <Link to="/legal" className="hover:text-foreground">
-                      All legal
-                    </Link>
-                  </SheetClose>
+                  <Link to="/legal/impressum" onClick={closeSheet} className="hover:text-foreground">
+                    Impressum
+                  </Link>
+                  <Link to="/legal/privacy" onClick={closeSheet} className="hover:text-foreground">
+                    Privacy
+                  </Link>
+                  <Link to="/legal/cookies" onClick={closeSheet} className="hover:text-foreground">
+                    Cookies
+                  </Link>
+                  <Link to="/legal/terms" onClick={closeSheet} className="hover:text-foreground">
+                    Terms
+                  </Link>
+                  <Link to="/legal" onClick={closeSheet} className="hover:text-foreground">
+                    All legal
+                  </Link>
                 </nav>
               </div>
             </SheetContent>

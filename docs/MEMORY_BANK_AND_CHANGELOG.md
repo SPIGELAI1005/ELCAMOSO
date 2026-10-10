@@ -35,7 +35,7 @@ Canonical product rules still live in `elcamoso-comprehensive-spec.md`. Update *
 
 ### Routes
 
-`/`, `/onboarding`, `/drive`, `/explore`, `/demo`, `/sounds`, `/symphony`, `/worlds`, `/fusion`, `/studio`, `/garage`, `/journeys`, `/journeys/$journeyId` (Replay/Remix + separate Drive Song), `/calibrate`, `/settings`, `/about`, `/science` (Science of ELCAMOSO composition model), `/pricing`, `/legal` (+ impressum, privacy, cookies, terms, accessibility), `/auth/account/callback` (magic link), `/auth/account/google/callback` (Google OAuth, server GET), `/upgrade/$token`, `/pair`, `/pair/$token` (Tesla↔phone QR claim), `/connect/$sessionId` (legacy join), `/share/drive/$shareId` (Drive Song share, noindex + OG), `/api/og` + `/api/og/drive-song/$shareId` (social cards), `/debug` (dev-only; includes `/debug/og` social card preview, `/debug/calibration` road-test lab, `/debug` Realism V2 A/B)
+`/`, `/onboarding`, `/drive`, `/explore`, `/demo`, `/sounds`, `/symphony`, `/worlds`, `/fusion`, `/studio`, `/garage`, `/journeys`, `/journeys/$journeyId` (Replay/Remix + separate Drive Song), `/calibrate`, `/settings`, `/story` (product story), `/about` (redirect → `/story`), `/science` (Science of ELCAMOSO composition model), `/pricing`, `/legal` (+ impressum, privacy, cookies, terms, accessibility), `/auth/account/callback` (magic link), `/auth/account/google/callback` (Google OAuth, server GET), `/upgrade/$token`, `/pair`, `/pair/$token` (Tesla↔phone QR claim), `/connect/$sessionId` (legacy join), `/share/drive/$shareId` (Drive Song share, noindex + OG), `/api/og` + `/api/og/drive-song/$shareId` (social cards), `/debug` (dev-only; includes `/debug/og` social card preview, `/debug/calibration` road-test lab, `/debug` Realism V2 A/B). Header groups: Explore (Explore, Demo) · Sounds (Sounds, Studio, Garage) · About (Story, Science).
 
 ### SEO / Social cards
 
@@ -99,7 +99,7 @@ Canonical product rules still live in `elcamoso-comprehensive-spec.md`. Update *
 - **Read About:** under **Hear it** on phone/tablet; at **`lg+`** aligns with expansion row beside **Electric Car Motion Sound** (**About** in red `#e53935`).
 - CTA column (`lg+`): tagline + supporting line + **Start Drive** + **Hear it**; no duplicate bottom tagline block.
 - Below fold: curated sound previews + **Plans** (`LandingPlansSection`: monthly/yearly toggle, early-adopter strikethrough pricing, red billing notice when checkout disabled) + privacy blurb (no duplicate legal links — footer only).
-- `/about`: founder story, **Motion becomes sound.** visual + Tesla cabin clips, field-capture clips in `public/about/` (user-controlled `<video>`, no autoplay).
+- `/story`: founder story (About menu → Story), **Motion becomes sound.** visual + Tesla cabin clips, field-capture clips in `public/about/` (user-controlled `<video>`, no autoplay). `/about` redirects here.
 
 ### Header nav (`BrandNav`)
 
@@ -160,7 +160,8 @@ Canonical product rules still live in `elcamoso-comprehensive-spec.md`. Update *
 | Audition hook                | `src/lib/drive/useAudition.ts`                                                      |
 | Landing                      | `src/routes/index.tsx`, `src/components/LandingHero.tsx`, `LandingPlansSection.tsx` |
 | Pricing                      | `src/routes/pricing.tsx`, `src/lib/billing/plan-display.ts`                         |
-| About                        | `src/routes/about.tsx`, `public/about/field-capture-*.mp4`                          |
+| Story / About                | `src/routes/story.tsx`, `/about` → `/story`, `public/about/field-capture-*.mp4`     |
+| Header nav groups            | `src/components/BrandNav.tsx` (Explore / Sounds / About dropdowns + mobile accordion) |
 | Sounds UI                    | `src/routes/sounds.tsx`                                                             |
 | Legal operator               | `src/lib/legal/operator.ts`                                                         |
 | Tesla smoke test             | `docs/TESLA_BROWSER_SMOKE_TEST.md`                                                  |
@@ -190,6 +191,12 @@ Canonical product rules still live in `elcamoso-comprehensive-spec.md`. Update *
 ---
 
 ## Changelog
+
+### 2026-10-10 (Header nav groups: Explore / Sounds / About)
+
+- About content moved to `/story`; `/about` redirects. Science sits under the About menu.
+- Demo under Explore; Studio and Garage under Sounds. Desktop Radix dropdowns + mobile hamburger accordion; selecting a leaf closes the menu/sheet.
+- Bottom chrome unchanged (Drive · Explore · Studio · Garage). i18n `nav.story`; SEO indexes `/story`.
 
 ### 2026-10-10 (Google OAuth redirect URI Console fix)
 

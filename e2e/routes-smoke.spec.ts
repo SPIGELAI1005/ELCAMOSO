@@ -15,7 +15,7 @@ const ROUTES: { path: string; signal: RegExp }[] = [
   { path: "/journeys", signal: /Every drive creates a different song/i },
   { path: "/pricing", signal: /Make every drive yours/i },
   { path: "/settings", signal: /Settings/i },
-  { path: "/about", signal: /Your EV\. Your sound/i },
+  { path: "/story", signal: /Your EV\. Your sound/i },
   { path: "/calibrate", signal: /Calibrate motion/i },
   { path: "/onboarding", signal: /Your EV\. Your Sound|Location|Motion|Before you drive|Start/i },
   { path: "/legal", signal: /Legal/i },
@@ -39,11 +39,16 @@ test.describe("Route smoke", () => {
     });
   }
 
-  test("About begins with the origin story before live-or-later positioning", async ({ page }) => {
-    await gotoPath(page, "/about");
+  test("Story begins with the origin story before live-or-later positioning", async ({ page }) => {
+    await gotoPath(page, "/story");
     const text = (await page.locator("main").innerText()).toLocaleLowerCase();
     expect(text.indexOf("where it started")).toBeGreaterThanOrEqual(0);
     expect(text.indexOf("where it started")).toBeLessThan(text.indexOf("sound when you want it"));
+  });
+
+  test("legacy /about redirects to Story", async ({ page }) => {
+    await gotoPath(page, "/about");
+    await expect(page).toHaveURL(/\/story\/?$/);
   });
 
   test("World cards do not show decorative gradient placeholders", async ({ page }) => {

@@ -30,8 +30,11 @@ export function SiteFooter() {
               {link.label}
             </Link>
           ))}
-          <Link to="/about" className="underline-offset-4 hover:underline">
-            About
+          <Link to="/story" className="underline-offset-4 hover:underline">
+            Story
+          </Link>
+          <Link to="/science" className="underline-offset-4 hover:underline">
+            Science
           </Link>
         </nav>
 

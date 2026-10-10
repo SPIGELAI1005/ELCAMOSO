@@ -29,7 +29,7 @@ Routes call `createSeoHeadFromPath("/path")` — do not hand-roll absolute URLs.
 
 ## Indexable routes
 
-`/`, `/explore`, `/sounds`, `/symphony`, `/worlds`, `/fusion`, `/pricing`, `/about`, `/legal`, `/legal/*`
+`/`, `/explore`, `/sounds`, `/symphony`, `/worlds`, `/fusion`, `/pricing`, `/story`, `/science`, `/legal`, `/legal/*`
 
 ## Noindex routes
 
@@ -78,7 +78,9 @@ Marketing children: BreadcrumbList where defined.
 | `/worlds`        | YES           | www       | Breadcrumb                         | worlds                    |
 | `/fusion`        | YES           | www       | Breadcrumb                         | fusion                    |
 | `/pricing`       | YES           | www       | Breadcrumb                         | default                   |
-| `/about`         | YES           | www       | Breadcrumb                         | default                   |
+| `/story`         | YES           | www       | Breadcrumb                         | default                   |
+| `/science`       | YES           | www       | Breadcrumb                         | default                   |
+| `/about`         | NO (redirect) | www       | → `/story`                         | -                         |
 | `/legal/*`       | YES           | www       | —                                  | default                   |
 | `/drive`         | NO            | www       | —                                  | default                   |
 | `/studio`        | NO            | www       | —                                  | default                   |
