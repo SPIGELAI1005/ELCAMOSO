@@ -47,8 +47,12 @@ export interface EntitlementUser {
   trialStatus: TrialStatus;
   /** Extra entitlements while trial is active (unioned with plan entitlements). */
   trialEntitlements?: readonly Entitlement[];
-  /** Epoch ms when trial ends; null = no time limit (dev only). */
+  /** UTC epoch ms when trial ends; null = no time limit (dev only). */
   trialEndsAt?: number | null;
+  /** Active purchased / grandfathered / reward profile unlocks (server-authored). */
+  grantedProfileIds?: readonly string[];
+  /** Active reward entitlement unlocks (server-authored). */
+  grantedEntitlements?: readonly Entitlement[];
   /** Monotonic revision for cache invalidation when server snapshot updates. */
   revision?: number;
 }
@@ -61,4 +65,8 @@ export interface EntitlementSnapshot {
   entitlements: readonly Entitlement[];
   trialActive: boolean;
   revision: number;
+  /** Server-authored profile unlocks still valid at snapshot UTC time. */
+  grantedProfileIds: readonly string[];
+  /** UTC epoch ms when the current offline lease tip expires; null if none issued. */
+  offlineLeaseExpiresAt: number | null;
 }

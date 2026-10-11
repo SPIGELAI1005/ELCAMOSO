@@ -5,9 +5,13 @@ import {
   isSoundProfileEntitled,
   isSoundProfilePreviewAllowed,
 } from "@/lib/entitlements/catalog";
-import { hasEntitlementDuringLiveDriveHold } from "@/lib/entitlements/live-drive-access";
+import { canDriveProfileWithAccess } from "@/lib/entitlements/drive-profile-access";
+import {
+  grantedProfileIdsDuringLiveDriveHold,
+  hasEntitlementDuringLiveDriveHold,
+} from "@/lib/entitlements/live-drive-access";
 import { getProfile } from "@/lib/sound/profiles";
-import { canDriveWithSoundProfile, lockedProfilePreviewSeconds } from "@/lib/sound/profile-access";
+import { lockedProfilePreviewSeconds } from "@/lib/sound/profile-access";
 import { useSessionStore } from "@/lib/store/session-store";
 import { isLiveSessionStatus } from "@/lib/ui/chrome";
 
@@ -26,10 +30,22 @@ export function useFeatureAccess() {
   const effectiveHas = (entitlement: Entitlement) =>
     hasEntitlement(entitlement) || (isLiveDrive && hasEntitlementDuringLiveDriveHold(entitlement));
 
+  const { snapshot } = useEntitlements();
   const hasAllSoundProfiles = effectiveHas("all_sound_profiles");
+  const grantedProfileIds = [
+    ...new Set([
+      ...snapshot.grantedProfileIds,
+      ...(isLiveDrive ? grantedProfileIdsDuringLiveDriveHold() : []),
+    ]),
+  ];
 
   const canDriveWithProfile = (profileId: string) =>
-    canDriveWithSoundProfile(getProfile(profileId), hasAllSoundProfiles);
+    canDriveProfileWithAccess({
+      profileId,
+      hasAllSoundProfiles,
+      grantedProfileIds,
+      hasEntitlement: effectiveHas,
+    });
 
   const canPreviewProfile = (profileId: string) => isSoundProfilePreviewAllowed(profileId);
 

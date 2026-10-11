@@ -11,9 +11,6 @@ import { useDriveSession } from "@/lib/drive/useDriveSession";
 import { getSession, type DriveProductStatus } from "@/lib/drive/session";
 import type { DriveState } from "@/lib/drive/model";
 import { needsIntenseConfirm } from "@/lib/drive/safety";
-import { driveSecondaryReadout } from "@/lib/drive/drive-display";
-import { supportsDynamicDrive } from "@/lib/drive/drivetrain-resolve";
-import { DynamicDriveInstrument } from "@/components/DynamicDriveInstrument";
 import { DriveSessionPanel } from "@/components/DriveSessionPanel";
 import { ExperiencePicker } from "@/components/experiences/ExperiencePicker";
 import { experienceForProfileId } from "@/lib/experiences";
@@ -29,12 +26,12 @@ import { DriveDiagnosticsPanel } from "@/components/DriveDiagnosticsPanel";
 import { TeslaRoadTestHud } from "@/components/TeslaRoadTestHud";
 import { isDriveDebugModeActive } from "@/lib/diagnostics/debug-mode";
 import type { MotionPipelineMetrics } from "@/lib/motion/pipeline-metrics";
-import { IDLE_MOTION } from "@/lib/drive/motion-energy";
 import { formatSpeed, t } from "@/lib/i18n";
 import { driveCoachFn } from "@/lib/cloud/server-fns";
 import { getProfile, type SoundProfile } from "@/lib/sound/profiles";
 import { PostDriveExperience } from "@/components/journey/PostDriveExperience";
 import { DriveModePicker } from "@/components/drive/DriveModePicker";
+import { DriveCockpit } from "@/components/drive/DriveCockpit";
 import { SilentCaptureHud } from "@/components/drive/SilentCaptureHud";
 import { PostSilentCaptureExperience } from "@/components/drive/PostSilentCaptureExperience";
 import { IncompleteJourneyRecovery } from "@/components/drive/IncompleteJourneyRecovery";
@@ -236,9 +233,7 @@ function DriveScreen() {
 
   const speed = formatSpeed(state.speed, settings.units, settings.language);
   const liveProfile = getProfile(sessionSnap.profileId);
-  const motion = sessionSnap.motion ?? IDLE_MOTION;
   const safetyMode = sessionSnap.safetyMode || Boolean(cockpit);
-  const secondary = driveSecondaryReadout(liveProfile, state, motion);
 
   return (
     <main className="flex min-h-screen flex-col px-6 pt-6 pb-10 sm:px-10">
@@ -341,34 +336,18 @@ function DriveScreen() {
           <Driving
             kmh={speed.value}
             unit={speed.unit}
-            motionEnergy={motion.motionEnergy}
-            throttle={state.throttle}
-            regen={state.regen}
-            waveResponse={liveProfile.voice.waveResponse}
+            speedMps={state.speed}
             reducedMotion={reducedMotion}
-            secondary={secondary}
             profile={liveProfile}
-            dynamicDriveActive={settings.dynamicDrive}
-            traits={liveProfile.traits}
-            safetyMode={safetyMode}
             productStatus={sessionSnap.productStatus}
-            rulesHeld={sessionSnap.rulesHeld}
-            suggestedProfileId={sessionSnap.suggestedProfileId}
-            autoRulesMode={settings.autoRulesMode}
+            sessionKind={sessionSnap.kind}
             driveState={state}
-            onHold={() => getSession().setRulesHeld(!sessionSnap.rulesHeld)}
-            onAcceptSuggestion={() => getSession().acceptSuggestion()}
-            onDismissSuggestion={() => getSession().dismissSuggestion()}
             onStop={handleStop}
-            showPairing
             showDebugDiagnostics={debugDriveActive}
             showRoadTestHud={roadTestHudActive}
-            devMode={debugDriveActive}
             pipelineMetrics={sessionSnap.pipeline}
-            showTeslaUpgrade={Boolean(cockpit) && showTeslaUpgrade}
-            onCloseTeslaUpgrade={() => setShowTeslaUpgrade(false)}
-            relaySessionId={relaySessionId}
-            onRelaySessionChange={setRelaySessionId}
+            dynamicDriveActive={settings.dynamicDrive}
+            safetyMode={safetyMode}
           />
         )
       ) : (
@@ -462,222 +441,60 @@ function DriveScreen() {
 function Driving({
   kmh,
   unit,
-  motionEnergy,
-  throttle,
-  regen,
-  waveResponse,
+  speedMps,
   reducedMotion,
-  secondary,
   profile,
-  dynamicDriveActive,
-  traits,
-  safetyMode,
   productStatus,
-  rulesHeld,
-  suggestedProfileId,
-  autoRulesMode,
+  sessionKind,
   driveState,
-  onHold,
-  onAcceptSuggestion,
-  onDismissSuggestion,
   onStop,
-  showPairing,
   showDebugDiagnostics,
   showRoadTestHud,
-  devMode,
   pipelineMetrics,
-  showTeslaUpgrade,
-  onCloseTeslaUpgrade,
-  relaySessionId,
-  onRelaySessionChange,
+  dynamicDriveActive,
+  safetyMode,
 }: {
   kmh: number;
   unit: string;
-  motionEnergy: number;
-  throttle: number;
-  regen: number;
-  waveResponse: number;
+  speedMps: number;
   reducedMotion: boolean;
-  secondary: { value: string; label: string; gearLabel: string | null };
   profile: ReturnType<typeof getProfile>;
-  dynamicDriveActive: boolean;
-  traits: string[];
-  safetyMode: boolean;
   productStatus: DriveProductStatus;
-  rulesHeld: boolean;
-  suggestedProfileId: string | null;
-  autoRulesMode: string;
+  sessionKind: string;
   driveState: DriveState;
-  onHold: () => void;
-  onAcceptSuggestion: () => void;
-  onDismissSuggestion: () => void;
   onStop: () => void;
-  showPairing: boolean;
   showDebugDiagnostics: boolean;
   showRoadTestHud: boolean;
-  devMode: boolean;
   pipelineMetrics: MotionPipelineMetrics;
-  showTeslaUpgrade: boolean;
-  onCloseTeslaUpgrade: () => void;
-  relaySessionId: string | null;
-  onRelaySessionChange: (sessionId: string | null) => void;
+  dynamicDriveActive: boolean;
+  safetyMode: boolean;
 }) {
-  const suggestion = suggestedProfileId ? getProfile(suggestedProfileId) : null;
-  const showExtras = !safetyMode;
-  const showDynamicInstrument =
-    dynamicDriveActive &&
-    supportsDynamicDrive(profile) &&
-    profile.drivetrainMode === "virtual-transmission";
-
   return (
-    <div
-      className={`flex flex-1 flex-col items-center justify-between py-10 text-center sm:py-12 ${
-        safetyMode ? "drive-tesla-cockpit px-4 sm:px-6" : ""
-      }`}
-    >
-      <ElcamosoMark
-        intensity={motionEnergy}
-        throttle={throttle}
-        regen={regen}
-        direction={regen > throttle + 0.08 ? "inward" : "outward"}
-        waveResponse={waveResponse}
+    <div className="flex flex-1 flex-col">
+      <DriveCockpit
+        profile={profile}
+        driveState={driveState}
+        productStatus={productStatus}
+        sessionKind={sessionKind}
+        displaySpeed={kmh}
+        speedUnit={unit}
+        speedMps={speedMps}
         reducedMotion={reducedMotion}
-        className={safetyMode ? "h-16 w-auto" : "h-12 w-auto"}
+        onStop={onStop}
+        className={safetyMode ? "drive-tesla-cockpit" : undefined}
       />
-
-      <div className="flex flex-col items-center gap-8">
-        <div className="drive-speed-readout">
-          <p
-            className={`leading-none font-extralight tabular-nums ${
-              safetyMode ? "text-[7.5rem] sm:text-[9rem]" : "text-[6rem] sm:text-[8rem]"
-            }`}
-          >
-            {kmh}
-          </p>
-          <p className="mt-2 text-[11px] tracking-[0.34em] text-muted-foreground uppercase">
-            {unit}
-          </p>
-        </div>
-
-        {showDynamicInstrument ? (
-          <DynamicDriveInstrument
-            profile={profile}
-            state={driveState}
-            productStatus={productStatus}
-            reducedMotion={reducedMotion}
-            driverDistance={safetyMode}
-            className="w-full px-1"
-          />
-        ) : (
-          <>
-            <div>
-              <p className="text-2xl font-light tabular-nums tracking-tight">{secondary.value}</p>
-              <p className="mt-1 text-[11px] tracking-[0.34em] text-muted-foreground uppercase">
-                {secondary.label}
-              </p>
-            </div>
-
-            <div className="w-56">
-              <div className="h-px w-full bg-border">
-                <div
-                  className="relative h-px bg-foreground transition-[width] duration-150"
-                  style={{ width: `${Math.min(100, motionEnergy * 100)}%` }}
-                >
-                  <span className="absolute -top-[3px] -right-[3px] block h-[7px] w-[7px] rounded-full bg-foreground" />
-                </div>
-              </div>
-              {secondary.gearLabel ? (
-                <p className="mt-4 text-[11px] tracking-[0.34em] text-muted-foreground uppercase">
-                  {secondary.gearLabel}
-                </p>
-              ) : null}
-            </div>
-          </>
-        )}
+      {/* Minimal notices only - purchases, pairing, and rewards stay outside active Drive. */}
+      <div className="mx-auto w-full max-w-lg px-4 pb-2">
         <DynamicDriveTrialDuringDrive
           dynamicDriveActive={dynamicDriveActive}
           safetyMode={safetyMode}
         />
-        <DynamicDriveSessionConflictNotice className="mt-4 w-full max-w-lg" />
-      </div>
-
-      <div className="flex flex-col items-center gap-5">
-        {!showDynamicInstrument ? (
-          <div>
-            <p className="text-lg font-light">{profile.name}</p>
-            {showExtras ? (
-              <p className="mt-2 text-xs tracking-[0.18em] text-muted-foreground uppercase">
-                {traits.join(" · ")}
-              </p>
-            ) : null}
-          </div>
-        ) : null}
-
-        {showExtras && suggestion && autoRulesMode === "suggest" && !rulesHeld ? (
-          <div className="flex flex-wrap items-center justify-center gap-3">
-            <button
-              type="button"
-              onClick={onAcceptSuggestion}
-              className="h-11 rounded-full border border-foreground px-6 text-[11px] tracking-[0.16em] uppercase"
-            >
-              Try {suggestion.name}
-            </button>
-            <button
-              type="button"
-              onClick={onDismissSuggestion}
-              className="h-11 px-3 text-[11px] tracking-[0.16em] text-muted-foreground uppercase"
-            >
-              Not now
-            </button>
-          </div>
-        ) : null}
-
-        {showExtras && autoRulesMode !== "off" ? (
-          <button
-            type="button"
-            onClick={onHold}
-            aria-pressed={rulesHeld}
-            className={`h-12 min-w-[11rem] rounded-full border px-8 text-xs tracking-[0.24em] uppercase ${
-              rulesHeld
-                ? "border-foreground bg-foreground text-background"
-                : "border-border text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            {rulesHeld ? "Hold on" : "Hold"}
-          </button>
-        ) : null}
-
-        <button
-          onClick={onStop}
-          className="h-14 min-w-[11rem] rounded-full border border-border px-10 text-xs tracking-[0.24em] text-muted-foreground uppercase transition-colors hover:text-foreground"
-        >
-          Stop Drive
-        </button>
-
-        {showPairing ? (
-          <DriveSessionPanel
-            className="mt-2 w-full max-w-lg"
-            compact
-            devMode={devMode}
-            onRelaySessionChange={onRelaySessionChange}
-          />
-        ) : null}
-        {showTeslaUpgrade ? (
-          <Suspense fallback={null}>
-            <TeslaDrivePlusUpgrade
-              open
-              relaySessionId={relaySessionId}
-              onClose={onCloseTeslaUpgrade}
-              className="mt-4 w-full max-w-lg"
-            />
-          </Suspense>
-        ) : null}
-        <DynamicDriveTrialComplete className="mt-4" />
-        {showRoadTestHud ? <TeslaRoadTestHud className="mt-2 w-full max-w-lg" /> : null}
+        <DynamicDriveSessionConflictNotice className="mt-2 w-full" />
+        {showRoadTestHud ? <TeslaRoadTestHud className="mt-2 w-full" /> : null}
         {showDebugDiagnostics ? (
           <>
-            <DrivePipelineMetrics metrics={pipelineMetrics} className="mt-2 w-full max-w-lg" />
-            <DriveDiagnosticsPanel className="mt-2 w-full max-w-lg" />
+            <DrivePipelineMetrics metrics={pipelineMetrics} className="mt-2 w-full" />
+            <DriveDiagnosticsPanel className="mt-2 w-full" />
           </>
         ) : null}
       </div>

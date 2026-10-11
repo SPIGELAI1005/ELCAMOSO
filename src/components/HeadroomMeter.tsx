@@ -1,10 +1,10 @@
 import { intensityBand, type SoundProfile } from "@/lib/sound/profiles";
 import type { MeterReading } from "@/lib/sound/engine";
+import { SAMPLE_PEAK_CEILING_LINEAR } from "@/lib/sound/gain-staging";
 
 /**
- * Loudness headroom readout. Shows how much room is left before the limiter
- * starts holding the sound back, so a profile that will feel too intense can be
- * spotted before switching into it.
+ * Loudness headroom readout. Shows room before the −1 dBFS sample-peak protect
+ * stage. Overload sample counts stay in the lab/diagnostics — not customer UI.
  */
 export function HeadroomMeter({
   meter,
@@ -23,12 +23,12 @@ export function HeadroomMeter({
   compact?: boolean;
 }) {
   const band = intensityBand(profile);
-  const level = meter ? Math.min(1, meter.peak / 0.85) : 0;
+  const level = meter ? Math.min(1, meter.peak / SAMPLE_PEAK_CEILING_LINEAR) : 0;
   const headroomPct = meter ? Math.round(meter.headroom * 100) : null;
-  const limiting = (meter?.reduction ?? 0) > 1.5;
+  const limiting = Boolean(meter?.nearCeiling);
 
   const warning = limiting
-    ? "Peaks are being held back. Lower the master volume or this sound's balance for cleaner dynamics."
+    ? "Near the peak ceiling. Lower master volume or output boost for cleaner dynamics."
     : headroomPct !== null && headroomPct < 12
       ? "Very little headroom left. This will feel loud on the move."
       : band === "intense" && volume * profileGain > 0.8

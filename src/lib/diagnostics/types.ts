@@ -42,7 +42,7 @@ export interface FusionDiagnostics {
 
 export interface PowertrainDiagnostics {
   /** Explicit backend - never confuse Legacy Mode with Dynamic Drive in tests. */
-  powertrainBackend: "legacy" | "dynamic";
+  powertrainBackend: "legacy" | "dynamic" | "gearless";
   throttle: number;
   load: number;
   driverDemand: number | null;
@@ -104,14 +104,20 @@ export interface AudioDiagnostics {
     profileGain: number;
     loudnessTrim: number;
     loadScale: number;
+    outputBoostDb: number;
+    bodyCharacter: number;
+    mechanicalCharacter: number;
     effectiveMasterTarget: number;
     masterNode: number;
+    boostNode: number;
     duck: number;
     body: number;
     accents: number;
     beds: number;
     wet: number;
     profileBusOutput: number;
+    samplePeakCeilingDbfs: number;
+    peakProtectLookaheadMs: number;
   } | null;
 }
 

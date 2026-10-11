@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import { createSeoHeadFromPath } from "@/lib/seo";
 import { ElcamosoMark } from "@/components/ElcamosoLogo";
 import { useSettings } from "@/lib/drive/useSettings";
@@ -7,6 +8,7 @@ import { useReducedMotion } from "@/lib/drive/useReducedMotion";
 import { SnippetStudio } from "@/components/SnippetStudio";
 import { materializeCustom, type CustomSound, type Playlist } from "@/lib/drive/settings";
 import { describeProfileRule } from "@/lib/drive/profile-rules";
+import { getRewardsPublicFlagFn } from "@/lib/rewards/server-fns";
 import { SOUND_PROFILES, allProfiles, getProfile } from "@/lib/sound/profiles";
 import { copyShareLink } from "@/lib/sound/share";
 import { trackEvent } from "@/lib/telemetry/analytics";
@@ -31,6 +33,12 @@ function Garage() {
   const [garageTab, setGarageTab] = useState<"sounds" | "experiences" | "songs" | "journeys">(
     "sounds",
   );
+  const rewardsFlag = useQuery({
+    queryKey: ["rewards-public-flag"],
+    queryFn: () => getRewardsPublicFlagFn(),
+    staleTime: 60_000,
+  });
+  const rewardsEnabled = rewardsFlag.data?.rewardsEnabled === true;
 
   const customs = settings.customSounds;
   const families = groupTakes(customs);
@@ -160,6 +168,14 @@ function Garage() {
           >
             Recordings
           </Link>
+          {rewardsEnabled ? (
+            <Link
+              to="/rewards"
+              className="h-12 shrink-0 rounded-full border border-border px-8 text-xs leading-[3rem] tracking-[0.24em] uppercase"
+            >
+              Sound Spin
+            </Link>
+          ) : null}
         </section>
 
         <dl className="mt-10 grid grid-cols-3 gap-6 text-center">

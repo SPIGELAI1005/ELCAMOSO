@@ -8,7 +8,8 @@ import {
 import type { PowertrainProfile } from "@/lib/powertrain/profiles";
 import { getPowertrainProfile } from "@/lib/powertrain/profiles";
 import { PowertrainSimulator } from "@/lib/powertrain/simulator";
-import type { VirtualPowertrainState } from "@/lib/powertrain/types";
+import type { ShiftMapPresetId } from "@/lib/powertrain/shift-presets";
+import type { DrivetrainShiftEvent, VirtualPowertrainState } from "@/lib/powertrain/types";
 
 export interface PowertrainTraceSample {
   tMs: number;
@@ -41,6 +42,8 @@ export interface PowertrainScenario {
   id: string;
   label: string;
   profileId?: string;
+  /** Artistic shift-map preset for this scenario (default legacy). */
+  shiftMapPreset?: ShiftMapPresetId;
   /** Fixed dt per step in seconds. */
   dt: number;
   steps: number;
@@ -54,9 +57,12 @@ export interface PowertrainScenario {
 export interface ScenarioRunResult {
   scenarioId: string;
   profileId: string;
+  shiftMapPreset: ShiftMapPresetId;
   samples: PowertrainTraceSample[];
   shiftCount: number;
   gearChanges: { atMs: number; from: number; to: number }[];
+  /** Exactly one entry per beginShift (unique sequenceId). */
+  shiftEvents: DrivetrainShiftEvent[];
 }
 
 export const POWERTRAIN_SCENARIOS: PowertrainScenario[] = [
@@ -68,6 +74,21 @@ export const POWERTRAIN_SCENARIOS: PowertrainScenario[] = [
     steps: 900,
     integrateSpeed: true,
     drive: (_, speed) => ({ speedKmh: speed, accelerationMs2: 0, throttle: 0.3, braking: 0 }),
+  },
+  {
+    id: "city-0-80-0",
+    label: "City preset 0–80–0",
+    profileId: "gt-v8",
+    shiftMapPreset: "city",
+    dt: 0.016,
+    steps: 1600,
+    integrateSpeed: true,
+    drive: (frame, speed) => {
+      if (frame < 900) {
+        return { speedKmh: speed, accelerationMs2: 0, throttle: 0.42, braking: 0 };
+      }
+      return { speedKmh: speed, accelerationMs2: 0, throttle: 0, braking: 0.55 };
+    },
   },
   {
     id: "medium-0-100",
@@ -337,9 +358,11 @@ export function getPowertrainScenario(id: string): PowertrainScenario | undefine
 export function runPowertrainScenario(
   scenario: PowertrainScenario,
   profile?: PowertrainProfile,
+  opts?: { shiftMapPreset?: ShiftMapPresetId },
 ): ScenarioRunResult {
   const p = profile ?? getPowertrainProfile(scenario.profileId ?? "flat-six-sport");
-  const sim = new PowertrainSimulator({ profile: p });
+  const shiftMapPreset = opts?.shiftMapPreset ?? scenario.shiftMapPreset ?? "legacy";
+  const sim = new PowertrainSimulator({ profile: p, shiftMapPreset });
   const runtime = createSimulatorRuntime(undefined, {
     integrateSpeed: scenario.integrateSpeed,
     maxAccelMs2: 4.8,
@@ -349,6 +372,7 @@ export function runPowertrainScenario(
   let controls: SimulatorControls = { speedKmh: 0, accelerationMs2: 0, throttle: 0, braking: 0 };
   const samples: PowertrainTraceSample[] = [];
   const gearChanges: ScenarioRunResult["gearChanges"] = [];
+  const shiftEvents: DrivetrainShiftEvent[] = [];
   let prevGear = 0;
   let shiftCount = 0;
 
@@ -367,6 +391,10 @@ export function runPowertrainScenario(
       directThrottle: controls.throttle,
       braking: controls.braking,
     });
+
+    if (out.shiftEvent) {
+      shiftEvents.push(out.shiftEvent);
+    }
 
     if (out.gear !== prevGear && i > 0) {
       gearChanges.push({ atMs: tMs, from: prevGear, to: out.gear });
@@ -419,9 +447,11 @@ export function runPowertrainScenario(
   return {
     scenarioId: scenario.id,
     profileId: p.id,
+    shiftMapPreset,
     samples,
     shiftCount,
     gearChanges,
+    shiftEvents,
   };
 }
 

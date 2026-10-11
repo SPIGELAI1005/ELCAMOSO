@@ -1,15 +1,22 @@
 /**
- * Perceptual volume mapping for the Drive volume slider.
+ * Perceptual volume mapping for the Drive / Settings volume slider.
  *
  * UI 0..1 maps to an acoustic gain factor that feels closer to:
- * 20% quiet · 40% clearly audible · 60% normal · 70% strong normal · 85% loud · 100% max.
+ * 20% quiet · 35% new-device default · 40% clearly audible · 60% normal ·
+ * 70% strong normal · 85% loud · 100% max.
  *
  * Pure linear UI→gain under-powers mid settings in a Tesla cabin.
+ * Gain staging ownership: see `src/lib/sound/gain-staging/` and
+ * `docs/audio/GAIN_STAGING.md` (Prompt 08).
  */
+
+import { MASTER_BUS_OUTPUT_GAIN } from "@/lib/sound/gain-staging/constants";
+import { mildMasterLoadScale } from "@/lib/sound/gain-staging/compute";
 
 const ANCHORS: ReadonlyArray<{ ui: number; gain: number }> = [
   { ui: 0, gain: 0 },
   { ui: 0.2, gain: 0.18 },
+  { ui: 0.35, gain: 0.34 },
   { ui: 0.4, gain: 0.42 },
   { ui: 0.6, gain: 0.68 },
   { ui: 0.7, gain: 0.82 },
@@ -21,7 +28,7 @@ function lerp(a: number, b: number, t: number): number {
   return a + (b - a) * t;
 }
 
-/** Map slider position (0..1) to perceptual linear gain (0..1). */
+/** Map slider position (0..1) to perceptual linear gain (0..1). Zero → silence. */
 export function perceptualVolumeGain(uiVolume: number): number {
   const v = Math.min(1, Math.max(0, uiVolume));
   if (v <= 0) return 0;
@@ -45,11 +52,11 @@ export function gainToDb(gain: number): number {
   return 20 * Math.log10(gain);
 }
 
-/** Documented product staging constants (MasterBus post-comp output). */
-export const MASTER_BUS_OUTPUT_GAIN = 0.9;
+/** @deprecated Prefer import from gain-staging; kept for existing importers. */
+export { MASTER_BUS_OUTPUT_GAIN };
 
 /**
- * Soft-start / profile-switch ramp - close to full so Tesla cabin is audible
+ * Soft-start / profile-switch ramp — close to full so Tesla cabin is audible
  * immediately; sensor source must not dictate engine loudness.
  */
 export const STARTUP_VOLUME_SCALE = 0.92;
@@ -58,11 +65,9 @@ export const STARTUP_VOLUME_SCALE = 0.92;
 export const PROFILE_SWITCH_VOLUME_SCALE = 1;
 
 /**
- * Cruise/load envelope on master gain. Floor keeps light-load cabin driving
- * audible; load still opens toward full under acceleration.
+ * @deprecated Use mildMasterLoadScale from gain-staging (Prompt 08).
+ * Kept as a thin wrapper so older call sites keep compiling during migration.
  */
 export function loadAwareMasterScale(load: number, regen = 0): number {
-  const L = Math.min(1, Math.max(0, load));
-  const duck = 1 - Math.min(1, Math.max(0, regen)) * 0.22;
-  return (0.82 + L * 0.18) * duck;
+  return mildMasterLoadScale(load, regen);
 }

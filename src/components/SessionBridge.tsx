@@ -15,7 +15,7 @@ const SILENT_WAV =
 export function SessionBridge() {
   const { settings, update } = useSettings();
   const access = useFeatureAccess();
-  const { entitlements } = useEntitlements();
+  const { entitlements, snapshot } = useEntitlements();
   const sessionSnap = useSessionStore();
   const sessionUi = useSessionSelector((snap) => ({
     kind: snap.kind,
@@ -31,13 +31,22 @@ export function SessionBridge() {
   useEffect(() => {
     const isLiveDrive = sessionSnap.kind === "drive" && isLiveSessionStatus(sessionSnap.status);
     if (isLiveDrive && !wasLiveDriveRef.current) {
-      beginLiveDriveAccess(entitlements);
+      beginLiveDriveAccess(entitlements, {
+        accountId: settings.accountUserId,
+        grantedProfileIds: snapshot.grantedProfileIds,
+      });
     }
     if (!isLiveDrive && wasLiveDriveRef.current) {
       endLiveDriveAccess();
     }
     wasLiveDriveRef.current = isLiveDrive;
-  }, [sessionSnap.kind, sessionSnap.status, entitlements]);
+  }, [
+    sessionSnap.kind,
+    sessionSnap.status,
+    entitlements,
+    snapshot.grantedProfileIds,
+    settings.accountUserId,
+  ]);
 
   useEffect(() => {
     const dynamicDrive = settings.dynamicDrive && access.dynamicDrive;
@@ -45,6 +54,9 @@ export function SessionBridge() {
       profileId: settings.profileId,
       volume: settings.volume,
       profileGain: getProfileGain(settings, settings.profileId),
+      outputBoostDb: settings.outputBoostDb,
+      bodyCharacter: settings.bodyCharacter,
+      mechanicalCharacter: settings.mechanicalCharacter,
       tuning: getTuning(settings, settings.profileId),
       motionSensitivity: settings.motionSensitivity,
       motionNoiseFloor: settings.motionNoiseFloor,
@@ -53,6 +65,7 @@ export function SessionBridge() {
       snippets: settings.snippets,
       cabinEq: activeCustom?.eq ?? settings.cabinEq,
       shiftFeel: access.advancedControls ? settings.shiftFeel : settings.shiftFeel,
+      shiftMapPreset: settings.shiftMapPreset,
       autoRules: settings.autoRules,
       autoRulesMode: settings.autoRulesMode,
       playlists: settings.playlists,

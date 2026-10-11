@@ -3,7 +3,7 @@
 Living document for product context, recent architecture decisions, and a dated changelog.
 Canonical product rules still live in `elcamoso-comprehensive-spec.md`. Update **both** when direction or architecture changes.
 
-**Last updated:** 2026-10-10
+**Last updated:** 2026-10-12
 
 ---
 
@@ -35,7 +35,7 @@ Canonical product rules still live in `elcamoso-comprehensive-spec.md`. Update *
 
 ### Routes
 
-`/`, `/onboarding`, `/drive`, `/explore`, `/demo`, `/sounds`, `/symphony`, `/worlds`, `/fusion`, `/studio`, `/garage`, `/journeys`, `/journeys/$journeyId` (Replay/Remix + separate Drive Song), `/calibrate`, `/settings`, `/story` (product story), `/about` (redirect → `/story`), `/science` (Science of ELCAMOSO composition model), `/pricing`, `/legal` (+ impressum, privacy, cookies, terms, accessibility), `/auth/account/callback` (magic link), `/auth/account/google/callback` (Google OAuth, server GET), `/upgrade/$token`, `/pair`, `/pair/$token` (Tesla↔phone QR claim), `/connect/$sessionId` (legacy join), `/share/drive/$shareId` (Drive Song share, noindex + OG), `/api/og` + `/api/og/drive-song/$shareId` (social cards), `/debug` (dev-only; includes `/debug/og` social card preview, `/debug/calibration` road-test lab, `/debug` Realism V2 A/B). Header groups: Explore (Explore, Demo) · Sounds (Sounds, Studio, Garage) · About (Story, Science).
+`/`, `/onboarding`, `/drive`, `/explore`, `/demo`, `/sounds`, `/symphony`, `/worlds`, `/fusion`, `/studio`, `/garage`, `/rewards` (Sound Spin; `ELCAMOSO_REWARDS_ENABLED`), `/journeys`, `/journeys/$journeyId` (Replay/Remix + separate Drive Song), `/calibrate`, `/settings`, `/story` (product story), `/about` (redirect → `/story`), `/science` (Science of ELCAMOSO composition model), `/pricing`, `/legal` (+ impressum, privacy, cookies, terms, accessibility), `/auth/account/callback` (magic link), `/auth/account/google/callback` (Google OAuth, server GET), `/upgrade/$token`, `/pair`, `/pair/$token` (Tesla↔phone QR claim), `/connect/$sessionId` (legacy join), `/share/drive/$shareId` (Drive Song share, noindex + OG), `/api/og` + `/api/og/drive-song/$shareId` (social cards), `/debug` (dev-only; includes `/debug/og` social card preview, `/debug/calibration` road-test lab, `/debug` Realism V2 A/B). Header groups: Explore (Explore, Demo) · Sounds (Sounds, Studio, Garage) · About (Story, Science).
 
 ### SEO / Social cards
 
@@ -48,17 +48,20 @@ Canonical product rules still live in `elcamoso-comprehensive-spec.md`. Update *
 
 ### Account / auth (current)
 
-- **Magic link** + **Google OAuth** (Authorization Code + PKCE + state/nonce + ID token validation).
-- Session: HttpOnly cookie `elcamoso_account_session` (Secure in production, SameSite=Lax). Profile UX in localStorage is `{ userId, email, expiresAt }` only — no session token, no Google tokens.
-- Server-only env: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI` (never `VITE_*`). Docs: `docs/account-google-oauth.md`.
-- **Continue with Google** only when all three Google env vars are set; partial config fails startup validation in `src/server.ts`.
-- Production redirect URI is fixed: `https://www.elcamoso.com/auth/account/google/callback`. That exact string must be listed under Google Cloud Console → OAuth **Web application** client → Authorized redirect URIs (`redirect_uri_mismatch` = Console gap, not app code).
+- **Magic link** + **Google OAuth** + **Supabase email OTP** (six-digit code; `signInWithOtp` / `verifyOtp` type `email`).
+- Session: HttpOnly cookie `elcamoso_account_session` (Secure in production, SameSite=Lax). Profile UX in localStorage is `{ userId, email, expiresAt }` only — no session token, no Google/Supabase tokens.
+- Server-only env: `GOOGLE_*`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `ELCAMOSO_EMAIL_OTP_ENABLED`. Docs: `docs/account-google-oauth.md`, `docs/account/EMAIL_OTP_SETUP.md`, `docs/account/IDENTITY_MIGRATION_PLAN.md`.
+- **Continue with Google** only when all three Google env vars are set; email OTP when Supabase URL+anon key are set.
+- Production Google redirect URI is fixed: `https://www.elcamoso.com/auth/account/google/callback`.
 - Tesla vehicle OAuth remains separate (`docs/dynamic-drive/tesla-oauth-env.md`).
+- Cross-tab logout via BroadcastChannel + storage event. Free profiles remain usable signed-out; premium follows entitlement lease policy.
 
 ### Sound architecture (current)
 
 - Web Audio only. Improved strategies + Dynamic Drive layered synth for virtual-transmission profiles.
 - **Realism V2.2 (default for combustion):** continuous, DC-blocked worklet combustion excitation with per-cycle jitter, per-fire noise burst and rate compensation → formants/body resonance + RPM-tracking engine-order resonators + 70 ms decorrelated pipe IR; Powertrain-authored RPM/load/shift phases plus the shared Dynamic Drive transient scheduler (torque cut → thump → reengage bark; rev-match / overrun / turbo on the full tier). Worklet readiness is **per AudioContext** (`WeakSet`) - a global flag used to drop every later context to the fallback. A/B vs Current on `/debug`. See `docs/AUDIO_REALISM_V2.md`.
+- **Combustion contract v1 (2026-10-11):** worklet AudioParams use finite reads (zero is valid; `firingHz=0` schedules no new fires). Architecture codes: 0 even · 1 lope · 2 flat-six · 3 cross-plane · 4 v-twin · 5 single · **6 flat-plane-v8** (`architecture-contract.ts` + `combustion-processor.js`). Race Car uses code 6. Rally Turbo 3 still uses lope code 1 as an explicit unresolved shortcut. `supportRatios`/`supportWeights` are crank-order metadata; live resonators consume them only with `VITE_COMBUSTION_PROFILE_ORDER_BANDS=1` (default off = legacy ½/1/2 × firing-order bands). Engine-sim reference: `docs/audio/engine-sim-reference/`.
+- **Combustion topology pilot (opt-in):** `VITE_COMBUSTION_TOPOLOGY_PILOT` enables explicit 720° cylinder schedules + collector routing + primary delays for `american-muscle-v8` / `race-car` only (`combustion-topology.ts` → worklet message). Default off. Remaining: pressure-shaped pulses, per-collector IRs, roll-out to other combustion IDs.
 - Loudness staging rule for V2: the excitation carries timbre, the combustion bus carries load loudness; cruise → full-load span target 12–16 dB. Do not compound load gains across stages.
 - Road Feel V3 master gain / perceptual volume remains authoritative for cabin loudness.
 
@@ -70,7 +73,15 @@ Canonical product rules still live in `elcamoso-comprehensive-spec.md`. Update *
 - DSP primitives: `src/lib/sound/dsp/` (+ `layers-extra.ts` for expansion)
 - Strategies: `strategies.ts` + `strategies-extra.ts`
 - Loudness balance: `src/lib/sound/realism/loudness.ts`
-- Typed acoustic specs: `src/lib/sound/profile-specs` (`getAcousticProfileSpec`) — metadata only; `family` mirrors runtime routing, `packageFamily` records INDEX intent when mismatched (`docs/FAMILY_CLASSIFICATION_MISMATCHES.md`)
+- Typed acoustic specs: `src/lib/sound/profile-specs` (`getAcousticProfileSpec` / `allCatalogAcousticProfileSpecs`) — metadata only, including Prompt 02 `recipe` (cycle/VT/layers/sample/headroom/listening); `family` mirrors runtime routing, `packageFamily` records INDEX intent when mismatched (`docs/FAMILY_CLASSIFICATION_MISMATCHES.md`). Recipes unused by live audio until a later renderer flag.
+- Virtual drivetrain: `PowertrainSimulator` + `settings.shiftMapPreset` (legacy/city/touring/sport); City default gated by `VITE_CITY_SHIFT_PRESET`. Shift sequence IDs on `VirtualPowertrainState.shiftEvent`.
+- **Drive Audio V3 / raw mechanical (opt-in):** `VITE_DRIVE_AUDIO_V3` + `realismEngine:"v3"` for pilots `american-muscle-v8` / `flat-six-sport` only (`src/lib/sound/realism/v3`). Overlay on HybridCombustionSynth; Current/V2 unchanged when flag off. Listening **pending**.
+- **Hybrid sample layer (Prompt 05):** `src/lib/sound/realism/samples` — typed recording manifests, bounded cache/loader, procedural fallback. `SOUND_ASSET_CATALOG` empty → all combustion profiles **awaiting-assets**. Acquisition brief: `docs/audio/SAMPLE_ACQUISITION_BRIEF.md`. Granular synthesis deferred.
+- **Shift events (Prompt 06):** `src/lib/sound/realism/shift-events` — consumes `shiftEvent.sequenceId` once; audio-clock choreography; per-profile engagement; `shiftFeel.shiftIntensity` (0 = no clacks). Suspend/resume discards stale events. Listening pending.
+- **Catalog tuning (Prompt 07):** `src/lib/sound/realism/catalog-tuning` — 57 distinct overlays; wired into `acousticEngineForProfile` + `profileExperienceConfig`. Acceptance: `docs/audio/RAW_MECHANICAL_AUDIO_ACCEPTANCE.md`. Matrix: `docs/audio/profile-upgrade-matrix-prompt-07.md`. Listening/device **unverified**; samples still awaiting.
+- **Gain staging (Prompt 08):** `src/lib/sound/gain-staging` — coherent path, −1 dBFS sample peak protect, default UI volume 35%, optional +6 dB boost, advanced Body/Mechanical Character. Docs: `docs/audio/GAIN_STAGING.md`. Cabin checklist unverified.
+- **Drive Cockpit (Prompt 09):** `src/components/drive/DriveCockpit.tsx` — branded active-Drive UI; `cockpit-model` / `cockpit-profile-switch`; powertrain `warmStartAtSpeed` on profile change; sequential engine crossfade; favourites + volume share Settings state. Sound / Shift pickers use Radix `Select` (rounded monochrome list, Drive+ badge for locked) — never native OS `<select>` highlights.
+- **Sounds Listen selection:** Row / Preview / Use Sound call `select()` which updates `settings.profileId` and, when already live, `listenProfile` so the sticky Listen bar and engine match the tapped profile.
 - Profile experience config + upgrade matrix (worktree; often untracked until committed): `src/lib/sound/profile-experience-config.ts`, `docs/audio/profile-upgrade-matrix.md`
 - Evidence tracking / listening honesty: `docs/audio/ARTIFACTS_AND_TRACKING.md`, `docs/audio/LISTENING_AND_ASSET_STATUS.md` — **0** listening-verified; Muscle pilot **0/9** approved slots
 - Subjective review notes: `docs/SOUND_PROFILE_REVIEW.md`
@@ -145,6 +156,8 @@ Canonical product rules still live in `elcamoso-comprehensive-spec.md`. Update *
 | Profiles                     | `src/lib/sound/profiles.ts`, `profiles-expansion.ts`                                |
 | Acoustic specs               | `src/lib/sound/profile-specs/` (`getAcousticProfileSpec`), `docs/FAMILY_CLASSIFICATION_MISMATCHES.md` |
 | Upgrade matrix / listening   | `docs/audio/profile-upgrade-matrix.md`, `LISTENING_AND_ASSET_STATUS.md`, `ARTIFACTS_AND_TRACKING.md` |
+| Drive Cockpit V2 plan        | `docs/DRIVE_COCKPIT_V2_PLAN.md`, `docs/DRIVE_COCKPIT_V2_PROGRESS.md`, `cursor-prompts/ELCAMOSO_DRIVE_AUDIO_UPGRADE.md` |
+| Audio comparison lab         | `src/lib/sound/lab/`, `/debug/audio-lab`, `npm run audio:lab`, `docs/audio/AUDIO_LAB.md` |
 | Muscle V8 pilot              | `docs/AMERICAN_V8_HYBRID_PILOT.md`, `src/lib/sound/realism/v2/american-v8-pilot-manifest.ts` |
 | Realism                      | `src/lib/sound/realism/*`                                                           |
 | Realism V2                   | `src/lib/sound/realism/v2/`, `docs/AUDIO_REALISM_V2.md`                             |
@@ -178,7 +191,7 @@ Canonical product rules still live in `elcamoso-comprehensive-spec.md`. Update *
 - Sticky chrome fix: BrandNav + Sounds/Studio listen bars; Cabin EQ presets (Phone speakers / Cabin / Headphones)
 - Demo Drive: PRND + pedals; guided tour; `useDemoDrive` syncs profile; `DemoSoundPicker` for full catalog
 - Find a sound on `/sounds` (local matcher + optional `findSoundFn`)
-- Card Preview / Listen on `/sounds` updates settings and calls `listenProfile` (in-place switch when already playing)
+- Card / row select on `/sounds` updates `profileId` + sticky Listen; Preview / Listen call `listenProfile` (in-place switch when already playing)
 - Title-fidelity pass: Playful (laugh/fart/kazoo) + Neon Drive + Construction Monster
 - Phone Drive harden: GPS `coords.speed` null → lat/lon delta fallback; wake lock for all live Drive; visibility hide grace; Tesla browser smoke checklist in `docs/TESLA_BROWSER_SMOKE_TEST.md`
 - Playwright e2e: `e2e/` + `playwright.config.ts`; scripts `npm run test:e2e` / `test:e2e:ui` (chromium + mobile-chrome)
@@ -191,6 +204,131 @@ Canonical product rules still live in `elcamoso-comprehensive-spec.md`. Update *
 ---
 
 ## Changelog
+
+### 2026-10-12 (Sounds Listen + Drive Sound picker polish)
+
+- **`/sounds`:** Selecting a profile (row, Preview, Use Sound) updates sticky Listen and switches live audio via `listenProfile` when already playing — no longer stuck on the previous profile.
+- **Drive Cockpit:** Replaced native Sound / Shift `<select>` with Radix Select; list matches monochrome cockpit (rounded panel, inverted focus, Drive+ for locked). Shared `Select` viewport no longer clips to one row.
+- Docs: this memory bank entry; engine-sim / Cockpit V2 notes unchanged.
+
+### 2026-10-11 (Drive Cockpit V2 Prompt 14 — integration / release pack)
+
+- Integration fixes: free-trio cannot be bypassed by Symphony/World/Fusion `access:"free"`; Drive gating uses experience entitlements; mid-drive `fade_to_free` immediate; live-hold profile grants merged.
+- Release checklist + parked device test script; readiness table; coordinated auth/billing flag activation; no auto-deploy.
+- Verified here: typecheck, production build, focused regressions; catalog 57/57. Listening / Tesla-moving / live email / live discounts **not** claimed.
+- Docs: `docs/DRIVE_COCKPIT_V2_RELEASE_CHECKLIST.md`, `docs/device/DRIVE_COCKPIT_V2_DEVICE_TEST_SCRIPT.md`.
+
+### 2026-10-11 (Drive Cockpit V2 Prompt 13 — Stripe reward discounts)
+
+- Fulfil Sound Spin one-payment discounts via existing Checkout / subscription APIs; pinned Stripe API `2026-08-26.dahlia`.
+- Cases: new monthly Checkout coupon attach; active monthly next-invoice apply with preview + non-stacking.
+- Durable `reserved → applied → consumed` (paid invoice webhook only); no live coupon creation; feature off until configured.
+- Docs: `docs/rewards/STRIPE_DISCOUNT_FULFILMENT.md`. Migration `0005_reward_discount_fulfilment.sql`.
+
+### 2026-10-11 (Drive Cockpit V2 Prompt 12 — Sound Spin rewards)
+
+- Monthly Sound Spin behind `ELCAMOSO_REWARDS_ENABLED` (default off) + campaign `enabled: false` until config complete.
+- Server-authoritative claims: crypto weighted selection, UTC calendar month uniqueness, durable fulfilment + idempotent grant ids.
+- Free vs paid pools; reward types (48h sound, 7d pack, cockpit theme, one-payment discount reservation, weekend library).
+- UI: `/rewards` wheel outside Drive; decorative segments; actual odds/terms; Garage link when flag on.
+- Migration `0004_reward_claims.sql`. Docs: `docs/rewards/SOUND_SPIN.md`.
+
+### 2026-10-11 (Drive Cockpit V2 Prompt 11 — free / premium entitlements)
+
+- Permanent free trio: `american-muscle-v8`, `flat-six-sport`, `cyber-pulse` (`profile-access-config.ts`).
+- Authoritative `access-resolver` for catalog, favourites, playback, assets, UI; UTC precedence + past-due grace.
+- Grants store + additive migration `0003_entitlement_grants`; grandfathered purchases preserved when free set changes.
+- Offline lease (72h) with mid-drive `fade_to_free`; account switch invalidates prior-user cache.
+- Docs: `docs/entitlements/ENTITLEMENTS.md`. No new prices/plans.
+
+### 2026-10-11 (Engine-sim contract + topology pilot)
+
+- Worklet finite AudioParam reads: zero firingHz schedules no new fires; intensity/load/sharpness zero keep defined timbre (not `||` defaults). Diagnostic: `scripts/diagnose-combustion-worklet-controls.mjs`.
+- Architecture contract v1: codes 0–6; flat-plane V8 = 6; single = 5; Race Car remapped. Rally Turbo 3 lope shortcut documented as unresolved.
+- Profile order bands gated by `VITE_COMBUSTION_PROFILE_ORDER_BANDS` (default off).
+- Topology pilot gated by `VITE_COMBUSTION_TOPOLOGY_PILOT` (default off): Muscle V8 cross-plane bank schedule vs Race Car flat-plane alternating collectors; primary-length delays in worklet. Reference: `docs/audio/engine-sim-reference/`.
+
+### 2026-10-11 (Drive Cockpit V2 Prompt 10 — email OTP)
+
+- Additive Supabase email OTP (`signInWithOtp` / `verifyOtp` type `email`); Google + magic-link preserved.
+- Server-side send/verify + rate limits; ELCAMOSO HttpOnly cookie after verified email; no client-trusted user ids.
+- `shouldCreateUser: true` (first-time signup allowed); template requires `{{ .Token }}`; setup guide without secrets.
+- Identity mapping plan: verified email → existing `userId` / Stripe; no auto-merge of production identities.
+- Cross-tab logout sync; redirect allowlist; in-car code entry while email is read on phone.
+
+### 2026-10-11 (Drive Cockpit V2 Prompt 09 — Drive Cockpit UI)
+
+- Replaced cluttered active-Drive layout with premium `DriveCockpit` using design tokens + real `ElcamosoLogo`.
+- Stale/unavailable speed shows em dash (not misleading zero); gearless regimes instead of fake six-speed gears; simulated RPM/gear captions.
+- Fast sound switching via shared `settings.profileId`; latest-wins; entitlement gating; favourites remain when access expires.
+- Powertrain warm-start preserves road speed across profile changes; engine sequential crossfade ~540 ms with restore on failure.
+- Integration/unit tests + Playwright cockpit layout smoke (390×844 / 1280×800).
+
+### 2026-10-11 (Drive Cockpit V2 Prompt 08 — gain staging)
+
+- Audited and fixed double profileGain / compressor-as-limiter issues; documented coherent path in `GAIN_STAGING.md`.
+- Peak protect at −1 dBFS sample (WaveShaper); MasterBus program compressor gentled; user volume perceptual + optional +6 dB boost.
+- New-device master volume default 35%; merge import no longer overwrites device volume/boost; advanced Body/Mechanical Character in Settings.
+- Overload telemetry on engine meters for lab/debug only. Listening/device checklist unverified.
+
+### 2026-10-11 (Drive Cockpit V2 Prompt 07 — full-catalog tuning)
+
+- Enumerated live catalog: **47** core / **57** public IDs. Typed Prompt 07 overlays for every ID (`catalog-tuning/by-profile.ts`); family defaults + individual audible rationales.
+- Wired `applyAcousticCatalogTuning` into `acousticEngineForProfile` (9 combustion) and `applyExperienceCatalogTuning` into `profileExperienceConfig` (57).
+- All-profile finite/lifecycle unit tests; acceptance doc + complete matrix; listening rubric humans-only (0 scored). Hybrid assets still awaiting; device unverified. **Not** claiming authenticity for all sounds.
+
+### 2026-10-11 (Drive Cockpit V2 Prompt 06 — mechanical shift events)
+
+- Synchronized shift choreography on the audio clock from Prompt 03 `shiftEvent.sequenceId` (exactly-once; stale discard after suspend).
+- Per-profile engagement: muscle-heavy / sports-precise / restrained / none (gearless silence).
+- `shiftFeel.shiftIntensity` separate from master volume; Settings control; zero mutes mechanical only.
+- Fixtures: `npm run audio:prompt-06`. Listening **pending**. Simulated audio — no actuation claims.
+
+### 2026-10-11 (Drive Cockpit V2 Prompt 05 — hybrid sample layer)
+
+- Typed hybrid recording manifest + per-profile acquisition requests for 9 combustion Sound Profile IDs.
+- Bounded decoded-buffer cache, stale-safe loader, bounded RPM stretch helpers, optional equal-power blend.
+- Engine loads samples for the active personality only; empty catalog → procedural_only with restored procedural gain.
+- Docs: `SAMPLE_ACQUISITION_BRIEF.md`, `GRANULAR_SYNTHESIS_DECISION.md` (granular **not** added).
+- **Approved assets: 0** — profiles marked awaiting-assets; listening/sample realism not claimed.
+
+### 2026-10-11 (Drive Cockpit V2 Prompt 04 — raw mechanical combustion)
+
+- Opt-in Drive Audio V3 behind `VITE_DRIVE_AUDIO_V3` / `ELCAMOSO_DRIVE_AUDIO_V3` (default off).
+- Pilots: `american-muscle-v8` + `flat-six-sport` with distinct presets; reusable pulse primitives for later IDs.
+- Hybrid overlay: rumble HP, mild WaveShaper + post-LP, low-order body, load-dependent intake/exhaust balance; worklet seed for repeatable cycle texture.
+- Quality tier high/low-cost; V2 fallback when flag off or build fails. Loudness-matched fixtures via `npm run audio:prompt-04`.
+- **Listening-verified: no** — automated tests do not prove authentic engine sound.
+
+### 2026-10-11 (Drive Cockpit V2 Prompt 03 — shared virtual drivetrain)
+
+- Authoritative `VirtualPowertrainState`: operating regime (steady/unloading/shifting/recovering), unique `shiftEvent.sequenceId`, speed freshness/source, estimated load proxy.
+- City / Touring / Sport artistic shift-map presets (`shift-presets.ts`); six-speed City = up `[15,28,43,58,75]` / down `[10,21,35,49,65]` km/h; other gear counts adapted.
+- Settings `shiftMapPreset` + UI selector; City is the **default** only when `VITE_CITY_SHIFT_PRESET` / `ELCAMOSO_CITY_SHIFT_PRESET` is on (otherwise legacy Road Feel).
+- Gearless helper for continuous profiles; GPS hold/decay does not invent acceleration. Fixture: `artifacts/prompt-03-fixture.json`.
+- Tests: `shift-presets.test.ts` + full `src/lib/powertrain` (182 pass). Typecheck pass.
+
+### 2026-10-11 (Drive Cockpit V2 Prompt 02 — acoustic recipes)
+
+- Extended `AcousticProfileSpec` with additive `recipe` (renderer kind, capabilities, cycle geometry, layer recipes, VT thresholds, sample-bank metadata, headroom, listening).
+- New `family-defaults.ts` + `recipe-build.ts`; distinct validated recipes for all **57** catalog IDs via `allCatalogAcousticProfileSpecs()`.
+- Gearless / continuous profiles explicitly disable combustion shift accents; comedy/EV VT profiles do not inherit pops/clacks.
+- Validation clamps units/bounds; listening stays under `recipe.listening` only. **No audible path change** (metadata preparation for later flags).
+- Matrix/PROGRESS/PLAN updated with exact code locations. Tests: `getAcousticProfileSpec.test.ts` (13 pass).
+
+### 2026-10-11 (Drive Cockpit V2 Prompt 01 — audio comparison lab)
+
+- Production-engine lab under `src/lib/sound/lab/`: deterministic fixtures, metrics (peak/RMS/DC/centroid/bands, approximate loudness), capture metadata, pending per-ID baseline reports.
+- UI: `/debug/audio-lab` (DEV; deployed requires `ELCAMOSO_AUDIO_LAB_SECRET` or billing admin secret). Not in BrandNav.
+- CLI: `npm run audio:lab` → `artifacts/audio-lab/`. Docs: `docs/audio/AUDIO_LAB.md`.
+- Normal Drive playback unchanged. Listening-verified still **0/57**. Full multi-profile WAV matrix pending CLI run in this environment.
+
+### 2026-10-11 (Drive Cockpit V2 Prompt 00 — audit only)
+
+- Saved pack to `cursor-prompts/ELCAMOSO_DRIVE_AUDIO_UPGRADE.md`.
+- Created `docs/DRIVE_COCKPIT_V2_PLAN.md` and `docs/DRIVE_COCKPIT_V2_PROGRESS.md` (architecture map, flag ownership, rollback, Prompt 00–07 order).
+- Extended `docs/audio/profile-upgrade-matrix.md` with Prompt 00 catalog facts (47 core / 57 total / 9 V2 combustion / family mismatches).
+- **No runtime or audible changes.** Listening-verified remains 0/57.
 
 ### 2026-10-10 (Header nav groups: Explore / Sounds / About)
 

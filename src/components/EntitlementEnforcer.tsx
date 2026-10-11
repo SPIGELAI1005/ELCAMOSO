@@ -2,6 +2,10 @@ import { useEffect } from "react";
 
 import { FALLBACK_SOUND_PROFILE_ID } from "@/lib/entitlements/catalog";
 import { deferSettingsClampUntilDriveEnds } from "@/lib/entitlements/live-drive-access";
+import {
+  OFFLINE_LEASE_EXPIRY_POLICY,
+  resolveOfflineLeaseExpiryAction,
+} from "@/lib/entitlements/offline-lease";
 import { useFeatureAccess } from "@/lib/entitlements/selectors";
 import { useSettings } from "@/lib/drive/useSettings";
 import { DEFAULT_SHIFT_FEEL } from "@/lib/drive/types-extra";
@@ -13,13 +17,6 @@ function isEntitlementDowngradePatch(
   settings: ReturnType<typeof useSettings>["settings"],
 ): boolean {
   if ("dynamicDrive" in patch && patch["dynamicDrive"] === false && settings.dynamicDrive) {
-    return true;
-  }
-  if (
-    "profileId" in patch &&
-    typeof patch["profileId"] === "string" &&
-    patch["profileId"] !== settings.profileId
-  ) {
     return true;
   }
   if ("latencyCompMs" in patch && patch["latencyCompMs"] === 0 && settings.latencyCompMs !== 0) {
@@ -37,14 +34,21 @@ export function EntitlementEnforcer() {
   const isLiveDrive = session.kind === "drive" && isLiveSessionStatus(session.status);
 
   useEffect(() => {
+    const leaseAction = resolveOfflineLeaseExpiryAction(Date.now(), settings.accountUserId);
+    const mustFadeToFree =
+      isLiveDrive &&
+      (!access.canDriveWithProfile(settings.profileId) ||
+        (leaseAction.expired && OFFLINE_LEASE_EXPIRY_POLICY === "fade_to_free"));
+
+    // Mid-drive fade_to_free applies immediately (quiet profile crossfade). Never defer.
+    if (mustFadeToFree && settings.profileId !== FALLBACK_SOUND_PROFILE_ID) {
+      update({ profileId: leaseAction.fallbackProfileId });
+    }
+
     const patch: Partial<typeof settings> = {};
 
     if (settings.dynamicDrive && !access.dynamicDrive) {
       patch.dynamicDrive = false;
-    }
-
-    if (!access.canDriveWithProfile(settings.profileId) && isLiveDrive) {
-      patch.profileId = FALLBACK_SOUND_PROFILE_ID;
     }
 
     if (!access.advancedControls) {
@@ -58,6 +62,15 @@ export function EntitlementEnforcer() {
       }
     } else if (!access.revMatch && settings.shiftFeel.revMatch !== DEFAULT_SHIFT_FEEL.revMatch) {
       patch.shiftFeel = { ...settings.shiftFeel, revMatch: DEFAULT_SHIFT_FEEL.revMatch };
+    }
+
+    // Outside live Drive, also clamp denied Engine profiles immediately.
+    if (
+      !isLiveDrive &&
+      !access.canDriveWithProfile(settings.profileId) &&
+      settings.profileId !== FALLBACK_SOUND_PROFILE_ID
+    ) {
+      patch.profileId = FALLBACK_SOUND_PROFILE_ID;
     }
 
     if (Object.keys(patch).length === 0) return;
@@ -79,6 +92,7 @@ export function EntitlementEnforcer() {
     settings.latencyCompMs,
     settings.profileId,
     settings.shiftFeel,
+    settings.accountUserId,
     update,
   ]);
 

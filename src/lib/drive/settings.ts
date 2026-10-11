@@ -31,6 +31,11 @@ import type {
   FusionStudioParams,
 } from "@/lib/studio/types";
 import { DEFAULT_FUSION_PARAMS, DEFAULT_SYMPHONY_PARAMS } from "@/lib/studio/types";
+import {
+  defaultShiftMapPreset,
+  isShiftMapPresetId,
+  type ShiftMapPresetId,
+} from "@/lib/powertrain/shift-presets";
 
 /** Per-profile fine-tuning of how motion translates into sound state. */
 export interface ProfileTuning {
@@ -152,8 +157,17 @@ export function materializeCustom(sound: CustomSound): SoundProfile {
 
 export interface ElcamosoSettings {
   profileId: string;
-  /** master volume, 0..1 */
+  /**
+   * Master volume slider 0..1 (perceptual curve in the engine).
+   * New-device default ~35%. Zero = silence. Device-local; not taken from merge imports.
+   */
   volume: number;
+  /** Optional output boost 0..6 dB (peak-protected). Does not override car hardware volume. */
+  outputBoostDb: number;
+  /** Advanced Body character 0..1 (0.5 = authored). Settings only — not Drive cockpit. */
+  bodyCharacter: number;
+  /** Advanced Mechanical character 0..1 (0.5 = authored). Settings only. */
+  mechanicalCharacter: number;
   demoMotion: boolean;
   /**
    * Drive output mode:
@@ -197,6 +211,12 @@ export interface ElcamosoSettings {
   cabinEq: CabinEq;
   /** gear-change feel for virtual-transmission profiles */
   shiftFeel: ShiftFeel;
+  /**
+   * Artistic virtual shift-map preset (Prompt 03).
+   * Default is City only when VITE_CITY_SHIFT_PRESET / ELCAMOSO_CITY_SHIFT_PRESET is on;
+   * otherwise legacy Road Feel maps. Selectable in Settings regardless.
+   */
+  shiftMapPreset: ShiftMapPresetId;
   autoRules: AutoRule[];
   /** @deprecated migrated into autoRulesMode */
   autoRulesEnabled: boolean;
@@ -265,7 +285,10 @@ const KEY = "elcamoso.settings";
 
 export const DEFAULT_SETTINGS: ElcamosoSettings = {
   profileId: DEFAULT_PROFILE_ID,
-  volume: 0.7,
+  volume: 0.35,
+  outputBoostDb: 0,
+  bodyCharacter: 0.5,
+  mechanicalCharacter: 0.5,
   demoMotion: false,
   driveOutputMode: "live",
   captureQuality: "balanced",
@@ -289,6 +312,7 @@ export const DEFAULT_SETTINGS: ElcamosoSettings = {
   layerMix: normalizeMix(undefined),
   cabinEq: DEFAULT_CABIN_EQ,
   shiftFeel: DEFAULT_SHIFT_FEEL,
+  shiftMapPreset: defaultShiftMapPreset(),
   autoRules: [],
   autoRulesEnabled: false,
   autoRulesMode: "off",
@@ -468,6 +492,7 @@ function sanitizeShiftFeel(v: unknown): ShiftFeel {
     shiftMs: num(r["shiftMs"], DEFAULT_SHIFT_FEEL.shiftMs, 40, 400),
     torqueDip: num(r["torqueDip"], DEFAULT_SHIFT_FEEL.torqueDip, 0, 0.6),
     revMatch: num(r["revMatch"], DEFAULT_SHIFT_FEEL.revMatch, 0, 1),
+    shiftIntensity: num(r["shiftIntensity"], DEFAULT_SHIFT_FEEL.shiftIntensity, 0, 1),
   };
 }
 
@@ -810,6 +835,14 @@ export function sanitizeSettings(input: unknown): {
   const settings: ElcamosoSettings = {
     profileId,
     volume: num(p["volume"], DEFAULT_SETTINGS.volume, 0, 1),
+    outputBoostDb: num(p["outputBoostDb"], DEFAULT_SETTINGS.outputBoostDb, 0, 6),
+    bodyCharacter: num(p["bodyCharacter"], DEFAULT_SETTINGS.bodyCharacter, 0, 1),
+    mechanicalCharacter: num(
+      p["mechanicalCharacter"],
+      DEFAULT_SETTINGS.mechanicalCharacter,
+      0,
+      1,
+    ),
     demoMotion: bool(p["demoMotion"], false),
     driveOutputMode:
       p["driveOutputMode"] === "capture" || p["driveOutputMode"] === "live-and-capture"
@@ -836,6 +869,9 @@ export function sanitizeSettings(input: unknown): {
     layerMix: normalizeMix(p["layerMix"]),
     cabinEq: sanitizeCabinEq(p["cabinEq"]),
     shiftFeel: sanitizeShiftFeel(p["shiftFeel"]),
+    shiftMapPreset: isShiftMapPresetId(p["shiftMapPreset"])
+      ? p["shiftMapPreset"]
+      : defaultShiftMapPreset(),
     autoRules: sanitizeAutoRules(p["autoRules"], knownIds),
     autoRulesEnabled: bool(p["autoRulesEnabled"], false),
     autoRulesMode: sanitizeAutoRulesMode(p["autoRulesMode"], bool(p["autoRulesEnabled"], false)),
@@ -1042,7 +1078,7 @@ export function readRawStored(): string | null {
 /* ---------------------------------------------------------------- transfer */
 
 const BACKUP_KIND = "elcamoso.settings.backup";
-const BACKUP_VERSION = 8;
+const BACKUP_VERSION = 9;
 
 export interface SettingsBackup {
   kind: typeof BACKUP_KIND;
@@ -1172,6 +1208,14 @@ function migratePayload(payload: Record<string, unknown>, version: number) {
     }
   }
 
+  if (version < 9) {
+    // Prompt 08 gain staging — do not rewrite an existing saved volume.
+    if (p["outputBoostDb"] === undefined) p["outputBoostDb"] = 0;
+    if (p["bodyCharacter"] === undefined) p["bodyCharacter"] = 0.5;
+    if (p["mechanicalCharacter"] === undefined) p["mechanicalCharacter"] = 0.5;
+    notes.push("Added output boost and advanced Body / Mechanical character controls.");
+  }
+
   return { payload: p, notes };
 }
 
@@ -1291,7 +1335,11 @@ export function mergeBackup(
 
   const settings: ElcamosoSettings = {
     ...current,
-    volume: incoming.volume,
+    // Prompt 08: keep this device's loudness — do not import another device's volume/boost.
+    volume: current.volume,
+    outputBoostDb: current.outputBoostDb,
+    bodyCharacter: incoming.bodyCharacter,
+    mechanicalCharacter: incoming.mechanicalCharacter,
     reducedMotion: incoming.reducedMotion,
     haptics: incoming.haptics,
     motionSensitivity: incoming.motionSensitivity,
@@ -1375,6 +1423,9 @@ export async function importSettingsFile(
 export function restoreRecommended(): ElcamosoSettings {
   return writeSettings({
     volume: DEFAULT_SETTINGS.volume,
+    outputBoostDb: DEFAULT_SETTINGS.outputBoostDb,
+    bodyCharacter: DEFAULT_SETTINGS.bodyCharacter,
+    mechanicalCharacter: DEFAULT_SETTINGS.mechanicalCharacter,
     tuning: {},
     profileGain: {},
     cabinEq: DEFAULT_CABIN_EQ,

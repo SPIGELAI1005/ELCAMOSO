@@ -5,6 +5,9 @@
  * in docs/sound-profiles and docs/audio/profile-upgrade-matrix.md. This module
  * contains bounded runtime controls only.
  */
+
+import { applyExperienceCatalogTuning } from "@/lib/sound/realism/catalog-tuning/apply";
+
 export const PUBLIC_PROFILE_IDS = [
   "gt-v8", "racing-v10", "cyber-pulse", "race-car", "rally-car", "space-ship", "ufo",
   "speed-boat", "cruise-ship", "santa-sleigh", "wild-west-carriage", "romanian-85-carriage",
@@ -190,6 +193,14 @@ export const PROFILE_EXPERIENCE_CONFIG = {
   "fusion-future-pulse": define({ physics: "hybrid", pitchDriver: "motor-speed", loadDriver: "torque-demand", aspiration: "not-applicable", availableRoles: ["motor", "mechanical", "regen", "music", "event"], transitionTauSeconds: 0.1, phases: { accelerationTexture: 1.16, cruiseIntrusiveScale: 0.54, releaseCharacter: 0.52, regenCharacter: 0.84 } }),
 } satisfies Record<PublicProfileId, ProfileExperienceConfig>;
 
-export function profileExperienceConfig(profileId: string): ProfileExperienceConfig | null {
+/** Untuned experience config (Prompt 07 baselines). Prefer profileExperienceConfig at runtime. */
+export function profileExperienceConfigBase(profileId: string): ProfileExperienceConfig | null {
   return (PROFILE_EXPERIENCE_CONFIG as Record<string, ProfileExperienceConfig>)[profileId] ?? null;
+}
+
+/** Runtime experience config including Prompt 07 catalog overlays. */
+export function profileExperienceConfig(profileId: string): ProfileExperienceConfig | null {
+  const base = profileExperienceConfigBase(profileId);
+  if (!base) return null;
+  return applyExperienceCatalogTuning(profileId, base);
 }

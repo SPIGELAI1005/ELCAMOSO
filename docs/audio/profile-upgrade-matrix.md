@@ -2,6 +2,131 @@
 
 Generated from the runtime registry on 2026-09-26. The registry contains **57** selectable profiles. Public IDs, ordering and entitlements are not changed by this matrix.
 
+## Prompt 00 audit note (2026-10-11)
+
+Drive Cockpit V2 / raw mechanical audio audit (`docs/DRIVE_COCKPIT_V2_PLAN.md`, `docs/DRIVE_COCKPIT_V2_PROGRESS.md`) re-verified against the live catalog:
+
+| Fact | Value |
+| --- | --- |
+| Core Sound Profiles | **47** (`CORE_SOUND_PROFILE_IDS` / 22 + 25 expansion) |
+| Assembled total | **57** (+3 Symphony, +3 World, +4 Fusion) |
+| Realism V2 combustion eligible | **9** (`ACOUSTIC_ENGINE_BY_PROFILE` in `src/lib/sound/realism/v2/acoustic-engine.ts`) |
+| Typed specs | `getAcousticProfileSpec(id)` covers all 47 core IDs (metadata-only) |
+| Family mismatches (IDs unchanged) | `neon-drive` runtime `designed` vs package `musical`; `dragon` / `thunder-beast` runtime `designed` vs package `environmental` — see `docs/FAMILY_CLASSIFICATION_MISMATCHES.md` |
+| Rows below | One row per real ID; not regenerated in Prompt 00 (no audible/runtime change) |
+
+## Prompt 02 recipe contract evidence (2026-10-11)
+
+Schema/data preparation only — **audible output unchanged**. Evidence is code locations, not listening claims.
+
+| Fact | Evidence |
+| --- | --- |
+| Additive recipe on existing spec | `AcousticProfileSpec.recipe` in `src/lib/sound/profile-specs/types.ts` |
+| Foundations (not a parallel catalog) | `src/lib/sound/profile-specs/family-defaults.ts` (`ACOUSTIC_FAMILY_DEFAULTS`) |
+| Distinct recipe per catalog ID | `buildAcousticRecipe` in `recipe-build.ts`; `allCatalogAcousticProfileSpecs()` → 57 |
+| Cycle geometry / 720° four-stroke | `AcousticCycleGeometry` + Realism V2 overlay via `acousticEngineForProfile` |
+| Layer / VT / sample / headroom fields | `AcousticLayerRecipe`, `AcousticVirtualTransmissionRecipe`, `AcousticSampleBankRecipe`, `AcousticHeadroomRecipe` |
+| Real RPM vs normalized | `cycle.idleRpm` / `maxRpm` documented + clamped 0..20000 in `validate.ts` (never 0..1) |
+| Gearless: no combustion pops/clacks | `virtualTransmission.allowCombustionShiftAccents=false` when continuous; test `"keeps gearless profiles free of…"` |
+| Comedy/EV VT accents blocked | `farting-car`, `kazoo-kart`, `electric-hypercar` — accents false |
+| Missing samples → procedural | `sampleBankRecipe.proceduralFallback: true`; banks from `EMPTY_COMBUSTION_SAMPLE_BANKS` |
+| Listening ≠ runtime config | `recipe.listening` only; `acceptance` unchanged |
+| Validation / unknown ID | `validateAcousticProfileSpec` + unknown-id test in `getAcousticProfileSpec.test.ts` |
+| SSR-safe | Recipes are plain JSON-serializable objects (asserted in tests) |
+| Live audio still on prior path | No SoundEngine / strategy consumer of `recipe` yet |
+
+## Prompt 03 virtual drivetrain evidence (2026-10-11)
+
+Authoritative VT state for UI + audio; City map artistic (not measured vehicle data).
+
+| Fact | Evidence |
+| --- | --- |
+| Authoritative state | `VirtualPowertrainState` in `src/lib/powertrain/types.ts` — speed/source/freshness, accel via diagnostics, `estimatedLoad`, gear, RPM, `operatingRegime`, `shiftEvent.sequenceId` |
+| Simulator owner | `PowertrainSimulator.tick` → `DriveSession` → `driveStateFromPowertrain` → UI + `SoundEngine` |
+| City upshifts (6-speed) | `CITY_UPSHIFT_KMH = [15,28,43,58,75]` in `shift-presets.ts`; applied to `gt-v8` (6 gears) |
+| City downshifts | `CITY_DOWNSHIFT_KMH = [10,21,35,49,65]` |
+| Non-6-speed adapt | `adaptSpeedLadder` + tests for 4/5/7-speed personalities |
+| Touring / Sport | Scales ×1.18 / ×1.38; Sport demand curve holds longer |
+| City default flag | `VITE_CITY_SHIFT_PRESET` / `ELCAMOSO_CITY_SHIFT_PRESET` (off → legacy default) |
+| Settings | `settings.shiftMapPreset` + Settings UI select |
+| Gearless | `gearlessDrivetrainState`; continuous profiles never tick VT simulator |
+| Fixture | `city-0-80-0` → `artifacts/prompt-03-fixture.json` (5 upshifts to gear 6) |
+| Tests | `src/lib/powertrain/shift-presets.test.ts` |
+
+## Prompt 04 raw mechanical evidence (2026-10-11)
+
+Opt-in pulse-driven overlay on HybridCombustionSynth — **not** a catalog rename and **not** a global bass/octave pass. Listening still unverified.
+
+| Fact | Evidence |
+| --- | --- |
+| Flag (default off) | `VITE_DRIVE_AUDIO_V3` / `ELCAMOSO_DRIVE_AUDIO_V3` → `isDriveAudioV3Enabled()` |
+| Pilots only | `RAW_MECHANICAL_PILOT_IDS` = `american-muscle-v8`, `flat-six-sport` |
+| Distinct presets | `raw-mechanical-presets.ts` — muscle lower body orders / exhaust bias; flat-six higher body + intake/mechanical bias |
+| Primitives | `pulse-primitives.ts` — firing/crank Hz, Nyquist clamp, pulse width, seeded cycle variation, mild sat curve, quality tier |
+| Engine gate | `engine.ts`: flag + `realismEngine:"v3"` + pilot → V3 overlay; else V2/Current unchanged |
+| Worklet | Existing combustion worklet; seeded via `setSeed`; finite-width tails; no main-thread per-fire scheduling |
+| Quality fallback | `resolveRawMechanicalQualityTier` → low-cost reduces bands / sat / WaveShaper OS |
+| Fixtures | `npm run audio:prompt-04` → `artifacts/audio-lab/prompt-04-raw-mechanical/` (loudness-matched) |
+| Listening | **pending** — automated metrics ≠ authenticity |
+
+## Prompt 05 hybrid sample layer evidence (2026-10-11)
+
+Lightweight BufferSource hybrid under procedural combustion — **not** Wwise/FMOD. Catalog empty → awaiting assets (no invented recordings).
+
+| Fact | Evidence |
+| --- | --- |
+| Typed recording manifest | `src/lib/sound/realism/samples/types.ts` (`HybridRecordingManifestEntry`) |
+| Acquisition requests (9 IDs) | `recording-requests.ts` / `docs/audio/SAMPLE_ACQUISITION_BRIEF.md` |
+| Validation + bounded stretch | `validate.ts` (`validateHybridRecordingEntry`, `boundedPlaybackRate`) |
+| Loader + stale gens | `loader.ts` (`HybridSampleLoader`) |
+| Bounded cache + memory | `cache.ts` (`BoundedDecodedBufferCache.measure`) |
+| Status | `sampleAssetStatusForProfile` → `awaiting-assets` while catalog empty |
+| Engine wiring | `prepareHybridSampleLayer` in `engine.ts` |
+| Loudness continuity | Procedural combustion gain restored when samples silent |
+| Granular | **Deferred** — `docs/audio/GRANULAR_SYNTHESIS_DECISION.md` |
+| Approved runtime banks | **0** |
+
+## Prompt 07 full-catalog tuning (2026-10-11)
+
+Mandatory pass over the live **57**-ID catalog (47 core + Symphony/World/Fusion). Runtime overlays + complete matrix — **not** documentation-only coverage.
+
+| Fact | Evidence |
+| --- | --- |
+| Typed rows | `src/lib/sound/realism/catalog-tuning/by-profile.ts` (57 distinct overlays) |
+| Acoustic apply | `acousticEngineForProfile` → `applyAcousticCatalogTuning` (9 combustion) |
+| Experience apply | `profileExperienceConfig` → `applyExperienceCatalogTuning` (57) |
+| Complete matrix | `docs/audio/profile-upgrade-matrix-prompt-07.md` |
+| Acceptance | `docs/audio/RAW_MECHANICAL_AUDIO_ACCEPTANCE.md` |
+| Lifecycle tests | `all-profiles-finite.test.ts` |
+| Listening / device | **unverified** (human rubric empty) |
+| Assets | Hybrid banks still awaiting; tractor/heavy paths asset-pending where noted |
+
+## Prompt 06 shift-event tuning (2026-10-11)
+
+Consumes Prompt 03 `shiftEvent.sequenceId`. Simulated audio only.
+
+| Profile ID | Engagement style | Mechanical | Rev-blip | Lift-off pop | Overrun | Notes |
+| --- | --- | --- | --- | --- | --- | --- |
+| `american-muscle-v8` | muscle-heavy | yes (muted heavy thump ~155 Hz) | yes | yes | yes | Long soft engagement |
+| `big-twin` | muscle-heavy | yes | yes | no | yes | Cruiser thump |
+| `flat-six-sport` | sports-precise | yes (short ~210 Hz) | yes | no | yes | Precise nibble |
+| `race-car` | sports-precise | yes | yes | no | yes | Track |
+| `racing-v10` | sports-precise | yes | yes | no | yes | |
+| `motorcycle-superbike` | sports-precise | yes (quick) | yes | no | yes | Not a car clack |
+| `gt-v8` | restrained | yes | yes | no | yes | Road GT |
+| `turbo-inline-6` | restrained | yes | yes | no | yes | |
+| `rally-car` | sports-precise | yes | yes | yes (gated) | yes | Load-gated pops |
+| Gearless / accents-off (e.g. `cyber-pulse`) | none | **no** | no | no | no | Recipe `allowCombustionShiftAccents=false` |
+
+| Fact | Evidence |
+| --- | --- |
+| Exactly-once consumer | `ShiftEventConsumer` in `shift-events/consumer.ts` |
+| Audio-clock choreography | `buildShiftChoreography` — torque-cut → mechanical → recovery |
+| Intensity control | `shiftFeel.shiftIntensity` (Settings); 0 mutes mechanical only |
+| Stale / resume | `markTimelineGap` + `SoundEngine.resumeFromIdle` |
+| Fixtures | `npm run audio:prompt-06` → `artifacts/audio-lab/prompt-06-shift-events/` |
+| Listening | **pending** |
+
 ## Evidence boundary
 
 Cells prefixed **Fact** describe inspected runtime behavior or shipped files. Cells prefixed **Design** are sound-design targets, not claims of vehicle replication. Marketing names are not used to infer topology: an engine layout is stated only when the typed drivetrain/acoustic configuration or the profile specification states it. No public V12 or supercharged profile currently exists; no such topology was invented. No runtime WAV/MP3/OGG/FLAC assets currently ship under `public/`.
@@ -32,8 +157,8 @@ Status `listening verified` is intentionally unused: automated checks and spectr
 | `wiesn-tractor`<br>Oide Wiesn Tractor | Fact: single-cylinder two-stroke (documented).<br>Design: Lanz-style hot-bulb single-cylinder two-stroke with huge separated fires and flywheel inertia. | Fact: ImprovedSynth profile strategy; Original renderer retained for A/B<br>Fact: no approved runtime recording ships; procedural source active. | Design: single pressure event; flywheel; stack chuff; gear/chassis clatter | Fact: pitch driver `engine-rpm`; load driver `simulated-load`.<br>Design: throttle loads the stroke before cadence rises; 280–650 RPM. Model the physical source and its operating regimes. Separate excitation, mechanism, body/resonance and environment layers. | Fact: virtual transmission via `single-cylinder-ag`; shift phases are simulated, not measured. Design: no combustion-like regen event. | Design: **Big Twin**; preserve Lanz-style hot-bulb single-cylinder two-stroke with huge separated fires and flywheel inertia. rather than converging on the neighbor's layer balance and response. | Fact: procedural-only strategy with no profile-specific recorded assets and no direct full-drive audio golden. | Design: phase mix idle 1.12, accel texture 1.08, cruise intrusive scale 0.80, release 0.76; combustion/exhaust/mechanical/event isolation. Missing assets: individual stroke variants; stack; mechanical clatter. Any sample must have a manifest containing source, commercial rights, app-embedding permission, attribution, RPM/load or state metadata, and SHA-256 hashes. The procedural fallback must remain functional when samples are absent. | **procedural upgrade** | Design rejection: pitched-down diesel car; fast RPM response; dense firing |
 | `open-wind`<br>Open Wind | Fact: environmental; exact topology unspecified.<br>Design: Calm aerodynamic air shaped by motion with no engine core. | Fact: ImprovedSynth profile strategy; Original renderer retained for A/B<br>Fact: no approved runtime recording ships; procedural source active. | Design: low body air; mid rush; high edge; gust modulation | Fact: pitch driver `vehicle-speed`; load driver `motion-energy`.<br>Design: speed controls bands; acceleration changes pressure; lift sighs. Use state machines, hysteresis and contextual events. Permit quiet passages. Do not map speed directly to pitch unless the physical source requires it. | Fact: continuous motion model; no physical gear claim. Design: no combustion-like regen event. | Design: **Storm Glider**; preserve Calm aerodynamic air shaped by motion with no engine core. rather than converging on the neighbor's layer balance and response. | Fact: procedural-only strategy with no profile-specific recorded assets and no direct full-drive audio golden. | Design: phase mix idle 1.00, accel texture 1.08, cruise intrusive scale 0.76, release 0.82; environment isolation. Missing assets: multi-band wind recordings or procedural filtered noise. Any sample must have a manifest containing source, commercial rights, app-embedding permission, attribution, RPM/load or state metadata, and SHA-256 hashes. The procedural fallback must remain functional when samples are absent. | **procedural upgrade** | Design rejection: flat white noise; random storm events; tonal motor |
 | `storm-glider`<br>Storm Glider | Fact: environmental; exact topology unspecified.<br>Design: Weather-charged motion with layered gusts, pressure drops and distant thunder. | Fact: ImprovedSynth profile strategy; Original renderer retained for A/B<br>Fact: no approved runtime recording ships; procedural source active. | Design: gust bands; rain edge; pressure rumble; thunder events | Fact: pitch driver `vehicle-speed`; load driver `motion-energy`.<br>Design: motion shapes wind; jerk triggers gust edges; thunder remains rare. Use state machines, hysteresis and contextual events. Permit quiet passages. Do not map speed directly to pitch unless the physical source requires it. | Fact: continuous motion model; no physical gear claim. Design: no combustion-like regen event. | Design: **Storm Run**; preserve Weather-charged motion with layered gusts, pressure drops and distant thunder. rather than converging on the neighbor's layer balance and response. | Fact: procedural-only strategy with no profile-specific recorded assets and no direct full-drive audio golden. | Design: phase mix idle 1.00, accel texture 1.14, cruise intrusive scale 0.64, release 0.82; core/environment/event isolation. Missing assets: wind intensity layers; original thunder variants. Any sample must have a manifest containing source, commercial rights, app-embedding permission, attribution, RPM/load or state metadata, and SHA-256 hashes. The procedural fallback must remain functional when samples are absent. | **procedural upgrade** | Design rejection: constant thunder; random loud surprises; clipped sub energy |
-| `flat-six-sport`<br>Flat-Six Sport | Fact: flat-six (configured).<br>Design: Smooth overlapping flat-six pulses, dry mechanical precision and strong high-RPM intake development. | Fact: Realism V2 procedural hybrid-capable renderer; Current renderer retained for A/B<br>Fact: no approved runtime recording ships; procedural source active. | Design: flat-six pulses; intake formants; dry mechanical band; light exhaust | Fact: pitch driver `engine-rpm`; load driver `simulated-load`.<br>Design: RPM brightens strongly; load opens intake; crisp shift/rev-match. Use deterministic RPM, load, gear, shift phase and overrun. Firing frequency follows four-stroke physics unless the profile explicitly specifies otherwise. | Fact: virtual transmission via `flat-six-sport`; shift phases are simulated, not measured. Design: no combustion-like regen event. | Design: **Turbo Inline-6**; preserve Smooth overlapping flat-six pulses, dry mechanical precision and strong high-RPM intake development. rather than converging on the neighbor's layer balance and response. | Fact: no approved recorded bank ships; realtime worklet and offline fallback excitation are not sample-identical; direct listening remains required. | Design: phase mix idle 0.90, accel texture 1.22, cruise intrusive scale 0.60, release 0.48; combustion/intake/exhaust/mechanical/event isolation. Missing assets: five RPM x three load anchors; intake/exhaust separates; shifts. Any sample must have a manifest containing source, commercial rights, app-embedding permission, attribution, RPM/load or state metadata, and SHA-256 hashes. The procedural fallback must remain functional when samples are absent. | **procedural upgrade** | Design rejection: V8 lope; generic six drone; excessive low bass |
-| `american-muscle-v8`<br>American Muscle V8 | Fact: cross-plane V8 lope (configured).<br>Design: Heavy cross-plane V8 lope, exhaust-dominant load and long overrun burble. | Fact: Realism V2 procedural hybrid-capable renderer; Current renderer retained for A/B<br>Fact: typed pilot manifest exists, but all asset paths and approvals remain unknown; procedural fallback active. | Design: uneven strong/weak pulse; low exhaust formants; body shake | Fact: pitch driver `engine-rpm`; load driver `simulated-load`.<br>Design: slow inertia; full load opens exhaust; lift produces gated burble. Use deterministic RPM, load, gear, shift phase and overrun. Firing frequency follows four-stroke physics unless the profile explicitly specifies otherwise. | Fact: virtual transmission via `american-v8`; shift phases are simulated, not measured. Design: no combustion-like regen event. | Design: **GT V8**; preserve Heavy cross-plane V8 lope, exhaust-dominant load and long overrun burble. rather than converging on the neighbor's layer balance and response. | Fact: no approved recorded bank ships; realtime worklet and offline fallback excitation are not sample-identical; direct listening remains required. | Design: phase mix idle 1.08, accel texture 1.18, cruise intrusive scale 0.66, release 0.78; combustion/intake/exhaust/mechanical/event isolation. Missing assets: idle lope; load loops; overrun variants; lazy shift thump. Any sample must have a manifest containing source, commercial rights, app-embedding permission, attribution, RPM/load or state metadata, and SHA-256 hashes. The procedural fallback must remain functional when samples are absent. | **hybrid** | Design rejection: smooth GT V8 polish; high-rev V10 brightness; constant pops |
+| `flat-six-sport`<br>Flat-Six Sport | Fact: flat-six (configured).<br>Design: Smooth overlapping flat-six pulses, dry mechanical precision and strong high-RPM intake development. | Fact: Realism V2 procedural hybrid-capable renderer; Current renderer retained for A/B<br>Fact: Prompt 04 opt-in V3 raw-mechanical pilot (`DRIVE_AUDIO_V3` + `realismEngine:"v3"`); listening pending<br>Fact: no approved runtime recording ships; procedural source active. | Design: flat-six pulses; intake formants; dry mechanical band; light exhaust | Fact: pitch driver `engine-rpm`; load driver `simulated-load`.<br>Design: RPM brightens strongly; load opens intake; crisp shift/rev-match. Use deterministic RPM, load, gear, shift phase and overrun. Firing frequency follows four-stroke physics unless the profile explicitly specifies otherwise. | Fact: virtual transmission via `flat-six-sport`; shift phases are simulated, not measured. Design: no combustion-like regen event. | Design: **Turbo Inline-6**; preserve Smooth overlapping flat-six pulses, dry mechanical precision and strong high-RPM intake development. rather than converging on the neighbor's layer balance and response. | Fact: no approved recorded bank ships; realtime worklet and offline fallback excitation are not sample-identical; direct listening remains required. | Design: phase mix idle 0.90, accel texture 1.22, cruise intrusive scale 0.60, release 0.48; combustion/intake/exhaust/mechanical/event isolation. Missing assets: five RPM x three load anchors; intake/exhaust separates; shifts. Any sample must have a manifest containing source, commercial rights, app-embedding permission, attribution, RPM/load or state metadata, and SHA-256 hashes. The procedural fallback must remain functional when samples are absent. | **procedural upgrade** | Design rejection: V8 lope; generic six drone; excessive low bass |
+| `american-muscle-v8`<br>American Muscle V8 | Fact: cross-plane V8 lope (configured).<br>Design: Heavy cross-plane V8 lope, exhaust-dominant load and long overrun burble. | Fact: Realism V2 procedural hybrid-capable renderer; Current renderer retained for A/B<br>Fact: Prompt 04 opt-in V3 raw-mechanical pilot (`DRIVE_AUDIO_V3` + `realismEngine:"v3"`); listening pending<br>Fact: typed pilot manifest exists, but all asset paths and approvals remain unknown; procedural fallback active. | Design: uneven strong/weak pulse; low exhaust formants; body shake | Fact: pitch driver `engine-rpm`; load driver `simulated-load`.<br>Design: slow inertia; full load opens exhaust; lift produces gated burble. Use deterministic RPM, load, gear, shift phase and overrun. Firing frequency follows four-stroke physics unless the profile explicitly specifies otherwise. | Fact: virtual transmission via `american-v8`; shift phases are simulated, not measured. Design: no combustion-like regen event. | Design: **GT V8**; preserve Heavy cross-plane V8 lope, exhaust-dominant load and long overrun burble. rather than converging on the neighbor's layer balance and response. | Fact: no approved recorded bank ships; realtime worklet and offline fallback excitation are not sample-identical; direct listening remains required. | Design: phase mix idle 1.08, accel texture 1.18, cruise intrusive scale 0.66, release 0.78; combustion/intake/exhaust/mechanical/event isolation. Missing assets: idle lope; load loops; overrun variants; lazy shift thump. Any sample must have a manifest containing source, commercial rights, app-embedding permission, attribution, RPM/load or state metadata, and SHA-256 hashes. The procedural fallback must remain functional when samples are absent. | **hybrid** | Design rejection: smooth GT V8 polish; high-rev V10 brightness; constant pops |
 | `turbo-inline-6`<br>Turbo Inline-6 | Fact: turbo inline-six (configured).<br>Design: Smooth even six with deep midrange, progressive boost and elastic response. | Fact: Realism V2 procedural hybrid-capable renderer; Current renderer retained for A/B<br>Fact: no approved runtime recording ships; procedural source active. | Design: even-six pulse; intake; boost spool; wastegate; flutter | Fact: pitch driver `engine-rpm`; load driver `simulated-load`.<br>Design: boost lags load; flutter only after boost; seven-speed behavior. Use deterministic RPM, load, gear, shift phase and overrun. Firing frequency follows four-stroke physics unless the profile explicitly specifies otherwise. | Fact: virtual transmission via `turbo-inline-6`; shift phases are simulated, not measured. Design: no combustion-like regen event. Turbo state: simulated boost, 0.62 s attack / 0.42 s decay; release requires >=0.60 prior state. | Design: **Flat-Six Sport**; preserve Smooth even six with deep midrange, progressive boost and elastic response. rather than converging on the neighbor's layer balance and response. | Fact: no approved recorded bank ships; realtime worklet and offline fallback excitation are not sample-identical; direct listening remains required. | Design: phase mix idle 1.00, accel texture 1.16, cruise intrusive scale 0.62, release 0.66; combustion/intake/exhaust/boost/mechanical/event isolation. Missing assets: RPM/load matrix; spool bed; wastegate and flutter variants. Any sample must have a manifest containing source, commercial rights, app-embedding permission, attribution, RPM/load or state metadata, and SHA-256 hashes. The procedural fallback must remain functional when samples are absent. | **procedural upgrade** | Design rejection: V8 subharmonic; constant whistle/flutter; instant boost |
 | `electric-hypercar`<br>Synthetic Hyper EV | Fact: fictional multi-speed EV.<br>Design: Fictional multi-speed hyper-EV with motor orders, inverter energy and deliberate virtual shifts. | Fact: ImprovedSynth profile strategy; Original renderer retained for A/B<br>Fact: no approved runtime recording ships; procedural source active. | Design: motor orders; inverter cluster; reduction gear; torque pulse | Fact: pitch driver `motor-speed`; load driver `torque-demand`.<br>Design: torque controls brightness; motor RPM follows ratios; regen distinct. Use original procedural sonification. Keep speed, torque demand, acceleration and regen as independent controls; never disguise a single pitch ramp as a complete profile. | Fact: virtual transmission via `synthetic-ev`; shift phases are simulated, not measured. Design: regen identity 1.00. | Design: **Formula Electric**; preserve Fictional multi-speed hyper-EV with motor orders, inverter energy and deliberate virtual shifts. rather than converging on the neighbor's layer balance and response. | Fact: procedural-only strategy with no profile-specific recorded assets and no direct full-drive audio golden. | Design: phase mix idle 0.30, accel texture 1.18, cruise intrusive scale 0.56, release 0.46; motor/mechanical/regen/environment/event isolation. Missing assets: original motor/inverter layers and shift transients. Any sample must have a manifest containing source, commercial rights, app-embedding permission, attribution, RPM/load or state metadata, and SHA-256 hashes. The procedural fallback must remain functional when samples are absent. | **procedural upgrade** | Design rejection: combustion artifacts; exhaust cues; arbitrary shift noise |
 | `formula-electric`<br>Formula Electric | Fact: fictional competition EV.<br>Design: Competition EV with technical motor whine, inverter clusters, reduction gear and aero. | Fact: ImprovedSynth profile strategy; Original renderer retained for A/B<br>Fact: no approved runtime recording ships; procedural source active. | Design: motor orders; inverter sidebands; gear mesh; tire/aero | Fact: pitch driver `motor-speed`; load driver `torque-demand`.<br>Design: torque demand and motor speed remain independent dimensions. Use original procedural sonification. Keep speed, torque demand, acceleration and regen as independent controls; never disguise a single pitch ramp as a complete profile. | Fact: continuous motion model; no physical gear claim. Design: regen identity 0.82. | Design: **Synthetic Hyper EV**; preserve Competition EV with technical motor whine, inverter clusters, reduction gear and aero. rather than converging on the neighbor's layer balance and response. | Fact: procedural-only strategy with no profile-specific recorded assets and no direct full-drive audio golden. | Design: phase mix idle 0.15, accel texture 1.22, cruise intrusive scale 0.52, release 0.42; motor/mechanical/regen/environment isolation. Missing assets: motor/inverter/gear layers; curb/tire accents optional. Any sample must have a manifest containing source, commercial rights, app-embedding permission, attribution, RPM/load or state metadata, and SHA-256 hashes. The procedural fallback must remain functional when samples are absent. | **procedural upgrade** | Design rejection: road-EV softness; combustion shifts; single sine sweep |

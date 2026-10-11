@@ -19,6 +19,11 @@ import {
   type CombustionExcitationHandle,
 } from "@/lib/sound/realism/v2/combustion-excitation";
 import {
+  combustionTopologyForProfile,
+  isCombustionTopologyPilotEnabled,
+} from "@/lib/sound/realism/v2/combustion-topology";
+import { buildOrderBandSpec } from "@/lib/sound/realism/v2/profile-order-bands";
+import {
   EMPTY_COMBUSTION_SAMPLE_BANKS,
   loadRegionFromDemand,
   reportAmericanV8SampleCoverage,
@@ -50,11 +55,31 @@ import {
   type TransientSchedulerState,
   type TransientVariant,
 } from "@/lib/sound/dynamic-drive/transient-scheduler";
+import type { RawMechanicalPreset } from "@/lib/sound/realism/v3/raw-mechanical-presets";
+import {
+  belowNyquist,
+  mildSaturationCurve,
+  shouldPreferOversampling,
+} from "@/lib/sound/realism/v3/pulse-primitives";
+import {
+  buildShiftChoreography,
+  ShiftEventConsumer,
+  shiftEngagementForProfile,
+  type ShiftEngagementStyle,
+} from "@/lib/sound/realism/shift-events";
 
-export type RealismEngineMode = "current" | "v2";
+export type RealismEngineMode = "current" | "v2" | "v3";
+
+export interface HybridBuildOptions {
+  /**
+   * Prompt 04 raw-mechanical overlay. When set, diagnostics.realismEngine is "v3".
+   * Omit for unchanged Realism V2 behaviour.
+   */
+  rawMechanical?: RawMechanicalPreset | null;
+}
 
 export interface HybridCombustionDiagnostics {
-  realismEngine: "v2";
+  realismEngine: "v2" | "v3";
   excitationMode: "worklet" | "fallback" | "none";
   firingHz: number;
   cylinders: number;
@@ -93,6 +118,21 @@ export interface HybridCombustionDiagnostics {
   spaceMode: "pipe-ir" | "dry";
   /** Current RPM-tracking order resonator centers (Hz). */
   orderHz: number[];
+  /** Prompt 04 raw-mechanical pilot id when active. */
+  rawMechanicalProfileId: string | null;
+  /** high | low-cost quality tier for constrained browsers. */
+  rawMechanicalQuality: "high" | "low-cost" | null;
+  /** Explicit cylinder topology pilot (engine-sim adaptation). */
+  topologyMode: "off" | "pilot";
+  topologyProfileId: string | null;
+  /** Oversampling assessment (not a claim that OS is active). */
+  oversamplingNote: string | null;
+  /** Prompt 06 user shift intensity 0..1 (mechanical only; not master volume). */
+  shiftIntensity: number;
+  /** Last consumed drivetrain shift sequenceId (Prompt 03 event). */
+  lastShiftSequenceId: number | null;
+  /** Per-profile engagement style. */
+  shiftEngagementStyle: ShiftEngagementStyle | null;
 }
 
 function targetParam(param: AudioParam, value: number, t: number, tau: number) {
@@ -168,12 +208,6 @@ const LEGACY_BARK_DELAY = 0.13;
 /** Pipe-IR early reflections for a ~1 m exhaust tract plus a short diffuse tail. */
 const PIPE_IR_SECONDS = 0.07;
 
-/** Half-order energy exists only where firing is uneven (lope, cross-plane, twin, single). */
-function halfOrderWeight(architectureCode: number): number {
-  if (architectureCode === 1 || architectureCode === 4 || architectureCode === 5) return 0.75;
-  if (architectureCode === 3) return 0.5;
-  return 0.18;
-}
 
 /**
  * Drop-in orchestrator for combustion profiles under Realism V2.2.
@@ -232,6 +266,15 @@ export class HybridCombustionSynth {
   private advancedTransients = true;
   private mutedRoles = new Set<AudioLayerRole>();
   private nodeEstimate = 0;
+  private rawMechanical: RawMechanicalPreset | null = null;
+  private lowOrderBody: FormantBand[] = [];
+  private rumbleHp: BiquadFilterNode | null = null;
+  private harshnessShelf: BiquadFilterNode | null = null;
+  private saturation: WaveShaperNode | null = null;
+  private saturationPostLp: BiquadFilterNode | null = null;
+  private shiftConsumer = new ShiftEventConsumer();
+  private shiftIntensity = 0.72;
+  private shiftEngagementStyle: ShiftEngagementStyle | null = null;
   private diagnostics: HybridCombustionDiagnostics = {
     realismEngine: "v2",
     excitationMode: "none",
@@ -258,11 +301,30 @@ export class HybridCombustionSynth {
     transientTier: "full",
     spaceMode: "dry",
     orderHz: [],
+    rawMechanicalProfileId: null,
+    rawMechanicalQuality: null,
+    topologyMode: "off",
+    topologyProfileId: null,
+    oversamplingNote: null,
+    shiftIntensity: 0.72,
+    lastShiftSequenceId: null,
+    shiftEngagementStyle: null,
   };
 
-  build(ctx: BaseAudioContext, profile: SoundProfile, buses: StrategyBuses): boolean {
+  build(
+    ctx: BaseAudioContext,
+    profile: SoundProfile,
+    buses: StrategyBuses,
+    options?: HybridBuildOptions,
+  ): boolean {
     this.dispose();
     this.disposed = false;
+    this.shiftConsumer.reset();
+    this.shiftEngagementStyle = shiftEngagementForProfile(profile.id).style;
+    this.diagnostics.shiftEngagementStyle = this.shiftEngagementStyle;
+    this.diagnostics.shiftIntensity = this.shiftIntensity;
+    this.diagnostics.lastShiftSequenceId = null;
+    this.rawMechanical = options?.rawMechanical ?? null;
     const cfg = acousticEngineForProfile(profile.id);
     if (!cfg) return false;
     this.cfg = cfg;
@@ -298,6 +360,19 @@ export class HybridCombustionSynth {
 
     this.excitation = createCombustionExcitation(ctx);
     this.diagnostics.excitationMode = this.excitation.mode;
+    if (this.rawMechanical?.seed != null) {
+      this.excitation.setSeed?.(this.rawMechanical.seed);
+    }
+    if (isCombustionTopologyPilotEnabled()) {
+      const topology = combustionTopologyForProfile(profile.id);
+      this.excitation.setTopology?.(topology);
+      this.diagnostics.topologyMode = topology ? "pilot" : "off";
+      this.diagnostics.topologyProfileId = topology ? profile.id : null;
+    } else {
+      this.excitation.setTopology?.(null);
+      this.diagnostics.topologyMode = "off";
+      this.diagnostics.topologyProfileId = null;
+    }
     nodes += this.excitation.mode === "worklet" ? 1 : 5;
 
     // Exhaust formants - semi-stationary resonances excited by combustion
@@ -350,14 +425,10 @@ export class HybridCombustionSynth {
     // RPM-tracking engine-order resonators carved out of the excitation itself.
     // They replace the previous sine / triangle support oscillators: the harmonic
     // weight now comes from the combustion pulses, so it keeps their jitter and grit.
+    // Default: legacy ½/1/2 × firing-order bands. Profile supportRatios/supportWeights
+    // are crank orders and apply only when VITE_COMBUSTION_PROFILE_ORDER_BANDS=1.
     {
-      const firingOrder = cfg.cylinders / 2;
-      const half = halfOrderWeight(cfg.architectureCode);
-      const spec: Array<{ order: number; weight: number; q: number }> = [
-        { order: firingOrder / 2, weight: 0.62 * half, q: 7.5 },
-        { order: firingOrder, weight: 1, q: 8.5 },
-        { order: firingOrder * 2, weight: 0.42, q: 6 },
-      ];
+      const spec = buildOrderBandSpec(cfg);
       this.orderBands = spec.map(({ order, weight, q }) => {
         const filter = ctx.createBiquadFilter();
         filter.type = "bandpass";
@@ -406,7 +477,67 @@ export class HybridCombustionSynth {
       this.diagnostics.spaceMode = "dry";
     }
 
-    this.combustionBus.connect(buses.body);
+    const raw = this.rawMechanical;
+    if (raw) {
+      // Prompt 04: rumble HP → mild saturation → post LP (AA substitute) → harshness shelf.
+      this.rumbleHp = ctx.createBiquadFilter();
+      this.rumbleHp.type = "highpass";
+      this.rumbleHp.frequency.value = belowNyquist(raw.rumbleHpHz, ctx.sampleRate);
+      this.rumbleHp.Q.value = 0.7;
+      this.saturation = ctx.createWaveShaper();
+      this.saturation.curve = mildSaturationCurve(raw.saturationDrive);
+      this.saturation.oversample = raw.quality === "high" ? "2x" : "none";
+      this.saturationPostLp = ctx.createBiquadFilter();
+      this.saturationPostLp.type = "lowpass";
+      this.saturationPostLp.frequency.value = belowNyquist(
+        raw.quality === "high" ? 12_000 : 8_500,
+        ctx.sampleRate,
+      );
+      this.saturationPostLp.Q.value = 0.7;
+      this.harshnessShelf = ctx.createBiquadFilter();
+      this.harshnessShelf.type = "highshelf";
+      this.harshnessShelf.frequency.value = belowNyquist(raw.harshnessShelfHz, ctx.sampleRate);
+      this.harshnessShelf.gain.value = raw.harshnessGainDb;
+      this.combustionBus.connect(this.rumbleHp);
+      this.rumbleHp.connect(this.saturation);
+      this.saturation.connect(this.saturationPostLp);
+      this.saturationPostLp.connect(this.harshnessShelf);
+      this.harshnessShelf.connect(buses.body);
+      nodes += 4;
+
+      // Low engine-order body energy from the pulse excitation (60–180 Hz region).
+      this.lowOrderBody = raw.bodyOrderHz.map((hz, i) => {
+        const filter = ctx.createBiquadFilter();
+        filter.type = "peaking";
+        filter.frequency.value = belowNyquist(hz, ctx.sampleRate);
+        filter.Q.value = 1.4 + i * 0.25;
+        filter.gain.value = raw.bodyOrderGainDb[i] ?? 2;
+        const gain = ctx.createGain();
+        gain.gain.value = 0.16 / (1 + i * 0.35);
+        this.excitation!.node.connect(filter);
+        filter.connect(gain);
+        gain.connect(this.combustionBus!);
+        nodes += 2;
+        return { filter, gain };
+      });
+
+      const os = shouldPreferOversampling({
+        quality: raw.quality,
+        saturationDrive: raw.saturationDrive,
+        sampleRate: ctx.sampleRate,
+      });
+      this.diagnostics.realismEngine = "v3";
+      this.diagnostics.rawMechanicalProfileId = raw.profileId;
+      this.diagnostics.rawMechanicalQuality = raw.quality;
+      this.diagnostics.oversamplingNote = `${os.prefer ? "prefer" : "skip"}: ${os.reason}; WaveShaper.oversample=${this.saturation.oversample}`;
+      this.legacyRng = (raw.seed % 997) / 997;
+    } else {
+      this.combustionBus.connect(buses.body);
+      this.diagnostics.realismEngine = "v2";
+      this.diagnostics.rawMechanicalProfileId = null;
+      this.diagnostics.rawMechanicalQuality = null;
+      this.diagnostics.oversamplingNote = null;
+    }
     this.intakeBus.connect(buses.beds);
     this.sampleBus.connect(buses.body);
 
@@ -417,10 +548,16 @@ export class HybridCombustionSynth {
       src.loop = true;
       const filter = ctx.createBiquadFilter();
       filter.type = "bandpass";
-      filter.frequency.value = 1400 + cfg.mechanicalIntensity * 800;
-      filter.Q.value = 1.25;
+      if (raw) {
+        // 150–600 Hz mechanical weight (quieter than body; follows rotation/load in update).
+        filter.frequency.value = belowNyquist(raw.mechanicalCenterHz, ctx.sampleRate);
+        filter.Q.value = raw.mechanicalQ;
+      } else {
+        filter.frequency.value = 1400 + cfg.mechanicalIntensity * 800;
+        filter.Q.value = 1.25;
+      }
       const gain = ctx.createGain();
-      gain.gain.value = 0.03 * cfg.mechanicalIntensity;
+      gain.gain.value = 0.03 * cfg.mechanicalIntensity * (raw?.mechanicalGainScale ?? 1);
       src.connect(filter);
       filter.connect(gain);
       gain.connect(buses.accents);
@@ -520,6 +657,47 @@ export class HybridCombustionSynth {
     this.diagnostics.transientTier = enabled ? "full" : "core";
   }
 
+  /**
+   * Mechanical shift transient intensity (0..1), independent of master volume.
+   * Zero mutes clacks/thumps but keeps torque-cut / RPM continuity from powertrain.
+   */
+  setShiftIntensity(value: number) {
+    this.shiftIntensity = Math.min(1, Math.max(0, value));
+    this.diagnostics.shiftIntensity = this.shiftIntensity;
+  }
+
+  getShiftIntensity(): number {
+    return this.shiftIntensity;
+  }
+
+  /**
+   * Prompt 08 advanced character (0..1, 0.5 = authored identity).
+   * Bounded scale on body / mechanical buses only — not a second master volume.
+   */
+  setCharacterFeel(body: number, mechanical: number) {
+    this.bodyCharacter = Math.min(1, Math.max(0, Number.isFinite(body) ? body : 0.5));
+    this.mechanicalCharacter = Math.min(
+      1,
+      Math.max(0, Number.isFinite(mechanical) ? mechanical : 0.5),
+    );
+  }
+
+  private bodyCharacter = 0.5;
+  private mechanicalCharacter = 0.5;
+
+  private characterBodyScale(): number {
+    return 0.75 + this.bodyCharacter * 0.5;
+  }
+
+  private characterMechanicalScale(): number {
+    return 0.75 + this.mechanicalCharacter * 0.5;
+  }
+
+  /** Discard overdue shift events after tab suspend / audio timeline gaps. */
+  notifyAudioTimelineGap(gapMs: number) {
+    this.shiftConsumer.markTimelineGap(gapMs);
+  }
+
   setDecodedSamples(map: Map<string, AudioBuffer>) {
     this.decodedSamples = map;
     const expected = this.sampleBank?.entries.length ?? 0;
@@ -572,9 +750,15 @@ export class HybridCombustionSynth {
     const idleGate = Math.max(0, 1 - rpmNorm * 2.2) * Math.max(0, 1 - demand * 2);
     // Idle lope fades with RPM / demand, but combustion never becomes perfectly periodic:
     // a light-load floor keeps 2-5 % cycle variation at cruise (worklet scales it further).
+    const raw = this.rawMechanical;
     const irregularity = Math.min(
       1,
-      cfg.idleIrregularity * idleGate * (overrun ? 0.35 : 1) + 0.05 + (1 - load) * 0.04,
+      cfg.idleIrregularity *
+        (raw?.idleIrregularityScale ?? 1) *
+        idleGate *
+        (overrun ? 0.35 : 1) +
+        0.05 +
+        (1 - load) * 0.04,
     );
 
     // Transient choreography - scheduler (powertrain) or legacy edge detection.
@@ -587,6 +771,10 @@ export class HybridCombustionSynth {
       load * 0.32 +
       rpmNorm * 0.14 * (0.45 + demand * 0.55) +
       load * demand * cfg.highLoadEnrichment * 0.2;
+    if (raw) {
+      // At fixed RPM, load still opens pulse energy (not a global gain knob).
+      intensity *= 0.9 + load * 0.22 + demand * (0.08 + raw.loadBalanceBias * 0.1);
+    }
 
     // Authoritative phase load from Powertrain (torque cut → reengage)
     if (shifting) intensity *= Math.max(0.18, Math.min(1, shiftLoad));
@@ -688,7 +876,12 @@ export class HybridCombustionSynth {
     });
     this.diagnostics.orderHz = orderHz;
     if (this.supportBus) {
-      targetParam(this.supportBus.gain, (0.16 + load * 0.1) * gate("combustion"), audioTime, 0.08);
+      targetParam(
+        this.supportBus.gain,
+        (0.16 + load * 0.1) * (raw?.supportGainScale ?? 1) * gate("combustion"),
+        audioTime,
+        0.08,
+      );
     }
     if (this.pipeSend) {
       // Pipe energy grows with exhaust pulse strength; overrun lets the pipe ring more.
@@ -698,40 +891,74 @@ export class HybridCombustionSynth {
     if (this.combustionBus) {
       // Bus level is the one place loudness follows load; the stages before it are
       // mostly timbre so the chain does not compound into a 25 dB idle-to-WOT span.
-      const body = (0.42 + load * 0.24 + demand * 0.1) * (1 + bark * 0.5);
+      const body =
+        (0.42 + load * 0.24 + demand * 0.1) *
+        (1 + bark * 0.5) *
+        (raw?.combustionGainScale ?? 1);
       const phaseMul =
         shiftPhase === "torque_cut" || shiftPhase === "disengage"
           ? 0.55
           : shiftPhase === "reengage"
             ? 0.9
             : 1;
-      targetParam(
-        this.combustionBus.gain,
-        body * phaseMul * (overrun ? 0.65 : 1) * gate("combustion"),
-        audioTime,
-        0.06,
-      );
-      this.diagnostics.combustionGain = body;
+      const bodyScaled =
+        body * phaseMul * (overrun ? 0.65 : 1) * gate("combustion") * this.characterBodyScale();
+      targetParam(this.combustionBus.gain, bodyScaled, audioTime, 0.06);
+      this.diagnostics.combustionGain = bodyScaled;
     }
     if (this.intakeBus) {
-      const intakeGain = (0.1 + demand * 0.38) * cfg.intakePresence * (overrun ? 0.12 : 1);
+      const intakeBias = raw ? 0.75 + (1 - raw.loadBalanceBias) * 0.55 : 1;
+      const intakeGain =
+        (0.1 + demand * 0.38 + load * (raw ? 0.18 * (1 - raw.loadBalanceBias) : 0)) *
+        cfg.intakePresence *
+        (raw?.intakeGainScale ?? 1) *
+        intakeBias *
+        (overrun ? 0.12 : 1);
       targetParam(this.intakeBus.gain, intakeGain * gate("intake"), audioTime, 0.05);
       this.diagnostics.intakeGain = intakeGain;
     }
 
     if (this.mechanical) {
-      targetParam(
-        this.mechanical.gain.gain,
-        0.02 * cfg.mechanicalIntensity * (0.35 + rpmNorm + load * 0.55) * gate("mechanical"),
-        audioTime,
-        0.08,
-      );
-      targetParam(
-        this.mechanical.filter.frequency,
-        1050 + rpmNorm * 1500 + cfg.mechanicalIntensity * 400,
-        audioTime,
-        0.1,
-      );
+      const mechScale = raw?.mechanicalGainScale ?? 1;
+      // Mechanical stays quieter than engine body even when load rises.
+      const mechLevel =
+        0.02 *
+        cfg.mechanicalIntensity *
+        mechScale *
+        (0.35 + rpmNorm * 0.85 + load * 0.45) *
+        gate("mechanical") *
+        this.characterMechanicalScale();
+      targetParam(this.mechanical.gain.gain, Math.min(0.08, mechLevel), audioTime, 0.08);
+      if (raw) {
+        targetParam(
+          this.mechanical.filter.frequency,
+          belowNyquist(
+            raw.mechanicalCenterHz + rpmNorm * 160 + load * 70,
+            this.ctx?.sampleRate ?? 48_000,
+          ),
+          audioTime,
+          0.1,
+        );
+      } else {
+        targetParam(
+          this.mechanical.filter.frequency,
+          1050 + rpmNorm * 1500 + cfg.mechanicalIntensity * 400,
+          audioTime,
+          0.1,
+        );
+      }
+    }
+
+    if (raw && this.lowOrderBody.length) {
+      this.lowOrderBody.forEach((band, i) => {
+        const excite = 0.55 + load * 0.35 + demand * 0.12 * raw.loadBalanceBias;
+        targetParam(
+          band.gain.gain,
+          (0.14 / (1 + i * 0.32)) * excite * (overrun ? 0.7 : 1),
+          audioTime,
+          0.08,
+        );
+      });
     }
 
     // Overrun bed: requires prior load + lift - not random cruise pops
@@ -814,6 +1041,27 @@ export class HybridCombustionSynth {
     return this.advancedTransients || CORE_TRANSIENT_KINDS.has(kind);
   }
 
+  /** Profile-compatible extras: rev-blip / lift-off / overrun only when engagement allows. */
+  private extraTransientAllowed(
+    kind: TransientKind,
+    engagement: ReturnType<typeof shiftEngagementForProfile>,
+  ): boolean {
+    if (engagement.style === "none") {
+      return (
+        kind !== "upshift" &&
+        kind !== "downshift" &&
+        kind !== "drivetrain-thump" &&
+        kind !== "rev-match" &&
+        kind !== "overrun" &&
+        kind !== "exhaust-pop"
+      );
+    }
+    if (kind === "rev-match") return engagement.allowRevBlip && this.advancedTransients;
+    if (kind === "overrun") return engagement.allowOverrun && this.advancedTransients;
+    if (kind === "exhaust-pop") return engagement.allowLiftOffPop && this.advancedTransients;
+    return true;
+  }
+
   private barkLevel(audioTime: number): number {
     if (audioTime < this.barkStart || audioTime >= this.barkUntil || this.barkAmount <= 0) {
       return 0;
@@ -845,9 +1093,53 @@ export class HybridCombustionSynth {
     const pt = state.powertrain;
     const shifting = Boolean(pt?.shifting || state.isShifting);
     const t = this.drivetrain.transient;
+    const profileId = this.profile?.id ?? "";
+    const engagement = shiftEngagementForProfile(profileId);
+    this.shiftEngagementStyle = engagement.style;
+    this.diagnostics.shiftEngagementStyle = engagement.style;
 
     if (pt) {
       const nowMs = audioTime * 1000;
+      // Prompt 06: consume Prompt 03 shiftEvent.sequenceId exactly once on the audio clock.
+      const consumed = this.shiftConsumer.consume(pt.shiftEvent, nowMs);
+      let choreographed = false;
+      if (consumed.accepted && pt.shiftEvent) {
+        const plan = buildShiftChoreography({
+          event: pt.shiftEvent,
+          engagement,
+          shiftIntensity: this.shiftIntensity,
+          audioNowSec: audioTime,
+          audioNowMs: nowMs,
+          torqueCutMs:
+            this.drivetrain.powertrain.transmission.shift.upshiftDurationMs * 0.45,
+          recoveryMs:
+            this.drivetrain.powertrain.transmission.shift.upshiftDurationMs * 0.35,
+        });
+        this.diagnostics.lastShiftSequenceId = plan.sequenceId;
+        this.diagnostics.eventCounts.shift += 1;
+        for (const step of plan.steps) {
+          if (step.kind && step.intensity > 0.001) {
+            this.firePulse(
+              {
+                kind: step.kind,
+                variant: {
+                  id: `choreo-${step.phase}`,
+                  intensity: step.intensity,
+                  filterHz: step.filterHz,
+                  decayMs: step.decayMs,
+                },
+                strength: 1,
+              },
+              step.audioTime,
+            );
+          }
+          if (step.phase === "recovery" && step.envelopeScale > 0.001) {
+            this.armBark(step.audioTime, step.envelopeScale);
+          }
+        }
+        choreographed = true;
+      }
+
       const tick = tickTransientScheduler({
         pt,
         prevPt: this.prevPowertrain ?? null,
@@ -858,10 +1150,28 @@ export class HybridCombustionSynth {
         nowMs,
       });
       this.scheduler = tick.state;
-      let shiftPulseFired = false;
+      let shiftPulseFired = choreographed;
       for (const pulse of this.scheduler.active) {
         if (pulse.startedAtMs !== nowMs) continue;
         if (!this.kindAllowed(pulse.kind)) continue;
+        // Choreography owns upshift/downshift/thump for this sequence.
+        if (
+          choreographed &&
+          (pulse.kind === "upshift" ||
+            pulse.kind === "downshift" ||
+            pulse.kind === "drivetrain-thump")
+        ) {
+          continue;
+        }
+        if (!this.extraTransientAllowed(pulse.kind, engagement)) continue;
+        // Scale mechanical-ish pulses by shiftIntensity; zero mutes extras only.
+        const strength =
+          pulse.kind === "upshift" ||
+          pulse.kind === "downshift" ||
+          pulse.kind === "drivetrain-thump"
+            ? this.shiftIntensity
+            : 1;
+        if (strength <= 0.001) continue;
         if (pulse.kind === "upshift" || pulse.kind === "downshift") shiftPulseFired = true;
         this.firePulse(
           {
@@ -872,36 +1182,38 @@ export class HybridCombustionSynth {
               filterHz: pulse.filterHz,
               decayMs: pulse.durationMs,
             },
-            strength: 1,
+            strength,
           },
           audioTime,
         );
       }
-      // Core guarantee: a gear change is always audible, even when the scheduler's
-      // load / probability gates skip it (light-throttle shifts in town).
+      // Core guarantee only when no sequenceId choreography handled the shift.
       const shiftStart = shifting && !this.lastShifting;
-      if (shiftStart && !shiftPulseFired) {
+      if (shiftStart && !shiftPulseFired && engagement.allowMechanicalTransient) {
         const up = pt.shiftDirection !== "down";
         const pool = up ? this.pools.upshift : this.pools.downshift;
         const softest = [...pool].sort((a, b) => a.intensity - b.intensity)[0] ?? pool[0]!;
-        this.firePulse(
-          {
-            kind: up ? "upshift" : "downshift",
-            variant: softest,
-            strength: (up ? t.upshiftStrength : t.downshiftStrength) * 0.75,
-          },
-          audioTime,
-        );
+        if (this.shiftIntensity > 0.001) {
+          this.firePulse(
+            {
+              kind: up ? "upshift" : "downshift",
+              variant: softest,
+              strength: (up ? t.upshiftStrength : t.downshiftStrength) * 0.75 * this.shiftIntensity,
+            },
+            audioTime,
+          );
+        }
       }
-      // Reengage: clutch / converter takes up drive → bark, scaled by demand.
+      // Reengage bark when choreography did not already schedule recovery.
       if (
+        !choreographed &&
         shifting &&
         pt.shiftPhase === "reengage" &&
         this.lastShiftPhase !== "reengage"
       ) {
         const down = pt.shiftDirection === "down";
         const demand = pt.driverDemand ?? state.throttle;
-        this.armBark(audioTime, (down ? 0.2 : 0.12) + demand * 0.16);
+        this.armBark(audioTime, ((down ? 0.2 : 0.12) + demand * 0.16) * engagement.recoveryBarkScale);
       }
       this.prevPowertrain = { ...pt };
       this.prevSpeedKmh = speedKmh;
@@ -1013,12 +1325,25 @@ export class HybridCombustionSynth {
     return voice;
   }
 
+  /** Restore full procedural combustion level when the sample layer is silent. */
+  private restoreProceduralSampleMix(audioTime: number) {
+    if (this.sampleBus) targetParam(this.sampleBus.gain, 0.0001, audioTime, 0.1);
+    if (this.combustionBus) {
+      targetParam(
+        this.combustionBus.gain,
+        this.diagnostics.combustionGain || 0.35,
+        audioTime,
+        0.12,
+      );
+    }
+  }
+
   private updateSamples(rpm: number, demand: number, overrun: boolean, audioTime: number) {
     this.diagnostics.uncoveredOperatingRegions = reportAmericanV8SampleCoverage(
       this.sampleBank,
     ).uncovered;
     if (!this.sampleBank?.entries.length || !this.decodedSamples.size || !this.sampleBus) {
-      if (this.sampleBus) targetParam(this.sampleBus.gain, 0.0001, audioTime, 0.1);
+      this.restoreProceduralSampleMix(audioTime);
       this.diagnostics.sampleAssisted = false;
       this.diagnostics.activeSampleIds = [];
       if (!this.sampleBank?.entries.length) {
@@ -1027,13 +1352,15 @@ export class HybridCombustionSynth {
       return;
     }
     const load = loadRegionFromDemand(demand, overrun, rpm);
-    const selection = selectSampleMix(this.sampleBank, rpm, load, demand);
+    // Linear default: equal-power is available via selectSampleMix(..., "equal-power")
+    // but correlated engine loops often comb-filter under equal-power.
+    const selection = selectSampleMix(this.sampleBank, rpm, load, demand, "linear");
     const activeIds = new Set(selection.targets.map((target) => target.entry.assetId));
     for (const [id, voice] of this.sampleVoices) {
       if (!activeIds.has(id)) targetParam(voice.gain.gain, 0.0001, audioTime, 0.09);
     }
     if (!selection.targets.length) {
-      targetParam(this.sampleBus.gain, 0.0001, audioTime, 0.1);
+      this.restoreProceduralSampleMix(audioTime);
       this.diagnostics.sampleAssisted = false;
       this.diagnostics.activeSampleIds = [];
       this.diagnostics.sampleFallbackReason = selection.fallbackReason;
@@ -1050,13 +1377,14 @@ export class HybridCombustionSynth {
       targetParam(voice.gain.gain, trim * overlap * target.weight * 0.55, audioTime, 0.1);
     }
     if (!playable) {
-      targetParam(this.sampleBus.gain, 0.0001, audioTime, 0.1);
+      this.restoreProceduralSampleMix(audioTime);
       this.diagnostics.sampleAssisted = false;
       this.diagnostics.activeSampleIds = [];
       this.diagnostics.sampleFallbackReason = "decode-failed";
       return;
     }
-    // Samples assist under procedural - never fully replace excitation
+    // Samples assist under procedural - never fully replace excitation.
+    // Duck procedural slightly so total loudness stays continuous vs pure procedural.
     targetParam(
       this.sampleBus.gain,
       0.35 * (this.mutedRoles.has("combustion") ? 0.0001 : 1),
@@ -1087,18 +1415,22 @@ export class HybridCombustionSynth {
   }
 
   listLayers() {
+    const prefix = this.rawMechanical ? "v3" : "v2";
     return [
-      { id: "v2-combustion", role: "combustion" as const },
-      { id: "v2-intake", role: "intake" as const },
-      { id: "v2-body-resonance", role: "combustion" as const },
-      { id: "v2-orders", role: "combustion" as const },
-      { id: "v2-pipe", role: "exhaust" as const },
-      { id: "v2-mechanical", role: "mechanical" as const },
-      { id: "v2-overrun", role: "exhaust" as const },
-      { id: "v2-transients", role: "event" as const },
-      ...(this.turbo ? [{ id: "v2-turbo", role: "boost" as const }] : []),
+      { id: `${prefix}-combustion`, role: "combustion" as const },
+      { id: `${prefix}-intake`, role: "intake" as const },
+      { id: `${prefix}-body-resonance`, role: "combustion" as const },
+      ...(this.lowOrderBody.length
+        ? [{ id: `${prefix}-low-order-body`, role: "combustion" as const }]
+        : []),
+      { id: `${prefix}-orders`, role: "combustion" as const },
+      { id: `${prefix}-pipe`, role: "exhaust" as const },
+      { id: `${prefix}-mechanical`, role: "mechanical" as const },
+      { id: `${prefix}-overrun`, role: "exhaust" as const },
+      { id: `${prefix}-transients`, role: "event" as const },
+      ...(this.turbo ? [{ id: `${prefix}-turbo`, role: "boost" as const }] : []),
       ...(this.diagnostics.sampleAssisted
-        ? [{ id: "v2-samples", role: "combustion" as const }]
+        ? [{ id: `${prefix}-samples`, role: "combustion" as const }]
         : []),
     ].map((layer) => ({ ...layer, muted: this.mutedRoles.has(layer.role) }));
   }
@@ -1136,10 +1468,21 @@ export class HybridCombustionSynth {
     this.intakeFormants = [];
     this.bodyResonances.forEach(dropBand);
     this.bodyResonances = [];
+    this.lowOrderBody.forEach(dropBand);
+    this.lowOrderBody = [];
     this.orderBands.forEach(dropBand);
     this.orderBands = [];
     this.spectralTilt?.disconnect();
     this.spectralTilt = null;
+    this.rumbleHp?.disconnect();
+    this.rumbleHp = null;
+    this.saturation?.disconnect();
+    this.saturation = null;
+    this.saturationPostLp?.disconnect();
+    this.saturationPostLp = null;
+    this.harshnessShelf?.disconnect();
+    this.harshnessShelf = null;
+    this.rawMechanical = null;
     this.pipeSend?.disconnect();
     this.pipeSend = null;
     this.pipe?.disconnect();

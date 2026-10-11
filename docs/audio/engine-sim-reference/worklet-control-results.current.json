@@ -1,0 +1,38 @@
+{
+  "date": "2026-10-11",
+  "processorPath": "public/audio/combustion-processor.js",
+  "sampleRate": 48000,
+  "seconds": 1,
+  "scope": "current working-tree processor; port stubbed for Node VM (original reproduce-worklet-controls.cjs fails on this.port.onmessage)",
+  "cases": [
+    {
+      "parameter": "firingHz",
+      "zeroEqualsFallbackWithin1eMinus7": true,
+      "maxAbsoluteDifference": 0,
+      "rmsAtZero": 0.08250840651956685,
+      "samples": 48000
+    },
+    {
+      "parameter": "intensity",
+      "zeroEqualsFallbackWithin1eMinus7": true,
+      "maxAbsoluteDifference": 2.9802322387695312e-8,
+      "rmsAtZero": 0.07093939267099364,
+      "samples": 48000
+    },
+    {
+      "parameter": "load",
+      "zeroEqualsFallbackWithin1eMinus7": true,
+      "maxAbsoluteDifference": 2.9802322387695312e-8,
+      "rmsAtZero": 0.07093939266344362,
+      "samples": 48000
+    },
+    {
+      "parameter": "sharpness",
+      "zeroEqualsFallbackWithin1eMinus7": true,
+      "maxAbsoluteDifference": 1.4901161193847656e-8,
+      "rmsAtZero": 0.07093939302665646,
+      "samples": 48000
+    }
+  ],
+  "conclusion": "Zero-valued controls are still overwritten by truthiness defaults. Not a browser/device/listening test."
+}

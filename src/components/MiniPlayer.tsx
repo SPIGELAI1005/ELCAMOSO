@@ -25,6 +25,8 @@ export function MiniPlayer() {
     meterCompressorReduction: snap.meter
       ? Math.round(snap.meter.compressorReduction * 16)
       : 0,
+    meterNearCeiling: snap.meter?.nearCeiling ?? false,
+    meterSamplePeakDbfs: snap.meter ? Math.round(snap.meter.samplePeakDbfs * 4) : 0,
   }));
   const { settings } = useSettings();
   if (pathname === "/") return null;
@@ -43,6 +45,9 @@ export function MiniPlayer() {
         prePeak: ui.meterPrePeak / 16,
         preRms: ui.meterPreRms / 16,
         compressorReduction: ui.meterCompressorReduction / 16,
+        samplePeakDbfs: ui.meterSamplePeakDbfs / 4,
+        nearCeiling: ui.meterNearCeiling,
+        overloadSampleCount: 0,
       }
     : null;
 

@@ -1,9 +1,15 @@
+import { PUBLIC_PROFILE_IDS } from "@/lib/sound/profile-experience-config";
 import { CORE_SOUND_PROFILE_IDS } from "@/lib/sound/profile-specs/core-ids";
 import { buildAcousticProfileSpec } from "@/lib/sound/profile-specs/build";
 import type { AcousticProfileSpec } from "@/lib/sound/profile-specs/types";
 import { validateAcousticProfileSpec } from "@/lib/sound/profile-specs/validate";
 
-export type { AcousticProfileSpec, AcousticFamilyMismatch } from "@/lib/sound/profile-specs/types";
+export type {
+  AcousticProfileSpec,
+  AcousticFamilyMismatch,
+  AcousticRecipe,
+  AcousticRendererKind,
+} from "@/lib/sound/profile-specs/types";
 export {
   packageFamilyForProfile,
   familyMismatchForProfile,
@@ -12,6 +18,11 @@ export {
 } from "@/lib/sound/profile-specs/package-family";
 export { CORE_SOUND_PROFILE_IDS, isCoreSoundProfileId } from "@/lib/sound/profile-specs/core-ids";
 export { validateAcousticProfileSpec } from "@/lib/sound/profile-specs/validate";
+export { buildAcousticRecipe, rendererKindForProfile } from "@/lib/sound/profile-specs/recipe-build";
+export {
+  ACOUSTIC_FAMILY_DEFAULTS,
+  familyDefaultsFor,
+} from "@/lib/sound/profile-specs/family-defaults";
 
 const cache = new Map<string, AcousticProfileSpec>();
 
@@ -36,6 +47,11 @@ export function getAcousticProfileSpec(id: string): AcousticProfileSpec {
 /** All 47 core Sound Profile specs (validated). */
 export function allCoreAcousticProfileSpecs(): AcousticProfileSpec[] {
   return CORE_SOUND_PROFILE_IDS.map((id) => getAcousticProfileSpec(id));
+}
+
+/** All 57 catalog Sound Profile specs including Symphony / World / Fusion (validated). */
+export function allCatalogAcousticProfileSpecs(): AcousticProfileSpec[] {
+  return PUBLIC_PROFILE_IDS.map((id) => getAcousticProfileSpec(id));
 }
 
 /** Test helper: drop memoized specs after intentional catalog changes in tests. */

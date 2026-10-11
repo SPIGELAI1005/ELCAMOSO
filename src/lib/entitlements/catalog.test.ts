@@ -25,7 +25,8 @@ describe("sound profile catalog entitlements", () => {
     expect(isSoundProfilePreviewAllowed("dragon")).toBe(true);
   });
 
-  it("uses a stable fallback profile id", () => {
-    expect(FALLBACK_SOUND_PROFILE_ID).toBe("gt-v8");
+  it("uses a stable free-tier fallback profile id", () => {
+    expect(FALLBACK_SOUND_PROFILE_ID).toBe("american-muscle-v8");
+    expect(FREE_SOUND_PROFILE_IDS).toContain(FALLBACK_SOUND_PROFILE_ID);
   });
 });

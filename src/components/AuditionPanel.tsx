@@ -9,6 +9,7 @@ import {
   type ProfileTuning,
 } from "@/lib/drive/settings";
 import { getProfile } from "@/lib/sound/profiles";
+import { getSession } from "@/lib/drive/session";
 import { HeadroomMeter } from "@/components/HeadroomMeter";
 import { EnvironmentPicker } from "@/components/EnvironmentPicker";
 import { LayerMixer } from "@/components/LayerMixer";
@@ -60,7 +61,11 @@ export function AuditionPanel({ profileId }: { profileId: string }) {
       <QuickJump
         className="mb-10 border-b border-border pb-8"
         settings={settings}
-        onSelect={(id) => update({ profileId: id })}
+        onSelect={(id) => {
+          update({ profileId: id });
+          // If preview is already running, switch in place so Listen matches the pick.
+          if (active) void getSession().listenProfile(id);
+        }}
       />
       <div className="flex flex-wrap items-center justify-between gap-6">
         <div className="flex items-center gap-5">

@@ -25,6 +25,9 @@ function demoSessionConfig(settings: ElcamosoSettings) {
     profileId,
     volume: settings.volume,
     profileGain: getProfileGain(settings, profileId),
+    outputBoostDb: settings.outputBoostDb,
+    bodyCharacter: settings.bodyCharacter,
+    mechanicalCharacter: settings.mechanicalCharacter,
     tuning: getTuning(settings, profileId),
     environmentId: settings.environmentId,
     mix: settings.layerMix,
@@ -67,9 +70,14 @@ function DemoDrive() {
     (profileId: string) => {
       const next = { ...settings, profileId };
       update({ profileId });
+      // Always push into the live session so the Feel section plays the new pick
+      // even when Start was pressed before the selection changed.
       syncDemoSession(next);
+      if (active) {
+        getSession().primeAudioFromUserGesture();
+      }
     },
-    [settings, syncDemoSession, update],
+    [active, settings, syncDemoSession, update],
   );
 
   const onEnvironmentChange = useCallback(

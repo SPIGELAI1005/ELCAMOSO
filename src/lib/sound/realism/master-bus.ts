@@ -3,8 +3,9 @@ import { clamp } from "@/lib/sound/dsp/math";
 import { MASTER_BUS_OUTPUT_GAIN } from "@/lib/sound/perceptual-volume";
 
 /**
- * Profile bus → gentle saturation → EQ → compressor → master feed.
- * Keeps subjective loudness consistent and avoids clipping.
+ * Profile bus → gentle saturation → EQ → light program compressor → user-volume stage.
+ * Prompt 08: this is EQ/body shaping before user volume / boost / peak protect.
+ * Do not treat the program compressor as a brickwall limiter (see gain-staging/peak-protect).
  */
 export interface MasterBus {
   input: GainNode;
@@ -14,13 +15,16 @@ export interface MasterBus {
   dispose: () => void;
 }
 
-/** Gentle program control; the final limiter remains the peak safety stage. */
+/**
+ * Very gentle program control so shift/combustion transients are not flattened.
+ * Peak safety is the dedicated peak-protect stage (−1 dBFS sample ceiling).
+ */
 export const MASTER_COMPRESSOR = {
-  thresholdDb: -10,
-  kneeDb: 6,
-  ratio: 1.8,
-  attackSeconds: 0.018,
-  releaseSeconds: 0.28,
+  thresholdDb: -14,
+  kneeDb: 8,
+  ratio: 1.45,
+  attackSeconds: 0.028,
+  releaseSeconds: 0.32,
 } as const;
 
 export function createMasterBus(ctx: BaseAudioContext, destination: AudioNode): MasterBus {

@@ -24,6 +24,8 @@ export {
   isSoundProfilePreviewAllowed,
 } from "@/lib/entitlements/catalog";
 
+export { FREE_SOUND_PROFILE_SET } from "@/lib/sound/profile-access-config";
+
 export { DEFAULT_ENTITLEMENT_USER } from "@/lib/entitlements/defaults";
 
 export { effectiveTrialStatus, isTrialActive } from "@/lib/entitlements/trial";
@@ -33,6 +35,29 @@ export {
   hasEntitlement,
   resolveEntitlements,
 } from "@/lib/entitlements/resolve";
+
+export {
+  resolveCapabilityAccess,
+  resolveEffectiveEntitlements,
+  resolveProfileDriveAccess,
+} from "@/lib/entitlements/access-resolver";
+
+export { canDriveProfileWithAccess } from "@/lib/entitlements/drive-profile-access";
+
+export {
+  upsertEntitlementGrant,
+  seedGrandfatheredProfileGrant,
+  listGrantsForAccount,
+  resetEntitlementGrantsForTests,
+} from "@/lib/entitlements/grants";
+
+export {
+  OFFLINE_LEASE_MAX_MS,
+  OFFLINE_LEASE_EXPIRY_POLICY,
+  beginOfflineAccessLease,
+  invalidateOfflineLeaseOnAccountSwitch,
+  resolveOfflineLeaseExpiryAction,
+} from "@/lib/entitlements/offline-lease";
 
 export {
   EntitlementDeniedError,

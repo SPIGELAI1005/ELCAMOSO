@@ -24,6 +24,7 @@ import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as PairRouteImport } from './routes/pair'
 import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as ReplayRouteImport } from './routes/replay'
+import { Route as RewardsRouteImport } from './routes/rewards'
 import { Route as ScienceRouteImport } from './routes/science'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as ShareRouteImport } from './routes/share'
@@ -35,6 +36,7 @@ import { Route as SymphonyRouteImport } from './routes/symphony'
 import { Route as WorldsRouteImport } from './routes/worlds'
 import { Route as ApiOgRouteImport } from './routes/api/og'
 import { Route as ConnectSessionIdRouteImport } from './routes/connect.$sessionId'
+import { Route as DebugAudioLabRouteImport } from './routes/debug.audio-lab'
 import { Route as DebugBillingRouteImport } from './routes/debug.billing'
 import { Route as DebugCalibrationRouteImport } from './routes/debug.calibration'
 import { Route as DebugDiagnosticsRouteImport } from './routes/debug.diagnostics'
@@ -137,6 +139,11 @@ const ReplayRoute = ReplayRouteImport.update({
   path: '/replay',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RewardsRoute = RewardsRouteImport.update({
+  id: '/rewards',
+  path: '/rewards',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ScienceRoute = ScienceRouteImport.update({
   id: '/science',
   path: '/science',
@@ -191,6 +198,11 @@ const ConnectSessionIdRoute = ConnectSessionIdRouteImport.update({
   id: '/connect/$sessionId',
   path: '/connect/$sessionId',
   getParentRoute: () => rootRouteImport,
+} as any)
+const DebugAudioLabRoute = DebugAudioLabRouteImport.update({
+  id: '/audio-lab',
+  path: '/audio-lab',
+  getParentRoute: () => DebugRoute,
 } as any)
 const DebugBillingRoute = DebugBillingRouteImport.update({
   id: '/billing',
@@ -340,6 +352,7 @@ export interface FileRoutesByFullPath {
   '/pair': typeof PairRoute
   '/pricing': typeof PricingRoute
   '/replay': typeof ReplayRoute
+  '/rewards': typeof RewardsRoute
   '/science': typeof ScienceRoute
   '/settings': typeof SettingsRoute
   '/share': typeof ShareRouteWithChildren
@@ -351,6 +364,7 @@ export interface FileRoutesByFullPath {
   '/worlds': typeof WorldsRoute
   '/api/og': typeof ApiOgRouteWithChildren
   '/connect/$sessionId': typeof ConnectSessionIdRoute
+  '/debug/audio-lab': typeof DebugAudioLabRoute
   '/debug/billing': typeof DebugBillingRoute
   '/debug/calibration': typeof DebugCalibrationRoute
   '/debug/diagnostics': typeof DebugDiagnosticsRoute
@@ -393,6 +407,7 @@ export interface FileRoutesByTo {
   '/pair': typeof PairRoute
   '/pricing': typeof PricingRoute
   '/replay': typeof ReplayRoute
+  '/rewards': typeof RewardsRoute
   '/science': typeof ScienceRoute
   '/settings': typeof SettingsRoute
   '/share': typeof ShareRouteWithChildren
@@ -404,6 +419,7 @@ export interface FileRoutesByTo {
   '/worlds': typeof WorldsRoute
   '/api/og': typeof ApiOgRouteWithChildren
   '/connect/$sessionId': typeof ConnectSessionIdRoute
+  '/debug/audio-lab': typeof DebugAudioLabRoute
   '/debug/billing': typeof DebugBillingRoute
   '/debug/calibration': typeof DebugCalibrationRoute
   '/debug/diagnostics': typeof DebugDiagnosticsRoute
@@ -448,6 +464,7 @@ export interface FileRoutesById {
   '/pair': typeof PairRoute
   '/pricing': typeof PricingRoute
   '/replay': typeof ReplayRoute
+  '/rewards': typeof RewardsRoute
   '/science': typeof ScienceRoute
   '/settings': typeof SettingsRoute
   '/share': typeof ShareRouteWithChildren
@@ -459,6 +476,7 @@ export interface FileRoutesById {
   '/worlds': typeof WorldsRoute
   '/api/og': typeof ApiOgRouteWithChildren
   '/connect/$sessionId': typeof ConnectSessionIdRoute
+  '/debug/audio-lab': typeof DebugAudioLabRoute
   '/debug/billing': typeof DebugBillingRoute
   '/debug/calibration': typeof DebugCalibrationRoute
   '/debug/diagnostics': typeof DebugDiagnosticsRoute
@@ -504,6 +522,7 @@ export interface FileRouteTypes {
     | '/pair'
     | '/pricing'
     | '/replay'
+    | '/rewards'
     | '/science'
     | '/settings'
     | '/share'
@@ -515,6 +534,7 @@ export interface FileRouteTypes {
     | '/worlds'
     | '/api/og'
     | '/connect/$sessionId'
+    | '/debug/audio-lab'
     | '/debug/billing'
     | '/debug/calibration'
     | '/debug/diagnostics'
@@ -557,6 +577,7 @@ export interface FileRouteTypes {
     | '/pair'
     | '/pricing'
     | '/replay'
+    | '/rewards'
     | '/science'
     | '/settings'
     | '/share'
@@ -568,6 +589,7 @@ export interface FileRouteTypes {
     | '/worlds'
     | '/api/og'
     | '/connect/$sessionId'
+    | '/debug/audio-lab'
     | '/debug/billing'
     | '/debug/calibration'
     | '/debug/diagnostics'
@@ -611,6 +633,7 @@ export interface FileRouteTypes {
     | '/pair'
     | '/pricing'
     | '/replay'
+    | '/rewards'
     | '/science'
     | '/settings'
     | '/share'
@@ -622,6 +645,7 @@ export interface FileRouteTypes {
     | '/worlds'
     | '/api/og'
     | '/connect/$sessionId'
+    | '/debug/audio-lab'
     | '/debug/billing'
     | '/debug/calibration'
     | '/debug/diagnostics'
@@ -666,6 +690,7 @@ export interface RootRouteChildren {
   PairRoute: typeof PairRoute
   PricingRoute: typeof PricingRoute
   ReplayRoute: typeof ReplayRoute
+  RewardsRoute: typeof RewardsRoute
   ScienceRoute: typeof ScienceRoute
   SettingsRoute: typeof SettingsRoute
   ShareRoute: typeof ShareRouteWithChildren
@@ -796,6 +821,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ReplayRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/rewards': {
+      id: '/rewards'
+      path: '/rewards'
+      fullPath: '/rewards'
+      preLoaderRoute: typeof RewardsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/science': {
       id: '/science'
       path: '/science'
@@ -872,6 +904,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/connect/$sessionId'
       preLoaderRoute: typeof ConnectSessionIdRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/debug/audio-lab': {
+      id: '/debug/audio-lab'
+      path: '/audio-lab'
+      fullPath: '/debug/audio-lab'
+      preLoaderRoute: typeof DebugAudioLabRouteImport
+      parentRoute: typeof DebugRoute
     }
     '/debug/billing': {
       id: '/debug/billing'
@@ -1081,6 +1120,7 @@ const LegalRouteRouteWithChildren = LegalRouteRoute._addFileChildren(
 )
 
 interface DebugRouteChildren {
+  DebugAudioLabRoute: typeof DebugAudioLabRoute
   DebugBillingRoute: typeof DebugBillingRoute
   DebugCalibrationRoute: typeof DebugCalibrationRoute
   DebugDiagnosticsRoute: typeof DebugDiagnosticsRoute
@@ -1091,6 +1131,7 @@ interface DebugRouteChildren {
 }
 
 const DebugRouteChildren: DebugRouteChildren = {
+  DebugAudioLabRoute: DebugAudioLabRoute,
   DebugBillingRoute: DebugBillingRoute,
   DebugCalibrationRoute: DebugCalibrationRoute,
   DebugDiagnosticsRoute: DebugDiagnosticsRoute,
@@ -1150,6 +1191,7 @@ const rootRouteChildren: RootRouteChildren = {
   PairRoute: PairRoute,
   PricingRoute: PricingRoute,
   ReplayRoute: ReplayRoute,
+  RewardsRoute: RewardsRoute,
   ScienceRoute: ScienceRoute,
   SettingsRoute: SettingsRoute,
   ShareRoute: ShareRouteWithChildren,

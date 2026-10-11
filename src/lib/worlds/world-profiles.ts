@@ -11,7 +11,7 @@ export const WORLD_SOUND_PROFILES: SoundProfile[] = listWorldPacks().map((pack) 
   drivetrainMode: "continuous" as const,
   motionModel: "ambient" as const,
   sourceMode: "procedural" as const,
-  access: "free" as const,
+  access: "drive_plus" as const,
   voice: {
     baseFrequency: 80,
     harmonics: [1],

@@ -21,6 +21,25 @@ import {
   verifyExchangedGoogleIdToken,
 } from "@/lib/account/google-oauth";
 import { mintAccountSessionTicket, verifyAccountSessionTicket } from "@/lib/account/session-ticket";
+import { sanitizeReturnTo } from "@/lib/account/return-to";
+import { isEmailOtpConfigured } from "@/lib/account/supabase-config";
+import {
+  assertEmailOtpSendAllowed,
+  assertEmailOtpVerifyAllowed,
+  clearEmailOtpVerifyFailures,
+  recordEmailOtpVerifyFailure,
+  secondsRemaining,
+  EMAIL_OTP_RESEND_COOLDOWN_MS,
+} from "@/lib/account/email-otp-rate-limit";
+import {
+  clearPendingEmailOtp,
+  readPendingEmailOtp,
+  savePendingEmailOtp,
+} from "@/lib/account/email-otp-pending";
+import {
+  EmailOtpProviderError,
+  getEmailOtpProvider,
+} from "@/lib/account/email-otp-provider";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -72,7 +91,15 @@ function createSessionToken(): string {
   return createMagicLinkToken();
 }
 
-function createSessionForEmail(email: string, now = Date.now()): VerifyMagicLinkResult {
+/**
+ * Mint an ELCAMOSO session for a *verified* email identity.
+ * Preserves existing userId / Stripe mapping via createUserForEmail.
+ * Never call with an unverified client-supplied email.
+ */
+export function createSessionFromVerifiedEmail(
+  email: string,
+  now = Date.now(),
+): VerifyMagicLinkResult {
   const normalized = normalizeAccountEmail(email);
   const userId = createUserForEmail(normalized);
   const sessionToken = createSessionToken();
@@ -90,6 +117,119 @@ function createSessionForEmail(email: string, now = Date.now()): VerifyMagicLink
     email: normalized,
     expiresAt: session.expiresAt,
   };
+}
+
+/** @deprecated Prefer createSessionFromVerifiedEmail — same behaviour. */
+function createSessionForEmail(email: string, now = Date.now()): VerifyMagicLinkResult {
+  return createSessionFromVerifiedEmail(email, now);
+}
+
+export function getEmailOtpAvailability(): { available: boolean; resendCooldownSeconds: number } {
+  return {
+    available: isEmailOtpConfigured(),
+    resendCooldownSeconds: Math.ceil(EMAIL_OTP_RESEND_COOLDOWN_MS / 1000),
+  };
+}
+
+export interface RequestEmailOtpResult {
+  ok: true;
+  /** Generic message — does not disclose whether the account exists. */
+  message: string;
+  resendCooldownSeconds: number;
+}
+
+export interface VerifyEmailOtpResult extends VerifyMagicLinkResult {
+  returnTo: string;
+}
+
+export async function requestEmailOtp(input: {
+  email: string;
+  returnTo?: string | undefined;
+  clientKey?: string | null | undefined;
+  now?: number | undefined;
+}): Promise<RequestEmailOtpResult> {
+  const now = input.now ?? Date.now();
+  const normalized = normalizeAccountEmail(input.email);
+  if (!isValidAccountEmail(normalized)) {
+    throw new Error("Enter a valid email address");
+  }
+  if (!isEmailOtpConfigured()) {
+    throw new Error("Email code sign-in is not configured on this server.");
+  }
+
+  const limited = assertEmailOtpSendAllowed({
+    email: normalized,
+    clientKey: input.clientKey,
+    now,
+  });
+  if (!limited.ok) {
+    throw new Error(`Please wait ${secondsRemaining(limited.retryAfterMs)}s before requesting another code.`);
+  }
+
+  savePendingEmailOtp(normalized, input.returnTo ?? "/drive", now);
+
+  try {
+    await getEmailOtpProvider().sendOtp(normalized);
+  } catch (error) {
+    if (error instanceof EmailOtpProviderError && error.code === "misconfigured") {
+      throw new Error("Email code sign-in is not configured on this server.");
+    }
+    // Same generic message for provider failures — avoid account-existence disclosure.
+    throw new Error("Could not send a sign-in code. Try again later.");
+  }
+
+  // Never log the code. Always return a non-disclosing success message.
+  return {
+    ok: true,
+    message: "If that email can receive mail, a six-digit sign-in code is on its way.",
+    resendCooldownSeconds: Math.ceil(EMAIL_OTP_RESEND_COOLDOWN_MS / 1000),
+  };
+}
+
+export async function verifyEmailOtp(input: {
+  email: string;
+  code: string;
+  returnTo?: string | undefined;
+  now?: number | undefined;
+}): Promise<VerifyEmailOtpResult> {
+  const now = input.now ?? Date.now();
+  const normalized = normalizeAccountEmail(input.email);
+  const code = input.code.replace(/\s+/g, "").trim();
+
+  if (!isValidAccountEmail(normalized)) {
+    throw new Error("Enter a valid email address");
+  }
+  if (!/^\d{6}$/.test(code)) {
+    throw new Error("Enter the six-digit code from your email.");
+  }
+  if (!isEmailOtpConfigured()) {
+    throw new Error("Email code sign-in is not configured on this server.");
+  }
+
+  const limited = assertEmailOtpVerifyAllowed({ email: normalized, now });
+  if (!limited.ok) {
+    throw new Error(`Too many attempts. Wait ${secondsRemaining(limited.retryAfterMs)}s and try again.`);
+  }
+
+  try {
+    const verified = await getEmailOtpProvider().verifyOtp(normalized, code);
+    // Identity comes from the provider after verification — never from an unverified client claim alone.
+    const session = createSessionFromVerifiedEmail(verified.email, now);
+    clearEmailOtpVerifyFailures(normalized);
+    const pending = readPendingEmailOtp(normalized, now);
+    clearPendingEmailOtp(normalized);
+    const returnTo = sanitizeReturnTo(pending?.returnTo ?? input.returnTo ?? "/drive");
+    return { ...session, returnTo };
+  } catch (error) {
+    recordEmailOtpVerifyFailure(normalized, now);
+    if (error instanceof EmailOtpProviderError && error.code === "invalid_or_expired") {
+      throw new Error("That code is invalid or has expired.");
+    }
+    if (error instanceof Error && /six-digit|valid email|not configured|Too many/i.test(error.message)) {
+      throw error;
+    }
+    throw new Error("That code is invalid or has expired.");
+  }
 }
 
 export function requestAccountSignIn(
@@ -201,10 +341,7 @@ export function signOutAccount(sessionToken: string): void {
   deleteAccountSession(sessionToken);
 }
 
-export function sanitizeReturnTo(returnTo: string): string {
-  if (!returnTo.startsWith("/") || returnTo.startsWith("//")) return "/drive";
-  return returnTo;
-}
+export { sanitizeReturnTo } from "@/lib/account/return-to";
 
 export function toPublicGoogleSignInResult(
   result: CompleteGoogleSignInResult,

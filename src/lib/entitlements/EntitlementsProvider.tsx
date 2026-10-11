@@ -1,8 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
-import { createContext, useContext, useMemo, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useMemo, type ReactNode } from "react";
 
 import { useAccount } from "@/lib/account/AccountProvider";
 import { DEFAULT_ENTITLEMENT_USER } from "@/lib/entitlements/defaults";
+import { invalidateOfflineLeaseOnAccountSwitch } from "@/lib/entitlements/offline-lease";
 import { getEntitlementsFn } from "@/lib/entitlements/server-fns";
 import { buildEntitlementSnapshot, hasEntitlement } from "@/lib/entitlements/resolve";
 import type { Entitlement, EntitlementSnapshot, EntitlementUser } from "@/lib/entitlements/types";
@@ -28,6 +29,10 @@ export interface EntitlementsProviderProps {
 export function EntitlementsProvider({ user, now, children }: EntitlementsProviderProps) {
   const { session, isAuthenticated } = useAccount();
 
+  useEffect(() => {
+    invalidateOfflineLeaseOnAccountSwitch(session?.userId ?? null);
+  }, [session?.userId]);
+
   const query = useQuery({
     queryKey: ["entitlements", session?.userId ?? null, isAuthenticated],
     queryFn: async () => {
@@ -51,6 +56,7 @@ export function EntitlementsProvider({ user, now, children }: EntitlementsProvid
             subscriptionStatus: query.data.subscriptionStatus,
             trialStatus: query.data.trialStatus,
             revision: query.data.revision,
+            grantedProfileIds: query.data.grantedProfileIds,
           }
         : {}),
     };

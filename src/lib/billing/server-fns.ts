@@ -87,6 +87,8 @@ export const createCheckoutSessionFn = createServerFn({ method: "POST" })
       origin: string;
       returnPath?: string;
       source?: string;
+      /** Sound Spin reservation id — server validates ownership; no client coupon ids. */
+      rewardReservationId?: string | null;
     }) => data,
   )
   .handler(async ({ data }) => {
@@ -106,6 +108,9 @@ export const createCheckoutSessionFn = createServerFn({ method: "POST" })
         ...(data.returnPath ? { returnPath: data.returnPath } : {}),
         ...(data.source ? { source: data.source } : {}),
       },
+      ...(data.rewardReservationId
+        ? { rewardReservationId: data.rewardReservationId }
+        : {}),
     });
   });
 

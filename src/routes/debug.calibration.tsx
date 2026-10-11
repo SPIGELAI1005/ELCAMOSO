@@ -26,6 +26,7 @@ import { SoundEngine } from "@/lib/sound/engine";
 import type { RealismEngineMode } from "@/lib/sound/realism/v2";
 import { getProfile, SOUND_PROFILES } from "@/lib/sound/profiles";
 import { isCombustionRealismV2Profile } from "@/lib/sound/realism/v2";
+import { isDriveAudioV3Enabled, isRawMechanicalPilotId } from "@/lib/sound/realism/v3";
 
 export const Route = createFileRoute("/debug/calibration")({
   beforeLoad: () => {
@@ -124,8 +125,10 @@ function DebugCalibrationLab() {
     engine.setDynamicDriveEnabled(dynamicDrive);
     engine.setRealismEngine(isCombustionRealismV2Profile(profileId) ? realismEngine : "current");
     await engine.start(getProfile(profileId), { signature: false, seed: 42 });
-    // Approximate loudness match between Current and V2 for A/B listening.
-    engine.setVolume(realismEngine === "v2" ? 0.48 : 0.52);
+    // Approximate loudness match between Current / V2 / V3 for A/B listening.
+    engine.setVolume(
+      realismEngine === "v2" || realismEngine === "v3" ? 0.48 : 0.52,
+    );
     engineRef.current = engine;
     playIndexRef.current = Math.max(
       0,
@@ -499,18 +502,30 @@ function DebugCalibrationLab() {
           <div>
             <p className="text-sm text-muted-foreground">Audio engine</p>
             <div className="mt-2 flex gap-2">
-              {(["current", "v2"] as const).map((m) => (
-                <button
-                  key={m}
-                  type="button"
-                  onClick={() => switchRealismLive(m)}
-                  className={`h-10 rounded-full border px-4 text-[11px] tracking-[0.16em] uppercase ${
-                    realismEngine === m ? "border-foreground bg-secondary" : "border-border"
-                  }`}
-                >
-                  {m === "current" ? "Current" : "Realism V2"}
-                </button>
-              ))}
+              {(
+                [
+                  ["current", "Current"],
+                  ["v2", "Realism V2"],
+                  ["v3", "Raw Mech V3"],
+                ] as const
+              ).map(([m, label]) => {
+                const v3Ok =
+                  m !== "v3" ||
+                  (isDriveAudioV3Enabled() && isRawMechanicalPilotId(profileId));
+                return (
+                  <button
+                    key={m}
+                    type="button"
+                    disabled={!v3Ok}
+                    onClick={() => switchRealismLive(m)}
+                    className={`h-10 rounded-full border px-4 text-[11px] tracking-[0.16em] uppercase disabled:opacity-40 ${
+                      realismEngine === m ? "border-foreground bg-secondary" : "border-border"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
             </div>
           </div>
           <div>

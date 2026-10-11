@@ -2,8 +2,10 @@ import { relations, sql } from "drizzle-orm";
 import {
   boolean,
   integer,
+  jsonb,
   pgEnum,
   pgTable,
+  primaryKey,
   text,
   timestamp,
   uniqueIndex,
@@ -173,10 +175,48 @@ export const dynamicDriveTrialSessions = pgTable(
   ],
 );
 
+/** User-owned entitlement / profile grants — clients read only; server writers only. */
+export const entitlementGrantKindEnum = pgEnum("entitlement_grant_kind", [
+  "purchased_profile",
+  "grandfathered_profile",
+  "reward_profile",
+  "reward_entitlement",
+]);
+
+export const entitlementGrants = pgTable(
+  "entitlement_grants",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    kind: entitlementGrantKindEnum("kind").notNull(),
+    profileId: text("profile_id"),
+    entitlement: text("entitlement"),
+    /** UTC; null = permanent. */
+    expiresAt: timestamp("expires_at", { withTimezone: true, mode: "date" }),
+    source: text("source"),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => [
+    uniqueIndex("entitlement_grants_user_profile_kind_unique")
+      .on(table.userId, table.kind, table.profileId)
+      .where(sql`${table.profileId} is not null`),
+    uniqueIndex("entitlement_grants_user_entitlement_kind_unique")
+      .on(table.userId, table.kind, table.entitlement)
+      .where(sql`${table.entitlement} is not null`),
+  ],
+);
+
 export const usersRelations = relations(users, ({ many }) => ({
   subscriptions: many(subscriptions),
   dynamicDriveTrials: many(dynamicDriveTrials),
   dynamicDriveTrialSessions: many(dynamicDriveTrialSessions),
+  entitlementGrants: many(entitlementGrants),
 }));
 
 export const subscriptionsRelations = relations(subscriptions, ({ one }) => ({
@@ -216,3 +256,154 @@ export type StripeWebhookEventRow = typeof stripeWebhookEvents.$inferSelect;
 export type StripeWebhookEventInsert = typeof stripeWebhookEvents.$inferInsert;
 export type DynamicDriveTrialRow = typeof dynamicDriveTrials.$inferSelect;
 export type DynamicDriveTrialSessionRow = typeof dynamicDriveTrialSessions.$inferSelect;
+export type EntitlementGrantRow = typeof entitlementGrants.$inferSelect;
+export type EntitlementGrantInsert = typeof entitlementGrants.$inferInsert;
+
+export const entitlementGrantsRelations = relations(entitlementGrants, ({ one }) => ({
+  user: one(users, {
+    fields: [entitlementGrants.userId],
+    references: [users.id],
+  }),
+}));
+
+/** Prompt 12 — Sound Spin campaigns / claims (server writers only). */
+export const rewardFulfilmentStatusEnum = pgEnum("reward_fulfilment_status", [
+  "pending",
+  "fulfilled",
+  "failed",
+  "disabled",
+]);
+
+export const rewardOutcomeKindEnum = pgEnum("reward_outcome_kind", [
+  "sound_48h",
+  "sound_pack_7d",
+  "cockpit_theme",
+  "one_payment_discount",
+  "full_library_weekend",
+]);
+
+export const rewardAudienceEnum = pgEnum("reward_audience", ["free", "paid"]);
+
+export const discountReservationStatusEnum = pgEnum("discount_reservation_status", [
+  "reserved",
+  "applied",
+  "consumed",
+  "expired",
+  "pending",
+  "ineligible",
+  "failed",
+]);
+
+export const rewardCampaigns = pgTable("reward_campaigns", {
+  campaignId: text("campaign_id").primaryKey(),
+  configVersion: integer("config_version").notNull(),
+  title: text("title").notNull(),
+  enabled: boolean("enabled").notNull().default(false),
+  stagingIllustrativeOnly: boolean("staging_illustrative_only").notNull().default(true),
+  periodStrategy: text("period_strategy").notNull().default("utc_calendar_month"),
+  configJson: jsonb("config_json").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" })
+    .notNull()
+    .defaultNow()
+    .$onUpdate(() => new Date()),
+});
+
+export const rewardClaims = pgTable(
+  "reward_claims",
+  {
+    claimId: uuid("claim_id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    campaignId: text("campaign_id")
+      .notNull()
+      .references(() => rewardCampaigns.campaignId, { onDelete: "restrict" }),
+    configVersion: integer("config_version").notNull(),
+    periodKey: text("period_key").notNull(),
+    audience: rewardAudienceEnum("audience").notNull(),
+    idempotencyKey: text("idempotency_key").notNull(),
+    status: rewardFulfilmentStatusEnum("status").notNull().default("pending"),
+    outcomeKind: rewardOutcomeKindEnum("outcome_kind").notNull(),
+    outcomeRewardId: text("outcome_reward_id").notNull(),
+    outcomeJson: jsonb("outcome_json").notNull(),
+    fulfilmentAttempts: integer("fulfilment_attempts").notNull().default(0),
+    lastFulfilmentError: text("last_fulfilment_error"),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => [
+    uniqueIndex("reward_claims_user_campaign_period_unique").on(
+      table.userId,
+      table.campaignId,
+      table.periodKey,
+    ),
+    uniqueIndex("reward_claims_user_campaign_period_idem_unique").on(
+      table.userId,
+      table.campaignId,
+      table.periodKey,
+      table.idempotencyKey,
+    ),
+  ],
+);
+
+export const rewardDiscountReservations = pgTable(
+  "reward_discount_reservations",
+  {
+    reservationId: uuid("reservation_id").primaryKey(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    claimId: uuid("claim_id")
+      .notNull()
+      .references(() => rewardClaims.claimId, { onDelete: "cascade" }),
+    discountPercent: integer("discount_percent").notNull(),
+    status: discountReservationStatusEnum("status").notNull().default("reserved"),
+    expiresAt: timestamp("expires_at", { withTimezone: true, mode: "date" }).notNull(),
+    discountCase: text("discount_case"),
+    stripeCustomerId: text("stripe_customer_id"),
+    stripeCouponId: text("stripe_coupon_id"),
+    stripeCheckoutSessionId: text("stripe_checkout_session_id"),
+    stripeSubscriptionId: text("stripe_subscription_id"),
+    stripeInvoiceId: text("stripe_invoice_id"),
+    stripeDiscountId: text("stripe_discount_id"),
+    applyIdempotencyKey: text("apply_idempotency_key"),
+    lastError: text("last_error"),
+    ineligibleReason: text("ineligible_reason"),
+    appliedAt: timestamp("applied_at", { withTimezone: true, mode: "date" }),
+    consumedAt: timestamp("consumed_at", { withTimezone: true, mode: "date" }),
+    expectedSubtotalCents: integer("expected_subtotal_cents"),
+    expectedDiscountAmountCents: integer("expected_discount_amount_cents"),
+    expectedInvoiceTotalCents: integer("expected_invoice_total_cents"),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => [
+    uniqueIndex("reward_discount_reservations_claim_unique").on(table.claimId),
+    uniqueIndex("reward_discount_reservations_apply_idem_unique")
+      .on(table.applyIdempotencyKey)
+      .where(sql`${table.applyIdempotencyKey} is not null`),
+  ],
+);
+
+export const rewardCockpitThemes = pgTable(
+  "reward_cockpit_themes",
+  {
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    themeId: text("theme_id").notNull(),
+    claimId: uuid("claim_id"),
+    unlockedAt: timestamp("unlocked_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+  },
+  (table) => [primaryKey({ columns: [table.userId, table.themeId] })],
+);
+
+export type RewardClaimRow = typeof rewardClaims.$inferSelect;
+export type RewardDiscountReservationRow = typeof rewardDiscountReservations.$inferSelect;

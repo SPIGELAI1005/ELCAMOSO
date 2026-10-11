@@ -19,6 +19,10 @@ export interface CombustionExcitationParams {
 export interface CombustionExcitationHandle {
   node: AudioNode;
   setParams: (p: CombustionExcitationParams) => void;
+  /** Seed cycle-to-cycle RNG (worklet only; no-op on fallback). */
+  setSeed?: (seed: number) => void;
+  /** Install validated cylinder topology (worklet only; no-op on fallback). */
+  setTopology?: (topology: unknown | null) => void;
   dispose: () => void;
   mode: "worklet" | "fallback";
 }
@@ -166,7 +170,18 @@ function createWorkletExcitation(ctx: BaseAudioContext): CombustionExcitationHan
         irregularity?.setTargetAtTime(Math.max(0, Math.min(1, p.irregularity)), t, 0.08);
         load?.setTargetAtTime(Math.max(0, Math.min(1, p.load)), t, 0.05);
         sharpness?.setTargetAtTime(Math.max(0, Math.min(1, p.sharpness)), t, 0.06);
-        architecture?.setTargetAtTime(Math.max(0, Math.min(5, p.architecture)), t, 0.2);
+        architecture?.setTargetAtTime(Math.max(0, Math.min(6, p.architecture)), t, 0.2);
+      },
+      setSeed(seed: number) {
+        const s = seed >>> 0;
+        node.port.postMessage({ type: "seed", seed: s === 0 ? 1 : s });
+      },
+      setTopology(topology: unknown | null) {
+        if (topology == null) {
+          node.port.postMessage({ type: "clearTopology" });
+          return;
+        }
+        node.port.postMessage({ type: "topology", topology });
       },
       dispose() {
         node.disconnect();

@@ -2,6 +2,8 @@
  * Sample-bank schema for Realism V2 sample-assisted combustion.
  * Assets are optional - procedural fallback always works without them.
  */
+import { applyEqualPowerShape } from "@/lib/sound/realism/samples/blend";
+import type { HybridSampleBlendMode } from "@/lib/sound/realism/samples/types";
 import {
   AMERICAN_V8_PILOT_MANIFEST,
   isPilotEntryApproved,
@@ -164,12 +166,17 @@ function requestedLoadAnchor(load: SampleLoadRegion, demand: number): number {
   return Math.min(1, Math.max(0.65, demand));
 }
 
-/** Select up to four adjacent RPM/load anchors using linear-amplitude weights. */
+/**
+ * Select up to four adjacent RPM/load anchors.
+ * Default linear-amplitude weights; equal-power is optional and does not guarantee
+ * absence of comb filtering for correlated loops.
+ */
 export function selectSampleMix(
   bank: CombustionSampleBank,
   rpm: number,
   load: SampleLoadRegion,
   demand: number,
+  blendMode: HybridSampleBlendMode = "linear",
 ): SampleMixSelection {
   const requestedCharacter =
     load === "idle" ? "idle" : load === "off-load" ? "off-load" : load === "overrun" ? "overrun" : "on-load";
@@ -225,8 +232,16 @@ export function selectSampleMix(
   if (total <= 0) {
     return { targets: [], fallbackReason: hadRateMiss ? "rate-out-of-range" : "no-load-bank" };
   }
+  let normalized = targets.map((target) => ({
+    ...target,
+    weight: target.weight / Math.max(1, total),
+  }));
+  if (blendMode === "equal-power") {
+    const shaped = applyEqualPowerShape(normalized.map((t) => t.weight));
+    normalized = normalized.map((target, i) => ({ ...target, weight: shaped[i] ?? 0 }));
+  }
   return {
-    targets: targets.map((target) => ({ ...target, weight: target.weight / Math.max(1, total) })),
+    targets: normalized,
     fallbackReason: "none",
   };
 }

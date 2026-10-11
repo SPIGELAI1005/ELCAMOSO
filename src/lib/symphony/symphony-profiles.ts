@@ -11,7 +11,7 @@ export const SYMPHONY_SOUND_PROFILES: SoundProfile[] = [
     drivetrainMode: "continuous",
     motionModel: "ambient",
     sourceMode: "hybrid",
-    access: "free",
+    access: "drive_plus",
     voice: {
       baseFrequency: 110,
       harmonics: [1],
@@ -33,7 +33,7 @@ export const SYMPHONY_SOUND_PROFILES: SoundProfile[] = [
     drivetrainMode: "continuous",
     motionModel: "ambient",
     sourceMode: "hybrid",
-    access: "free",
+    access: "drive_plus",
     voice: {
       baseFrequency: 130,
       harmonics: [1],
@@ -55,7 +55,7 @@ export const SYMPHONY_SOUND_PROFILES: SoundProfile[] = [
     drivetrainMode: "continuous",
     motionModel: "ambient",
     sourceMode: "hybrid",
-    access: "free",
+    access: "drive_plus",
     voice: {
       baseFrequency: 110,
       harmonics: [1],

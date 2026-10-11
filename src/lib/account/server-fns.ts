@@ -89,3 +89,39 @@ export const signOutAccountFn = createServerFn({ method: "POST" })
     clearAccountSessionCookie();
     return { ok: true as const };
   });
+
+export const getEmailOtpStatusFn = createServerFn({ method: "GET" }).handler(async () => {
+  const { getEmailOtpAvailability } = await import("@/lib/account/auth-service");
+  return getEmailOtpAvailability();
+});
+
+export const requestEmailOtpFn = createServerFn({ method: "POST" })
+  .inputValidator((data: { email: string; returnTo?: string; clientKey?: string | null }) => data)
+  .handler(async ({ data }) => {
+    const { requestEmailOtp } = await import("@/lib/account/auth-service");
+    return requestEmailOtp({
+      email: data.email,
+      returnTo: data.returnTo ?? "/drive",
+      clientKey: data.clientKey ?? null,
+    });
+  });
+
+export const verifyEmailOtpFn = createServerFn({ method: "POST" })
+  .inputValidator((data: { email: string; code: string; returnTo?: string }) => data)
+  .handler(async ({ data }) => {
+    const { verifyEmailOtp } = await import("@/lib/account/auth-service");
+    const { setAccountSessionCookie } = await import("@/lib/account/session-cookies.server");
+    const verified = await verifyEmailOtp({
+      email: data.email,
+      code: data.code,
+      returnTo: data.returnTo ?? "/drive",
+    });
+    setAccountSessionCookie(verified.sessionToken, verified.expiresAt);
+    // Never return sessionToken to the browser — cookie is the session.
+    return {
+      userId: verified.userId,
+      email: verified.email,
+      expiresAt: verified.expiresAt,
+      returnTo: verified.returnTo,
+    };
+  });

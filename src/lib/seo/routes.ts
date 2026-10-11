@@ -224,6 +224,12 @@ export const NOINDEX_ROUTE_POLICIES: SeoRoutePolicy[] = [
     description: "Your saved sounds and experience presets.",
   },
   {
+    path: "/rewards",
+    indexable: false,
+    title: "Sound Spin - ELCAMOSO",
+    description: "Monthly Sound Spin rewards for verified ELCAMOSO accounts.",
+  },
+  {
     path: "/calibrate",
     indexable: false,
     title: "Calibrate - ELCAMOSO",

@@ -63,7 +63,7 @@ import {
   isDrivingSafetySpeed,
   type MotionState,
 } from "@/lib/drive/motion-energy";
-import { cappedGain } from "@/lib/drive/safety";
+import { intensityCeiling } from "@/lib/drive/safety";
 import { matchRule, type AutoRule, type AutoRulesMode, type ProfileRule } from "@/lib/drive/rules";
 import { ContextClassifier, predictState, type DriveContext } from "@/lib/drive/context";
 import { evaluateProfileRules } from "@/lib/drive/profile-rules";
@@ -203,6 +203,9 @@ export interface SessionConfig {
   profileId: string;
   volume: number;
   profileGain: number;
+  outputBoostDb: number;
+  bodyCharacter: number;
+  mechanicalCharacter: number;
   tuning?: ProfileTuning;
   motionSensitivity: number;
   motionNoiseFloor: number;
@@ -211,6 +214,8 @@ export interface SessionConfig {
   snippets?: SoundSnippet[];
   cabinEq: CabinEq;
   shiftFeel: ShiftFeel;
+  /** Artistic City / Touring / Sport / legacy shift-map preset. */
+  shiftMapPreset?: import("@/lib/powertrain/shift-presets").ShiftMapPresetId;
   autoRules: AutoRule[];
   autoRulesMode: AutoRulesMode;
   playlists: Playlist[];
@@ -240,6 +245,9 @@ function configFingerprint(c: SessionConfig): string {
     profileId: c.profileId,
     volume: c.volume,
     profileGain: c.profileGain,
+    outputBoostDb: c.outputBoostDb,
+    bodyCharacter: c.bodyCharacter,
+    mechanicalCharacter: c.mechanicalCharacter,
     tuning: c.tuning,
     motionSensitivity: c.motionSensitivity,
     motionNoiseFloor: c.motionNoiseFloor,
@@ -247,6 +255,7 @@ function configFingerprint(c: SessionConfig): string {
     mix: c.mix,
     cabinEq: c.cabinEq,
     shiftFeel: c.shiftFeel,
+    shiftMapPreset: c.shiftMapPreset ?? "legacy",
     autoRules: c.autoRules,
     autoRulesMode: c.autoRulesMode,
     playlists: c.playlists,
@@ -334,12 +343,16 @@ class DriveSession {
   private baseMix: LayerMix = normalizeMix(undefined);
   private config: SessionConfig = {
     profileId: "gt-v8",
-    volume: 0.7,
+    volume: 0.35,
     profileGain: 1,
+    outputBoostDb: 0,
+    bodyCharacter: 0.5,
+    mechanicalCharacter: 0.5,
     motionSensitivity: 1,
     motionNoiseFloor: 0,
     cabinEq: DEFAULT_CABIN_EQ,
     shiftFeel: DEFAULT_SHIFT_FEEL,
+    shiftMapPreset: "legacy",
     autoRules: [],
     autoRulesMode: "off",
     playlists: [],
@@ -356,6 +369,8 @@ class DriveSession {
   private vehicleTelemetryUnsub: (() => void) | null = null;
   private powertrainSim: PowertrainSimulator | null = null;
   private powertrainSoundProfileId: string | null = null;
+  /** After a mid-drive profile change, seed the new powertrain at current speed. */
+  private pendingPowertrainWarmStart: { speedKmh: number; throttle: number } | null = null;
   private sensorFusion: SensorFusionState = createSensorFusion();
   private lastVehicleMotion = vehicleMotionFromDrive({
     speedMps: 0,
@@ -409,6 +424,7 @@ class DriveSession {
   private syncEngineDriveTier(profile: ReturnType<typeof getProfile>) {
     this.engine?.setDynamicDriveEnabled(this.powertrainSimActive(profile));
     this.engine?.setAdvancedTransientsEnabled(this.dynamicDriveExtrasActive());
+    this.engine?.setShiftIntensity(this.config.shiftFeel.shiftIntensity ?? 0.72);
   }
 
   /**
@@ -631,11 +647,18 @@ class DriveSession {
     this.sensorFusion.options.noiseFloor = merged.motionNoiseFloor;
     if (next.mix && merged.mix) this.baseMix = merged.mix;
     const profile = getProfile(this.config.profileId);
-    const gain = cappedGain(this.config.volume, this.config.profileGain, profile);
-    this.engine?.setVolume(gain);
-    this.engine?.setProfileGain(1);
-    this.engine?.setIntensityCeiling(cappedGain(1, 1, profile));
+    // Prompt 08: pass UI volume and profile gain separately (no double attenuation).
+    this.engine?.setVolume(this.config.volume);
+    this.engine?.setProfileGain(this.config.profileGain);
+    this.engine?.setOutputBoostDb(this.config.outputBoostDb);
+    this.engine?.setCharacterFeel(this.config.bodyCharacter, this.config.mechanicalCharacter);
+    this.engine?.setIntensityCeiling(intensityCeiling(profile));
     if (merged.profileId !== prevId) {
+      // Preserve road speed into the next personality - no idle snap or shift replay.
+      this.pendingPowertrainWarmStart = {
+        speedKmh: this.speed * 3.6,
+        throttle: this.state.throttle,
+      };
       this.powertrainSim = null;
       this.powertrainSoundProfileId = null;
       try {
@@ -652,6 +675,9 @@ class DriveSession {
     if (next.mix) this.engine?.setMix(next.mix);
     if (next.snippets) void this.engine?.setSnippets(next.snippets);
     if (next.cabinEq) this.engine?.setCabinEq(next.cabinEq);
+    if (next.shiftFeel) {
+      this.engine?.setShiftIntensity(merged.shiftFeel.shiftIntensity ?? 0.72);
+    }
     if (next.dynamicDrive !== undefined || next.virtualTransmission !== undefined) {
       const profile = getProfile(this.config.profileId);
       this.syncEngineDriveTier(profile);
@@ -1040,7 +1066,7 @@ class DriveSession {
         mix: this.config.mix,
         ...(seed !== undefined ? { seed } : {}),
       });
-      this.engineB.setVolume(0.0001);
+      this.engineB.setVolume(0);
       this.journeyTrace = trace;
       this.journeyReplay = sourceA;
       this.journeyAbSourceB = sourceB;
@@ -1072,7 +1098,7 @@ class DriveSession {
         environmentId: this.config.environmentId,
         mix: this.config.mix,
       });
-      this.engineB.setVolume(0.0001);
+      this.engineB.setVolume(0);
       this.status = "running";
       this.kind = "ab";
       this.lastTick = performance.now();
@@ -1097,18 +1123,13 @@ class DriveSession {
     const peakB = this.engineB.getMeter()?.rms ?? 0.1;
     const match = Math.min(2, (peakA + 0.04) / (peakB + 0.04));
     if (this.ab.active === "a") {
-      this.engine.setVolume(
-        cappedGain(this.config.volume, this.config.profileGain, getProfile(this.ab.a)),
-      );
-      this.engineB.setVolume(0.0001);
+      this.engine.setVolume(this.config.volume);
+      this.engine.setProfileGain(this.config.profileGain);
+      this.engineB.setVolume(0);
     } else {
-      this.engine.setVolume(0.0001);
-      this.engineB.setVolume(
-        Math.min(
-          0.85,
-          cappedGain(this.config.volume, this.config.profileGain, getProfile(this.ab.b)) * match,
-        ),
-      );
+      this.engine.setVolume(0);
+      this.engineB.setVolume(this.config.volume);
+      this.engineB.setProfileGain(this.config.profileGain * Math.min(2, match));
     }
     this.emit();
   }
@@ -1300,10 +1321,14 @@ class DriveSession {
         ...(primedContext ? { context: primedContext } : {}),
       });
       engine.setCabinEq(this.config.cabinEq);
-      engine.setIntensityCeiling(cappedGain(1, 1, profile));
-      engine.setVolume(cappedGain(this.config.volume, this.config.profileGain, profile));
+      engine.setIntensityCeiling(intensityCeiling(profile));
+      engine.setProfileGain(this.config.profileGain);
+      engine.setOutputBoostDb(this.config.outputBoostDb);
+      engine.setCharacterFeel(this.config.bodyCharacter, this.config.mechanicalCharacter);
+      engine.setVolume(this.config.volume);
       engine.setDynamicDriveEnabled(this.powertrainSimActive(profile));
       engine.setAdvancedTransientsEnabled(this.dynamicDriveExtrasActive());
+      engine.setShiftIntensity(this.config.shiftFeel.shiftIntensity ?? 0.72);
       this.engine = engine;
     } catch (error) {
       reportAudioError(error);
@@ -1548,11 +1573,20 @@ class DriveSession {
     const { speed, acceleration, profile, dt, now, vehicleMotion } = input;
 
     if (this.powertrainSimActive(profile)) {
+      const preset = this.config.shiftMapPreset ?? "legacy";
       if (!this.powertrainSim || this.powertrainSoundProfileId !== profile.id) {
         this.powertrainSim = new PowertrainSimulator({
           profile: this.powertrainProfileForSession(profile),
+          shiftMapPreset: preset,
         });
         this.powertrainSoundProfileId = profile.id;
+        const warm = this.pendingPowertrainWarmStart;
+        if (warm) {
+          this.powertrainSim.warmStartAtSpeed(warm.speedKmh, warm.throttle);
+          this.pendingPowertrainWarmStart = null;
+        }
+      } else if (this.powertrainSim.getShiftMapPreset() !== preset) {
+        this.powertrainSim.setShiftMapPreset(preset);
       }
 
       let directThrottle: number | undefined;

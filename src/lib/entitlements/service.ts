@@ -3,6 +3,11 @@ import { getDynamicDriveTrialService } from "@/lib/dynamic-drive-trial/service";
 import { getAccountSession } from "@/lib/account/auth-service";
 import { hasDrivePlusSubscriptionAccess } from "@/lib/billing/subscription-access-policy";
 import { getSubscriptionForUser } from "@/lib/billing/subscription-store";
+import {
+  activeGrantedEntitlements,
+  activeGrantedProfileIds,
+} from "@/lib/entitlements/grants";
+import { getOfflineAccessLease } from "@/lib/entitlements/offline-lease";
 import { TRIAL_DRIVE_PLUS_ENTITLEMENTS } from "@/lib/entitlements/plans";
 import { buildEntitlementSnapshot } from "@/lib/entitlements/resolve";
 import type {
@@ -56,13 +61,16 @@ export async function resolveEntitlementUser(input: {
   let trialEndsAt: number | null = null;
   let revision = 0;
 
+  let grantedProfileIds: string[] = [];
+  let grantedEntitlements: Entitlement[] = [];
+
   if (input.sessionToken) {
     const session = getAccountSession(input.sessionToken, now);
     if (session) {
       accountId = session.userId;
 
       const subscription = getSubscriptionForUser(session.userId);
-      if (subscription && hasDrivePlusSubscriptionAccess(subscription)) {
+      if (subscription && hasDrivePlusSubscriptionAccess(subscription, now)) {
         plan = "DRIVE_PLUS";
         subscriptionStatus = mapBillingStatusToSubscription(subscription.status);
         revision += 1;
@@ -80,6 +88,10 @@ export async function resolveEntitlementUser(input: {
       } else if (trialSnapshot.status === "expired") {
         trialStatus = "expired";
       }
+
+      grantedProfileIds = activeGrantedProfileIds(session.userId, now);
+      grantedEntitlements = activeGrantedEntitlements(session.userId, now);
+      if (grantedProfileIds.length || grantedEntitlements.length) revision += 4;
     }
   }
 
@@ -90,6 +102,8 @@ export async function resolveEntitlementUser(input: {
     trialStatus,
     ...(trialEntitlements ? { trialEntitlements } : {}),
     trialEndsAt,
+    grantedProfileIds,
+    grantedEntitlements,
     revision,
   };
 }
@@ -98,8 +112,14 @@ export async function resolveEntitlementSnapshot(input: {
   sessionToken?: string | null;
   now?: number;
 }): Promise<EntitlementSnapshot> {
-  const user = await resolveEntitlementUser(input);
-  return buildEntitlementSnapshot(user, input.now ?? Date.now());
+  const now = input.now ?? Date.now();
+  const user = await resolveEntitlementUser({ ...input, now });
+  const lease = getOfflineAccessLease();
+  const leaseExpires =
+    lease && lease.accountId === user.accountId && lease.expiresAtUtc > now
+      ? lease.expiresAtUtc
+      : null;
+  return buildEntitlementSnapshot(user, now, leaseExpires);
 }
 
 export class EntitlementDeniedError extends Error {

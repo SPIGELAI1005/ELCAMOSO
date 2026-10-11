@@ -41,7 +41,7 @@ export interface CalibrationTraceSample {
   shiftDirection: "up" | "down" | null;
   lastShiftReason: string;
   overrun: boolean;
-  powertrainBackend: "legacy" | "dynamic" | "unknown";
+  powertrainBackend: "legacy" | "dynamic" | "gearless" | "unknown";
 }
 
 export interface CalibrationMarker {
@@ -55,7 +55,7 @@ export interface CalibrationMarker {
 export interface CalibrationTraceMeta {
   profileId: string;
   personalityId: string | null;
-  realismEngine: "current" | "v2" | "unknown";
+  realismEngine: "current" | "v2" | "v3" | "unknown";
   dynamicDrive: boolean;
   synthesisMode: string;
   label: string;
@@ -80,7 +80,7 @@ export interface CalibrationSubjectiveNote {
   id: string;
   traceId: string;
   at: number;
-  realismEngine: "current" | "v2";
+  realismEngine: "current" | "v2" | "v3";
   mechanicalVsElectronic: "mechanical" | "electronic" | null;
   shiftFeel: "natural" | "artificial" | null;
   loadResponse: "good" | "weak" | null;

@@ -22,6 +22,27 @@
       "when": 1788008000000,
       "tag": "0002_stripe_webhook_events",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1788009000000,
+      "tag": "0003_entitlement_grants",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1788010000000,
+      "tag": "0004_reward_claims",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1788011000000,
+      "tag": "0005_reward_discount_fulfilment",
+      "breakpoints": true
     }
   ]
 }

@@ -9,6 +9,12 @@ import {
 } from "react";
 
 import {
+  ACCOUNT_SYNC_CHANNEL,
+  ACCOUNT_SYNC_STORAGE_KEY,
+  publishAccountSyncEvent,
+  type AccountSyncEvent,
+} from "@/lib/account/account-sync";
+import {
   accountSessionToSettingsPatch,
   clearAccountSettingsPatch,
   clearPersistedAccountSession,
@@ -39,7 +45,9 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     (next: PersistedAccountSession) => {
       writePersistedAccountSession(next);
       setSession(next);
+      // Preferences / account ids only — never starts Drive audio.
       update(accountSessionToSettingsPatch(next));
+      publishAccountSyncEvent({ type: "signed-in", at: Date.now(), userId: next.userId });
     },
     [update],
   );
@@ -82,7 +90,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     void refresh();
   }, [refresh]);
 
-  // Re-check the HttpOnly cookie when returning from Google OAuth / another tab.
+  // Re-check the HttpOnly cookie when returning from OAuth / another tab / focus.
   useEffect(() => {
     function onVisible() {
       if (document.visibilityState === "visible") void refresh();
@@ -98,6 +106,61 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     };
   }, [refresh]);
 
+  // Logout and session changes across open tabs.
+  useEffect(() => {
+    function applySync(event: AccountSyncEvent) {
+      if (event.type === "signed-out") {
+        clearPersistedAccountSession();
+        setSession(null);
+        update(clearAccountSettingsPatch());
+        return;
+      }
+      if (event.type === "signed-in") void refresh();
+    }
+
+    let channel: BroadcastChannel | null = null;
+    try {
+      channel = new BroadcastChannel(ACCOUNT_SYNC_CHANNEL);
+      channel.onmessage = (message) => {
+        const data = message.data as AccountSyncEvent | undefined;
+        if (data?.type) applySync(data);
+      };
+    } catch {
+      channel = null;
+    }
+
+    function onStorage(ev: StorageEvent) {
+      if (ev.key !== ACCOUNT_SYNC_STORAGE_KEY || !ev.newValue) return;
+      try {
+        applySync(JSON.parse(ev.newValue) as AccountSyncEvent);
+      } catch {
+        /* ignore */
+      }
+    }
+    window.addEventListener("storage", onStorage);
+
+    return () => {
+      channel?.close();
+      window.removeEventListener("storage", onStorage);
+    };
+  }, [refresh, update]);
+
+  // Local expiry handling — server cookie remains authoritative on the next refresh.
+  useEffect(() => {
+    if (!session) return;
+    const ms = session.expiresAt - Date.now();
+    if (ms <= 0) {
+      clearPersistedAccountSession();
+      setSession(null);
+      update(clearAccountSettingsPatch());
+      return;
+    }
+    const timer = window.setTimeout(() => {
+      void refresh();
+    }, Math.min(ms + 50, 2_147_000_000));
+    return () => window.clearTimeout(timer);
+  }, [refresh, session, update]);
+
   const signOut = useCallback(async () => {
     try {
       await signOutAccountFn({ data: {} });
@@ -107,6 +170,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     clearPersistedAccountSession();
     setSession(null);
     update(clearAccountSettingsPatch());
+    publishAccountSyncEvent({ type: "signed-out", at: Date.now() });
   }, [update]);
 
   const value = useMemo(

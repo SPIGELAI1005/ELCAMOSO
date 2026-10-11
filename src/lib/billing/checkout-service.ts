@@ -24,6 +24,8 @@ export interface BeginCheckoutInput {
   request: CheckoutPlanRequest;
   /** Request Host header - used to validate origin when allowlist is unset. */
   trustedHost?: string | null;
+  /** Optional Sound Spin discount reservation (Prompt 13). Never trust client coupon ids. */
+  rewardReservationId?: string | null;
 }
 
 export type BeginCheckoutResult =
@@ -114,6 +116,50 @@ export async function beginDrivePlusCheckout(
     },
     ...buildCheckoutSessionTaxParams(),
   };
+
+  if (input.rewardReservationId) {
+    const { isRewardDiscountsEnabled } = await import("@/lib/rewards/discount/flag");
+    const { prepareCheckoutRewardDiscount, bindCheckoutSessionToReservation } = await import(
+      "@/lib/rewards/discount/service"
+    );
+    if (!isRewardDiscountsEnabled()) {
+      throw new Error("Reward discounts are not enabled");
+    }
+    const prepared = prepareCheckoutRewardDiscount({
+      accountId: input.userId,
+      reservationId: input.rewardReservationId,
+      interval: input.request.interval,
+    });
+    if (!prepared.ok) {
+      throw new Error(prepared.message);
+    }
+    params.discounts = [{ coupon: prepared.couponId }];
+    Object.assign(metadata, prepared.metadata);
+    params.metadata = metadata;
+    params.subscription_data = { metadata };
+    // Session id bound after create — see below.
+    const session = await stripe.checkout.sessions
+      .create(params, {
+        idempotencyKey: `reward-checkout:${input.rewardReservationId}:${priceId}`,
+      })
+      .catch((error) => {
+        throw wrapStripeBillingError(error);
+      });
+    if (!session.url) {
+      throw new Error("Checkout session missing redirect URL");
+    }
+    bindCheckoutSessionToReservation({
+      reservationId: input.rewardReservationId,
+      accountId: input.userId,
+      checkoutSessionId: session.id,
+      stripeCustomerId,
+    });
+    return {
+      action: "checkout",
+      url: session.url,
+      sessionId: session.id,
+    };
+  }
 
   const session = await stripe.checkout.sessions.create(params).catch((error) => {
     throw wrapStripeBillingError(error);

@@ -257,6 +257,42 @@
   grid-template-columns: 1fr;
 }
 
+/** Drive Cockpit V2 (Prompt 09) - consumer driving surface. */
+.drive-cockpit__speed {
+  font-size: clamp(3.75rem, 15vw, 7.5rem);
+}
+
+@media (min-width: 80rem) {
+  .drive-cockpit__speed {
+    font-size: clamp(5.5rem, 8vw, 8.5rem);
+  }
+}
+
+@media (orientation: landscape) and (max-height: 36rem) {
+  .drive-cockpit {
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+  }
+
+  .drive-cockpit__centre {
+    padding-block: 0.25rem;
+  }
+
+  .drive-cockpit__speed {
+    font-size: clamp(3rem, 12vh, 4.75rem);
+  }
+
+  .drive-cockpit__footer {
+    gap: 0.5rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .drive-cockpit__arc {
+    transition: none;
+  }
+}
+
 .dd-instrument--cockpit .dd-instrument__cluster {
   gap: 1.25rem;
 }

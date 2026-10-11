@@ -11,7 +11,7 @@ export const FUSION_SOUND_PROFILES: SoundProfile[] = FUSION_PRESETS.map((preset)
   drivetrainMode: "continuous" as const,
   motionModel: "ambient" as const,
   sourceMode: "hybrid" as const,
-  access: "free" as const,
+  access: "drive_plus" as const,
   voice: {
     baseFrequency: 100,
     harmonics: [1],

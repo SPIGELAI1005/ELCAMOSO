@@ -101,7 +101,11 @@ function readFusion(
 
 function readPowertrain(driveState: DriveState): PowertrainDiagnostics {
   const pt = driveState.powertrain;
-  const backend = driveState.powertrainBackend ?? (pt ? "dynamic" : "legacy");
+  const rawBackend = driveState.powertrainBackend ?? (pt ? "dynamic" : "legacy");
+  const backend =
+    rawBackend === "legacy" || rawBackend === "dynamic" || rawBackend === "gearless"
+      ? rawBackend
+      : "legacy";
   return {
     powertrainBackend: backend,
     throttle: pt?.throttle ?? driveState.throttle,

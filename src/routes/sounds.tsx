@@ -62,15 +62,38 @@ function Sounds() {
   );
   const sections = useMemo(() => groupProfilesBySection(profiles), [profiles]);
 
-  const select = (id: string) => {
-    if (!access.canDriveWithProfile(id)) return;
+  /** True when Sounds Listen / audition audio is already live. */
+  const listeningLive =
+    (snap.kind === "audition" || snap.kind === "demo" || snap.kind === "ab") &&
+    (snap.status === "running" || snap.status === "starting" || snap.status === "suspended");
+
+  /**
+   * Put a Sound Profile into the sticky Listen section.
+   * Preview-allowed ids may be selected for listening even when Drive+ is required to drive.
+   * When audio is already live, switch the running engine immediately.
+   */
+  const select = (id: string, opts?: { closeDetail?: boolean; forDrive?: boolean }) => {
+    const forDrive = opts?.forDrive ?? false;
+    if (forDrive && !access.canDriveWithProfile(id)) return;
+    if (!forDrive && !access.canPreviewProfile(id) && !access.canDriveWithProfile(id)) return;
+
     const profile = allProfiles().find((p) => p.id === id);
-    if (profile && needsIntenseConfirm(profile, settings.volume, getProfileGain(settings, id))) {
+    if (
+      forDrive &&
+      profile &&
+      needsIntenseConfirm(profile, settings.volume, getProfileGain(settings, id))
+    ) {
       setConfirmId(id);
       return;
     }
+
     update({ profileId: id });
-    setDetailId(null);
+    if (opts?.closeDetail !== false) setDetailId(null);
+
+    // Keep Listen audio locked to the selection the user just made.
+    if (listeningLive || snap.status === "running") {
+      void getSession().listenProfile(id, snap.auditionKmh || 60);
+    }
   };
 
   const preview = (profile: SoundProfile) => {
@@ -80,6 +103,7 @@ function Sounds() {
       previewTimerRef.current = null;
     }
     update({ profileId: profile.id });
+    setDetailId(null);
     void getSession().listenProfile(profile.id, 60);
     const limitSeconds = access.previewDurationForProfile(profile.id);
     if (limitSeconds != null) {
@@ -195,8 +219,16 @@ function Sounds() {
                 {items.map((profile) => {
                   const starred = settings.favourites.includes(profile.id);
                   const lockedForDrive = !access.canDriveWithProfile(profile.id);
+                  const isSelected = settings.profileId === profile.id;
+                  const isPlaying =
+                    listeningLive && snap.profileId === profile.id && snap.status === "running";
                   return (
-                    <li key={profile.id} className="flex items-center justify-between gap-3 py-5">
+                    <li
+                      key={profile.id}
+                      className={`flex items-center justify-between gap-3 py-5 ${
+                        isSelected ? "bg-secondary/40" : ""
+                      }`}
+                    >
                       <button
                         type="button"
                         onClick={() => {
@@ -207,8 +239,11 @@ function Sounds() {
                               context: "locked_sound",
                             });
                           }
+                          // Select into Listen first, then open details.
+                          select(profile.id, { closeDetail: false });
                           setDetailId(profile.id);
                         }}
+                        aria-pressed={isSelected}
                         className="min-w-0 flex-1 text-left"
                       >
                         <span className="flex items-baseline gap-2">
@@ -218,13 +253,18 @@ function Sounds() {
                         <span className="mt-2 block text-xs tracking-[0.18em] text-muted-foreground uppercase">
                           {profile.traits.join(" · ")}
                           {starred ? " · ★" : ""}
+                          {isPlaying ? " · Listening" : isSelected ? " · Selected" : ""}
                         </span>
                       </button>
                       <button
                         type="button"
                         aria-label={`Preview ${profile.name}`}
                         onClick={() => preview(profile)}
-                        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-border text-sm hover:bg-secondary"
+                        className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full border text-sm hover:bg-secondary ${
+                          isPlaying
+                            ? "border-foreground bg-foreground text-background"
+                            : "border-border"
+                        }`}
                       >
                         ▶
                       </button>
@@ -369,7 +409,7 @@ function Sounds() {
               </button>
               <button
                 type="button"
-                onClick={() => select(detail.id)}
+                onClick={() => select(detail.id, { forDrive: true, closeDetail: true })}
                 disabled={!access.canDriveWithProfile(detail.id)}
                 className="h-11 rounded-full bg-primary px-6 text-[11px] tracking-[0.2em] text-primary-foreground uppercase disabled:opacity-40"
               >
@@ -396,8 +436,13 @@ function Sounds() {
                 type="button"
                 className="h-11 rounded-full bg-primary px-6 text-[11px] tracking-[0.2em] text-primary-foreground uppercase"
                 onClick={() => {
-                  update({ profileId: confirmId });
+                  const id = confirmId;
                   setConfirmId(null);
+                  update({ profileId: id });
+                  setDetailId(null);
+                  if (listeningLive || snap.status === "running") {
+                    void getSession().listenProfile(id, snap.auditionKmh || 60);
+                  }
                 }}
               >
                 Continue

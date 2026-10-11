@@ -3,8 +3,10 @@ import { IDLE_STATE } from "@/lib/drive/model";
 import { familyForProfile } from "@/lib/sound/realism/families";
 import { createMotionTracker, motionFromDrive } from "@/lib/sound/realism/motion";
 import { getProfile } from "@/lib/sound/profiles";
+import { PUBLIC_PROFILE_IDS } from "@/lib/sound/profile-experience-config";
 import {
   CORE_SOUND_PROFILE_IDS,
+  allCatalogAcousticProfileSpecs,
   clearAcousticProfileSpecCache,
   getAcousticProfileSpec,
   mismatchedPackageFamilyIds,
@@ -35,6 +37,28 @@ describe("getAcousticProfileSpec", () => {
       expect(spec.loudness.profileTrim).toBeLessThanOrEqual(1.6);
       expect(spec.sampleBank.approvedAssetsPresent).toBe(false);
       expect(spec.acceptance.status).toBeTruthy();
+      expect(spec.recipe.rendererKind).toBeTruthy();
+      expect(spec.recipe.inheritance.familyDefaultsId.startsWith("foundation:")).toBe(true);
+      expect(spec.recipe.inheritance.overrides.length).toBeGreaterThan(0);
+      expect(spec.recipe.sampleBankRecipe.proceduralFallback).toBe(true);
+      expect(spec.recipe.headroom.maxGainCeiling).toBe(0.85);
+      expect(spec.recipe.listening.listeningVerdict).toBe("pending");
+      // Specs must be JSON-serializable across SSR/client boundaries.
+      expect(() => JSON.parse(JSON.stringify(spec))).not.toThrow();
+    }
+  });
+
+  it("covers all 57 catalog IDs with unique recipe mappings", () => {
+    expect(PUBLIC_PROFILE_IDS).toHaveLength(57);
+    clearAcousticProfileSpecCache();
+    const specs = allCatalogAcousticProfileSpecs();
+    expect(specs).toHaveLength(57);
+    const ids = specs.map((s) => s.id);
+    expect(new Set(ids).size).toBe(57);
+    for (const spec of specs) {
+      expect(spec.recipe.inheritance.overrides.some((o) => o === `identity:${spec.id}`)).toBe(
+        true,
+      );
     }
   });
 
@@ -57,6 +81,8 @@ describe("getAcousticProfileSpec", () => {
     expect(["continuous", "virtual-transmission"]).toContain(spec.regimes.drivetrainMode);
     expect(spec.layers.roles.length).toBeGreaterThan(0);
     expect(spec.loudness.maxGainCeiling).toBe(0.85);
+    expect(spec.recipe).toBeTruthy();
+    expect(spec.recipe.sampleBankRecipe.proceduralFallback).toBe(true);
   });
 
   it("clamps invalid numeric fields during validation", () => {
@@ -70,13 +96,110 @@ describe("getAcousticProfileSpec", () => {
       },
       events: { ...base.events, maxEventVoices: 100, variationDepth: 9 },
       loudness: { profileTrim: 9, maxGainCeiling: 2 },
-    } as AcousticProfileSpec;
+      recipe: {
+        ...base.recipe,
+        cycle: {
+          ...base.recipe.cycle,
+          idleRpm: -50,
+          maxRpm: 999999,
+          cycleVariation: 4,
+          harmonicOrderWeights: [2, -1, 0.5],
+        },
+        virtualTransmission: {
+          ...base.recipe.virtualTransmission,
+          torqueCutMs: 5000,
+          downshiftBlip: 3,
+        },
+        headroom: {
+          ...base.recipe.headroom,
+          maxGainCeiling: 2,
+          antiHarshnessGainDb: 5,
+        },
+        listening: { listeningVerdict: "maybe", notes: 12 },
+      },
+    } as unknown as AcousticProfileSpec;
     const fixed = validateAcousticProfileSpec(broken);
     expect(fixed.dsp.transitionTauSeconds).toBeLessThanOrEqual(2);
     expect(fixed.dsp.phases.accelerationTexture).toBe(0);
     expect(fixed.events.maxEventVoices).toBeLessThanOrEqual(8);
     expect(fixed.loudness.profileTrim).toBeLessThanOrEqual(1.6);
     expect(fixed.loudness.maxGainCeiling).toBe(0.85);
+    expect(fixed.recipe.cycle.idleRpm).toBe(0);
+    expect(fixed.recipe.cycle.maxRpm).toBeLessThanOrEqual(20000);
+    expect(fixed.recipe.cycle.cycleVariation).toBeLessThanOrEqual(1);
+    expect(fixed.recipe.cycle.harmonicOrderWeights.every((w) => w >= 0 && w <= 1)).toBe(true);
+    expect(fixed.recipe.virtualTransmission.torqueCutMs).toBeLessThanOrEqual(800);
+    expect(fixed.recipe.virtualTransmission.downshiftBlip).toBeLessThanOrEqual(1);
+    expect(fixed.recipe.headroom.maxGainCeiling).toBe(0.85);
+    expect(fixed.recipe.headroom.antiHarshnessGainDb).toBeLessThanOrEqual(0);
+    expect(fixed.recipe.listening.listeningVerdict).toBe("pending");
+  });
+
+  it("repairs a missing recipe block with a safe validated recipe", () => {
+    const base = getAcousticProfileSpec("cyber-pulse");
+    const { recipe: _removed, ...rest } = base;
+    const fixed = validateAcousticProfileSpec(rest as AcousticProfileSpec);
+    expect(fixed.recipe.rendererKind).toBe("electric-designed");
+    expect(fixed.recipe.virtualTransmission.allowCombustionShiftAccents).toBe(false);
+  });
+
+  it("keeps gearless profiles free of combustion pops / RPM clacks", () => {
+    const gearlessIds = [
+      "cyber-pulse",
+      "open-wind",
+      "formula-electric",
+      "dragon",
+      "neon-drive",
+      "symphony-cinematic-rock",
+      "world-space-drive",
+      "fusion-road-anthem",
+    ];
+    for (const id of gearlessIds) {
+      const spec = getAcousticProfileSpec(id);
+      expect(spec.regimes.drivetrainMode).toBe("continuous");
+      expect(spec.recipe.virtualTransmission.enabled).toBe(false);
+      expect(spec.recipe.virtualTransmission.allowCombustionShiftAccents).toBe(false);
+      expect(spec.recipe.capabilities).not.toContain("combustion-shift-accents");
+      expect(spec.recipe.cycle.stroke).toBe("none");
+      expect(spec.recipe.cycle.cylinders).toBe(0);
+    }
+  });
+
+  it("gives combustion Realism V2 profiles four-stroke cycle geometry and VT accents", () => {
+    const gt = getAcousticProfileSpec("gt-v8");
+    expect(gt.recipe.rendererKind).toBe("combustion-hybrid-v2");
+    expect(gt.recipe.cycle.stroke).toBe("four-stroke");
+    expect(gt.recipe.cycle.cycleDegrees).toBe(720);
+    expect(gt.recipe.cycle.cylinders).toBe(8);
+    expect(gt.recipe.cycle.idleRpm).toBeGreaterThan(0);
+    expect(gt.recipe.cycle.maxRpm).toBeGreaterThan(gt.recipe.cycle.idleRpm);
+    expect(gt.recipe.virtualTransmission.enabled).toBe(true);
+    expect(gt.recipe.virtualTransmission.allowCombustionShiftAccents).toBe(true);
+    expect(gt.recipe.virtualTransmission.upshiftThresholdsKmh.length).toBeGreaterThan(0);
+    expect(gt.recipe.capabilities).toContain("combustion-events");
+
+    const muscle = getAcousticProfileSpec("american-muscle-v8");
+    expect(muscle.recipe.cycle.architecture).toContain("lope");
+    expect(muscle.recipe.inheritance.overrides.some((o) => o.includes("cycle"))).toBe(true);
+  });
+
+  it("does not let comedy VT profiles inherit combustion shift accents", () => {
+    for (const id of ["farting-car", "kazoo-kart", "electric-hypercar"] as const) {
+      const spec = getAcousticProfileSpec(id);
+      expect(spec.recipe.virtualTransmission.enabled).toBe(true);
+      expect(spec.recipe.virtualTransmission.allowCombustionShiftAccents).toBe(false);
+      expect(spec.recipe.capabilities).not.toContain("combustion-shift-accents");
+    }
+  });
+
+  it("marks missing samples with procedural fallback and separates listening from runtime", () => {
+    const gt = getAcousticProfileSpec("gt-v8");
+    expect(gt.sampleBank.approvedAssetsPresent).toBe(false);
+    expect(gt.recipe.sampleBankRecipe.approvedAssetsPresent).toBe(false);
+    expect(gt.recipe.sampleBankRecipe.proceduralFallback).toBe(true);
+    // Listening stays out of acceptance runtime meta.
+    expect(gt.acceptance).not.toHaveProperty("listeningVerdict");
+    expect(gt.recipe.listening.listeningVerdict).toBe("pending");
   });
 
   it("records package vs runtime mismatches for neon-drive, dragon, thunder-beast only", () => {

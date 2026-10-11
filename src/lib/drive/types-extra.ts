@@ -38,6 +38,16 @@ export interface ShiftFeel {
   shiftMs: number;
   torqueDip: number;
   revMatch: number;
+  /**
+   * Mechanical shift transient level 0..1 (Prompt 06).
+   * Independent of master volume. Zero mutes clacks/thumps but keeps RPM / torque-cut.
+   */
+  shiftIntensity: number;
 }
 
-export const DEFAULT_SHIFT_FEEL: ShiftFeel = { shiftMs: 160, torqueDip: 0.22, revMatch: 0.45 };
+export const DEFAULT_SHIFT_FEEL: ShiftFeel = {
+  shiftMs: 160,
+  torqueDip: 0.22,
+  revMatch: 0.45,
+  shiftIntensity: 0.72,
+};

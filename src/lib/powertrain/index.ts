@@ -97,6 +97,32 @@ export {
   DEMAND_BREAKPOINTS,
 } from "@/lib/powertrain/shift-map";
 export {
+  CITY_UPSHIFT_KMH,
+  CITY_DOWNSHIFT_KMH,
+  SHIFT_MAP_PRESET_IDS,
+  adaptSpeedLadder,
+  applyShiftPresetToProfile,
+  buildPresetShiftMap,
+  defaultShiftMapPreset,
+  isShiftMapPresetId,
+  resolveShiftMapForPreset,
+  summarizeShiftPreset,
+  type ShiftMapPresetId,
+  type ShiftPresetSummary,
+} from "@/lib/powertrain/shift-presets";
+export { isCityShiftPresetDefaultEnabled } from "@/lib/powertrain/shift-preset-flag";
+export {
+  gearlessDrivetrainState,
+  speedFreshnessFromMotion,
+} from "@/lib/powertrain/gearless-state";
+export type {
+  OperatingRegime,
+  SpeedFreshness,
+  DrivetrainShiftEvent,
+  PowertrainRuntimeDiagnostics,
+  ShiftPhase,
+} from "@/lib/powertrain/types";
+export {
   shouldUseDynamicPowertrain,
   shouldUseDynamicPowertrainFromSessionConfig,
 } from "@/lib/powertrain/dynamic-powertrain-gate";

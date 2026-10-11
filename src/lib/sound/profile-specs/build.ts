@@ -10,6 +10,7 @@ import {
   familyMismatchForProfile,
   packageFamilyForProfile,
 } from "@/lib/sound/profile-specs/package-family";
+import { buildAcousticRecipe } from "@/lib/sound/profile-specs/recipe-build";
 import type { AcousticProfileSpec } from "@/lib/sound/profile-specs/types";
 import { validateAcousticProfileSpec } from "@/lib/sound/profile-specs/validate";
 
@@ -115,6 +116,7 @@ export function buildAcousticProfileSpec(profileId: string): AcousticProfileSpec
       physics: experience.physics,
       status: experience.status,
     },
+    recipe: buildAcousticRecipe(profileId),
   };
 
   return validateAcousticProfileSpec(raw);

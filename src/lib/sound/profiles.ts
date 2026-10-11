@@ -796,7 +796,8 @@ export const PROFILE_CATEGORIES: ProfileCategory[] = [
   "Garage",
 ];
 
-export const DEFAULT_PROFILE_ID = "gt-v8";
+/** Default selection — must remain a permanent free Sound Profile id. */
+export const DEFAULT_PROFILE_ID = "american-muscle-v8";
 
 /* ------------------------------------------------ custom profile registry */
 

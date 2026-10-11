@@ -1,13 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 
 import { ElcamosoMark } from "@/components/ElcamosoLogo";
 import {
   beginGoogleSignInFn,
+  getEmailOtpStatusFn,
   getGoogleSignInStatusFn,
   requestAccountSignInFn,
+  requestEmailOtpFn,
+  verifyEmailOtpFn,
 } from "@/lib/account/server-fns";
+import { useAccount } from "@/lib/account/AccountProvider";
+import { sanitizeReturnTo } from "@/lib/account/return-to";
 import { useReducedMotion } from "@/lib/drive/useReducedMotion";
 import {
   Dialog,
@@ -25,19 +30,35 @@ interface AccountSignInDialogProps {
   description?: string;
 }
 
-/** Account sign-in: Google OAuth (when configured) + email magic link. */
+type Step = "email" | "code";
+
+/**
+ * Account sign-in: Google OAuth (when configured) + email six-digit code (Supabase OTP)
+ * with magic-link fallback when OTP is not configured.
+ * Code entry is designed for in-car use while the email is read on a phone.
+ */
 export function AccountSignInDialog({
   open,
   onOpenChange,
-  returnTo = "/drive?activateTrial=1",
+  returnTo = "/drive",
   title = "Sign in",
-  description = "Sign in to sync your plan, save Dynamic Drive Preview, and pick up where you left off.",
+  description = "Sign in to sync your plan and preferences. Free Sound Profiles stay available without an account.",
 }: AccountSignInDialogProps) {
   const reducedMotion = useReducedMotion();
+  const { saveSession, refresh } = useAccount();
+  const emailFieldId = useId();
+  const codeFieldId = useId();
+  const codeInputRef = useRef<HTMLInputElement>(null);
+
+  const [step, setStep] = useState<Step>("email");
   const [email, setEmail] = useState("");
+  const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
   const [googleBusy, setGoogleBusy] = useState(false);
   const [googleAvailable, setGoogleAvailable] = useState(false);
+  const [otpAvailable, setOtpAvailable] = useState(false);
+  const [resendCooldownSeconds, setResendCooldownSeconds] = useState(60);
+  const [resendIn, setResendIn] = useState(0);
   const [message, setMessage] = useState<string | null>(null);
   const [verifyUrl, setVerifyUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -47,10 +68,16 @@ export function AccountSignInDialog({
     let cancelled = false;
     void (async () => {
       try {
-        const status = await getGoogleSignInStatusFn();
-        if (!cancelled) setGoogleAvailable(status.available);
+        const [google, otp] = await Promise.all([getGoogleSignInStatusFn(), getEmailOtpStatusFn()]);
+        if (cancelled) return;
+        setGoogleAvailable(google.available);
+        setOtpAvailable(otp.available);
+        setResendCooldownSeconds(otp.resendCooldownSeconds);
       } catch {
-        if (!cancelled) setGoogleAvailable(false);
+        if (!cancelled) {
+          setGoogleAvailable(false);
+          setOtpAvailable(false);
+        }
       }
     })();
     return () => {
@@ -65,11 +92,51 @@ export function AccountSignInDialog({
       setVerifyUrl(null);
       setGoogleBusy(false);
       setBusy(false);
+      setStep("email");
+      setCode("");
+      setResendIn(0);
     }
   }, [open]);
 
-  async function handleSubmit(event: React.FormEvent) {
-    event.preventDefault();
+  useEffect(() => {
+    if (step !== "code" || resendIn <= 0) return;
+    const timer = window.setInterval(() => {
+      setResendIn((prev) => Math.max(0, prev - 1));
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [resendIn, step]);
+
+  useEffect(() => {
+    if (step === "code" && open) {
+      codeInputRef.current?.focus();
+    }
+  }, [open, step]);
+
+  async function sendOtp(nextEmail: string) {
+    setBusy(true);
+    setError(null);
+    setMessage(null);
+    setVerifyUrl(null);
+    try {
+      const result = await requestEmailOtpFn({
+        data: {
+          email: nextEmail,
+          returnTo,
+          clientKey: typeof navigator !== "undefined" ? navigator.userAgent.slice(0, 80) : null,
+        },
+      });
+      setMessage(result.message);
+      setResendCooldownSeconds(result.resendCooldownSeconds);
+      setResendIn(result.resendCooldownSeconds);
+      setStep("code");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not send a sign-in code.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function sendMagicLink(nextEmail: string) {
     setBusy(true);
     setError(null);
     setMessage(null);
@@ -77,7 +144,7 @@ export function AccountSignInDialog({
     try {
       const origin = window.location.origin;
       const result = await requestAccountSignInFn({
-        data: { email, returnTo, origin },
+        data: { email: nextEmail, returnTo, origin },
       });
       setMessage(result.message);
       setVerifyUrl(result.verifyUrl ?? null);
@@ -86,6 +153,49 @@ export function AccountSignInDialog({
     } finally {
       setBusy(false);
     }
+  }
+
+  async function handleEmailSubmit(event: React.FormEvent) {
+    event.preventDefault();
+    if (otpAvailable) {
+      await sendOtp(email);
+      return;
+    }
+    await sendMagicLink(email);
+  }
+
+  async function handleCodeSubmit(event: React.FormEvent) {
+    event.preventDefault();
+    setBusy(true);
+    setError(null);
+    try {
+      const result = await verifyEmailOtpFn({
+        data: { email, code, returnTo },
+      });
+      saveSession({
+        userId: result.userId,
+        email: result.email,
+        expiresAt: result.expiresAt,
+      });
+      await refresh();
+      onOpenChange(false);
+      // Restore preferences via AccountProvider — do not start Drive audio.
+      const next = sanitizeReturnTo(result.returnTo);
+      if (next !== window.location.pathname + window.location.search) {
+        window.location.assign(next);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "That code is invalid or has expired.");
+      setCode("");
+      codeInputRef.current?.focus();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleResend() {
+    if (resendIn > 0 || busy) return;
+    await sendOtp(email);
   }
 
   async function handleGoogleSignIn() {
@@ -106,6 +216,17 @@ export function AccountSignInDialog({
     }
   }
 
+  function onCodeChange(value: string) {
+    const digits = value.replace(/\D/g, "").slice(0, 6);
+    setCode(digits);
+  }
+
+  function onCodePaste(event: React.ClipboardEvent<HTMLInputElement>) {
+    event.preventDefault();
+    const text = event.clipboardData.getData("text") ?? "";
+    onCodeChange(text);
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md overflow-hidden border-border/60 bg-background p-0 sm:rounded-2xl">
@@ -123,62 +244,137 @@ export function AccountSignInDialog({
             </p>
             <DialogHeader className="mt-5 space-y-2">
               <DialogTitle className="text-center text-2xl font-light tracking-tight">
-                {title}
+                {step === "code" ? "Enter your code" : title}
               </DialogTitle>
               <DialogDescription className="mx-auto max-w-sm text-center text-sm leading-relaxed text-muted-foreground">
-                {description}
+                {step === "code"
+                  ? "Open the email on your phone and type the six-digit code here. No password needed."
+                  : description}
               </DialogDescription>
             </DialogHeader>
           </div>
         </div>
 
         <div className="space-y-5 px-6 py-6">
-          {googleAvailable ? (
-            <div className="space-y-4">
+          {step === "email" ? (
+            <>
+              {googleAvailable ? (
+                <div className="space-y-4">
+                  <button
+                    type="button"
+                    disabled={googleBusy || busy}
+                    onClick={() => void handleGoogleSignIn()}
+                    className="inline-flex h-12 min-h-12 w-full items-center justify-center gap-2 rounded-full border border-border bg-secondary text-[11px] tracking-[0.2em] uppercase transition-colors hover:border-foreground/30 disabled:opacity-50"
+                  >
+                    <GoogleMark />
+                    {googleBusy ? "Redirecting…" : "Continue with Google"}
+                  </button>
+                  <div className="flex items-center gap-3">
+                    <div className="h-px flex-1 bg-border" />
+                    <p className="text-[10px] tracking-[0.22em] text-muted-foreground uppercase">
+                      or email
+                    </p>
+                    <div className="h-px flex-1 bg-border" />
+                  </div>
+                </div>
+              ) : null}
+
+              <form onSubmit={(event) => void handleEmailSubmit(event)} className="space-y-4">
+                <label htmlFor={emailFieldId} className="block space-y-2">
+                  <span className="text-[10px] tracking-[0.22em] text-muted-foreground uppercase">
+                    Email
+                  </span>
+                  <input
+                    id={emailFieldId}
+                    type="email"
+                    name="email"
+                    autoComplete="email"
+                    inputMode="email"
+                    required
+                    value={email}
+                    onChange={(event) => setEmail(event.target.value)}
+                    className="h-12 min-h-12 w-full rounded-full border border-border bg-transparent px-5 text-sm outline-none transition-colors focus:border-foreground/30"
+                    placeholder="you@example.com"
+                  />
+                </label>
+                <button
+                  type="submit"
+                  disabled={busy || googleBusy}
+                  className="inline-flex h-12 min-h-12 w-full items-center justify-center rounded-full bg-primary text-[11px] tracking-[0.22em] text-primary-foreground uppercase disabled:opacity-50"
+                >
+                  {busy
+                    ? "Sending…"
+                    : otpAvailable
+                      ? "Send sign-in code"
+                      : "Continue with email"}
+                </button>
+              </form>
+            </>
+          ) : (
+            <form onSubmit={(event) => void handleCodeSubmit(event)} className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Code sent to <span className="text-foreground">{email}</span>
+              </p>
               <button
                 type="button"
-                disabled={googleBusy || busy}
-                onClick={() => void handleGoogleSignIn()}
-                className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-full border border-border bg-secondary text-[11px] tracking-[0.2em] uppercase transition-colors hover:border-foreground/30 disabled:opacity-50"
+                className="text-[11px] tracking-[0.18em] text-muted-foreground uppercase underline-offset-4 hover:text-foreground hover:underline"
+                onClick={() => {
+                  setStep("email");
+                  setCode("");
+                  setError(null);
+                  setMessage(null);
+                }}
               >
-                <GoogleMark />
-                {googleBusy ? "Redirecting…" : "Continue with Google"}
+                Edit email
               </button>
-              <div className="flex items-center gap-3">
-                <div className="h-px flex-1 bg-border" />
-                <p className="text-[10px] tracking-[0.22em] text-muted-foreground uppercase">
-                  or email
-                </p>
-                <div className="h-px flex-1 bg-border" />
-              </div>
-            </div>
-          ) : null}
 
-          <form onSubmit={(event) => void handleSubmit(event)} className="space-y-4">
-            <label className="block space-y-2">
-              <span className="text-[10px] tracking-[0.22em] text-muted-foreground uppercase">
-                Email
-              </span>
-              <input
-                type="email"
-                autoComplete="email"
-                required
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                className="w-full rounded-full border border-border bg-transparent px-5 py-3.5 text-sm outline-none transition-colors focus:border-foreground/30"
-                placeholder="you@example.com"
-              />
-            </label>
-            <button
-              type="submit"
-              disabled={busy || googleBusy}
-              className="inline-flex h-12 w-full items-center justify-center rounded-full bg-primary text-[11px] tracking-[0.22em] text-primary-foreground uppercase disabled:opacity-50"
-            >
-              {busy ? "Sending…" : "Continue with email"}
-            </button>
-          </form>
+              <label htmlFor={codeFieldId} className="block space-y-2">
+                <span className="text-[10px] tracking-[0.22em] text-muted-foreground uppercase">
+                  Six-digit code
+                </span>
+                <input
+                  ref={codeInputRef}
+                  id={codeFieldId}
+                  type="text"
+                  name="one-time-code"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  pattern="[0-9]{6}"
+                  maxLength={6}
+                  required
+                  value={code}
+                  onChange={(event) => onCodeChange(event.target.value)}
+                  onPaste={onCodePaste}
+                  aria-describedby={`${codeFieldId}-hint`}
+                  className="h-14 min-h-12 w-full rounded-full border border-border bg-transparent px-5 text-center font-mono text-2xl tracking-[0.4em] tabular-nums outline-none transition-colors focus:border-foreground/30"
+                  placeholder="••••••"
+                />
+                <span id={`${codeFieldId}-hint`} className="block text-[11px] text-muted-foreground">
+                  Paste is supported. The countdown is for resend only - it does not change when the
+                  code expires on the server.
+                </span>
+              </label>
 
-          {message ? <p className="text-sm text-muted-foreground">{message}</p> : null}
+              <button
+                type="submit"
+                disabled={busy || code.length !== 6}
+                className="inline-flex h-12 min-h-12 w-full items-center justify-center rounded-full bg-primary text-[11px] tracking-[0.22em] text-primary-foreground uppercase disabled:opacity-50"
+              >
+                {busy ? "Verifying…" : "Verify and continue"}
+              </button>
+
+              <button
+                type="button"
+                disabled={busy || resendIn > 0}
+                onClick={() => void handleResend()}
+                className="inline-flex h-12 min-h-12 w-full items-center justify-center rounded-full border border-border text-[11px] tracking-[0.18em] uppercase disabled:opacity-50"
+              >
+                {resendIn > 0 ? `Resend in ${resendIn}s` : "Resend code"}
+              </button>
+            </form>
+          )}
+
+          {message ? <p className="text-sm text-muted-foreground" role="status">{message}</p> : null}
           {verifyUrl ? (
             <a
               href={verifyUrl}
@@ -187,11 +383,15 @@ export function AccountSignInDialog({
               Open secure sign-in link
             </a>
           ) : null}
-          {error ? <p className="text-sm text-destructive">{error}</p> : null}
+          {error ? (
+            <p className="text-sm text-destructive" role="alert">
+              {error}
+            </p>
+          ) : null}
 
           <p className="text-center text-[11px] leading-relaxed text-muted-foreground">
             Basic Drive stays free. Motion data stays on this device unless you opt into ELCAMOSO
-            Cloud.
+            Cloud. Premium access follows your plan and offline lease policy.
           </p>
         </div>
       </DialogContent>

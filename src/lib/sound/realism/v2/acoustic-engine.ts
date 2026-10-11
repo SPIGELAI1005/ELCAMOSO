@@ -3,24 +3,25 @@
  * Generic ELCAMOSO characters - not OEM recreations.
  */
 
+import { applyAcousticCatalogTuning } from "@/lib/sound/realism/catalog-tuning/apply";
+import {
+  RALLY_TURBO_3_LOPE_SHORTCUT,
+  type ArchitectureCodeV1,
+  type FiringOrderArchetype,
+} from "@/lib/sound/realism/v2/architecture-contract";
+
 export type StrokeCycle = "four-stroke" | "two-stroke";
 
-export type FiringOrderArchetype =
-  | "cross-plane-v8"
-  | "cross-plane-v8-lope"
-  | "flat-plane-v8"
-  | "flat-six"
-  | "inline-6"
-  | "inline-3"
-  | "v10-even"
-  | "inline-4"
-  | "v-twin"
-  | "single";
+export type { FiringOrderArchetype };
 
 export type BankConfiguration = "inline" | "v90" | "v60" | "flat" | "single";
 
-/** Worklet architecture code - keep in sync with combustion-processor.js */
-export type ArchitectureCode = 0 | 1 | 2 | 3 | 4 | 5;
+/**
+ * Worklet architecture code (contract v1).
+ * Keep in sync with `architecture-contract.ts` and `combustion-processor.js`.
+ * 0 even · 1 lope · 2 flat-six · 3 cross-plane · 4 v-twin · 5 single · 6 flat-plane-v8
+ */
+export type ArchitectureCode = ArchitectureCodeV1;
 
 export interface AcousticEngineConfig {
   cylinders: number;
@@ -55,7 +56,12 @@ export interface AcousticEngineConfig {
   intakeFormantsHz: number[];
   /** Semi-stationary engine/body resonances (Hz) - do not pitch with RPM. */
   bodyResonanceHz: number[];
-  /** Supporting harmonic partial ratios (band-limited, not sawtooth-dominant). */
+  /**
+   * Optional crank-order band schema (cycles per crank revolution) + weights 0..1.
+   * Live V2 resonators use these only when `VITE_COMBUSTION_PROFILE_ORDER_BANDS` is on;
+   * otherwise HybridCombustionSynth keeps the legacy ½/1/2 × firing-order bands.
+   * Also copied into profile-spec recipe metadata (not live audio by itself).
+   */
   supportRatios: number[];
   supportWeights: number[];
   /** Forced induction present. */
@@ -218,7 +224,8 @@ const FLAT_PLANE_V8_TRACK: AcousticEngineConfig = {
   stroke: "four-stroke",
   architecture: "flat-plane-v8",
   banks: "v90",
-  architectureCode: 5,
+  // Contract v1: flat-plane-v8 is code 6. Code 5 is single only.
+  architectureCode: 6,
   idleIrregularity: 0.08,
   exhaustPulse: 0.7,
   intakePresence: 0.76,
@@ -244,7 +251,8 @@ const RALLY_TURBO_3: AcousticEngineConfig = {
   stroke: "four-stroke",
   architecture: "inline-3",
   banks: "inline",
-  architectureCode: 1,
+  // Unresolved: lope shortcut until explicit 3-cylinder topology (see RALLY_TURBO_3_LOPE_SHORTCUT).
+  architectureCode: RALLY_TURBO_3_LOPE_SHORTCUT.architectureCode,
   idleIrregularity: 0.2,
   exhaustPulse: 0.74,
   intakePresence: 0.58,
@@ -343,8 +351,16 @@ export const ACOUSTIC_ENGINE_BY_PERSONALITY: Record<string, AcousticEngineConfig
   "v-twin-cruiser": V_TWIN,
 };
 
-export function acousticEngineForProfile(profileId: string): AcousticEngineConfig | null {
+/** Untuned archetype (Prompt 07 baselines / A-B). Prefer acousticEngineForProfile at runtime. */
+export function acousticEngineBaseForProfile(profileId: string): AcousticEngineConfig | null {
   return ACOUSTIC_ENGINE_BY_PROFILE[profileId] ?? null;
+}
+
+/** Runtime acoustic config including Prompt 07 catalog overlays. */
+export function acousticEngineForProfile(profileId: string): AcousticEngineConfig | null {
+  const base = acousticEngineBaseForProfile(profileId);
+  if (!base) return null;
+  return applyAcousticCatalogTuning(profileId, base);
 }
 
 export function isCombustionRealismV2Profile(profileId: string): boolean {

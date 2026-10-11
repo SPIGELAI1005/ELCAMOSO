@@ -20,10 +20,22 @@ import { DynamicDriveSynth } from "@/lib/sound/dynamic-drive/synth";
 import { supportsDynamicDrive } from "@/lib/powertrain/adapters/profile-map";
 import { reportAudioError } from "@/lib/telemetry/crashes";
 import {
-  loadAwareMasterScale,
   PROFILE_SWITCH_VOLUME_SCALE,
   STARTUP_VOLUME_SCALE,
 } from "@/lib/sound/perceptual-volume";
+import {
+  BODY_CHARACTER_SHELF_DB,
+  CHARACTER_NEUTRAL,
+  SAMPLE_PEAK_CEILING_DBFS,
+  SAMPLE_PEAK_CEILING_LINEAR,
+  USER_STAGE_CEILING,
+  computeUserStageLinearGain,
+  createPeakProtectStage,
+  linearToDb,
+  mildMasterLoadScale,
+  type PeakProtectStage,
+} from "@/lib/sound/gain-staging";
+import { intensityCeiling as intensityCeilingForProfile } from "@/lib/drive/safety";
 import {
   ensureCombustionWorklet,
   HybridCombustionSynth,
@@ -31,13 +43,19 @@ import {
   type HybridCombustionDiagnostics,
   type RealismEngineMode,
 } from "@/lib/sound/realism/v2";
+import {
+  isDriveAudioV3Enabled,
+  isRawMechanicalPilotId,
+  rawMechanicalPresetFor,
+  resolveRawMechanicalQualityTier,
+} from "@/lib/sound/realism/v3";
 import { isSymphonyProfileId, SymphonySynth } from "@/lib/symphony";
 import { FusionSynth, isFusionProfileId } from "@/lib/fusion";
 import { isWorldProfileId, WorldSynth } from "@/lib/worlds";
-import {
-  decodeManifestAssets,
-  fetchSoundAssetManifest,
-} from "@/lib/sound-assets/client-loader";
+import { fetchSoundAssetManifest } from "@/lib/sound-assets/client-loader";
+import { getSharedSampleLoader } from "@/lib/sound/realism/samples";
+import { DEFAULT_TIMELINE_GAP_FLUSH_MS } from "@/lib/sound/realism/shift-events";
+import { resolvePersonalityId } from "@/lib/drive/drivetrain-resolve";
 
 export interface MeterReading {
   prePeak: number;
@@ -45,23 +63,37 @@ export interface MeterReading {
   peak: number;
   rms: number;
   headroom: number;
+  /** Soft program-compressor reduction (MasterBus), not peak protect. */
   reduction: number;
   compressorReduction: number;
+  /** Sample peak at output tap, dBFS. */
+  samplePeakDbfs: number;
+  /** True when post-protect sample peak is within ~0.5 dB of the declared ceiling. */
+  nearCeiling: boolean;
+  /** Dev/lab: count of analyser samples at/above the declared ceiling this read. */
+  overloadSampleCount: number;
 }
 
 export interface SoundGainDiagnostics {
+  /** UI slider 0..1 (not the post-perceptual linear gain). */
   userVolume: number;
   profileGain: number;
   loudnessTrim: number;
   loadScale: number;
+  outputBoostDb: number;
+  bodyCharacter: number;
+  mechanicalCharacter: number;
   effectiveMasterTarget: number;
   masterNode: number;
+  boostNode: number;
   duck: number;
   body: number;
   accents: number;
   beds: number;
   wet: number;
   profileBusOutput: number;
+  samplePeakCeilingDbfs: number;
+  peakProtectLookaheadMs: number;
 }
 
 interface TextureNode {
@@ -120,7 +152,10 @@ export class SoundEngine {
   private cabinLow: BiquadFilterNode | null = null;
   private cabinMid: BiquadFilterNode | null = null;
   private cabinHigh: BiquadFilterNode | null = null;
+  /** @deprecated Prompt 08 — peak protect replaces DynamicsCompressor-as-limiter. */
   private limiter: DynamicsCompressorNode | null = null;
+  private boostGain: GainNode | null = null;
+  private peakProtect: PeakProtectStage | null = null;
   private analyser: AnalyserNode | null = null;
   private meterBuffer: Float32Array<ArrayBuffer> | null = null;
   private preAnalyser: AnalyserNode | null = null;
@@ -148,15 +183,20 @@ export class SoundEngine {
   private profile: SoundProfile | null = null;
   /** Stable per-interpretation seed (Journey Replay passes its saved seed). */
   private experienceSeed = 1;
-  private volume = 0.7;
+  /** UI master volume 0..1 (perceptual curve applied in computeUserStageLinearGain). */
+  private volume = 0.35;
   /** per-profile balance gain, 0.4..1.6 */
   private profileGain = 1;
+  private outputBoostDb = 0;
+  private bodyCharacter = CHARACTER_NEUTRAL;
+  private mechanicalCharacter = CHARACTER_NEUTRAL;
   private lastLoadScale = 1;
-  private lastMasterTarget = 0.0001;
-  /** extra ceiling from intensity band, on top of MAX_GAIN */
-  static readonly MAX_GAIN = 0.85;
-  private intensityCeiling = 0.85;
+  private lastMasterTarget = 0;
+  /** Pre-boost intensity-band ceiling. */
+  static readonly MAX_GAIN = USER_STAGE_CEILING;
+  private intensityCeiling = USER_STAGE_CEILING;
   private cabinEq: CabinEq = DEFAULT_CABIN_EQ;
+  private cabinLowNeutralDb = 0;
   private duckAmount = 1;
   private renderTime: number | null = null;
   private interruptHandler: (() => void) | null = null;
@@ -165,6 +205,8 @@ export class SoundEngine {
   private swapTimer: ReturnType<typeof setTimeout> | null = null;
   /** True while a crossfade rebuild is in flight; skip per-frame updates. */
   private swapping = false;
+  /** Latest-wins token for rapid Sound Profile switches. */
+  private swapGeneration = 0;
   /** Original (legacy) vs improved multi-layer realism path. */
   private synthesisMode: SynthesisMode = "improved";
   private improved: ImprovedSynth | null = null;
@@ -238,12 +280,33 @@ export class SoundEngine {
     return this.advancedTransientsEnabled;
   }
 
+  private shiftIntensity = 0.72;
+
+  /** Mechanical shift intensity 0..1 — not master volume (Prompt 06). */
+  setShiftIntensity(value: number) {
+    this.shiftIntensity = Math.min(1, Math.max(0, value));
+    this.hybrid?.setShiftIntensity(this.shiftIntensity);
+  }
+
+  getShiftIntensity() {
+    return this.shiftIntensity;
+  }
+
+  /** After suspend/resume — discard overdue shift sequence events. */
+  notifyAudioTimelineGap(gapMs: number) {
+    this.hybrid?.notifyAudioTimelineGap(gapMs);
+  }
+
   /** The strategy that actually owns the current graph, not merely an enabled setting. */
   getActiveBackend(): string {
     if (this.fusion) return "fusion";
     if (this.symphony) return "symphony";
     if (this.world) return "world";
-    if (this.hybrid) return `realism-v2-${this.hybrid.getDiagnostics().excitationMode}`;
+    if (this.hybrid) {
+      const diag = this.hybrid.getDiagnostics();
+      const prefix = diag.realismEngine === "v3" ? "realism-v3" : "realism-v2";
+      return `${prefix}-${diag.excitationMode}`;
+    }
     if (this.dynamicDrive) return "dynamic-drive";
     if (this.improved) return "improved";
     return this.ctx ? "legacy" : "stopped";
@@ -255,14 +318,20 @@ export class SoundEngine {
       profileGain: this.profileGain,
       loudnessTrim: this.profile ? loudnessForProfile(this.profile.id) : 1,
       loadScale: this.lastLoadScale,
+      outputBoostDb: this.outputBoostDb,
+      bodyCharacter: this.bodyCharacter,
+      mechanicalCharacter: this.mechanicalCharacter,
       effectiveMasterTarget: this.lastMasterTarget,
       masterNode: this.master?.gain.value ?? 0,
+      boostNode: this.boostGain?.gain.value ?? 1,
       duck: this.duck?.gain.value ?? 0,
       body: this.layers.body?.out.gain.value ?? 0,
       accents: this.layers.accents?.out.gain.value ?? 0,
       beds: this.layers.beds?.out.gain.value ?? 0,
       wet: this.wet?.gain.value ?? 0,
       profileBusOutput: this.profileBus?.output.gain.value ?? 0,
+      samplePeakCeilingDbfs: SAMPLE_PEAK_CEILING_DBFS,
+      peakProtectLookaheadMs: this.peakProtect?.lookaheadMs ?? 0,
     };
   }
 
@@ -352,19 +421,74 @@ export class SoundEngine {
   /** Per-profile balance so profiles sit at the same perceived level. */
   setProfileGain(gain: number) {
     this.profileGain = Math.min(1.6, Math.max(0.2, gain));
-    if (this.ctx && this.master) {
-      this.master.gain.setTargetAtTime(
-        this.safeVolume(this.volume * this.profileGain * PROFILE_SWITCH_VOLUME_SCALE),
-        this.now(),
-        0.25,
-      );
-    }
+    this.applyUserStageGain(0.25, PROFILE_SWITCH_VOLUME_SCALE);
   }
 
-  private safeVolume(value: number) {
-    // Loudness trim applies to every backend so GT V8 / Flat-Six stay comparable.
-    const balance = this.profile ? loudnessForProfile(this.profile.id) : 1;
-    return Math.min(SoundEngine.MAX_GAIN, this.intensityCeiling, Math.max(0.0001, value * balance));
+  /** Optional output boost 0..+6 dB (peak protect absorbs excess; does not raise car hardware volume). */
+  setOutputBoostDb(db: number) {
+    this.outputBoostDb = Math.min(6, Math.max(0, Number.isFinite(db) ? db : 0));
+    const t = this.now();
+    if (this.boostGain) {
+      const linear = 10 ** (this.outputBoostDb / 20);
+      if (linear <= 0) this.boostGain.gain.setValueAtTime(0, t);
+      else this.boostGain.gain.setTargetAtTime(linear, t, 0.08);
+    }
+    this.applyUserStageGain(0.12);
+  }
+
+  getOutputBoostDb() {
+    return this.outputBoostDb;
+  }
+
+  /**
+   * Advanced identity-preserving character (0..1, 0.5 = authored).
+   * Body: lowshelf offset. Mechanical: hybrid mechanical bus + MasterBus presence.
+   */
+  setCharacterFeel(body: number, mechanical: number) {
+    this.bodyCharacter = Math.min(1, Math.max(0, Number.isFinite(body) ? body : CHARACTER_NEUTRAL));
+    this.mechanicalCharacter = Math.min(
+      1,
+      Math.max(0, Number.isFinite(mechanical) ? mechanical : CHARACTER_NEUTRAL),
+    );
+    this.hybrid?.setCharacterFeel(this.bodyCharacter, this.mechanicalCharacter);
+    this.applyCharacterToGraph();
+  }
+
+  private applyCharacterToGraph() {
+    const t = this.now();
+    const bodyOffset = (this.bodyCharacter - CHARACTER_NEUTRAL) * 2 * BODY_CHARACTER_SHELF_DB;
+    const lowTarget = this.cabinEq.low + bodyOffset;
+    this.cabinLow?.gain.setTargetAtTime(lowTarget, t, 0.12);
+    const presence = this.mechanicalCharacter;
+    this.profileBus?.setPresence(presence, t);
+  }
+
+  /** Linear gain into peak-protect (may be 0 for silence). */
+  private computeMasterLinear(): number {
+    const trim = this.profile ? loudnessForProfile(this.profile.id) : 1;
+    const ceiling = this.profile
+      ? Math.min(this.intensityCeiling, intensityCeilingForProfile(this.profile))
+      : this.intensityCeiling;
+    return computeUserStageLinearGain({
+      uiVolume: this.volume,
+      profileGain: this.profileGain,
+      loudnessTrim: trim,
+      outputBoostDb: 0, // boost is a separate GainNode after master
+      loadScale: this.lastLoadScale,
+      intensityCeiling: ceiling,
+    });
+  }
+
+  private applyUserStageGain(timeConstant = 0.12, scale = 1) {
+    if (!this.ctx || !this.master) return;
+    const linear = this.computeMasterLinear() * scale;
+    this.lastMasterTarget = linear;
+    const t = this.now();
+    if (linear <= 0) {
+      this.master.gain.setValueAtTime(0, t);
+      return;
+    }
+    this.master.gain.setTargetAtTime(linear, t, Math.max(0.04, timeConstant));
   }
 
   private now() {
@@ -374,14 +498,16 @@ export class SoundEngine {
 
   setIntensityCeiling(value: number) {
     this.intensityCeiling = Math.min(SoundEngine.MAX_GAIN, Math.max(0.2, value));
+    this.applyUserStageGain(0.12);
   }
 
   setCabinEq(eq: CabinEq) {
     this.cabinEq = eq;
+    this.cabinLowNeutralDb = eq.low;
     const t = this.now();
-    this.cabinLow?.gain.setTargetAtTime(eq.low, t, 0.08);
     this.cabinMid?.gain.setTargetAtTime(eq.mid, t, 0.08);
     this.cabinHigh?.gain.setTargetAtTime(eq.high, t, 0.08);
+    this.applyCharacterToGraph();
   }
 
   setDuck(amount: number) {
@@ -425,14 +551,16 @@ export class SoundEngine {
   async resumeFromIdle() {
     const ctx = this.live();
     if (!ctx || !this.master) return;
+    // Treat resume as a timeline gap so overdue shift events never burst-fire.
+    this.notifyAudioTimelineGap(DEFAULT_TIMELINE_GAP_FLUSH_MS * 3);
     if (ctx.state !== "running") await ctx.resume();
     const t = ctx.currentTime;
-    this.master.gain.setValueAtTime(0.0001, t);
-    this.master.gain.setTargetAtTime(
-      this.safeVolume(this.volume * this.profileGain * STARTUP_VOLUME_SCALE),
-      t,
-      0.25,
-    );
+    this.lastLoadScale = 1;
+    const target = this.computeMasterLinear() * STARTUP_VOLUME_SCALE;
+    this.lastMasterTarget = target;
+    this.master.gain.setValueAtTime(0, t);
+    if (target <= 0) this.master.gain.setValueAtTime(0, t);
+    else this.master.gain.setTargetAtTime(target, t, 0.25);
   }
 
   async start(
@@ -467,35 +595,33 @@ export class SoundEngine {
     this.environment = getEnvironment(options?.environmentId ?? profile.environmentId);
     this.mix = normalizeMix(options?.mix ?? profile.mix);
 
-    // Output chain: layers -> tone -> stereo -> (dry + reverb send) -> master
-    // -> limiter -> speakers.
-    const limiter = ctx.createDynamicsCompressor();
-    limiter.threshold.value = -3;
-    limiter.knee.value = 3;
-    limiter.ratio.value = 12;
-    limiter.attack.value = 0.003;
-    limiter.release.value = 0.25;
-    limiter.connect(ctx.destination);
+    // Prompt 08 gain path:
+    // layers → cabin EQ → MasterBus (sat/EQ/gentle program) → user volume
+    // → optional boost → peak protect (−1 dBFS sample) → duck → destination.
+    // DynamicsCompressorNode is not used as a brickwall limiter.
+    const duck = ctx.createGain();
+    duck.gain.value = 1;
+    duck.connect(ctx.destination);
 
-    // Metering tap: reads the post-limiter signal so the headroom meter shows
-    // what actually reaches the speakers.
     const analyser = ctx.createAnalyser();
     analyser.fftSize = 1024;
     analyser.smoothingTimeConstant = 0.6;
-    limiter.connect(analyser);
+    duck.connect(analyser);
 
     const preAnalyser = ctx.createAnalyser();
     preAnalyser.fftSize = 1024;
     preAnalyser.smoothingTimeConstant = 0.6;
 
-    const duck = ctx.createGain();
-    duck.gain.value = 1;
-    duck.connect(preAnalyser);
-    preAnalyser.connect(limiter);
+    const peakProtect = createPeakProtectStage(ctx, duck);
+    preAnalyser.connect(peakProtect.input);
+
+    const boostGain = ctx.createGain();
+    boostGain.gain.value = 10 ** (this.outputBoostDb / 20);
+    boostGain.connect(preAnalyser);
 
     const master = ctx.createGain();
-    master.gain.value = 0.0001;
-    master.connect(duck);
+    master.gain.value = 0;
+    master.connect(boostGain);
 
     const cabinIn = ctx.createGain();
     const cabinLow = ctx.createBiquadFilter();
@@ -515,10 +641,12 @@ export class SoundEngine {
     cabinIn.connect(cabinLow);
     cabinLow.connect(cabinMid);
     cabinMid.connect(cabinHigh);
-    // Soft saturation → EQ → compressor after cabin shelves, before master.
+    // Soft saturation → EQ → gentle program compressor after cabin shelves, before user volume.
     const profileBus = createMasterBus(ctx, master);
     cabinHigh.connect(profileBus.input);
     this.profileBus = profileBus;
+    this.peakProtect = peakProtect;
+    this.boostGain = boostGain;
 
     // Shared space: one convolver fed by per-layer sends.
     const reverb = ctx.createConvolver();
@@ -568,7 +696,7 @@ export class SoundEngine {
     filter.Q.value = 1.2;
     filter.connect(body);
 
-    this.limiter = limiter;
+    this.limiter = null;
     this.analyser = analyser;
     this.meterBuffer = new Float32Array(analyser.fftSize);
     this.preAnalyser = preAnalyser;
@@ -594,12 +722,12 @@ export class SoundEngine {
     const withSignature = options?.signature !== false;
     const signatureEnd = withSignature ? this.playSignature() : ctx.currentTime + 0.4;
     this.setProfile(profile);
-    master.gain.setValueAtTime(0.0001, ctx.currentTime);
-    master.gain.setTargetAtTime(
-      this.safeVolume(this.volume * this.profileGain * STARTUP_VOLUME_SCALE),
-      signatureEnd - 0.35,
-      0.55,
-    );
+    this.applyCharacterToGraph();
+    master.gain.setValueAtTime(0, ctx.currentTime);
+    const startupTarget = this.computeMasterLinear() * STARTUP_VOLUME_SCALE;
+    this.lastMasterTarget = startupTarget;
+    if (startupTarget <= 0) master.gain.setValueAtTime(0, signatureEnd - 0.35);
+    else master.gain.setTargetAtTime(startupTarget, signatureEnd - 0.35, 0.55);
     this.fireSnippets("start", ctx.currentTime + 0.25);
   }
 
@@ -830,7 +958,7 @@ export class SoundEngine {
     const now = ctx.currentTime + 0.05;
     const bus = ctx.createGain();
     bus.gain.value = 0.5;
-    bus.connect(this.limiter ?? ctx.destination);
+    bus.connect(this.peakProtect?.input ?? this.duck ?? ctx.destination);
     [392, 587.33].forEach((freq, i) => {
       const at = now + i * 0.22;
       const osc = ctx.createOscillator();
@@ -891,8 +1019,10 @@ export class SoundEngine {
   /* -------------------------------------------------------- profile switch */
 
   /**
-   * Switching profiles never jumps in loudness: the current body is faded out,
-   * the new voices are built silently, then faded back in.
+   * Switching profiles never jumps in loudness: fade the current body out,
+   * build the new voices silently, then fade in (sequential - avoids correlated
+   * dual-source gain spikes). Total crossfade stays in the 300–600 ms band.
+   * Latest selection wins; failed builds leave the previous sound usable.
    */
   setProfile(profile: SoundProfile, force = false) {
     const ctx = this.ctx;
@@ -902,53 +1032,87 @@ export class SoundEngine {
       return;
     }
     if (!force && this.profile?.id === profile.id && this.voices.length) return;
+    const generation = ++this.swapGeneration;
     if (force || !this.voices.length || !body) {
       if (this.swapTimer) clearTimeout(this.swapTimer);
       this.swapTimer = null;
       this.swapping = false;
-      this.applyProfileBuild(profile);
+      this.applyProfileBuild(profile, null);
       return;
     }
     if (this.swapTimer) clearTimeout(this.swapTimer);
     this.swapping = true;
-    const fade = 0.18;
+    const previous = this.profile;
+    // Sequential linear fades (~220 ms out + ~320 ms in ≈ 540 ms). No dual-voice overlap.
+    const fadeOut = 0.22;
+    const fadeIn = 0.32;
     try {
       body.gain.cancelScheduledValues(ctx.currentTime);
       body.gain.setValueAtTime(body.gain.value, ctx.currentTime);
-      body.gain.linearRampToValueAtTime(0.0001, ctx.currentTime + fade);
+      body.gain.linearRampToValueAtTime(0.0001, ctx.currentTime + fadeOut);
     } catch {
       /* closed / interrupted context */
     }
     this.swapTimer = setTimeout(
       () => {
         this.swapTimer = null;
+        if (generation !== this.swapGeneration) {
+          this.swapping = false;
+          return;
+        }
         const c = this.ctx;
         if (!c || !this.body) {
           this.swapping = false;
           return;
         }
-        this.applyProfileBuild(profile);
+        const ok = this.applyProfileBuild(profile, previous);
+        if (!ok) {
+          this.swapping = false;
+          try {
+            this.body.gain.cancelScheduledValues(c.currentTime);
+            this.body.gain.setValueAtTime(0.0001, c.currentTime);
+            this.body.gain.linearRampToValueAtTime(1, c.currentTime + fadeIn);
+          } catch {
+            /* closed / interrupted context */
+          }
+          return;
+        }
+        if (generation !== this.swapGeneration) {
+          this.swapping = false;
+          return;
+        }
         try {
           this.body.gain.setValueAtTime(0.0001, c.currentTime);
-          this.body.gain.linearRampToValueAtTime(1, c.currentTime + 0.35);
+          this.body.gain.linearRampToValueAtTime(1, c.currentTime + fadeIn);
         } catch {
           /* closed / interrupted context */
         }
         this.swapping = false;
       },
-      fade * 1000 + 30,
+      fadeOut * 1000 + 30,
     );
   }
 
-  private applyProfileBuild(profile: SoundProfile) {
+  /** @returns false when build failed and the previous profile was restored. */
+  private applyProfileBuild(profile: SoundProfile, previous: SoundProfile | null): boolean {
     try {
       this.buildProfile(profile);
+      return true;
     } catch (error) {
       reportAudioError(error);
       this.teardownVoices();
-      this.profile = profile;
       this.improved = null;
       this.hybrid = null;
+      if (previous && previous.id !== profile.id) {
+        try {
+          this.buildProfile(previous);
+          return false;
+        } catch (restoreError) {
+          reportAudioError(restoreError);
+        }
+      }
+      this.profile = profile;
+      return false;
     }
   }
 
@@ -1001,9 +1165,41 @@ export class SoundEngine {
       this.world = null;
     }
 
-    // Realism V2 hybrid combustion - A/B vs current Improved / Dynamic Drive path.
+    // Prompt 04: raw mechanical combustion (opt-in flag + realismEngine "v3" + pilot IDs).
+    // Current / V2 paths below stay unchanged when the flag is off or mode is not v3.
     if (
-      this.realismEngine === "v2" &&
+      isDriveAudioV3Enabled() &&
+      this.realismEngine === "v3" &&
+      this.synthesisMode === "improved" &&
+      isRawMechanicalPilotId(profile.id) &&
+      isCombustionRealismV2Profile(profile.id) &&
+      strategyBuses
+    ) {
+      this.hybrid = new HybridCombustionSynth();
+      const quality = resolveRawMechanicalQualityTier(ctx);
+      const ok = this.hybrid.build(ctx, profile, strategyBuses, {
+        rawMechanical: rawMechanicalPresetFor(profile.id, quality),
+      });
+      if (ok) {
+        this.hybrid.setAdvancedTransientsEnabled(this.advancedTransientsEnabled);
+        this.hybrid.setShiftIntensity(this.shiftIntensity);
+        this.hybrid.setCharacterFeel(this.bodyCharacter, this.mechanicalCharacter);
+        {
+          const controller = new AbortController();
+          this.hybridLoadController = controller;
+          void this.prepareHybridSampleLayer(this.hybrid, ctx, profile, controller);
+        }
+        return;
+      }
+      this.hybrid.dispose();
+      this.hybrid = null;
+      // Fall through to V2 if raw build fails.
+    }
+
+    // Realism V2 hybrid combustion - A/B vs current Improved / Dynamic Drive path.
+    // Also the safe fallback when V3 is requested but the flag is off / pilot missing.
+    if (
+      (this.realismEngine === "v2" || this.realismEngine === "v3") &&
       this.synthesisMode === "improved" &&
       isCombustionRealismV2Profile(profile.id) &&
       strategyBuses
@@ -1012,10 +1208,12 @@ export class SoundEngine {
       const ok = this.hybrid.build(ctx, profile, strategyBuses);
       if (ok) {
         this.hybrid.setAdvancedTransientsEnabled(this.advancedTransientsEnabled);
-        if (profile.id === "american-muscle-v8") {
+        this.hybrid.setShiftIntensity(this.shiftIntensity);
+        this.hybrid.setCharacterFeel(this.bodyCharacter, this.mechanicalCharacter);
+        {
           const controller = new AbortController();
           this.hybridLoadController = controller;
-          void this.prepareAmericanV8PilotSamples(this.hybrid, ctx, controller);
+          void this.prepareHybridSampleLayer(this.hybrid, ctx, profile, controller);
         }
         return;
       }
@@ -1165,11 +1363,14 @@ export class SoundEngine {
     this.textures.push(node);
   }
 
+  /** UI master volume 0..1. Zero is silence. Perceptual curve applied internally. */
   setVolume(value: number) {
-    this.volume = value;
-    if (this.ctx && this.master) {
-      this.master.gain.setTargetAtTime(this.safeVolume(value * this.profileGain), this.now(), 0.2);
-    }
+    this.volume = Math.min(1, Math.max(0, Number.isFinite(value) ? value : 0));
+    this.applyUserStageGain(0.2);
+  }
+
+  getVolume() {
+    return this.volume;
   }
 
   /* ---------------------------------------------------------------- meter */
@@ -1193,10 +1394,12 @@ export class SoundEngine {
     }
     let peak = 0;
     let sum = 0;
+    let overloadSampleCount = 0;
     for (let i = 0; i < buf.length; i += 1) {
       const v = buf[i] ?? 0;
       const a = Math.abs(v);
       if (a > peak) peak = a;
+      if (a >= SAMPLE_PEAK_CEILING_LINEAR) overloadSampleCount += 1;
       sum += v * v;
     }
     const rms = Math.sqrt(sum / buf.length);
@@ -1207,15 +1410,19 @@ export class SoundEngine {
       prePeak = Math.max(prePeak, Math.abs(v));
       preSum += v * v;
     }
-    const ceiling = SoundEngine.MAX_GAIN;
+    const ceiling = SAMPLE_PEAK_CEILING_LINEAR;
+    const samplePeakDbfs = linearToDb(peak);
     return {
       prePeak: Math.min(1, prePeak),
       preRms: Math.min(1, Math.sqrt(preSum / preBuf.length)),
       peak: Math.min(1, peak),
       rms: Math.min(1, rms),
       headroom: Math.max(0, 1 - Math.min(1, peak / ceiling)),
-      reduction: this.limiter ? Math.abs(this.limiter.reduction) : 0,
+      reduction: this.profileBus?.getCompressorReductionDb() ?? 0,
       compressorReduction: this.profileBus?.getCompressorReductionDb() ?? 0,
+      samplePeakDbfs,
+      nearCeiling: samplePeakDbfs >= SAMPLE_PEAK_CEILING_DBFS - 0.5,
+      overloadSampleCount,
     };
   }
 
@@ -1229,21 +1436,32 @@ export class SoundEngine {
     };
   }
 
-  /** Asset fetch/decode stays outside AudioWorklet.process and cannot block procedural sound. */
-  private async prepareAmericanV8PilotSamples(
+  /**
+   * Prompt 05 hybrid sample layer: fetch/decode only for the active personality.
+   * Stays outside AudioWorklet.process. Empty catalog → procedural, no loudness jump.
+   * Stale loads after profile change are ignored via AbortController + loader generation.
+   */
+  private async prepareHybridSampleLayer(
     synth: HybridCombustionSynth,
     ctx: BaseAudioContext,
+    profile: SoundProfile,
     controller: AbortController,
   ) {
+    const loader = getSharedSampleLoader();
+    const generation = loader.invalidate();
     try {
+      const personality = resolvePersonalityId(profile);
       const manifest = await fetchSoundAssetManifest({
-        personality: "american-v8",
+        personality,
         signal: controller.signal,
       });
       if (controller.signal.aborted || this.hybrid !== synth) return;
-      const decoded = await decodeManifestAssets(ctx, manifest, controller.signal);
-      if (controller.signal.aborted || this.hybrid !== synth) return;
-      synth.setDecodedSamples(decoded);
+      const result = await loader.loadManifestAssets(ctx, manifest, {
+        signal: controller.signal,
+        generation,
+      });
+      if (controller.signal.aborted || this.hybrid !== synth || result.stale) return;
+      synth.setDecodedSamples(result.buffers);
     } catch (error) {
       if (controller.signal.aborted || this.hybrid !== synth) return;
       synth.setDecodedSamples(new Map());
@@ -1280,10 +1498,8 @@ export class SoundEngine {
       this.lastThrottle = state.throttle;
       this.lastRegen = state.regen;
       if (this.master) {
-        this.lastLoadScale = loadAwareMasterScale(state.load, state.regen);
-        const target = this.safeVolume(this.volume * this.profileGain * this.lastLoadScale);
-        this.lastMasterTarget = target;
-        this.master.gain.setTargetAtTime(target, t, 0.12);
+        this.lastLoadScale = mildMasterLoadScale(state.load, state.regen);
+        this.applyUserStageGain(0.12);
       }
       return;
     }
@@ -1331,10 +1547,8 @@ export class SoundEngine {
     this.lastRegen = state.regen;
 
     if (this.master) {
-      this.lastLoadScale = loadAwareMasterScale(state.load, state.regen);
-      const target = this.safeVolume(this.volume * this.profileGain * this.lastLoadScale);
-      this.lastMasterTarget = target;
-      this.master.gain.setTargetAtTime(target, t, 0.12);
+      this.lastLoadScale = mildMasterLoadScale(state.load, state.regen);
+      this.applyUserStageGain(0.12);
     }
 
     this.rhythms.forEach((clock) => this.scheduleRhythm(clock, state));
@@ -2116,6 +2330,9 @@ export class SoundEngine {
     this.cabinLow = null;
     this.cabinMid = null;
     this.cabinHigh = null;
+    this.peakProtect?.dispose();
+    this.peakProtect = null;
+    this.boostGain = null;
     this.limiter = null;
     this.analyser = null;
     this.meterBuffer = null;

@@ -1,4 +1,5 @@
 import type { SoundAssetManifest } from "@/lib/sound-assets/types";
+import { getSharedSampleLoader } from "@/lib/sound/realism/samples";
 
 const MANIFEST_ENDPOINT = "/api/sound-assets/manifest";
 
@@ -28,27 +29,21 @@ export async function fetchSoundAssetManifest(input: {
   return (await response.json()) as SoundAssetManifest;
 }
 
+/**
+ * Decode signed manifest assets through the bounded hybrid sample loader.
+ * Empty / procedural_only manifests return an empty map (awaiting assets).
+ */
 export async function decodeManifestAssets(
   audioContext: BaseAudioContext,
   manifest: SoundAssetManifest,
   signal?: AbortSignal,
 ): Promise<Map<string, AudioBuffer>> {
-  const buffers = new Map<string, AudioBuffer>();
-  if (manifest.deliveryMode === "procedural_only" || manifest.assets.length === 0) {
-    return buffers;
-  }
-
-  await Promise.allSettled(
-    manifest.assets.map(async (asset) => {
-      const response = await fetch(asset.url, signal ? { signal } : undefined);
-      if (!response.ok) {
-        throw new Error(`Failed to fetch sound asset ${asset.id}`);
-      }
-      const arrayBuffer = await response.arrayBuffer();
-      const decoded = await audioContext.decodeAudioData(arrayBuffer.slice(0));
-      buffers.set(asset.id, decoded);
-    }),
-  );
-
-  return buffers;
+  const loader = getSharedSampleLoader();
+  const generation = loader.invalidate();
+  const result = await loader.loadManifestAssets(audioContext, manifest, {
+    ...(signal ? { signal } : {}),
+    generation,
+  });
+  if (result.stale) return new Map();
+  return result.buffers;
 }

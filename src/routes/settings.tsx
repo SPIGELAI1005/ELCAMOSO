@@ -308,10 +308,62 @@ function SoundWorkspace({
           aria-label="Sound Volume"
         />
         <p className="mt-3 text-sm text-muted-foreground">
-          Master level for every profile. A limiter keeps sudden peaks in check without flattening
-          the dynamics.
+          Master level for every Experience (0 = silence). Uses a perceptual curve; new devices start
+          near 35%. Peak protection holds sample peaks near −1 dBFS. This does not change the car&apos;s
+          hardware volume.
         </p>
       </Block>
+
+      <Block title="Output boost" value={`${settings.outputBoostDb.toFixed(1)} dB`}>
+        <input
+          type="range"
+          min={0}
+          max={6}
+          step={0.5}
+          value={settings.outputBoostDb}
+          onChange={(e) => update({ outputBoostDb: Number(e.target.value) })}
+          className="mt-5 slider h-11 w-full"
+          aria-label="Output boost"
+        />
+        <p className="mt-3 text-sm text-muted-foreground">
+          Optional +0 to +6 dB after master volume, before peak protection. Remembered on this device
+          only. Does not override Bluetooth or cabin amplifiers.
+        </p>
+      </Block>
+
+      <details className="rounded-2xl border border-border/60 px-5 py-4">
+        <summary className="cursor-pointer text-[11px] tracking-[0.28em] text-muted-foreground uppercase">
+          Advanced character
+        </summary>
+        <p className="mt-3 text-sm text-muted-foreground">
+          Bounded Body and Mechanical Character. Centre (50) keeps the authored Sound Profile
+          identity. Not shown on the Drive cockpit.
+        </p>
+        <label className="mt-5 block text-sm" htmlFor="body-character">
+          Body ({Math.round(settings.bodyCharacter * 100)})
+        </label>
+        <input
+          id="body-character"
+          type="range"
+          min={0}
+          max={100}
+          value={Math.round(settings.bodyCharacter * 100)}
+          onChange={(e) => update({ bodyCharacter: Number(e.target.value) / 100 })}
+          className="mt-3 slider h-11 w-full"
+        />
+        <label className="mt-5 block text-sm" htmlFor="mechanical-character">
+          Mechanical Character ({Math.round(settings.mechanicalCharacter * 100)})
+        </label>
+        <input
+          id="mechanical-character"
+          type="range"
+          min={0}
+          max={100}
+          value={Math.round(settings.mechanicalCharacter * 100)}
+          onChange={(e) => update({ mechanicalCharacter: Number(e.target.value) / 100 })}
+          className="mt-3 slider h-11 w-full"
+        />
+      </details>
 
       <Block title="Profile balance" value={`${profileGain.toFixed(2)}x`}>
         <input
@@ -371,6 +423,29 @@ function SoundWorkspace({
             <p className="mt-2 text-sm text-muted-foreground">
               For Sound Profiles with gear shifts.
             </p>
+            <label className="mt-6 block text-sm" htmlFor="shift-map-preset">
+              Shift map
+            </label>
+            <select
+              id="shift-map-preset"
+              className="mt-3 h-11 w-full rounded-xl border border-border bg-background px-3 text-sm"
+              value={settings.shiftMapPreset}
+              onChange={(e) =>
+                update({
+                  shiftMapPreset: e.target.value as typeof settings.shiftMapPreset,
+                })
+              }
+              aria-label="Shift map preset"
+            >
+              <option value="legacy">Legacy (Road Feel)</option>
+              <option value="city">City (earlier gears)</option>
+              <option value="touring">Touring</option>
+              <option value="sport">Sport (holds longer)</option>
+            </select>
+            <p className="mt-2 text-xs text-muted-foreground">
+              Artistic tuning for virtual gears — not measured vehicle data. City becomes the
+              default only when the City shift-map flag is enabled.
+            </p>
             <label className="mt-6 block text-sm" htmlFor="shift-ms">
               Shift time
             </label>
@@ -422,6 +497,31 @@ function SoundWorkspace({
               aria-label="Rev match"
               className="mt-3 slider h-11 w-full"
             />
+            <label className="mt-6 block text-sm" htmlFor="shift-intensity">
+              Shift intensity
+            </label>
+            <input
+              id="shift-intensity"
+              type="range"
+              min={0}
+              max={1}
+              step={0.05}
+              value={settings.shiftFeel.shiftIntensity}
+              onChange={(e) =>
+                update({
+                  shiftFeel: {
+                    ...settings.shiftFeel,
+                    shiftIntensity: Number(e.target.value),
+                  },
+                })
+              }
+              aria-label="Shift intensity"
+              className="mt-3 slider h-11 w-full"
+            />
+            <p className="mt-2 text-xs text-muted-foreground">
+              Mechanical engagement only — zero mutes clacks but keeps gear RPM continuity. Not
+              master volume.
+            </p>
             <button
               type="button"
               className="mt-4 text-[11px] uppercase text-muted-foreground hover:text-foreground"

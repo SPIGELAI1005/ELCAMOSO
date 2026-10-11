@@ -23,19 +23,35 @@ describe("sound profile access", () => {
     expect(canDriveWithSoundProfile(getProfile("dragon"), true)).toBe(true);
   });
 
-  it("honours explicit access overrides on profiles", () => {
-    const [first, ...rest] = SOUND_PROFILES;
+  it("ignores access:free outside the free trio (no Symphony/World/Fusion bypass)", () => {
+    expect(
+      resolveProfileAccess({ id: "symphony-cinematic-rock", access: "free" }),
+    ).toBe("drive_plus");
+    expect(resolveProfileAccess({ id: "world-cyber-city", access: "free" })).toBe("drive_plus");
+    expect(resolveProfileAccess({ id: "fusion-road-anthem", access: "free" })).toBe("drive_plus");
+    expect(canDriveWithSoundProfile(getProfile("symphony-cinematic-rock"), false)).toBe(false);
+  });
+
+  it("keeps the free trio free even if a profile field says drive_plus", () => {
+    expect(
+      resolveProfileAccess({ id: "american-muscle-v8", access: "drive_plus" }),
+    ).toBe("free");
     const overridden = applyResolvedAccessToProfiles([
-      { ...first!, access: "drive_plus" },
-      ...rest,
+      { ...getProfile("american-muscle-v8"), access: "drive_plus" },
+      ...SOUND_PROFILES.filter((p) => p.id !== "american-muscle-v8"),
     ]);
-    expect(overridden[0]!.access).toBe("drive_plus");
+    expect(overridden.find((p) => p.id === "american-muscle-v8")!.access).toBe("free");
   });
 
   it("limits locked profile previews to a short window", () => {
     expect(lockedProfilePreviewSeconds(getProfile("dragon"), false)).toBe(20);
-    expect(lockedProfilePreviewSeconds(getProfile("gt-v8"), false)).toBeNull();
+    expect(lockedProfilePreviewSeconds(getProfile("american-muscle-v8"), false)).toBeNull();
+    expect(lockedProfilePreviewSeconds(getProfile("gt-v8"), false)).toBe(20);
     expect(lockedProfilePreviewSeconds(getProfile("dragon"), true)).toBeNull();
+  });
+
+  it("allows granted premium profiles without all_sound_profiles", () => {
+    expect(canDriveWithSoundProfile(getProfile("gt-v8"), false, undefined, ["gt-v8"])).toBe(true);
   });
 
   it("assigns resolved access on every built-in profile", () => {

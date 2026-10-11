@@ -98,6 +98,8 @@ describe("acoustic eligibility V2.1", () => {
     const rally = acousticEngineForProfile("rally-car")!;
 
     expect(track.architecture).toBe("flat-plane-v8");
+    expect(track.architectureCode).toBe(6);
+    expect(track.architectureCode).not.toBe(5);
     expect(track.cylinders).toBe(8);
     expect(track.combustionSharpness).toBeGreaterThan(flatSix.combustionSharpness);
     expect(rally.architecture).toBe("inline-3");

@@ -5,6 +5,7 @@ import { SoundEngine } from "@/lib/sound/engine";
 import type { SynthesisMode } from "@/lib/sound/realism/types";
 import type { RealismEngineMode } from "@/lib/sound/realism/v2";
 import { isCombustionRealismV2Profile } from "@/lib/sound/realism/v2";
+import { isDriveAudioV3Enabled, isRawMechanicalPilotId } from "@/lib/sound/realism/v3";
 import { DEBUG_SCENARIOS, getDebugScenario } from "@/lib/sound/realism/debug-scenarios";
 import { familyForProfile } from "@/lib/sound/realism/families";
 import type { DriveState } from "@/lib/drive/model";
@@ -92,7 +93,9 @@ function DebugHarness() {
     engineRef.current = engine;
     const wantPowertrain =
       supportsDynamicDrive(profile) &&
-      (dynamicDrive || (realismEngine === "v2" && isCombustionRealismV2Profile(profile.id)));
+      (dynamicDrive ||
+        ((realismEngine === "v2" || realismEngine === "v3") &&
+          isCombustionRealismV2Profile(profile.id)));
     if (wantPowertrain) {
       powertrainRef.current = new PowertrainSimulator({
         profile: powertrainProfileForSound(profile),
@@ -174,6 +177,12 @@ function DebugHarness() {
           Road-test calibration lab →
         </Link>
         <Link
+          to="/debug/audio-lab"
+          className="mt-2 inline-block text-[11px] tracking-[0.2em] text-muted-foreground uppercase hover:text-foreground"
+        >
+          Audio comparison lab →
+        </Link>
+        <Link
           to="/debug/billing"
           className="mt-2 inline-block text-[11px] tracking-[0.2em] text-muted-foreground uppercase hover:text-foreground"
         >
@@ -228,25 +237,34 @@ function DebugHarness() {
                 [
                   ["current", "Current Engine"],
                   ["v2", "Realism V2"],
+                  ["v3", "Raw Mechanical V3"],
                 ] as const
-              ).map(([id, label]) => (
-                <button
-                  key={id}
-                  type="button"
-                  aria-pressed={realismEngine === id}
-                  disabled={id === "v2" && !v2Eligible}
-                  onClick={() => setRealismEngine(id)}
-                  className={`h-10 rounded-full border px-5 text-[11px] tracking-[0.2em] uppercase disabled:opacity-40 ${
-                    realismEngine === id ? "border-foreground bg-secondary" : "border-border"
-                  }`}
-                >
-                  {label}
-                </button>
-              ))}
+              ).map(([id, label]) => {
+                const v3Eligible =
+                  isDriveAudioV3Enabled() && isRawMechanicalPilotId(profileId) && v2Eligible;
+                const disabled =
+                  (id === "v2" && !v2Eligible) || (id === "v3" && !v3Eligible);
+                return (
+                  <button
+                    key={id}
+                    type="button"
+                    aria-pressed={realismEngine === id}
+                    disabled={disabled}
+                    onClick={() => setRealismEngine(id)}
+                    className={`h-10 rounded-full border px-5 text-[11px] tracking-[0.2em] uppercase disabled:opacity-40 ${
+                      realismEngine === id ? "border-foreground bg-secondary" : "border-border"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
             </div>
             <p className="mt-2 text-[11px] text-muted-foreground">
               {v2Eligible
-                ? "Same motion trace - match volume before judging. Realism V2.1 is default for combustion."
+                ? isDriveAudioV3Enabled() && isRawMechanicalPilotId(profileId)
+                  ? "V3 raw mechanical is opt-in for Muscle / Flat-Six pilots. Match loudness before judging. Listening not claimed by meters."
+                  : "Same motion trace - match volume before judging. Realism V2 is default for combustion. V3 needs DRIVE_AUDIO_V3 + a pilot profile."
                 : "Realism V2 applies to combustion profiles (GT V8, Flat-Six, etc.)."}
             </p>
           </div>

@@ -1,5 +1,7 @@
 import {
+  FALLBACK_SOUND_PROFILE_ID,
   FREE_SOUND_PROFILE_IDS,
+  FREE_SOUND_PROFILE_SET,
   LOCKED_PROFILE_PREVIEW_SECONDS,
 } from "@/lib/sound/profile-access-config";
 
@@ -18,12 +20,14 @@ export function resolveProfileAccess(
   profile: ProfileAccessFields,
   resolveBase?: (baseId: string) => ProfileAccessFields | undefined,
 ): SoundProfileAccess {
-  if (profile.access) return profile.access;
+  // Canonical free trio always wins — profile.access cannot invent extra free IDs.
+  if (FREE_SET.has(profile.id)) return "free";
   if (profile.custom && profile.baseId) {
     const base = resolveBase?.(profile.baseId);
     if (base) return resolveProfileAccess(base, resolveBase);
   }
-  if (FREE_SET.has(profile.id)) return "free";
+  if (profile.access === "drive_plus") return "drive_plus";
+  // Ignore access:"free" on IDs outside FREE_SOUND_PROFILE_IDS (closes Symphony/World/Fusion bypass).
   return "drive_plus";
 }
 
@@ -49,8 +53,11 @@ export function canDriveWithSoundProfile(
   profile: ProfileAccessFields,
   hasAllSoundProfiles: boolean,
   resolveBase?: (baseId: string) => ProfileAccessFields | undefined,
+  /** Purchased / grandfathered / reward profile unlocks (server-authoritative). */
+  grantedProfileIds: readonly string[] = [],
 ): boolean {
   if (hasAllSoundProfiles) return true;
+  if (grantedProfileIds.includes(profile.id)) return true;
   return resolveProfileAccess(profile, resolveBase) === "free";
 }
 
@@ -69,4 +76,9 @@ export function lockedProfilePreviewSeconds(
   return LOCKED_PROFILE_PREVIEW_SECONDS;
 }
 
-export { FREE_SOUND_PROFILE_IDS, LOCKED_PROFILE_PREVIEW_SECONDS };
+export {
+  FALLBACK_SOUND_PROFILE_ID,
+  FREE_SOUND_PROFILE_IDS,
+  FREE_SOUND_PROFILE_SET,
+  LOCKED_PROFILE_PREVIEW_SECONDS,
+};
