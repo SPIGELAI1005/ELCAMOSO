@@ -38,8 +38,11 @@ export function phaseRoleGain(role: AudioLayerRole, motion: ReturnType<typeof mo
   const engineRoles = ["combustion", "motor", "exhaust", "intake"] as const;
   const isAmbientProfile = !config.availableRoles.some((r) => (engineRoles as readonly string[]).includes(r));
   if (stopped) {
+    if (isAmbientProfile) {
+      return phase.idleCharacter;
+    }
     if (role === "event" || role === "environment" || role === "regen") {
-      return isAmbientProfile ? phase.idleCharacter * 0.85 : 0.18;
+      return 0.55;
     }
     return phase.idleCharacter;
   }

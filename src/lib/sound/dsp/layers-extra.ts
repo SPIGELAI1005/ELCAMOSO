@@ -74,52 +74,29 @@ const PENT = [0, 2, 4, 7, 9];
 
 export function createHeartbeatLayer(ctx: BaseAudioContext, opts: LayerBaseOpts): LayerHandle {
   const bus = ctx.createGain();
-  // Gentle low shelf instead of high-pass to preserve warmth while reducing sub-bass
-  const shelf = ctx.createBiquadFilter();
-  shelf.type = "lowshelf";
-  shelf.frequency.value = 50;
-  shelf.gain.value = -6;
-  bus.connect(shelf);
-  const { gain, handle } = chain(ctx, opts, shelf);
+  const { gain, handle } = chain(ctx, opts, bus);
   let next = 0;
   let bpm = 62;
   let disposed = false;
 
   function beat(at: number, tone: number, level: number, which: "lub" | "dub") {
-    // Primary beat with simple smooth envelope
     const osc = ctx.createOscillator();
     const lp = ctx.createBiquadFilter();
     const g = ctx.createGain();
     osc.type = "sine";
-    const f0 = which === "lub" ? tone : tone * 0.88;
+    const f0 = which === "lub" ? tone : tone * 0.78;
     osc.frequency.setValueAtTime(f0, at);
-    osc.frequency.exponentialRampToValueAtTime(Math.max(60, f0 * 0.65), at + 0.1);
+    osc.frequency.exponentialRampToValueAtTime(Math.max(35, f0 * 0.55), at + 0.08);
     lp.type = "lowpass";
-    lp.frequency.value = which === "lub" ? 200 : 165;
-    lp.Q.value = 0.5;
-    // Smooth attack and exponential release - no discontinuities
+    lp.frequency.value = which === "lub" ? 180 : 140;
     g.gain.setValueAtTime(0.0001, at);
-    g.gain.linearRampToValueAtTime(Math.max(0.0002, level * 0.8), at + 0.025);
-    g.gain.exponentialRampToValueAtTime(0.0001, at + (which === "lub" ? 0.16 : 0.2));
+    g.gain.exponentialRampToValueAtTime(Math.max(0.0002, level), at + 0.012);
+    g.gain.exponentialRampToValueAtTime(0.0001, at + (which === "lub" ? 0.12 : 0.16));
     osc.connect(lp);
     lp.connect(g);
     g.connect(bus);
     osc.start(at);
-    osc.stop(at + 0.24);
-
-    // Second harmonic reinforces perceived bass
-    const harm = ctx.createOscillator();
-    const hg = ctx.createGain();
-    harm.type = "sine";
-    harm.frequency.setValueAtTime(f0 * 2, at);
-    harm.frequency.exponentialRampToValueAtTime(Math.max(95, f0 * 1.3), at + 0.08);
-    hg.gain.setValueAtTime(0.0001, at);
-    hg.gain.linearRampToValueAtTime(Math.max(0.0002, level * 0.32), at + 0.02);
-    hg.gain.exponentialRampToValueAtTime(0.0001, at + 0.12);
-    harm.connect(hg);
-    hg.connect(bus);
-    harm.start(at);
-    harm.stop(at + 0.16);
+    osc.stop(at + 0.2);
   }
 
   return {
@@ -135,8 +112,8 @@ export function createHeartbeatLayer(ctx: BaseAudioContext, opts: LayerBaseOpts)
       if (next < t) next = t;
       while (next < t + 0.2) {
         const amp = (opts.level ?? 0.35) * (0.45 + intensity * 0.7);
-        beat(next, 95, amp, "lub");
-        beat(next + interval * 0.28, 88, amp * 0.85, "dub");
+        beat(next, 78, amp, "lub");
+        beat(next + interval * 0.28, 70, amp * 0.85, "dub");
         next += interval;
       }
       targetParam(gain.gain, softGate(0.85), t, 0.2);

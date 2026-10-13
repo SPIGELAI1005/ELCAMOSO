@@ -1520,24 +1520,37 @@ export function createFartCadenceLayer(
   }
 
   function fireIdleBubble(at: number, tone: number, amp: number) {
-    const dur = 0.06 + audioRandom() * 0.08;
-    const osc = ctx.createOscillator();
+    const dur = 0.08 + audioRandom() * 0.1;
+    const startHz = 110 + audioRandom() * 70;
     const lp = ctx.createBiquadFilter();
-    const g = ctx.createGain();
-    osc.type = "sine";
-    const startHz = tone * (0.6 + audioRandom() * 0.3);
-    osc.frequency.setValueAtTime(startHz, at);
-    osc.frequency.exponentialRampToValueAtTime(Math.max(25, startHz * 0.5), at + dur);
     lp.type = "lowpass";
-    lp.frequency.value = 180 + audioRandom() * 80;
+    lp.frequency.value = 800 + audioRandom() * 200;
+    lp.Q.value = 0.5;
+    const g = ctx.createGain();
     g.gain.setValueAtTime(0.0001, at);
-    g.gain.exponentialRampToValueAtTime(Math.max(0.0002, amp * 0.35), at + 0.01);
+    g.gain.linearRampToValueAtTime(Math.max(0.0002, amp * 0.7), at + 0.015);
     g.gain.exponentialRampToValueAtTime(0.0001, at + dur);
+    const osc = ctx.createOscillator();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(startHz, at);
+    osc.frequency.exponentialRampToValueAtTime(Math.max(70, startHz * 0.6), at + dur);
     osc.connect(lp);
     lp.connect(g);
     g.connect(bus);
     osc.start(at);
     osc.stop(at + dur + 0.02);
+    const harm = ctx.createOscillator();
+    const hg = ctx.createGain();
+    harm.type = "sine";
+    harm.frequency.setValueAtTime(startHz * 2, at);
+    harm.frequency.exponentialRampToValueAtTime(Math.max(120, startHz * 1.2), at + dur);
+    hg.gain.setValueAtTime(0.0001, at);
+    hg.gain.linearRampToValueAtTime(Math.max(0.0002, amp * 0.4), at + 0.012);
+    hg.gain.exponentialRampToValueAtTime(0.0001, at + dur * 0.85);
+    harm.connect(hg);
+    hg.connect(bus);
+    harm.start(at);
+    harm.stop(at + dur + 0.02);
     return dur;
   }
 

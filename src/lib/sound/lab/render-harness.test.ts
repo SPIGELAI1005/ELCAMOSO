@@ -15,6 +15,7 @@ describe("audio lab render harness", () => {
         profileId: "gt-v8",
         fixtureId: "idle",
         includeSpectrum: false,
+        environmentId: "open",
       });
       assertLabCaptureMetadata(result.metadata);
       expect(result.metadata.profileId).toBe("gt-v8");

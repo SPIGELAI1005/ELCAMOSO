@@ -35,6 +35,8 @@ export interface LabRenderOptions {
   settings?: Partial<LabCaptureSettings>;
   capturePath?: LabCapturePath;
   includeSpectrum?: boolean;
+  /** Environment id for rendering. Defaults to "open" for accurate loudness measurement. */
+  environmentId?: string;
 }
 
 function resolveSettings(partial?: Partial<LabCaptureSettings>): LabCaptureSettings {
@@ -202,6 +204,7 @@ async function configureEngine(
   profileId: string,
   settings: LabCaptureSettings,
   context: AudioContext | OfflineAudioContext,
+  environmentId: string = "open",
 ) {
   const profile = getProfile(profileId);
   engine.setExperienceTuningEnabled(settings.experienceTuningEnabled);
@@ -212,6 +215,7 @@ async function configureEngine(
     context,
     signature: false,
     seed: settings.seed,
+    environmentId,
   });
 }
 
@@ -235,7 +239,7 @@ export async function renderLabOffline(options: LabRenderOptions): Promise<LabCa
     LAB_SAMPLE_RATE,
   );
   const engine = new SoundEngine();
-  await configureEngine(engine, options.profileId, settings, context);
+  await configureEngine(engine, options.profileId, settings, context, options.environmentId ?? "open");
   let simulator = createSimulator(options.profileId, fixture);
   let prevSpeed = 0;
   let switched = false;
@@ -332,7 +336,7 @@ export async function renderLabRealtime(options: LabRenderOptions): Promise<LabC
     }
   };
 
-  await configureEngine(engine, options.profileId, settings, context);
+  await configureEngine(engine, options.profileId, settings, context, options.environmentId ?? "open");
   // Tap master destination: SoundEngine connects to context.destination.
   // ScriptProcessor must be in the graph — connect a silent gain after tap.
   const silent = context.createGain();
