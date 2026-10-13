@@ -841,10 +841,11 @@ export class HybridCombustionSynth {
 
     this.exhaustFormants.forEach((band, i) => {
       const base = 0.26 / (1 + i * 0.48);
-      // Root-cause §2: Near-constant loadLift so exhaust formants are not another
-      // throttle-dependent gain stage. Combined with worklet, support, and bus this
-      // keeps the cruise-to-pull gap at 8-10 dB instead of 14-17 dB.
-      const loadLift = 0.85 + load * 0.15;
+      // Root-cause §2: Near-constant loadLift with small loadContrast influence.
+      // The base is 0.82 + load*0.18 (~2 dB cruise-to-pull contribution).
+      // loadContrast adds per-engine gap variation: high-contrast engines (Muscle, Big Twin)
+      // get wider gaps to hit the 8-10 dB target.
+      const loadLift = 0.82 + load * (0.18 + cfg.loadContrast * 0.08);
       const upperRpm = i > 1 ? rpmNorm * cfg.upperRpmEnergy * (0.12 + load * 0.28) : 0;
       const enrich = 1 + (i > 1 ? load * cfg.highLoadEnrichment * 0.55 + upperRpm : 0);
       const dark = 1 - cfg.bodyBrightness * 0.22;

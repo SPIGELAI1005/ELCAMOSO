@@ -144,9 +144,10 @@ const AMERICAN_V8: AcousticEngineConfig = {
   bodyResonanceHz: [86, 172, 390],
   // Cross-plane half-orders (2, 6) define the V8 burble character.
   // Crank order 2 = engine half-order (burble), order 6 = 3× half-order rumble.
-  // Weights boosted for 2 (0.66→0.82) and added 6 (0.38) to restore [4,2,8] top orders.
+  // Order 4 is the firing order - raised from 0.15 to 0.48 to lift firing share to ≥0.55
+  // while keeping order-2 above 0.15 for the burble character.
   supportRatios: [1, 2, 2.5, 3, 4, 6],
-  supportWeights: [0.88, 0.82, 0.14, 0.3, 0.15, 0.38],
+  supportWeights: [0.88, 0.82, 0.14, 0.3, 0.48, 0.38],
   forcedInduction: false,
   bodyBrightness: 0.36,
   redlineRpm: 6000,
