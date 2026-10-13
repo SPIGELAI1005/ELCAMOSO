@@ -876,9 +876,11 @@ export class HybridCombustionSynth {
     });
     this.diagnostics.orderHz = orderHz;
     if (this.supportBus) {
+      const supportFloor = 0.22;
+      const supportLoad = load * 0.08 + demand * 0.06;
       targetParam(
         this.supportBus.gain,
-        (0.16 + load * 0.1) * (raw?.supportGainScale ?? 1) * gate("combustion"),
+        (supportFloor + supportLoad) * (raw?.supportGainScale ?? 1) * gate("combustion"),
         audioTime,
         0.08,
       );
@@ -891,8 +893,12 @@ export class HybridCombustionSynth {
     if (this.combustionBus) {
       // Bus level is the one place loudness follows load; the stages before it are
       // mostly timbre so the chain does not compound into a 25 dB idle-to-WOT span.
+      // Baseline showed 15-17 dB pull-cruise gap vs target 8-10 dB. Add part-throttle
+      // floor so cruise is audible and reduce the dynamic range.
+      const partThrottleFloor = 0.52;
+      const loadContrib = load * 0.18 + demand * 0.16;
       const body =
-        (0.42 + load * 0.24 + demand * 0.1) *
+        (partThrottleFloor + loadContrib) *
         (1 + bark * 0.5) *
         (raw?.combustionGainScale ?? 1);
       const phaseMul =
@@ -902,18 +908,19 @@ export class HybridCombustionSynth {
             ? 0.9
             : 1;
       const bodyScaled =
-        body * phaseMul * (overrun ? 0.65 : 1) * gate("combustion") * this.characterBodyScale();
+        body * phaseMul * (overrun ? 0.7 : 1) * gate("combustion") * this.characterBodyScale();
       targetParam(this.combustionBus.gain, bodyScaled, audioTime, 0.06);
       this.diagnostics.combustionGain = bodyScaled;
     }
     if (this.intakeBus) {
       const intakeBias = raw ? 0.75 + (1 - raw.loadBalanceBias) * 0.55 : 1;
+      const intakeFloor = 0.16;
       const intakeGain =
-        (0.1 + demand * 0.38 + load * (raw ? 0.18 * (1 - raw.loadBalanceBias) : 0)) *
+        (intakeFloor + demand * 0.32 + load * (raw ? 0.14 * (1 - raw.loadBalanceBias) : 0.08)) *
         cfg.intakePresence *
         (raw?.intakeGainScale ?? 1) *
         intakeBias *
-        (overrun ? 0.12 : 1);
+        (overrun ? 0.18 : 1);
       targetParam(this.intakeBus.gain, intakeGain * gate("intake"), audioTime, 0.05);
       this.diagnostics.intakeGain = intakeGain;
     }
