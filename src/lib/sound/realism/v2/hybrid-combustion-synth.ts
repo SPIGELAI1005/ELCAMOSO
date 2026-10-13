@@ -627,11 +627,12 @@ export class HybridCombustionSynth {
       return { id, noise, filter, gain };
     };
     // Spec §NEW-D: Lower Q values reduce filter ringing that can cause click artifacts.
-    // Shift: Q 1.1→0.9 for broader, softer bandpass; Thump: Q 1.6→1.2 for less resonance.
+    // Click regression fix: further reduced Q for softer transients.
+    // Shift: Q 0.9→0.75; Thump: Q 1.2→1.0; Pop: Q 1.3→1.1
     this.voices = {
-      shift: makeVoice("shift", "pink", "bandpass", 760, 0.9),
-      thump: makeVoice("thump", "brown", "lowpass", 160, 1.2),
-      pop: makeVoice("pop", "pink", "bandpass", 520, 1.3),
+      shift: makeVoice("shift", "pink", "bandpass", 760, 0.75),
+      thump: makeVoice("thump", "brown", "lowpass", 160, 1.0),
+      pop: makeVoice("pop", "pink", "bandpass", 520, 1.1),
       ...(cfg.forcedInduction ? { turbo: makeVoice("turbo", "white", "bandpass", 1500, 2.0) } : {}),
     };
 
@@ -1276,13 +1277,13 @@ export class HybridCombustionSynth {
 
     // Spec §NEW-D: Remove broadband clicks at gear changes with proper shift envelope.
     // Longer attack times and filter warmup before gain ramp prevents click artifacts.
-    // Rally car regression fix: softer turbo attack (14ms), longer shift attack (16ms).
+    // Click regression fix: raised shift attack (16→24ms), filter warmup (4→8ms).
     const t = Math.max(audioTime, this.lastUpdateTime) + 0.002;
-    const attack = voiceId === "thump" ? 0.024 : voiceId === "turbo" ? 0.014 : 0.016;
+    const attack = voiceId === "thump" ? 0.026 : voiceId === "turbo" ? 0.016 : 0.024;
     const decayTau = Math.max(0.03, variant.decayMs / 1000 / 3);
 
-    // Start filter transition slightly before gain ramp for warmup
-    const filterWarmup = 0.004;
+    // Start filter transition slightly before gain ramp for warmup (raised 4→8ms)
+    const filterWarmup = 0.008;
     voice.filter.frequency.cancelScheduledValues(t);
     voice.filter.frequency.setValueAtTime(voice.filter.frequency.value, t);
     voice.filter.frequency.setTargetAtTime(variant.filterHz, t, 0.006);
