@@ -917,6 +917,12 @@ export class HybridCombustionSynth {
     this.diagnostics.orderHz = orderHz;
     // Root-cause §loudness: compute outputTrimLinear once, apply to all output paths
     const outputTrimLinear = Math.pow(10, (cfg.outputTrimDb ?? 0) / 20);
+    // Load-flat paths (support, pipe) get only part of the trim: trimming them fully
+    // raises the cruise floor as much as the pull and collapses the 8-10 dB gap.
+    const supportTrim = Math.pow(10, ((cfg.outputTrimDb ?? 0) * 0.5) / 20);
+    // Throttle-tracking gap gain: unity at full throttle, -throttleGapDb at light cruise.
+    const throttleMix = Math.min(1, Math.max(0, (load * 0.6 + demand * 0.4 - 0.18) / 0.77));
+    const throttleGapMul = Math.pow(10, (-(cfg.throttleGapDb ?? 0) * (1 - throttleMix)) / 20);
 
     if (this.supportBus) {
       // Raised floor (0.45) to keep cruise audible; target 8-10 dB pull-cruise gap.
@@ -927,7 +933,8 @@ export class HybridCombustionSynth {
         (supportFloor + supportLoad) *
           (raw?.supportGainScale ?? 1) *
           gate("combustion") *
-          outputTrimLinear,
+          supportTrim *
+          throttleGapMul,
         audioTime,
         0.08,
       );
@@ -935,14 +942,19 @@ export class HybridCombustionSynth {
     if (this.pipeSend) {
       // Pipe energy grows with exhaust pulse strength; overrun lets the pipe ring more.
       const pipeLevel = (0.26 + load * 0.14 + (overrun ? 0.1 : 0)) * (0.7 + cfg.exhaustPulse * 0.4);
-      targetParam(this.pipeSend.gain, pipeLevel * gate("exhaust") * outputTrimLinear, audioTime, 0.1);
+      targetParam(
+        this.pipeSend.gain,
+        pipeLevel * gate("exhaust") * supportTrim * throttleGapMul,
+        audioTime,
+        0.1,
+      );
     }
     if (this.combustionBus) {
       // Bus level is the one place loudness follows load; the stages before it are
       // mostly timbre so the chain does not compound into a large cruise-to-pull gap.
-      // Raised floor (0.78) and reduced load contribution to target 8-10 dB gap (was 11-14 dB).
+      // Floor 0.62 plus the per-engine throttleGapDb gain hold the 8-10 dB cruise-to-pull gap.
       // Overall engine loudness raised to match World sounds (~-13 LUFS).
-      const partThrottleFloor = 0.78;
+      const partThrottleFloor = 0.62;
       const loadContrib = load * 0.1 + demand * 0.08;
       const body =
         (partThrottleFloor + loadContrib) * (1 + bark * 0.5) * (raw?.combustionGainScale ?? 1);
@@ -959,7 +971,8 @@ export class HybridCombustionSynth {
         (overrun ? 0.7 : 1) *
         gate("combustion") *
         this.characterBodyScale() *
-        outputTrimLinear;
+        outputTrimLinear *
+        throttleGapMul;
       targetParam(this.combustionBus.gain, bodyScaled, audioTime, 0.06);
       this.diagnostics.combustionGain = bodyScaled;
     }
