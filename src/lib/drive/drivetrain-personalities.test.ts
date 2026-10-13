@@ -115,7 +115,7 @@ describe("drivetrain personalities", () => {
 
     expect(v10.transmission.gearRatios).toHaveLength(7);
     expect(track.transmission.gearRatios).toHaveLength(8);
-    expect(rally.transmission.gearRatios).toHaveLength(5);
+    expect(rally.transmission.gearRatios).toHaveLength(6); // GR Yaris 6-speed per spec §4
     expect(flatSix.transmission.gearRatios).toHaveLength(7);
     expect(track.engine.redlineRpm).not.toBe(flatSix.engine.redlineRpm);
     expect(rally.transient.aspiration).toBe("turbo");

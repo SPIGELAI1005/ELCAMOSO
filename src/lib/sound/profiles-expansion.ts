@@ -21,8 +21,11 @@ const TURBO6_BOX = {
   shiftSmoothing: 0.14,
 };
 
+// Motorcycle Superbike (motorcycle-inline-4): S1000RR-class gearing per spec §4
+// ~150 km/h in 1st at redline (was 218 km/h)
+// rpm/kmh = ratio × 3.0 × 1000 / (1.88 × 60)
 const BIKE_BOX = {
-  gearRatios: [18, 13, 10.2, 8.4, 7.2, 6.4],
+  gearRatios: [93, 68, 52, 43, 37, 32],
   idleRpm: 1200,
   redlineRpm: 14000,
   shiftSmoothing: 0.05,

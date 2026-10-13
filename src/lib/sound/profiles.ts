@@ -187,9 +187,11 @@ const TRACK_V8_BOX = {
   shiftSmoothing: 0.06,
 };
 
-// Rally Car (rally-turbo-3): 5 gears, 950 idle, 6800 redline - sequential short gearing
+// Rally Car (rally-turbo-3): 6-speed GR Yaris per spec §4
+// Final drive 3.941 (gears 1-4), 3.350 (gears 5-6), wheel 1.98m
+// rpm/kmh = ratio × finalDrive × 1000 / (1.98 × 60)
 const RALLY_BOX = {
-  gearRatios: [130, 85, 62, 48, 40],
+  gearRatios: [117, 74, 51, 39, 28, 24],
   idleRpm: 950,
   redlineRpm: 6800,
   shiftSmoothing: 0.1,

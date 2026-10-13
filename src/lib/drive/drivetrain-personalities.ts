@@ -820,9 +820,11 @@ const BASE_DRIVETRAIN_PERSONALITIES: DrivetrainPersonalityConfig[] = [
     id: "motorcycle-inline-4",
     name: "Motorcycle Inline-4",
     engine: { idleRpm: 1200, redlineRpm: 14000 },
+    // S1000RR-class gearing: ~150 km/h in 1st at redline (was 218 km/h, too tall).
+    // rpm/kmh in 1st = 3.5 × 3.0 × 1000 / (1.88 × 60) = 93.1 → 14000/93.1 = 150.4 km/h
     transmission: {
-      gearRatios: [2.85, 2.05, 1.58, 1.32, 1.14, 1.0],
-      finalDrive: 2.54,
+      gearRatios: [3.5, 2.55, 1.95, 1.62, 1.38, 1.2],
+      finalDrive: 3.0,
       upshiftRpm: { lowLoad: 9000, mediumLoad: 11000, highLoad: 13200 },
       upshiftLoadMedium: 0.34,
       upshiftLoadHigh: 0.66,
@@ -1301,10 +1303,13 @@ const RALLY_TURBO_3_PERSONALITY: DrivetrainPersonalityConfig = {
       forcedInduction: true,
     },
   },
+  // GR Yaris 6-speed per spec §4: final drive 3.941 (gears 1-4), 3.350 (gears 5-6).
+  // Effective ratios with base finalDrive 3.941: gears 5-6 scaled by 3.350/3.941.
+  // rpm/kmh: G1=117.4, G2=74.2, G3=50.9, G4=39.0, G5=28.2, G6=23.6
   transmission: {
     ...turboSixBase.transmission,
-    gearRatios: [2.92, 1.88, 1.38, 1.09, 0.91],
-    finalDrive: 4.1,
+    gearRatios: [3.538, 2.238, 1.535, 1.177, 0.85, 0.712],
+    finalDrive: 3.941,
     upshiftRpm: { lowLoad: 4100, mediumLoad: 5500, highLoad: 6500 },
     upshiftLoadMedium: 0.35,
     upshiftLoadHigh: 0.68,
@@ -1341,7 +1346,7 @@ const RALLY_TURBO_3_PERSONALITY: DrivetrainPersonalityConfig = {
       downshiftEasePower: 1.3,
     },
   },
-  wheelCircumferenceM: 2.0,
+  wheelCircumferenceM: 1.98,
   throttle: { attackTau: 0.06, releaseTau: 0.18, directWeight: 0.63 },
   overrun: {
     probability: 0.52,
