@@ -737,6 +737,13 @@ export const EXPANSION_STRATEGIES: ProfileStrategy[] = [
           freqs: [85, 130, 180],
           level: 0.45,
         }),
+        // Quiet felt sub under the 70–180 Hz growl (keeps ~10–20 % below 60 Hz).
+        createResonantBodyLayer(ctx, {
+          id: "sub",
+          destination: buses.body,
+          freqs: [48],
+          level: 1.4,
+        }),
         createFilteredNoiseLayer(ctx, {
           id: "body-rumble",
           destination: buses.body,
@@ -847,6 +854,12 @@ export const EXPANSION_STRATEGIES: ProfileStrategy[] = [
           destination: buses.body,
           freqs: [85, 130, 175],
           level: 0.48,
+        }),
+        createResonantBodyLayer(ctx, {
+          id: "sub",
+          destination: buses.body,
+          freqs: [52],
+          level: 0.75,
         }),
         createFilteredNoiseLayer(ctx, {
           id: "body-warmth",
