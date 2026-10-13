@@ -82,7 +82,7 @@ export function buildProfileOrderBandSpec(cfg: AcousticEngineConfig): OrderBandS
   for (let i = 0; i < ratios.length && bands.length < maxBands; i += 1) {
     const order = ratios[i];
     const weight = weights[i] ?? 0;
-    if (!Number.isFinite(order) || order <= 0) continue;
+    if (order == null || !Number.isFinite(order) || order <= 0) continue;
     if (!Number.isFinite(weight) || weight <= 0) continue;
     const q = Math.min(10, Math.max(3, 8.5 - i * 0.35));
     bands.push({

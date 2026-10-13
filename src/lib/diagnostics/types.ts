@@ -83,6 +83,8 @@ export interface AudioDiagnostics {
   sampleState: string | null;
   sampleFallbackReason: string | null;
   synthesisMode: string;
+  /** Combustion excitation source: worklet (native), fallback (tonal noise), or none. */
+  combustionExcitationMode: "worklet" | "fallback" | "none" | null;
   /** Full Dynamic Drive layer telemetry when motion-matched audio is active. */
   dynamicLayers: AudioLayerDiagnostics[];
   activeLayers: AudioLayerDiagnostics[];
