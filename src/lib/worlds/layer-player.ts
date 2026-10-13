@@ -31,6 +31,8 @@ interface LayerVoice {
   noise?: AudioBufferSourceNode | undefined;
   lfo?: OscillatorNode | undefined;
   lfoGain?: GainNode | undefined;
+  /** Additional oscillators started/stopped with the layer. */
+  extraSources?: OscillatorNode[] | undefined;
   /** Every node owned by this layer, used for deterministic teardown. */
   nodes: AudioNode[];
 }
@@ -38,7 +40,7 @@ interface LayerVoice {
 /**
  * Procedural world layers - continuous sources with gain envelopes.
  * Muted layers stay running (silent) to avoid restart clicks.
- * Includes high-pass at 55 Hz for Tesla speaker optimization.
+ * A gentle 55 Hz low shelf (not a high-pass) trims sub energy for car speakers.
  */
 export function createWorldLayerPlayer(
   ctx: BaseAudioContext,
@@ -83,6 +85,7 @@ export function createWorldLayerPlayer(
           v.osc?.start(audioTime);
           v.noise?.start(audioTime);
           v.lfo?.start(audioTime);
+          v.extraSources?.forEach((o) => o.start(audioTime));
         } catch {
           /* already started */
         }
@@ -140,6 +143,13 @@ export function createWorldLayerPlayer(
         } catch {
           /* */
         }
+        for (const o of v.extraSources ?? []) {
+          try {
+            o.stop();
+          } catch {
+            /* */
+          }
+        }
         for (const node of new Set(v.nodes)) {
           try {
             node.disconnect();
@@ -182,6 +192,32 @@ function buildLayer(
     osc.connect(filter);
     filter.connect(gain);
 
+    // Drones get a 2nd harmonic (70–150 Hz "speaker bass") and an optional quiet
+    // sub partial so the world is not stripped of all low body.
+    const extra: AudioNode[] = [];
+    let harm: OscillatorNode | undefined;
+    let sub: OscillatorNode | undefined;
+    if (layer.kind === "drone") {
+      harm = ctx.createOscillator();
+      harm.type = "sine";
+      harm.frequency.value = layer.tone * 2;
+      const harmGain = ctx.createGain();
+      harmGain.gain.value = 0.3;
+      harm.connect(harmGain);
+      harmGain.connect(gain);
+      extra.push(harm, harmGain);
+      if (layer.subHz) {
+        sub = ctx.createOscillator();
+        sub.type = "sine";
+        sub.frequency.value = layer.subHz;
+        const subGain = ctx.createGain();
+        subGain.gain.value = layer.subLevel ?? 0.35;
+        sub.connect(subGain);
+        subGain.connect(gain);
+        extra.push(sub, subGain);
+      }
+    }
+
     let lfo: OscillatorNode | undefined;
     let lfoGain: GainNode | undefined;
     if (layer.kind === "shimmer") {
@@ -198,7 +234,8 @@ function buildLayer(
       osc,
       lfo,
       lfoGain,
-      nodes: [gain, osc, filter, ...(lfo ? [lfo] : []), ...(lfoGain ? [lfoGain] : [])],
+      extraSources: [harm, sub].filter((n): n is OscillatorNode => !!n),
+      nodes: [gain, osc, filter, ...extra, ...(lfo ? [lfo] : []), ...(lfoGain ? [lfoGain] : [])],
     };
   }
 

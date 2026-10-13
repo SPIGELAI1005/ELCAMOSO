@@ -8,13 +8,13 @@ export const SPACE_DRIVE_PACK: WorldPack = {
   packGain: 0.28,
   eventCooldownSec: 4,
   layers: [
-    { id: "reactor", label: "Reactor", kind: "drone", level: 0.52, tone: 82 },
+    { id: "reactor", label: "Reactor", kind: "drone", level: 0.52, tone: 82, subHz: 50, subLevel: 0.85 },
     { id: "energyField", label: "Energy field", kind: "shimmer", level: 0.38, tone: 420 },
     { id: "cabin", label: "Cabin", kind: "drone", level: 0.35, tone: 130 },
     { id: "thruster", label: "Thruster", kind: "noise", level: 0.42, tone: 280 },
     { id: "windEnergy", label: "Wind energy", kind: "noise", level: 0.28, tone: 900 },
     { id: "warp", label: "Warp", kind: "shimmer", level: 0.45, tone: 175 },
-    { id: "regenTone", label: "Recovery", kind: "drone", level: 0.38, tone: 105 },
+    { id: "regenTone", label: "Recovery", kind: "drone", level: 0.38, tone: 105, subHz: 52, subLevel: 0.4 },
   ],
   stateRules: [
     { state: "idle", gains: { reactor: 0.45, cabin: 0.25 } },

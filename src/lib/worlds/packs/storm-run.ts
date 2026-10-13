@@ -10,7 +10,7 @@ export const STORM_RUN_PACK: WorldPack = {
   layers: [
     { id: "wind", label: "Wind", kind: "noise", level: 0.52, tone: 800 },
     { id: "thunder", label: "Distant thunder", kind: "impact", level: 0.28, tone: 85 },
-    { id: "airPressure", label: "Air pressure", kind: "drone", level: 0.38, tone: 78 },
+    { id: "airPressure", label: "Air pressure", kind: "drone", level: 0.38, tone: 78, subHz: 48, subLevel: 0.85 },
     { id: "rain", label: "Rain movement", kind: "noise", level: 0.35, tone: 2200 },
     { id: "cinematicTone", label: "Cinematic tone", kind: "drone", level: 0.42, tone: 115 },
   ],
