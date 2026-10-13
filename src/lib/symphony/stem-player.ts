@@ -28,7 +28,13 @@ export function createStemPlayer(
 
   const bus = ctx.createGain();
   bus.gain.value = pack.packGain;
-  bus.connect(destination);
+  // High-pass filter to reduce sub-60 Hz content for Tesla speakers
+  const hp = ctx.createBiquadFilter();
+  hp.type = "highpass";
+  hp.frequency.value = 55;
+  hp.Q.value = 0.6;
+  bus.connect(hp);
+  hp.connect(destination);
 
   const voices: StemVoice[] = [];
   const targets: StemGainTargets = {};
@@ -95,6 +101,11 @@ export function createStemPlayer(
       }
       try {
         bus.disconnect();
+      } catch {
+        /* */
+      }
+      try {
+        hp.disconnect();
       } catch {
         /* */
       }

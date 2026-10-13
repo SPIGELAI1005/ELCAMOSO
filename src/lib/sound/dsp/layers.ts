@@ -407,8 +407,8 @@ export function createWindLayer(
       const speedGate = softGate(Math.pow(Math.max(0, (m.speedKmh - 8) / 100), 0.7), 0.01);
       const bright = m.accelFast * 0.25;
       const idleFactor = 1 - m.speedSlow;
-      const idleContrib = idlePresence * idleFactor * 0.55 * (0.85 + 0.15 * Math.sin(gustPhase * 0.6));
-      const level = (opts.level ?? 0.45) * (speedGate * gust * (1 + bright) + idleContrib);
+      const idleContrib = idlePresence * idleFactor * 0.92 * (0.85 + 0.15 * Math.sin(gustPhase * 0.6));
+      const level = (opts.level ?? 0.45) * (speedGate * gust * (1 + bright) + idleContrib * 1.8);
       targetParam(gain.gain, softGate(level), t, 0.4);
       nodes.forEach(({ bp, g, band }, i) => {
         const idleFreqShift = idlePresence > 0 && m.speedKmh < 5 ? 0.7 : 1;
@@ -1441,7 +1441,9 @@ export function createLaughCadenceLayer(
           next += gap * (0.9 + audioRandom() * 0.3);
         }
       }
-      const presence = softGate(0.55 + demand * 0.7, 0.02);
+      const idleFactor = clamp(1 - demand * 2);
+      const idlePresenceBoost = idleFactor * 0.35;
+      const presence = softGate(0.6 + demand * 0.7 + idlePresenceBoost, 0.02);
       targetParam(gain.gain, presence, t, 0.18);
       targetParam(panner.pan, Math.sin(t * 0.21) * 0.25 * m.stereoWidth, t, 0.35);
     },
@@ -1563,14 +1565,14 @@ export function createFartCadenceLayer(
       }
 
       // Idle bubbles when demand is very low
-      if (idlePresence > 0 && demand < 0.04) {
+      if (idlePresence > 0 && demand < 0.08) {
         if (nextIdle < t) nextIdle = t;
-        const idleHorizon = t + 0.3;
+        const idleHorizon = t + 0.35;
         while (nextIdle < idleHorizon) {
-          const tone = (opts.tone ?? 95) * 0.5;
-          const amp = (opts.level ?? 0.55) * idlePresence;
+          const tone = (opts.tone ?? 95) * 0.55;
+          const amp = (opts.level ?? 0.55) * idlePresence * 1.8;
           fireIdleBubble(nextIdle, tone, amp);
-          nextIdle += 1.2 + audioRandom() * 2.5;
+          nextIdle += 0.6 + audioRandom() * 1.4;
         }
       }
 

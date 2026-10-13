@@ -87,37 +87,39 @@ export function createHeartbeatLayer(ctx: BaseAudioContext, opts: LayerBaseOpts)
 
   function beat(at: number, tone: number, level: number, which: "lub" | "dub") {
     // Primary beat - shifted up to 90-110 Hz range (missing-fundamental technique)
+    // Softened envelope to reduce clicks
     const osc = ctx.createOscillator();
     const lp = ctx.createBiquadFilter();
     const g = ctx.createGain();
     osc.type = "sine";
-    const f0 = which === "lub" ? tone : tone * 0.85;
+    const f0 = which === "lub" ? tone : tone * 0.88;
     osc.frequency.setValueAtTime(f0, at);
-    osc.frequency.exponentialRampToValueAtTime(Math.max(55, f0 * 0.6), at + 0.08);
+    osc.frequency.exponentialRampToValueAtTime(Math.max(60, f0 * 0.65), at + 0.1);
     lp.type = "lowpass";
-    lp.frequency.value = which === "lub" ? 220 : 180;
+    lp.frequency.value = which === "lub" ? 200 : 165;
+    // Softer attack (0.02s instead of 0.012s) and smoother release
     g.gain.setValueAtTime(0.0001, at);
-    g.gain.exponentialRampToValueAtTime(Math.max(0.0002, level), at + 0.012);
-    g.gain.exponentialRampToValueAtTime(0.0001, at + (which === "lub" ? 0.12 : 0.16));
+    g.gain.linearRampToValueAtTime(Math.max(0.0002, level * 0.85), at + 0.022);
+    g.gain.exponentialRampToValueAtTime(0.0001, at + (which === "lub" ? 0.14 : 0.18));
     osc.connect(lp);
     lp.connect(g);
     g.connect(bus);
     osc.start(at);
-    osc.stop(at + 0.2);
+    osc.stop(at + 0.22);
 
-    // Second harmonic reinforces perceived bass
+    // Second harmonic reinforces perceived bass - also softened
     const harm = ctx.createOscillator();
     const hg = ctx.createGain();
     harm.type = "sine";
     harm.frequency.setValueAtTime(f0 * 2, at);
-    harm.frequency.exponentialRampToValueAtTime(Math.max(90, f0 * 1.2), at + 0.06);
+    harm.frequency.exponentialRampToValueAtTime(Math.max(95, f0 * 1.3), at + 0.08);
     hg.gain.setValueAtTime(0.0001, at);
-    hg.gain.exponentialRampToValueAtTime(Math.max(0.0002, level * 0.4), at + 0.01);
-    hg.gain.exponentialRampToValueAtTime(0.0001, at + 0.1);
+    hg.gain.linearRampToValueAtTime(Math.max(0.0002, level * 0.35), at + 0.018);
+    hg.gain.exponentialRampToValueAtTime(0.0001, at + 0.12);
     harm.connect(hg);
     hg.connect(bus);
     harm.start(at);
-    harm.stop(at + 0.14);
+    harm.stop(at + 0.16);
   }
 
   return {
@@ -230,14 +232,14 @@ export function createSynthwaveLayer(
   opts: LayerBaseOpts & { rootHz?: number },
 ): LayerHandle {
   const bus = ctx.createGain();
-  // High-pass to reduce sub-60 Hz for Tesla speakers
+  // High-pass at 65 Hz to reduce sub-bass for Tesla speakers
   const hp = ctx.createBiquadFilter();
   hp.type = "highpass";
-  hp.frequency.value = 55;
-  hp.Q.value = 0.7;
+  hp.frequency.value = 65;
+  hp.Q.value = 0.6;
   bus.connect(hp);
-  // Root shifted up to 82 Hz for missing-fundamental bass
-  const root = opts.rootHz ?? 82;
+  // Root at 95 Hz for proper missing-fundamental bass
+  const root = opts.rootHz ?? 95;
   const ratios = [1, 1.5, 2, 2.5];
   const voices = ratios.map((r, i) => {
     const osc = ctx.createOscillator();
@@ -861,7 +863,7 @@ export function createRainLayer(
       );
       targetParam(
         glassG.gain,
-        softGate(0.06 + drops * 0.18 + midSpray * 0.22 + road * 0.08 + idleFactor * idlePresence * 0.12),
+        softGate(0.08 + drops * 0.22 + midSpray * 0.22 + road * 0.08 + idleFactor * idlePresence * 0.45),
         t,
         0.32,
       );
@@ -871,10 +873,10 @@ export function createRainLayer(
         t,
         0.25,
       );
-      // Roof rain is always present for cozy cabin feel
+      // Roof rain is always present for cozy cabin feel - boosted for idle audibility
       targetParam(
         roofG.gain,
-        softGate(idlePresence * (0.18 + idleFactor * 0.22) + road * 0.08),
+        softGate(idlePresence * (0.35 + idleFactor * 0.45) + road * 0.08),
         t,
         0.4,
       );
@@ -905,10 +907,10 @@ export function createRainLayer(
         src.stop(at + 0.06);
         nextDrop += (1 / dropRate) * (0.6 + audioRandom() * 0.8);
       }
-      const idleLevel = idlePresence * idleFactor * 0.55;
+      const idleLevel = idlePresence * idleFactor * 1.1;
       targetParam(
         gain.gain,
-        softGate((opts.level ?? 0.45) * (0.32 + road * 0.5 + midSpray * 0.2 + idleLevel)),
+        softGate((opts.level ?? 0.45) * (0.4 + road * 0.5 + midSpray * 0.2 + idleLevel)),
         t,
         0.28,
       );
@@ -925,23 +927,30 @@ export function createRainLayer(
 
 export function createOceanWaveLayer(ctx: BaseAudioContext, opts: LayerBaseOpts): LayerHandle {
   const bus = ctx.createGain();
-  // High-pass to reduce sub-60 Hz for Tesla speakers
-  const hp = ctx.createBiquadFilter();
-  hp.type = "highpass";
-  hp.frequency.value = 55;
-  hp.Q.value = 0.7;
-  bus.connect(hp);
-  // Swell: bandpass 80-200 Hz instead of pure lowpass for missing-fundamental bass
+  // Swell: bandpass 80-200 Hz for missing-fundamental bass body
   const swell = createLoopingNoise(ctx, "brown", 0.7);
   const swellBp = ctx.createBiquadFilter();
   swellBp.type = "bandpass";
-  swellBp.frequency.value = 140;
-  swellBp.Q.value = 0.5;
+  swellBp.frequency.value = 130;
+  swellBp.Q.value = 0.45;
   const swellG = ctx.createGain();
   swell.connect(swellBp);
   swellBp.connect(swellG);
   swellG.connect(bus);
   swell.start();
+
+  // Low-mid body (100-180 Hz) for warmth - this adds the 60-200 Hz content back
+  const body = createLoopingNoise(ctx, "brown", 0.6);
+  const bodyBp = ctx.createBiquadFilter();
+  bodyBp.type = "bandpass";
+  bodyBp.frequency.value = 135;
+  bodyBp.Q.value = 0.6;
+  const bodyG = ctx.createGain();
+  body.connect(bodyBp);
+  bodyBp.connect(bodyG);
+  bodyG.connect(bus);
+  body.start();
+
   const foam = createLoopingNoise(ctx, "pink", 1);
   const foamBp = ctx.createBiquadFilter();
   foamBp.type = "bandpass";
@@ -952,7 +961,7 @@ export function createOceanWaveLayer(ctx: BaseAudioContext, opts: LayerBaseOpts)
   foamBp.connect(foamG);
   foamG.connect(bus);
   foam.start();
-  const { gain, handle } = chain(ctx, opts, hp);
+  const { gain, handle } = chain(ctx, opts, bus);
   let disposed = false;
   let phase = audioRandom() * 20;
   return {
@@ -962,23 +971,32 @@ export function createOceanWaveLayer(ctx: BaseAudioContext, opts: LayerBaseOpts)
       // Swell period stays oceanic; speed mostly opens foam, accel lifts crest energy.
       phase += m.dt * (0.075 + m.accelFast * 0.2 + m.speedSlow * 0.035);
       const wave = 0.55 + 0.45 * Math.sin(phase) * Math.sin(phase * 0.37 + 1.2);
+      const idleFactor = 1 - m.speedSlow;
       targetParam(
         swellG.gain,
-        softGate(0.32 + wave * 0.48 + m.accelFast * 0.28 + m.speedSlow * 0.08),
+        softGate(0.35 + wave * 0.5 + m.accelFast * 0.28 + m.speedSlow * 0.1 + idleFactor * 0.25),
         t,
         0.45,
       );
+      // Body layer for 60-200 Hz warmth
+      targetParam(
+        bodyG.gain,
+        softGate(0.28 + wave * 0.35 + m.accelFast * 0.2 + idleFactor * 0.2),
+        t,
+        0.5,
+      );
       targetParam(
         foamG.gain,
-        softGate(0.12 + m.speedSlow * 0.22 + wave * 0.32 + m.accelFast * 0.14),
+        softGate(0.15 + m.speedSlow * 0.25 + wave * 0.35 + m.accelFast * 0.14 + idleFactor * 0.12),
         t,
         0.4,
       );
       foamBp.frequency.setTargetAtTime(550 + m.speedSlow * 700 + wave * 200, t, 0.55);
-      swellBp.frequency.setTargetAtTime(100 + wave * 60 + m.accelFast * 40, t, 0.5);
+      swellBp.frequency.setTargetAtTime(100 + wave * 50 + m.accelFast * 35, t, 0.5);
+      bodyBp.frequency.setTargetAtTime(110 + wave * 40, t, 0.6);
       targetParam(
         gain.gain,
-        softGate((opts.level ?? 0.45) * (0.38 + wave * 0.25 + m.speedSlow * 0.22)),
+        softGate((opts.level ?? 0.45) * (0.5 + wave * 0.28 + m.speedSlow * 0.22 + idleFactor * 0.35)),
         t,
         0.4,
       );
@@ -986,6 +1004,7 @@ export function createOceanWaveLayer(ctx: BaseAudioContext, opts: LayerBaseOpts)
     dispose() {
       disposed = true;
       stopSafe(swell);
+      stopSafe(body);
       stopSafe(foam);
     },
   };

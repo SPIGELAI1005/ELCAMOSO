@@ -2,7 +2,7 @@
  * Subjective loudness balance per profile (0.4..1.6).
  * Applied on top of master volume so no profile dominates the library.
  * Target: -16 ±2 LUFS integrated, true peak <= -1 dBTP.
- * Updated 2026-10: Non-engine profiles rebalanced after level/bass fixes.
+ * Updated 2026-10: Non-engine profiles significantly boosted for audibility at idle.
  */
 export const PROFILE_LOUDNESS: Record<string, number> = {
   "gt-v8": 1.08,
@@ -21,11 +21,11 @@ export const PROFILE_LOUDNESS: Record<string, number> = {
   "romanian-85-carriage": 1.05,
   "steam-train": 0.98,
   "wiesn-tractor": 1.02,
-  "open-wind": 1.0,
+  "open-wind": 1.32,
   "storm-glider": 0.96,
   "santa-sleigh": 1.0,
-  "laughing-machine": 0.95,
-  "farting-car": 0.98,
+  "laughing-machine": 1.28,
+  "farting-car": 1.22,
   "kazoo-kart": 1.0,
   "flat-six-sport": 1.05,
   "american-muscle-v8": 1.04,
@@ -47,13 +47,13 @@ export const PROFILE_LOUDNESS: Record<string, number> = {
   "construction-monster": 1.04,
   "horse-gallop": 1.0,
   dragon: 1.0,
-  "thunder-beast": 0.98,
-  "retro-arcade": 0.98,
-  "synthwave-drive": 0.96,
+  "thunder-beast": 1.02,
+  "retro-arcade": 1.18,
+  "synthwave-drive": 1.16,
   "deep-bass-pulse": 1.08,
-  "zen-drive": 1.0,
-  "rain-drive": 1.0,
-  "ocean-drive": 1.0,
+  "zen-drive": 1.25,
+  "rain-drive": 1.28,
+  "ocean-drive": 1.24,
   heartbeat: 1.02,
   "synthetic-ev": 1.02,
 };

@@ -8,12 +8,12 @@ export const CYBER_CITY_PACK: WorldPack = {
   packGain: 0.52,
   eventCooldownSec: 2.5,
   layers: [
-    { id: "digitalPulse", label: "Digital pulse", kind: "pulse", level: 0.5, tone: 95 },
-    { id: "synthBody", label: "Synth body", kind: "drone", level: 0.55, tone: 70 },
-    { id: "cityAmbience", label: "City ambience", kind: "noise", level: 0.35, tone: 600 },
-    { id: "accelShimmer", label: "Accel shimmer", kind: "shimmer", level: 0.45, tone: 1400 },
-    { id: "regenReversal", label: "Regen reverse", kind: "drone", level: 0.4, tone: 110 },
-    { id: "speedAmbience", label: "Speed ambience", kind: "noise", level: 0.4, tone: 1100 },
+    { id: "digitalPulse", label: "Digital pulse", kind: "pulse", level: 0.52, tone: 105 },
+    { id: "synthBody", label: "Synth body", kind: "drone", level: 0.55, tone: 95 },
+    { id: "cityAmbience", label: "City ambience", kind: "noise", level: 0.38, tone: 650 },
+    { id: "accelShimmer", label: "Accel shimmer", kind: "shimmer", level: 0.48, tone: 1450 },
+    { id: "regenReversal", label: "Regen reverse", kind: "drone", level: 0.42, tone: 130 },
+    { id: "speedAmbience", label: "Speed ambience", kind: "noise", level: 0.42, tone: 1150 },
   ],
   stateRules: [
     { state: "idle", gains: { synthBody: 0.35, cityAmbience: 0.2 } },

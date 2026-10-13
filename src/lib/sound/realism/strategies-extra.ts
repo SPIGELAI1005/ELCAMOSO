@@ -729,28 +729,39 @@ export const EXPANSION_STRATEGIES: ProfileStrategy[] = [
           id: "growl",
           destination: buses.body,
           dark: true,
-          level: 0.52,
+          level: 0.58,
         }),
         createResonantBodyLayer(ctx, {
           id: "pressure",
           destination: buses.body,
-          freqs: [80, 120, 165],
-          level: 0.38,
+          freqs: [85, 130, 180],
+          level: 0.45,
+        }),
+        createFilteredNoiseLayer(ctx, {
+          id: "body-rumble",
+          destination: buses.body,
+          color: "brown",
+          filterType: "bandpass",
+          tone: 115,
+          q: 0.5,
+          level: 0.32,
+          speedWeight: 0.4,
+          throttleWeight: 0.3,
         }),
         createFilteredNoiseLayer(ctx, {
           id: "turbulence",
           destination: buses.beds,
           color: "brown",
           filterType: "bandpass",
-          tone: 180,
-          q: 0.6,
-          level: 0.22,
+          tone: 200,
+          q: 0.55,
+          level: 0.26,
         }),
         createOneShotEventLayer(ctx, {
           id: "thunder",
           destination: buses.accents,
           level: 1,
-          events: [{ kind: "thunder", everySeconds: 22, jitter: 10, level: 0.16, tone: 90 }],
+          events: [{ kind: "thunder", everySeconds: 22, jitter: 10, level: 0.18, tone: 95 }],
         }),
       ];
     },
@@ -759,17 +770,17 @@ export const EXPANSION_STRATEGIES: ProfileStrategy[] = [
     id: "retro-arcade",
     build(ctx, buses) {
       return [
-        createArcadeLayer(ctx, { id: "arcade", destination: buses.body, level: 0.62, baseHz: 110 }),
+        createArcadeLayer(ctx, { id: "arcade", destination: buses.body, level: 1.05, baseHz: 120 }),
         createFilteredNoiseLayer(ctx, {
           id: "cabinet",
           destination: buses.beds,
           color: "pink",
           filterType: "bandpass",
-          tone: 520,
-          q: 0.8,
-          level: 0.12,
-          speedWeight: 0.6,
-          throttleWeight: 0.35,
+          tone: 560,
+          q: 0.75,
+          level: 0.18,
+          speedWeight: 0.55,
+          throttleWeight: 0.4,
         }),
       ];
     },
@@ -778,7 +789,7 @@ export const EXPANSION_STRATEGIES: ProfileStrategy[] = [
     id: "synthwave-drive",
     build(ctx, buses) {
       return [
-        createSynthwaveLayer(ctx, { id: "synthwave", destination: buses.body, level: 0.68, rootHz: 82 }),
+        createSynthwaveLayer(ctx, { id: "synthwave", destination: buses.body, level: 1.1, rootHz: 95 }),
         createFilteredNoiseLayer(ctx, {
           id: "air",
           destination: buses.beds,
@@ -786,7 +797,7 @@ export const EXPANSION_STRATEGIES: ProfileStrategy[] = [
           filterType: "bandpass",
           tone: 2800,
           q: 0.7,
-          level: 0.08,
+          level: 0.12,
         }),
       ];
     },
@@ -810,25 +821,36 @@ export const EXPANSION_STRATEGIES: ProfileStrategy[] = [
         createWindLayer(ctx, {
           id: "wind",
           destination: buses.beds,
-          level: 0.62,
-          idlePresence: 0.55,
+          level: 1.15,
+          idlePresence: 0.85,
           bands: [
-            { tone: 200, level: 0.3, q: 0.6 },
-            { tone: 900, level: 0.55, q: 0.7 },
-            { tone: 2400, level: 0.2, q: 0.8 },
+            { tone: 200, level: 0.38, q: 0.55 },
+            { tone: 900, level: 0.58, q: 0.65 },
+            { tone: 2400, level: 0.24, q: 0.75 },
           ],
         }),
         createResonantBodyLayer(ctx, {
           id: "drone",
           destination: buses.body,
-          freqs: [82, 123, 165],
-          level: 0.24,
+          freqs: [85, 130, 175],
+          level: 0.42,
+        }),
+        createFilteredNoiseLayer(ctx, {
+          id: "body-warmth",
+          destination: buses.body,
+          color: "brown",
+          filterType: "bandpass",
+          tone: 140,
+          q: 0.5,
+          level: 0.22,
+          speedWeight: 0.3,
+          throttleWeight: 0.15,
         }),
         createOneShotEventLayer(ctx, {
           id: "chimes",
           destination: buses.accents,
           level: 1,
-          events: [{ kind: "bell", everySeconds: 55, jitter: 28, level: 0.08, tone: 1320 }],
+          events: [{ kind: "bell", everySeconds: 55, jitter: 28, level: 0.1, tone: 1320 }],
         }),
       ];
     },
@@ -837,8 +859,8 @@ export const EXPANSION_STRATEGIES: ProfileStrategy[] = [
     id: "rain-drive",
     build(ctx, buses) {
       return [
-        createRainLayer(ctx, { id: "rain", destination: buses.beds, level: 0.58, idlePresence: 0.65 }),
-        createWindLayer(ctx, { id: "air", destination: buses.beds, level: 0.12, idlePresence: 0.3 }),
+        createRainLayer(ctx, { id: "rain", destination: buses.beds, level: 1.1, idlePresence: 0.9 }),
+        createWindLayer(ctx, { id: "air", destination: buses.beds, level: 0.25, idlePresence: 0.55 }),
         createFilteredNoiseLayer(ctx, {
           id: "glass-mid",
           destination: buses.accents,
@@ -846,8 +868,8 @@ export const EXPANSION_STRATEGIES: ProfileStrategy[] = [
           filterType: "bandpass",
           tone: 3200,
           q: 1.1,
-          level: 0.1,
-          speedWeight: 0.7,
+          level: 0.14,
+          speedWeight: 0.65,
           throttleWeight: 0.2,
         }),
       ];
@@ -857,13 +879,13 @@ export const EXPANSION_STRATEGIES: ProfileStrategy[] = [
     id: "ocean-drive",
     build(ctx, buses) {
       return [
-        createOceanWaveLayer(ctx, { id: "ocean", destination: buses.beds, level: 0.72 }),
-        createWindLayer(ctx, { id: "wind", destination: buses.beds, level: 0.22, idlePresence: 0.4 }),
+        createOceanWaveLayer(ctx, { id: "ocean", destination: buses.beds, level: 1.2 }),
+        createWindLayer(ctx, { id: "wind", destination: buses.beds, level: 0.38, idlePresence: 0.7 }),
         createResonantBodyLayer(ctx, {
           id: "deep",
           destination: buses.body,
-          freqs: [75, 110, 165],
-          level: 0.2,
+          freqs: [85, 130, 180],
+          level: 0.38,
         }),
       ];
     },

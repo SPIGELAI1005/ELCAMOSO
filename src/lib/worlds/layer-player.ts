@@ -38,6 +38,7 @@ interface LayerVoice {
 /**
  * Procedural world layers - continuous sources with gain envelopes.
  * Muted layers stay running (silent) to avoid restart clicks.
+ * Includes high-pass at 55 Hz for Tesla speaker optimization.
  */
 export function createWorldLayerPlayer(
   ctx: BaseAudioContext,
@@ -47,7 +48,13 @@ export function createWorldLayerPlayer(
 ) {
   const bus = ctx.createGain();
   bus.gain.value = 0.0001;
-  bus.connect(destination);
+  // High-pass filter for Tesla speakers - reduces sub-60 Hz content
+  const hp = ctx.createBiquadFilter();
+  hp.type = "highpass";
+  hp.frequency.value = 55;
+  hp.Q.value = 0.6;
+  bus.connect(hp);
+  hp.connect(destination);
 
   const voices: LayerVoice[] = [];
   const targets: Partial<Record<WorldLayerId, number>> = {};
@@ -143,6 +150,11 @@ export function createWorldLayerPlayer(
       }
       try {
         bus.disconnect();
+      } catch {
+        /* */
+      }
+      try {
+        hp.disconnect();
       } catch {
         /* */
       }
