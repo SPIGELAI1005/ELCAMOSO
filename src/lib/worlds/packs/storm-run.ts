@@ -5,7 +5,7 @@ export const STORM_RUN_PACK: WorldPack = {
   name: "Storm Run",
   tagline: "Wind · Thunder · Atmosphere",
   character: "Wind · Pressure · Rain",
-  packGain: 0.38,
+  packGain: 0.26,
   eventCooldownSec: 8,
   layers: [
     { id: "wind", label: "Wind", kind: "noise", level: 0.52, tone: 800 },

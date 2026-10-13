@@ -5,7 +5,7 @@ export const CYBER_CITY_PACK: WorldPack = {
   name: "Cyber City",
   tagline: "Pulse · Neon · Digital",
   character: "Pulse · Grid · Night",
-  packGain: 0.4,
+  packGain: 0.28,
   eventCooldownSec: 2.5,
   layers: [
     { id: "digitalPulse", label: "Digital pulse", kind: "pulse", level: 0.45, tone: 95 },

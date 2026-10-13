@@ -5,7 +5,7 @@ export const SPACE_DRIVE_PACK: WorldPack = {
   name: "Space Drive",
   tagline: "Reactor · Energy · Warp",
   character: "Cabin · Void · Thrust",
-  packGain: 0.38,
+  packGain: 0.28,
   eventCooldownSec: 4,
   layers: [
     { id: "reactor", label: "Reactor", kind: "drone", level: 0.52, tone: 82 },

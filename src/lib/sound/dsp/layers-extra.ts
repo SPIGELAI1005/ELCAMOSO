@@ -78,7 +78,7 @@ export function createHeartbeatLayer(ctx: BaseAudioContext, opts: LayerBaseOpts)
   const shelf = ctx.createBiquadFilter();
   shelf.type = "lowshelf";
   shelf.frequency.value = 50;
-  shelf.gain.value = -8;
+  shelf.gain.value = -6;
   bus.connect(shelf);
   const { gain, handle } = chain(ctx, opts, shelf);
   let next = 0;
@@ -86,31 +86,40 @@ export function createHeartbeatLayer(ctx: BaseAudioContext, opts: LayerBaseOpts)
   let disposed = false;
 
   function beat(at: number, tone: number, level: number, which: "lub" | "dub") {
-    // Clean heartbeat thud - single sine with very smooth envelope to avoid clicks
+    // Primary beat with simple smooth envelope
     const osc = ctx.createOscillator();
     const lp = ctx.createBiquadFilter();
     const g = ctx.createGain();
     osc.type = "sine";
-    const f0 = which === "lub" ? tone : tone * 0.9;
-    // Slow frequency sweep for organic feel
+    const f0 = which === "lub" ? tone : tone * 0.88;
     osc.frequency.setValueAtTime(f0, at);
-    osc.frequency.exponentialRampToValueAtTime(Math.max(55, f0 * 0.7), at + 0.15);
-    // Gentle lowpass to remove harmonics that cause clicks
+    osc.frequency.exponentialRampToValueAtTime(Math.max(60, f0 * 0.65), at + 0.1);
     lp.type = "lowpass";
-    lp.frequency.value = which === "lub" ? 180 : 150;
+    lp.frequency.value = which === "lub" ? 200 : 165;
     lp.Q.value = 0.5;
-    // Very smooth envelope: slow attack, slow release, no sharp transitions
-    const attackTime = 0.035;
-    const releaseTime = which === "lub" ? 0.18 : 0.22;
+    // Smooth attack and exponential release - no discontinuities
     g.gain.setValueAtTime(0.0001, at);
-    g.gain.linearRampToValueAtTime(level * 0.75, at + attackTime);
-    g.gain.setValueAtTime(level * 0.75, at + attackTime + 0.02);
-    g.gain.linearRampToValueAtTime(0.0001, at + releaseTime);
+    g.gain.linearRampToValueAtTime(Math.max(0.0002, level * 0.8), at + 0.025);
+    g.gain.exponentialRampToValueAtTime(0.0001, at + (which === "lub" ? 0.16 : 0.2));
     osc.connect(lp);
     lp.connect(g);
     g.connect(bus);
     osc.start(at);
-    osc.stop(at + releaseTime + 0.05);
+    osc.stop(at + 0.24);
+
+    // Second harmonic reinforces perceived bass
+    const harm = ctx.createOscillator();
+    const hg = ctx.createGain();
+    harm.type = "sine";
+    harm.frequency.setValueAtTime(f0 * 2, at);
+    harm.frequency.exponentialRampToValueAtTime(Math.max(95, f0 * 1.3), at + 0.08);
+    hg.gain.setValueAtTime(0.0001, at);
+    hg.gain.linearRampToValueAtTime(Math.max(0.0002, level * 0.32), at + 0.02);
+    hg.gain.exponentialRampToValueAtTime(0.0001, at + 0.12);
+    harm.connect(hg);
+    hg.connect(bus);
+    harm.start(at);
+    harm.stop(at + 0.16);
   }
 
   return {

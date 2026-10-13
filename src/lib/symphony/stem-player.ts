@@ -28,11 +28,11 @@ export function createStemPlayer(
 
   const bus = ctx.createGain();
   bus.gain.value = pack.packGain;
-  // Gentle shelf at low end - procedural stems already use 80+ Hz fundamentals
+  // Low shelf for Tesla speakers - target <25% LF energy
   const shelf = ctx.createBiquadFilter();
   shelf.type = "lowshelf";
-  shelf.frequency.value = 60;
-  shelf.gain.value = -4;
+  shelf.frequency.value = 65;
+  shelf.gain.value = -8;
   bus.connect(shelf);
   shelf.connect(destination);
 
