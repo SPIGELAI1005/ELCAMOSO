@@ -874,9 +874,10 @@ export class HybridCombustionSynth {
           : 1;
       // Fundamental weight thins out when the excitation is already dense at high RPM.
       const lowRpmBody = band.order <= cfg.cylinders / 2 ? 1 - rpmNorm * 0.35 : 1;
+      // Raised base multiplier (0.34 → 0.52) to boost harmonic content for firing-order share ≥0.55
       targetParam(
         band.gain.gain,
-        band.weight * 0.34 * density * upper * lowRpmBody * (shifting ? 0.6 : 1),
+        band.weight * 0.52 * density * upper * lowRpmBody * (shifting ? 0.6 : 1),
         audioTime,
         0.06,
       );
