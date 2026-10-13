@@ -75,7 +75,17 @@ export function isCombustionTopologyPilotEnabled(): boolean {
   );
 }
 
-export const TOPOLOGY_PILOT_PROFILE_IDS = ["american-muscle-v8", "race-car"] as const;
+export const TOPOLOGY_PILOT_PROFILE_IDS = [
+  "american-muscle-v8",
+  "race-car",
+  "gt-v8",
+  "flat-six-sport",
+  "turbo-inline-6",
+  "racing-v10",
+  "rally-car",
+  "motorcycle-superbike",
+  "big-twin",
+] as const;
 export type TopologyPilotProfileId = (typeof TOPOLOGY_PILOT_PROFILE_IDS)[number];
 
 export function isTopologyPilotProfileId(profileId: string): profileId is TopologyPilotProfileId {
@@ -246,9 +256,144 @@ export const FLAT_PLANE_V8_TOPOLOGY: CombustionTopologyV1 = {
   })),
 };
 
+/**
+ * GT V8: Cross-plane like Muscle but with slightly shorter primaries and
+ * more even pulse weights for a refined character.
+ */
+export const GT_V8_TOPOLOGY: CombustionTopologyV1 = {
+  version: 1,
+  cycleDegrees: 720,
+  cylinderCount: 8,
+  collectors: [{ id: 0 }, { id: 1 }],
+  soundSpeedMetresPerSecond: TOPOLOGY_SOUND_SPEED_DEFAULT,
+  cylinders: v8Cylinders(
+    [1, 8, 7, 2, 6, 5, 4, 3],
+    (cyl) => (cyl % 2 === 1 ? 0 : 1),
+    () => 0.1,
+    1,
+  ),
+};
+
+/**
+ * Flat-six sport: 1-6-2-4-3-5 firing order (Porsche-style), 120° intervals,
+ * collectors split banks (1-3-5 vs 2-4-6).
+ */
+export const FLAT_SIX_TOPOLOGY: CombustionTopologyV1 = {
+  version: 1,
+  cycleDegrees: 720,
+  cylinderCount: 6,
+  collectors: [{ id: 0 }, { id: 1 }],
+  soundSpeedMetresPerSecond: TOPOLOGY_SOUND_SPEED_DEFAULT,
+  cylinders: [1, 6, 2, 4, 3, 5].map((cylId, i) => ({
+    id: cylId,
+    firingAngleDegrees: i * 120,
+    collectorId: cylId % 2 === 1 ? 0 : 1,
+    pulseWeight: 1,
+    primaryLengthMetres: 0.08,
+  })),
+};
+
+/**
+ * Turbo Inline-6: 1-5-3-6-2-4 firing order, 120° intervals, single collector.
+ */
+export const TURBO_I6_TOPOLOGY: CombustionTopologyV1 = {
+  version: 1,
+  cycleDegrees: 720,
+  cylinderCount: 6,
+  collectors: [{ id: 0 }],
+  soundSpeedMetresPerSecond: TOPOLOGY_SOUND_SPEED_DEFAULT,
+  cylinders: [1, 5, 3, 6, 2, 4].map((cylId, i) => ({
+    id: cylId,
+    firingAngleDegrees: i * 120,
+    collectorId: 0,
+    pulseWeight: 1,
+    primaryLengthMetres: 0.06 + (cylId - 1) * 0.015,
+  })),
+};
+
+/**
+ * Racing V10: Even-firing 90° V10, 72° intervals, collectors split banks.
+ * Order: 1-6-5-10-2-7-3-8-4-9
+ */
+export const V10_TOPOLOGY: CombustionTopologyV1 = {
+  version: 1,
+  cycleDegrees: 720,
+  cylinderCount: 10,
+  collectors: [{ id: 0 }, { id: 1 }],
+  soundSpeedMetresPerSecond: TOPOLOGY_SOUND_SPEED_DEFAULT,
+  cylinders: [1, 6, 5, 10, 2, 7, 3, 8, 4, 9].map((cylId, i) => ({
+    id: cylId,
+    firingAngleDegrees: i * 72,
+    collectorId: cylId % 2 === 1 ? 0 : 1,
+    pulseWeight: 1,
+    primaryLengthMetres: 0.11,
+  })),
+};
+
+/**
+ * Rally Inline-3 turbo: 1-2-3 firing order, 240° intervals, single collector.
+ * Has noticeable pulse irregularity (odd cylinder count).
+ */
+export const RALLY_I3_TOPOLOGY: CombustionTopologyV1 = {
+  version: 1,
+  cycleDegrees: 720,
+  cylinderCount: 3,
+  collectors: [{ id: 0 }],
+  soundSpeedMetresPerSecond: TOPOLOGY_SOUND_SPEED_DEFAULT,
+  cylinders: [1, 2, 3].map((cylId, i) => ({
+    id: cylId,
+    firingAngleDegrees: i * 240,
+    collectorId: 0,
+    pulseWeight: 1.1 - i * 0.05,
+    primaryLengthMetres: 0.04 + i * 0.02,
+  })),
+};
+
+/**
+ * Superbike Inline-4: 1-3-4-2 firing order (crossplane), 180° intervals for smooth,
+ * or 270-180-90-180 for MotoGP-style. Using even 180° here.
+ */
+export const SUPERBIKE_I4_TOPOLOGY: CombustionTopologyV1 = {
+  version: 1,
+  cycleDegrees: 720,
+  cylinderCount: 4,
+  collectors: [{ id: 0 }],
+  soundSpeedMetresPerSecond: TOPOLOGY_SOUND_SPEED_DEFAULT,
+  cylinders: [1, 3, 4, 2].map((cylId, i) => ({
+    id: cylId,
+    firingAngleDegrees: i * 180,
+    collectorId: 0,
+    pulseWeight: 1,
+    primaryLengthMetres: 0.06,
+  })),
+};
+
+/**
+ * Big Twin V-twin (cruiser): 45° V-twin with uneven firing (315°/405° or similar).
+ * Single collector for that classic loping sound.
+ */
+export const V_TWIN_TOPOLOGY: CombustionTopologyV1 = {
+  version: 1,
+  cycleDegrees: 720,
+  cylinderCount: 2,
+  collectors: [{ id: 0 }],
+  soundSpeedMetresPerSecond: TOPOLOGY_SOUND_SPEED_DEFAULT,
+  cylinders: [
+    { id: 1, firingAngleDegrees: 0, collectorId: 0, pulseWeight: 1.15, primaryLengthMetres: 0.08 },
+    { id: 2, firingAngleDegrees: 315, collectorId: 0, pulseWeight: 1.0, primaryLengthMetres: 0.1 },
+  ],
+};
+
 export const TOPOLOGY_BY_PILOT_PROFILE: Record<TopologyPilotProfileId, CombustionTopologyV1> = {
   "american-muscle-v8": MUSCLE_V8_TOPOLOGY,
   "race-car": FLAT_PLANE_V8_TOPOLOGY,
+  "gt-v8": GT_V8_TOPOLOGY,
+  "flat-six-sport": FLAT_SIX_TOPOLOGY,
+  "turbo-inline-6": TURBO_I6_TOPOLOGY,
+  "racing-v10": V10_TOPOLOGY,
+  "rally-car": RALLY_I3_TOPOLOGY,
+  "motorcycle-superbike": SUPERBIKE_I4_TOPOLOGY,
+  "big-twin": V_TWIN_TOPOLOGY,
 };
 
 export function combustionTopologyForProfile(profileId: string): CombustionTopologyV1 | null {
