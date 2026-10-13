@@ -626,11 +626,13 @@ export class HybridCombustionSynth {
       nodes += 3;
       return { id, noise, filter, gain };
     };
+    // Spec §NEW-D: Lower Q values reduce filter ringing that can cause click artifacts.
+    // Shift: Q 1.1→0.9 for broader, softer bandpass; Thump: Q 1.6→1.2 for less resonance.
     this.voices = {
-      shift: makeVoice("shift", "pink", "bandpass", 760, 1.1),
-      thump: makeVoice("thump", "brown", "lowpass", 160, 1.6),
-      pop: makeVoice("pop", "pink", "bandpass", 520, 1.5),
-      ...(cfg.forcedInduction ? { turbo: makeVoice("turbo", "white", "bandpass", 1500, 2.4) } : {}),
+      shift: makeVoice("shift", "pink", "bandpass", 760, 0.9),
+      thump: makeVoice("thump", "brown", "lowpass", 160, 1.2),
+      pop: makeVoice("pop", "pink", "bandpass", 520, 1.3),
+      ...(cfg.forcedInduction ? { turbo: makeVoice("turbo", "white", "bandpass", 1500, 2.0) } : {}),
     };
 
     this.nodeEstimate = nodes;
@@ -748,8 +750,11 @@ export class HybridCombustionSynth {
 
     const rpmNorm = Math.min(1, rpm / Math.max(1, cfg.redlineRpm));
     const idleGate = Math.max(0, 1 - rpmNorm * 2.2) * Math.max(0, 1 - demand * 2);
-    // Idle lope fades with RPM / demand, but combustion never becomes perfectly periodic:
-    // a light-load floor keeps 2-5 % cycle variation at cruise (worklet scales it further).
+    // Spec §NEW-C: Cycle-to-cycle combustion variation breaks up the "static buzzer" sound.
+    // Idle lope fades with RPM / demand, but combustion never becomes perfectly periodic.
+    // Raised floor (0.08 + light-load 0.06) keeps 8-14% cycle variation at cruise so
+    // engines don't sound like a constant-pitch tone generator. Worklet ampSpread/timeSpread
+    // scale this further into per-fire amplitude jitter (ampSpread = 0.06 + irregularity*0.45).
     const raw = this.rawMechanical;
     const irregularity = Math.min(
       1,
@@ -757,8 +762,8 @@ export class HybridCombustionSynth {
         (raw?.idleIrregularityScale ?? 1) *
         idleGate *
         (overrun ? 0.35 : 1) +
-        0.05 +
-        (1 - load) * 0.04,
+        0.08 +
+        (1 - load) * 0.06,
     );
 
     // Transient choreography - scheduler (powertrain) or legacy edge detection.
@@ -1264,18 +1269,30 @@ export class HybridCombustionSynth {
     const peak =
       VOICE_PEAK[voiceId] * (PULSE_FLOOR + (1 - PULSE_FLOOR) * clamp01(variant.intensity * strength));
     if (peak <= 0.001) return;
-    const t = Math.max(audioTime, this.lastUpdateTime) + 0.002;
-    const attack = voiceId === "thump" ? 0.012 : voiceId === "turbo" ? 0.008 : 0.005;
-    const decayTau = Math.max(0.02, variant.decayMs / 1000 / 3.2);
 
-    voice.filter.frequency.setTargetAtTime(variant.filterHz, t, 0.003);
+    // Spec §NEW-D: Remove broadband clicks at gear changes with proper shift envelope.
+    // Longer attack times (was 5/12/8ms, now 12/20/10ms) and filter warmup before gain
+    // ramp prevents the abrupt leading edge that causes click artifacts.
+    const t = Math.max(audioTime, this.lastUpdateTime) + 0.002;
+    const attack = voiceId === "thump" ? 0.02 : voiceId === "turbo" ? 0.01 : 0.012;
+    const decayTau = Math.max(0.025, variant.decayMs / 1000 / 3.2);
+
+    // Start filter transition slightly before gain ramp for warmup
+    const filterWarmup = 0.004;
+    voice.filter.frequency.cancelScheduledValues(t);
+    voice.filter.frequency.setValueAtTime(voice.filter.frequency.value, t);
+    voice.filter.frequency.setTargetAtTime(variant.filterHz, t, 0.006);
+
     const g = voice.gain.gain;
-    g.cancelScheduledValues(t);
-    g.setValueAtTime(Math.max(0.0001, g.value), t);
-    g.linearRampToValueAtTime(peak, t + attack);
+    g.cancelScheduledValues(t + filterWarmup);
+    g.setValueAtTime(Math.max(0.0001, g.value), t + filterWarmup);
+    // Use exponential ramp for softer leading edge (reduces click perception)
+    g.exponentialRampToValueAtTime(Math.max(0.001, peak * 0.5), t + filterWarmup + attack * 0.4);
+    g.linearRampToValueAtTime(peak, t + filterWarmup + attack);
+    const attackEnd = t + filterWarmup + attack;
     if (kind === "turbo-flutter") {
       // Compressor-surge chatter: a handful of decaying bursts around 30 Hz.
-      let tt = t + attack;
+      let tt = attackEnd;
       let p = peak;
       for (let k = 0; k < 5; k += 1) {
         tt += 0.016;
@@ -1287,7 +1304,7 @@ export class HybridCombustionSynth {
       g.setTargetAtTime(0.0001, tt, decayTau);
     } else if (kind === "overrun") {
       // Overrun crackle: irregular micro-bursts riding the decay instead of one swell.
-      let tt = t + attack;
+      let tt = attackEnd;
       let p = peak;
       for (let k = 0; k < 4; k += 1) {
         tt += 0.02 + this.nextLegacyRand() * 0.05;
@@ -1298,7 +1315,7 @@ export class HybridCombustionSynth {
       }
       g.setTargetAtTime(0.0001, tt, decayTau);
     } else {
-      g.setTargetAtTime(0.0001, t + attack, decayTau);
+      g.setTargetAtTime(0.0001, attackEnd, decayTau);
     }
     this.diagnostics.transientCounts[kind] = (this.diagnostics.transientCounts[kind] ?? 0) + 1;
   }

@@ -118,8 +118,9 @@ const AMERICAN_V8: AcousticEngineConfig = {
   architecture: "cross-plane-v8-lope",
   banks: "v90",
   architectureCode: 1,
-  // Design: stronger idle lope than GT; matches personality acoustic hint (~0.42).
-  idleIrregularity: 0.4,
+  // Design: strong idle lope (20-30% amplitude jitter) with visible pulse irregularity.
+  // Spec §NEW-E: American Muscle V8 needs its idle lope to be audible and characterful.
+  idleIrregularity: 0.55,
   exhaustPulse: 0.98,
   intakePresence: 0.26,
   mechanicalIntensity: 0.2,
@@ -173,23 +174,25 @@ const TURBO_I6: AcousticEngineConfig = {
   architecture: "inline-6",
   banks: "inline",
   architectureCode: 0,
-  idleIrregularity: 0.09,
-  exhaustPulse: 0.52,
-  intakePresence: 0.48,
-  mechanicalIntensity: 0.36,
-  combustionSharpness: 0.5,
+  // Spec §NEW-E: Turbo I6 was near-silent at idle and cruise - raise exhaustPulse and
+  // idle character. Even-firing I6 is smooth, but still needs audible presence.
+  idleIrregularity: 0.14,
+  exhaustPulse: 0.68,
+  intakePresence: 0.52,
+  mechanicalIntensity: 0.4,
+  combustionSharpness: 0.52,
   highLoadEnrichment: 0.7,
-  loadContrast: 0.64,
-  upperRpmEnergy: 0.58,
-  intakeLoadResponse: 0.68,
-  overrunCharacter: 0.32,
+  loadContrast: 0.58,
+  upperRpmEnergy: 0.62,
+  intakeLoadResponse: 0.72,
+  overrunCharacter: 0.35,
   exhaustFormantsHz: [108, 215, 430, 820],
   intakeFormantsHz: [540, 1160, 2200],
   bodyResonanceHz: [125, 275, 570],
   supportRatios: [1, 2, 3, 4, 5],
   supportWeights: [0.8, 0.45, 0.28, 0.14, 0.08],
   forcedInduction: true,
-  bodyBrightness: 0.48,
+  bodyBrightness: 0.52,
   redlineRpm: 7000,
 };
 
@@ -225,24 +228,29 @@ const FLAT_PLANE_V8_TRACK: AcousticEngineConfig = {
   architecture: "flat-plane-v8",
   banks: "v90",
   // Contract v1: flat-plane-v8 is code 6. Code 5 is single only.
+  // Spec §NEW-E: Race Car must sound distinct from GT V8 - flat-plane has even bank
+  // alternation, sharper/brighter character, and higher-frequency exhaust resonance.
   architectureCode: 6,
-  idleIrregularity: 0.08,
-  exhaustPulse: 0.7,
-  intakePresence: 0.76,
-  mechanicalIntensity: 0.66,
-  combustionSharpness: 0.76,
-  highLoadEnrichment: 0.82,
-  loadContrast: 0.8,
-  upperRpmEnergy: 0.9,
-  intakeLoadResponse: 0.86,
-  overrunCharacter: 0.4,
-  exhaustFormantsHz: [145, 290, 620, 1240, 1900],
-  intakeFormantsHz: [820, 1700, 3200],
-  bodyResonanceHz: [155, 350, 840],
+  idleIrregularity: 0.06,
+  // Higher exhaust pulse and sharper combustion than GT V8's 0.72/0.43
+  exhaustPulse: 0.78,
+  intakePresence: 0.82,
+  mechanicalIntensity: 0.72,
+  combustionSharpness: 0.82,
+  highLoadEnrichment: 0.88,
+  loadContrast: 0.84,
+  upperRpmEnergy: 0.94,
+  intakeLoadResponse: 0.9,
+  overrunCharacter: 0.45,
+  // Higher formant centers than GT V8 for the "scream" characteristic
+  exhaustFormantsHz: [160, 320, 680, 1360, 2100],
+  intakeFormantsHz: [920, 1850, 3400],
+  bodyResonanceHz: [175, 380, 920],
   supportRatios: [1, 2, 3, 4, 6, 8],
-  supportWeights: [0.68, 0.4, 0.34, 0.22, 0.12, 0.06],
+  supportWeights: [0.65, 0.42, 0.36, 0.24, 0.14, 0.07],
   forcedInduction: false,
-  bodyBrightness: 0.76,
+  // Brighter than GT V8's 0.42 for the flat-plane V8 scream
+  bodyBrightness: 0.82,
   redlineRpm: 8600,
 };
 
