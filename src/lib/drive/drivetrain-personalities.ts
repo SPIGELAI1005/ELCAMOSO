@@ -1122,8 +1122,9 @@ const HIGH_REV_V10_PERSONALITY: DrivetrainPersonalityConfig = {
   id: "high-rev-v10",
   name: "High-Rev V10",
   engine: {
-    idleRpm: 850,
-    redlineRpm: 8500,
+    // Spec §4.5: idle 1000, redline 9000
+    idleRpm: 1000,
+    redlineRpm: 9000,
     acoustic: {
       cylinders: 10,
       architecture: "v10-even",
@@ -1133,17 +1134,18 @@ const HIGH_REV_V10_PERSONALITY: DrivetrainPersonalityConfig = {
       mechanicalIntensity: 0.58,
     },
   },
-  // Huracan-inspired 7-speed DCT: wider 1st/2nd spread (1.60 vs 1.21 before).
-  // rpm/kmh: G1=82, G2=51, G3=38, G4=31, G5=25, G6=20, G7=18
+  // Spec §4.5: 6-speed ASG-type (LFA-class): 3.231/2.188/1.609/1.233/1.000/0.794
+  // Final drive 4.10, tyre 2.19 m (315/30 R20)
+  // rpm/kmh: G1=100.8, G2=68.3, G3=50.2, G4=38.5, G5=31.2, G6=24.8
   transmission: {
     ...flatSixBase.transmission,
-    gearRatios: [3.91, 2.44, 1.81, 1.46, 1.18, 0.97, 0.84],
-    finalDrive: 3.73,
-    upshiftRpm: { lowLoad: 5000, mediumLoad: 6800, highLoad: 8150 },
+    gearRatios: [3.231, 2.188, 1.609, 1.233, 1.000, 0.794],
+    finalDrive: 4.10,
+    upshiftRpm: { lowLoad: 5400, mediumLoad: 7200, highLoad: 8650 },
     upshiftLoadMedium: 0.34,
     upshiftLoadHigh: 0.68,
     upshiftHysteresisRpm: 300,
-    downshiftBaseRpm: 3300,
+    downshiftBaseRpm: 3500,
     downshiftHysteresisRpm: 360,
     postUpshiftBlockMs: 360,
     kickdown: {
@@ -1164,18 +1166,19 @@ const HIGH_REV_V10_PERSONALITY: DrivetrainPersonalityConfig = {
     },
     idle: {
       ...flatSixBase.transmission.idle,
-      stoppedInGearRpm: 850,
+      stoppedInGearRpm: 1000,
       revLimitFraction: 0.58,
     },
     redline: { softFraction: 0.975, maxDownshiftFraction: 0.96 },
     rpm: {
       trackTau: 0.045,
-      maxRateRpmPerSec: 6900,
+      maxRateRpmPerSec: 7200,
       upshiftEasePower: 1.55,
       downshiftEasePower: 1.3,
     },
   },
-  wheelCircumferenceM: 2.04,
+  // Spec §4.5: tyre 2.19 m
+  wheelCircumferenceM: 2.19,
   throttle: { attackTau: 0.055, releaseTau: 0.17, directWeight: 0.64 },
   overrun: {
     probability: 0.22,
@@ -1208,8 +1211,9 @@ const FLAT_PLANE_V8_TRACK_PERSONALITY: DrivetrainPersonalityConfig = {
   id: "flat-plane-v8-track",
   name: "Flat-Plane V8 Track",
   engine: {
-    idleRpm: 900,
-    redlineRpm: 8600,
+    // Spec §4.6: idle 1000, redline 9000
+    idleRpm: 1000,
+    redlineRpm: 9000,
     acoustic: {
       cylinders: 8,
       architecture: "flat-plane-v8",
@@ -1219,17 +1223,18 @@ const FLAT_PLANE_V8_TRACK_PERSONALITY: DrivetrainPersonalityConfig = {
       mechanicalIntensity: 0.66,
     },
   },
-  // Z06-inspired 8-speed DCT: track-appropriate ratios, finalDrive 2.73.
-  // rpm/kmh: G1=101, G2=66, G3=46, G4=35, G5=28, G6=23, G7=19, G8=14
+  // Spec §4.6: 458-type 7-speed DCT: 3.08/2.18/1.63/1.29/1.03/0.84/0.69
+  // Final drive 5.14, tyre 2.07 m (305/30 R20). Replaces the 8-speed 5.56 set.
+  // rpm/kmh: G1=127.5, G2=90.2, G3=67.5, G4=53.4, G5=42.6, G6=34.8, G7=28.6
   transmission: {
     ...flatSixBase.transmission,
-    gearRatios: [4.56, 2.97, 2.08, 1.60, 1.27, 1.03, 0.85, 0.65],
-    finalDrive: 2.73,
-    upshiftRpm: { lowLoad: 5200, mediumLoad: 7000, highLoad: 8250 },
+    gearRatios: [3.08, 2.18, 1.63, 1.29, 1.03, 0.84, 0.69],
+    finalDrive: 5.14,
+    upshiftRpm: { lowLoad: 5400, mediumLoad: 7200, highLoad: 8650 },
     upshiftLoadMedium: 0.32,
     upshiftLoadHigh: 0.66,
     upshiftHysteresisRpm: 280,
-    downshiftBaseRpm: 3500,
+    downshiftBaseRpm: 3700,
     downshiftHysteresisRpm: 340,
     postUpshiftBlockMs: 320,
     kickdown: {
@@ -1250,18 +1255,19 @@ const FLAT_PLANE_V8_TRACK_PERSONALITY: DrivetrainPersonalityConfig = {
     },
     idle: {
       ...flatSixBase.transmission.idle,
-      stoppedInGearRpm: 900,
+      stoppedInGearRpm: 1000,
       revLimitFraction: 0.6,
     },
     redline: { softFraction: 0.975, maxDownshiftFraction: 0.965 },
     rpm: {
       trackTau: 0.04,
-      maxRateRpmPerSec: 7400,
+      maxRateRpmPerSec: 7600,
       upshiftEasePower: 1.48,
       downshiftEasePower: 1.25,
     },
   },
-  wheelCircumferenceM: 2.05,
+  // Spec §4.6: tyre 2.07 m
+  wheelCircumferenceM: 2.07,
   throttle: { attackTau: 0.05, releaseTau: 0.16, directWeight: 0.66 },
   overrun: {
     probability: 0.28,

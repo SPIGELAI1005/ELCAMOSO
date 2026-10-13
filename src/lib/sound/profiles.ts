@@ -171,21 +171,23 @@ const GT_BOX = {
   shiftSmoothing: 0.16,
 };
 
-// Racing V10 (high-rev-v10): 7-speed DCT, wider 1st/2nd spread (Huracan-inspired)
-// rpm/kmh: G1=119, G2=74, G3=55, G4=45, G5=36, G6=30, G7=26
+// Racing V10 (high-rev-v10): Spec §4.5 - 6-speed ASG-type (LFA-class)
+// Ratios: 3.231/2.188/1.609/1.233/1.000/0.794, final 4.10, tyre 2.19m
+// rpm/kmh: G1=101, G2=68, G3=50, G4=38, G5=31, G6=25
 const V10_BOX = {
-  gearRatios: [119, 74, 55, 45, 36, 30, 26],
-  idleRpm: 850,
-  redlineRpm: 8500,
+  gearRatios: [101, 68, 50, 38, 31, 25],
+  idleRpm: 1000,
+  redlineRpm: 9000,
   shiftSmoothing: 0.08,
 };
 
-// Race Car (flat-plane-v8-track): 8-speed DCT (Z06-inspired), finalDrive 2.73
-// rpm/kmh: G1=101, G2=66, G3=46, G4=36, G5=28, G6=23, G7=19, G8=14
+// Race Car (flat-plane-v8-track): Spec §4.6 - 458-type 7-speed DCT
+// Ratios: 3.08/2.18/1.63/1.29/1.03/0.84/0.69, final 5.14, tyre 2.07m
+// rpm/kmh: G1=128, G2=90, G3=68, G4=53, G5=43, G6=35, G7=29
 const TRACK_V8_BOX = {
-  gearRatios: [101, 66, 46, 36, 28, 23, 19, 14],
-  idleRpm: 900,
-  redlineRpm: 8600,
+  gearRatios: [128, 90, 68, 53, 43, 35, 29],
+  idleRpm: 1000,
+  redlineRpm: 9000,
   shiftSmoothing: 0.06,
 };
 
