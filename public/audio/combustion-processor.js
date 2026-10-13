@@ -239,9 +239,9 @@ class CombustionExcitationProcessor extends AudioWorkletProcessor {
     const lpCoef = 1 - Math.exp((-2 * Math.PI * burstLpHz) / sampleRate);
     const hpCoef = 1 - Math.exp((-2 * Math.PI * burstHpHz) / sampleRate);
 
-    // Moderate amplitude spread increase for cycle-to-cycle variation (spectral texture).
-    // Balanced: enough texture to avoid static buzzer but not excessive for turbo profiles.
-    const ampSpread = 0.08 + (1 - load) * 0.10 + irregularity * 0.48;
+    // Cycle-to-cycle amplitude jitter: more variation at cruise, less at high load for clean harmonics.
+    // irregularity contribution also reduced at high load to keep firing share ~0.55+.
+    const ampSpread = 0.06 + (1 - load) * 0.12 + irregularity * (0.32 + (1 - load) * 0.16);
     const rateComp = Math.min(2, Math.max(0.6, Math.pow(100 / Math.max(20, firingHz), 0.35)));
     const timeSpread = 0.015 + irregularity * 0.12;
     const wanderInc = (this.wanderRate * 2 * Math.PI) / sampleRate;
@@ -363,13 +363,14 @@ class CombustionExcitationProcessor extends AudioWorkletProcessor {
       }
       const wander = 1 + Math.sin(this.wanderPhase) * this.wanderDepth;
 
-      // Increased texture components for spectral flatness 0.03-0.08 vs 0.008-0.036.
+      // Texture adds cycle-to-cycle variation for spectral interest.
+      // Scale DOWN with load: more texture at cruise for interest, less at pull so harmonics dominate.
       // body: main tonal, edge: transient grit, rush: burst noise, texture: continuous variation
       const body = this.env * (0.72 + this.grit * 0.18) * wander;
       const edge = this.bright * this.grit * 0.28;
       const rush = this.burst * band * 0.75;
-      const texture = band * (0.04 + load * 0.06) * (0.6 + this.env * 0.4);
-      const raw = (body + edge + rush + texture) * (0.6 + intensity * 0.4) * 0.85;
+      const texture = band * (0.05 + (1 - load) * 0.04) * (0.6 + this.env * 0.4);
+      const raw = (body + edge + rush + texture) * (0.6 + intensity * 0.4) * 0.88;
 
       const sample = raw - this.previousRaw + 0.9975 * this.dcBlocked;
       this.previousRaw = raw;

@@ -118,9 +118,10 @@ const AMERICAN_V8: AcousticEngineConfig = {
   architecture: "cross-plane-v8-lope",
   banks: "v90",
   architectureCode: 1,
-  // Design: strong idle lope (20-30% amplitude jitter) with visible pulse irregularity.
+  // Design: strong idle lope (25-35% amplitude jitter) with visible pulse irregularity.
   // Spec §NEW-E: American Muscle V8 needs its idle lope to be audible and characterful.
-  idleIrregularity: 0.55,
+  // Raised from 0.55 to 0.68 to restore lumpy idle (0.21 → 0.12 regression).
+  idleIrregularity: 0.68,
   exhaustPulse: 0.98,
   intakePresence: 0.26,
   mechanicalIntensity: 0.2,
@@ -135,8 +136,11 @@ const AMERICAN_V8: AcousticEngineConfig = {
   exhaustFormantsHz: [78, 156, 312, 580],
   intakeFormantsHz: [360, 820, 1380],
   bodyResonanceHz: [86, 172, 390],
-  supportRatios: [1, 2, 2.5, 3, 4],
-  supportWeights: [0.88, 0.66, 0.14, 0.3, 0.11],
+  // Cross-plane half-orders (2, 6) define the V8 burble character.
+  // Crank order 2 = engine half-order (burble), order 6 = 3× half-order rumble.
+  // Weights boosted for 2 (0.66→0.82) and added 6 (0.38) to restore [4,2,8] top orders.
+  supportRatios: [1, 2, 2.5, 3, 4, 6],
+  supportWeights: [0.88, 0.82, 0.14, 0.3, 0.15, 0.38],
   forcedInduction: false,
   bodyBrightness: 0.36,
   redlineRpm: 6000,

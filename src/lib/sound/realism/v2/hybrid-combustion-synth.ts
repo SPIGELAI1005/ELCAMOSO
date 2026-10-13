@@ -343,11 +343,11 @@ export class HybridCombustionSynth {
 
     let nodes = 0;
     this.combustionBus = ctx.createGain();
-    this.combustionBus.gain.value = 0.58;
+    this.combustionBus.gain.value = 0.66;
     this.intakeBus = ctx.createGain();
-    this.intakeBus.gain.value = 0.32;
+    this.intakeBus.gain.value = 0.38;
     this.supportBus = ctx.createGain();
-    this.supportBus.gain.value = 0.18;
+    this.supportBus.gain.value = 0.24;
     this.sampleBus = ctx.createGain();
     this.sampleBus.gain.value = 0.0001;
     nodes += 4;
@@ -771,12 +771,13 @@ export class HybridCombustionSynth {
 
     // Combustion energy: load changes timbre path, not only loudness.
     // Raised floor (0.32) + reduced multipliers for 6-9 dB cruise-to-pull gap (was 14-17 dB).
+    // Raised intensity floor (0.32→0.38) to close cruise gap against World sounds.
     let intensity =
-      0.32 +
-      demand * 0.24 +
-      load * 0.22 +
-      rpmNorm * 0.12 * (0.45 + demand * 0.55) +
-      load * demand * cfg.highLoadEnrichment * 0.15;
+      0.38 +
+      demand * 0.22 +
+      load * 0.18 +
+      rpmNorm * 0.10 * (0.45 + demand * 0.55) +
+      load * demand * cfg.highLoadEnrichment * 0.12;
     if (raw) {
       // At fixed RPM, load still opens pulse energy (not a global gain knob).
       intensity *= 0.9 + load * 0.22 + demand * (0.08 + raw.loadBalanceBias * 0.1);
@@ -882,8 +883,8 @@ export class HybridCombustionSynth {
     });
     this.diagnostics.orderHz = orderHz;
     if (this.supportBus) {
-      // Raised floor (0.38) to keep cruise audible; target 6-9 dB pull-cruise gap.
-      const supportFloor = 0.38;
+      // Raised floor (0.45) to keep cruise audible; target 8-10 dB pull-cruise gap.
+      const supportFloor = 0.45;
       const supportLoad = load * 0.06 + demand * 0.05;
       targetParam(
         this.supportBus.gain,
@@ -900,10 +901,10 @@ export class HybridCombustionSynth {
     if (this.combustionBus) {
       // Bus level is the one place loudness follows load; the stages before it are
       // mostly timbre so the chain does not compound into a large cruise-to-pull gap.
-      // Raised floor (0.72) and reduced load contribution to target 6-9 dB gap (was 14-17 dB).
+      // Raised floor (0.78) and reduced load contribution to target 8-10 dB gap (was 11-14 dB).
       // Overall engine loudness raised to match World sounds (~-13 LUFS).
-      const partThrottleFloor = 0.72;
-      const loadContrib = load * 0.12 + demand * 0.1;
+      const partThrottleFloor = 0.78;
+      const loadContrib = load * 0.10 + demand * 0.08;
       const body =
         (partThrottleFloor + loadContrib) *
         (1 + bark * 0.5) *
