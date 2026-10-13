@@ -202,7 +202,9 @@ describe("Prompt 07 all-profile finite / lifecycle", () => {
             if (d && "combustionGain" in d && typeof d.combustionGain === "number") {
               expect(Number.isFinite(d.combustionGain), `${id}/${regime.name}/combustion`).toBe(true);
               expect(d.combustionGain, `${id}/${regime.name}`).toBeGreaterThanOrEqual(0);
-              expect(d.combustionGain, `${id}/${regime.name}`).toBeLessThan(2);
+              // Raised from 2 to 5 to accommodate per-engine outputTrimDb loudness normalization
+              // (+11 dB superbike = ~3.55x linear; max total ~4.3 at full load with character scaling)
+              expect(d.combustionGain, `${id}/${regime.name}`).toBeLessThan(5);
             }
             if (d && "intakeGain" in d && typeof d.intakeGain === "number") {
               expect(Number.isFinite(d.intakeGain), `${id}/${regime.name}/intake`).toBe(true);
@@ -248,7 +250,8 @@ describe("Prompt 07 all-profile finite / lifecycle", () => {
       );
       const d = synth.getDiagnostics();
       expect(Number.isFinite(d.combustionGain)).toBe(true);
-      expect(d.combustionGain).toBeLessThan(2);
+      // Raised from 2 to 5 to accommodate per-engine outputTrimDb loudness normalization
+      expect(d.combustionGain).toBeLessThan(5);
       synth.dispose();
     }
   });
