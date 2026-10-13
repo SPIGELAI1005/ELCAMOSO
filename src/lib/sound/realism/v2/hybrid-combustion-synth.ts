@@ -97,11 +97,7 @@ export interface HybridCombustionDiagnostics {
   audioContextState: string;
   sampleState: "unavailable" | "loading" | "ready" | "partial" | "failed";
   sampleFallbackReason:
-    | "none"
-    | "no-approved-assets"
-    | "no-load-bank"
-    | "rate-out-of-range"
-    | "decode-failed";
+    "none" | "no-approved-assets" | "no-load-bank" | "rate-out-of-range" | "decode-failed";
   activeSampleIds: string[];
   /**
    * Required Muscle pilot regions with no approved sample entry.
@@ -207,7 +203,6 @@ const LEGACY_BARK_DELAY = 0.13;
 
 /** Pipe-IR early reflections for a ~1 m exhaust tract plus a short diffuse tail. */
 const PIPE_IR_SECONDS = 0.07;
-
 
 /**
  * Drop-in orchestrator for combustion profiles under Realism V2.2.
@@ -759,10 +754,7 @@ export class HybridCombustionSynth {
     const raw = this.rawMechanical;
     const irregularity = Math.min(
       1,
-      cfg.idleIrregularity *
-        (raw?.idleIrregularityScale ?? 1) *
-        idleGate *
-        (overrun ? 0.35 : 1) +
+      cfg.idleIrregularity * (raw?.idleIrregularityScale ?? 1) * idleGate * (overrun ? 0.35 : 1) +
         0.08 +
         (1 - load) * 0.06,
     );
@@ -777,7 +769,7 @@ export class HybridCombustionSynth {
       0.38 +
       demand * 0.22 +
       load * 0.18 +
-      rpmNorm * 0.10 * (0.45 + demand * 0.55) +
+      rpmNorm * 0.1 * (0.45 + demand * 0.55) +
       load * demand * cfg.highLoadEnrichment * 0.12;
     if (raw) {
       // At fixed RPM, load still opens pulse energy (not a global gain knob).
@@ -819,9 +811,7 @@ export class HybridCombustionSynth {
       // Cruise keeps a body; full load adds pressure. Together with the excitation
       // this holds the cruise-to-full-load span near 12-16 dB (cabin-plausible).
       const loadLift =
-        0.7 +
-        load * (0.3 + cfg.loadContrast * 0.2) +
-        demand * (0.1 + cfg.loadContrast * 0.1);
+        0.7 + load * (0.3 + cfg.loadContrast * 0.2) + demand * (0.1 + cfg.loadContrast * 0.1);
       const upperRpm = i > 1 ? rpmNorm * cfg.upperRpmEnergy * (0.12 + load * 0.28) : 0;
       const enrich = 1 + (i > 1 ? load * cfg.highLoadEnrichment * 0.55 + upperRpm : 0);
       const dark = 1 - cfg.bodyBrightness * 0.22;
@@ -906,11 +896,9 @@ export class HybridCombustionSynth {
       // Raised floor (0.78) and reduced load contribution to target 8-10 dB gap (was 11-14 dB).
       // Overall engine loudness raised to match World sounds (~-13 LUFS).
       const partThrottleFloor = 0.78;
-      const loadContrib = load * 0.10 + demand * 0.08;
+      const loadContrib = load * 0.1 + demand * 0.08;
       const body =
-        (partThrottleFloor + loadContrib) *
-        (1 + bark * 0.5) *
-        (raw?.combustionGainScale ?? 1);
+        (partThrottleFloor + loadContrib) * (1 + bark * 0.5) * (raw?.combustionGainScale ?? 1);
       const phaseMul =
         shiftPhase === "torque_cut" || shiftPhase === "disengage"
           ? 0.55
@@ -1008,12 +996,7 @@ export class HybridCombustionSynth {
         audioTime,
         0.08,
       );
-      targetParam(
-        this.turbo.filter.frequency,
-        1500 + spool * 1900 + rpmNorm * 500,
-        audioTime,
-        0.1,
-      );
+      targetParam(this.turbo.filter.frequency, 1500 + spool * 1900 + rpmNorm * 500, audioTime, 0.1);
       if (
         pt?.boostRelease &&
         !this.lastBoostRelease &&
@@ -1127,10 +1110,8 @@ export class HybridCombustionSynth {
           shiftIntensity: this.shiftIntensity,
           audioNowSec: audioTime,
           audioNowMs: nowMs,
-          torqueCutMs:
-            this.drivetrain.powertrain.transmission.shift.upshiftDurationMs * 0.45,
-          recoveryMs:
-            this.drivetrain.powertrain.transmission.shift.upshiftDurationMs * 0.35,
+          torqueCutMs: this.drivetrain.powertrain.transmission.shift.upshiftDurationMs * 0.45,
+          recoveryMs: this.drivetrain.powertrain.transmission.shift.upshiftDurationMs * 0.35,
         });
         this.diagnostics.lastShiftSequenceId = plan.sequenceId;
         this.diagnostics.eventCounts.shift += 1;
@@ -1230,7 +1211,10 @@ export class HybridCombustionSynth {
       ) {
         const down = pt.shiftDirection === "down";
         const demand = pt.driverDemand ?? state.throttle;
-        this.armBark(audioTime, ((down ? 0.2 : 0.12) + demand * 0.16) * engagement.recoveryBarkScale);
+        this.armBark(
+          audioTime,
+          ((down ? 0.2 : 0.12) + demand * 0.16) * engagement.recoveryBarkScale,
+        );
       }
       this.prevPowertrain = { ...pt };
       this.prevSpeedKmh = speedKmh;
@@ -1272,7 +1256,8 @@ export class HybridCombustionSynth {
     if (!voice) return;
     const { kind, variant, strength } = input;
     const peak =
-      VOICE_PEAK[voiceId] * (PULSE_FLOOR + (1 - PULSE_FLOOR) * clamp01(variant.intensity * strength));
+      VOICE_PEAK[voiceId] *
+      (PULSE_FLOOR + (1 - PULSE_FLOOR) * clamp01(variant.intensity * strength));
     if (peak <= 0.001) return;
 
     // Spec §NEW-D: Remove broadband clicks at gear changes with proper shift envelope.

@@ -18,7 +18,8 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
     family: familyForProfile("gt-v8"),
     intendedIdentity: "Polished cross-plane GT V8 — weight with restraint, not muscle lope",
     previousSource: "Realism V2 HybridCombustionSynth + GT_V8 acoustic archetype",
-    diagnosedProblem: "Baseline: slightly thin cruise body vs design promise; intake can compete with exhaust under light load",
+    diagnosedProblem:
+      "Baseline: slightly thin cruise body vs design promise; intake can compete with exhaust under light load",
     chosenRenderer: "realism-v2-hybrid",
     layerOrderBalance: "Exhaust/combustion lead; intake secondary; mechanical tertiary",
     rpmLoadShaping: "Pull-away body; cruise quieter; load opens enrichment",
@@ -26,14 +27,15 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
     harshnessTreatment: "Keep GT edge; no blanket LPF",
     transmissionEvents: "VT shift accents when intensity > 0",
     sampleStatus: "hybrid-ready-awaiting-banks",
-    changedCode: ["acoustic-engine.ts via applyAcousticCatalogTuning","by-profile.ts:gt-v8"],
+    changedCode: ["acoustic-engine.ts via applyAcousticCatalogTuning", "by-profile.ts:gt-v8"],
     baselineCapturePath: "artifacts/audio-lab/prompt-07-catalog/gt-v8__baseline",
     afterCapturePath: "artifacts/audio-lab/prompt-07-catalog/gt-v8__after",
     automatedCheck: "pending",
     humanListeningStatus: "unverified",
     deviceStatus: "unverified",
     outcome: "combustion-tuned",
-    audibleRationale: "GT stays smoother than muscle: lower idle irregularity path, higher upperRpmEnergy than muscle family",
+    audibleRationale:
+      "GT stays smoother than muscle: lower idle irregularity path, higher upperRpmEnergy than muscle family",
     designFamilyHint: "cross-plane-gt-v8",
     acousticOverlay: {
       exhaustPulse: 0.8,
@@ -42,11 +44,7 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
       bodyBrightness: 0.4,
       loadContrast: 0.6,
       upperRpmEnergy: 0.52,
-      bodyResonanceHz: [
-        108,
-        228,
-        490
-      ]
+      bodyResonanceHz: [108, 228, 490],
     },
     experienceOverlay: {
       phases: {
@@ -54,31 +52,40 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
         accelerationTexture: 1.14,
         // Raised from 0.64 to 0.88 to close cruise-pull gap (target 8-10 dB)
         cruiseIntrusiveScale: 0.88,
-        releaseCharacter: 0.46
-      }
+        releaseCharacter: 0.46,
+      },
     },
   },
   "american-muscle-v8": {
     profileId: "american-muscle-v8",
     family: familyForProfile("american-muscle-v8"),
-    intendedIdentity: "Cross-plane muscle V8 — textured exhaust pulse groups, restrained intake, LUMPY IDLE BURBLE",
+    intendedIdentity:
+      "Cross-plane muscle V8 — textured exhaust pulse groups, restrained intake, LUMPY IDLE BURBLE",
     previousSource: "V2 hybrid + AMERICAN_V8; V3 raw-mechanical opt-in pilot",
-    diagnosedProblem: "Pilot review: risk of modeling all unevenness as global random firing; intake/whine historically too present; ORDER 2 (half-order burble) must be audible",
+    diagnosedProblem:
+      "Pilot review: risk of modeling all unevenness as global random firing; intake/whine historically too present; ORDER 2 (half-order burble) must be audible",
     chosenRenderer: "realism-v3-raw-mechanical-opt-in",
-    layerOrderBalance: "Bank/exhaust pulse groups dominate; intake restrained; mechanical soft; ORDER 2 BURBLE MUST BE PROMINENT",
+    layerOrderBalance:
+      "Bank/exhaust pulse groups dominate; intake restrained; mechanical soft; ORDER 2 BURBLE MUST BE PROMINENT",
     rpmLoadShaping: "Idle lope; load opens exhaust mass; cruise at spec level",
-    bassBodyAdjustment: "Deeper body resonances vs GT; low-order body via formants (supportWeights are crank-order metadata; live only with VITE_COMBUSTION_PROFILE_ORDER_BANDS)",
+    bassBodyAdjustment:
+      "Deeper body resonances vs GT; low-order body via formants (supportWeights are crank-order metadata; live only with VITE_COMBUSTION_PROFILE_ORDER_BANDS)",
     harshnessTreatment: "Soften metallic grit; keep burble-adjacent overrun",
     transmissionEvents: "Shift choreography + intensity; V3 pilots share path",
     sampleStatus: "hybrid-ready-awaiting-banks",
-    changedCode: ["by-profile.ts:american-muscle-v8","raw-mechanical-presets.ts (V3 flag)","applyAcousticCatalogTuning"],
+    changedCode: [
+      "by-profile.ts:american-muscle-v8",
+      "raw-mechanical-presets.ts (V3 flag)",
+      "applyAcousticCatalogTuning",
+    ],
     baselineCapturePath: "artifacts/audio-lab/prompt-07-catalog/american-muscle-v8__baseline",
     afterCapturePath: "artifacts/audio-lab/prompt-07-catalog/american-muscle-v8__after",
     automatedCheck: "pending",
     humanListeningStatus: "unverified",
     deviceStatus: "unverified",
     outcome: "combustion-tuned",
-    audibleRationale: "Stronger lope/exhaust vs GT; intentionally lower upperRpmEnergy so it does not race-whine; ORDER 2 BURBLE restored via high idleIrregularity",
+    audibleRationale:
+      "Stronger lope/exhaust vs GT; intentionally lower upperRpmEnergy so it does not race-whine; ORDER 2 BURBLE restored via high idleIrregularity",
     designFamilyHint: "cross-plane-muscle-v8",
     acousticOverlay: {
       exhaustPulse: 0.99,
@@ -90,17 +97,8 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
       loadContrast: 0.9,
       upperRpmEnergy: 0.26,
       combustionSharpness: 0.48,
-      bodyResonanceHz: [
-        82,
-        164,
-        380
-      ],
-      exhaustFormantsHz: [
-        74,
-        148,
-        300,
-        560
-      ]
+      bodyResonanceHz: [82, 164, 380],
+      exhaustFormantsHz: [74, 148, 300, 560],
     },
     experienceOverlay: {
       phases: {
@@ -110,16 +108,18 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
         accelerationTexture: 1.2,
         // Raised from 0.62 to 0.92 to close cruise-pull gap
         cruiseIntrusiveScale: 0.92,
-        releaseCharacter: 0.82
-      }
+        releaseCharacter: 0.82,
+      },
     },
   },
   "flat-six-sport": {
     profileId: "flat-six-sport",
     family: familyForProfile("flat-six-sport"),
-    intendedIdentity: "Flat-six sports — mechanical texture, balanced midrange, strong body without muscle rumble",
+    intendedIdentity:
+      "Flat-six sports — mechanical texture, balanced midrange, strong body without muscle rumble",
     previousSource: "V2 hybrid + FLAT_SIX; V3 raw-mechanical opt-in pilot",
-    diagnosedProblem: "Risk of cross-plane rumble bleed; midrange mechanical under-represented vs intake scream",
+    diagnosedProblem:
+      "Risk of cross-plane rumble bleed; midrange mechanical under-represented vs intake scream",
     chosenRenderer: "realism-v3-raw-mechanical-opt-in",
     layerOrderBalance: "Intake + mechanical lead; exhaust balanced; no muscle bank lope",
     rpmLoadShaping: "Body at low/mid; upper harmonics with RPM",
@@ -127,14 +127,19 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
     harshnessTreatment: "Narrow tame of grit; keep mechanical bite",
     transmissionEvents: "Sport VT; V3 pilot path",
     sampleStatus: "hybrid-ready-awaiting-banks",
-    changedCode: ["by-profile.ts:flat-six-sport","raw-mechanical-presets.ts","applyAcousticCatalogTuning"],
+    changedCode: [
+      "by-profile.ts:flat-six-sport",
+      "raw-mechanical-presets.ts",
+      "applyAcousticCatalogTuning",
+    ],
     baselineCapturePath: "artifacts/audio-lab/prompt-07-catalog/flat-six-sport__baseline",
     afterCapturePath: "artifacts/audio-lab/prompt-07-catalog/flat-six-sport__after",
     automatedCheck: "pending",
     humanListeningStatus: "unverified",
     deviceStatus: "unverified",
     outcome: "combustion-tuned",
-    audibleRationale: "Raises mechanicalIntensity vs family default; lowers exhaustPulse so it cannot become V8 rumble",
+    audibleRationale:
+      "Raises mechanicalIntensity vs family default; lowers exhaustPulse so it cannot become V8 rumble",
     designFamilyHint: "flat-six-sport",
     acousticOverlay: {
       exhaustPulse: 0.52,
@@ -144,11 +149,7 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
       upperRpmEnergy: 0.88,
       intakeLoadResponse: 0.97,
       combustionSharpness: 0.64,
-      bodyResonanceHz: [
-        150,
-        330,
-        700
-      ]
+      bodyResonanceHz: [150, 330, 700],
     },
     experienceOverlay: {
       phases: {
@@ -156,14 +157,15 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
         accelerationTexture: 1.26,
         // Raised from 0.56 to 0.84 to close cruise-pull gap (target 8-10 dB)
         cruiseIntrusiveScale: 0.84,
-        releaseCharacter: 0.45
-      }
+        releaseCharacter: 0.45,
+      },
     },
   },
   "turbo-inline-6": {
     profileId: "turbo-inline-6",
     family: familyForProfile("turbo-inline-6"),
-    intendedIdentity: "Turbo inline-six — smooth body + load-responsive spool; no constant idle whistle",
+    intendedIdentity:
+      "Turbo inline-six — smooth body + load-responsive spool; no constant idle whistle",
     previousSource: "V2 hybrid + TURBO_I6",
     diagnosedProblem: "Baseline intakePresence can read as constant whistle at idle/cruise",
     chosenRenderer: "realism-v2-hybrid",
@@ -173,7 +175,11 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
     harshnessTreatment: "Idle intake capped; enrichment under load only",
     transmissionEvents: "Turbo release character; shift accents when engaged",
     sampleStatus: "hybrid-ready-awaiting-banks",
-    changedCode: ["by-profile.ts:turbo-inline-6","applyAcousticCatalogTuning","applyExperienceCatalogTuning"],
+    changedCode: [
+      "by-profile.ts:turbo-inline-6",
+      "applyAcousticCatalogTuning",
+      "applyExperienceCatalogTuning",
+    ],
     baselineCapturePath: "artifacts/audio-lab/prompt-07-catalog/turbo-inline-6__baseline",
     afterCapturePath: "artifacts/audio-lab/prompt-07-catalog/turbo-inline-6__after",
     automatedCheck: "pending",
@@ -189,7 +195,7 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
       overrunCharacter: 0.38,
       bodyBrightness: 0.45,
       exhaustPulse: 0.55,
-      loadContrast: 0.7
+      loadContrast: 0.7,
     },
     experienceOverlay: {
       phases: {
@@ -197,13 +203,13 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
         // Raised from 0.56 to 0.84 to close cruise-pull gap (target 8-10 dB)
         cruiseIntrusiveScale: 0.84,
         releaseCharacter: 0.72,
-        idleCharacter: 0.9
+        idleCharacter: 0.9,
       },
       aspirationDynamics: {
         attackSeconds: 0.72,
         decaySeconds: 0.48,
-        minimumReleaseState: 0.55
-      }
+        minimumReleaseState: 0.55,
+      },
     },
   },
   "racing-v10": {
@@ -219,14 +225,15 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
     harshnessTreatment: "Sharpness slightly down; no dulling LPF",
     transmissionEvents: "Fast tau; sport shifts",
     sampleStatus: "hybrid-ready-awaiting-banks",
-    changedCode: ["by-profile.ts:racing-v10","applyAcousticCatalogTuning"],
+    changedCode: ["by-profile.ts:racing-v10", "applyAcousticCatalogTuning"],
     baselineCapturePath: "artifacts/audio-lab/prompt-07-catalog/racing-v10__baseline",
     afterCapturePath: "artifacts/audio-lab/prompt-07-catalog/racing-v10__after",
     automatedCheck: "pending",
     humanListeningStatus: "unverified",
     deviceStatus: "unverified",
     outcome: "combustion-tuned",
-    audibleRationale: "Higher upperRpmEnergy than race-car flat-plane; slightly darker bodyBrightness than race-car",
+    audibleRationale:
+      "Higher upperRpmEnergy than race-car flat-plane; slightly darker bodyBrightness than race-car",
     designFamilyHint: "high-rev-race",
     acousticOverlay: {
       upperRpmEnergy: 0.97,
@@ -235,11 +242,7 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
       highLoadEnrichment: 0.88,
       exhaustPulse: 0.68,
       mechanicalIntensity: 0.62,
-      bodyResonanceHz: [
-        135,
-        300,
-        740
-      ]
+      bodyResonanceHz: [135, 300, 740],
     },
     experienceOverlay: {
       phases: {
@@ -247,9 +250,9 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
         accelerationTexture: 1.28,
         // Raised from 0.5 to 0.82 to close cruise-pull gap (target 8-10 dB)
         cruiseIntrusiveScale: 0.82,
-        releaseCharacter: 0.48
+        releaseCharacter: 0.48,
       },
-      transitionTauSeconds: 0.05
+      transitionTauSeconds: 0.05,
     },
   },
   "race-car": {
@@ -265,7 +268,7 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
     harshnessTreatment: "Narrow sharpness trim only",
     transmissionEvents: "Very fast tau",
     sampleStatus: "hybrid-ready-awaiting-banks",
-    changedCode: ["by-profile.ts:race-car","applyAcousticCatalogTuning"],
+    changedCode: ["by-profile.ts:race-car", "applyAcousticCatalogTuning"],
     baselineCapturePath: "artifacts/audio-lab/prompt-07-catalog/race-car__baseline",
     afterCapturePath: "artifacts/audio-lab/prompt-07-catalog/race-car__after",
     automatedCheck: "pending",
@@ -281,11 +284,7 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
       highLoadEnrichment: 0.85,
       exhaustPulse: 0.72,
       mechanicalIntensity: 0.68,
-      bodyResonanceHz: [
-        150,
-        340,
-        820
-      ]
+      bodyResonanceHz: [150, 340, 820],
     },
     experienceOverlay: {
       phases: {
@@ -293,15 +292,16 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
         accelerationTexture: 1.3,
         // Raised from 0.5 to 0.82 to close cruise-pull gap (target 8-10 dB)
         cruiseIntrusiveScale: 0.82,
-        releaseCharacter: 0.56
+        releaseCharacter: 0.56,
       },
-      transitionTauSeconds: 0.042
+      transitionTauSeconds: 0.042,
     },
   },
   "rally-car": {
     profileId: "rally-car",
     family: familyForProfile("rally-car"),
-    intendedIdentity: "Turbo inline-three rally — aggressive spool, overrun, gravel-adjacent mechanical",
+    intendedIdentity:
+      "Turbo inline-three rally — aggressive spool, overrun, gravel-adjacent mechanical",
     previousSource: "V2 hybrid + RALLY_TURBO_3",
     diagnosedProblem: "Constant boost hiss risk; overrun can clip-crackle",
     chosenRenderer: "realism-v2-hybrid",
@@ -311,14 +311,15 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
     harshnessTreatment: "Sharpness down vs archetype to avoid crackle",
     transmissionEvents: "Dense events allowed; still intensity-gated",
     sampleStatus: "hybrid-ready-awaiting-banks",
-    changedCode: ["by-profile.ts:rally-car","applyAcousticCatalogTuning"],
+    changedCode: ["by-profile.ts:rally-car", "applyAcousticCatalogTuning"],
     baselineCapturePath: "artifacts/audio-lab/prompt-07-catalog/rally-car__baseline",
     afterCapturePath: "artifacts/audio-lab/prompt-07-catalog/rally-car__after",
     automatedCheck: "pending",
     humanListeningStatus: "unverified",
     deviceStatus: "unverified",
     outcome: "combustion-tuned",
-    audibleRationale: "Faster aspiration attack than turbo-inline-6; higher overrunCharacter; not diesel",
+    audibleRationale:
+      "Faster aspiration attack than turbo-inline-6; higher overrunCharacter; not diesel",
     designFamilyHint: "turbo-inline-6",
     acousticOverlay: {
       intakePresence: 0.5,
@@ -327,25 +328,25 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
       combustionSharpness: 0.62,
       loadContrast: 0.88,
       upperRpmEnergy: 0.66,
-      idleIrregularity: 0.22
+      idleIrregularity: 0.22,
     },
     experienceOverlay: {
       phases: {
         accelerationTexture: 1.22,
         // Raised from 0.52 to 0.84 to close cruise-pull gap (target 8-10 dB)
         cruiseIntrusiveScale: 0.84,
-        releaseCharacter: 0.84
+        releaseCharacter: 0.84,
       },
       aspirationDynamics: {
         attackSeconds: 0.42,
         decaySeconds: 0.3,
-        minimumReleaseState: 0.55
+        minimumReleaseState: 0.55,
       },
       variation: {
         depth: 0.028,
         minEventCooldownSeconds: 3.5,
-        maxEventVoices: 2
-      }
+        maxEventVoices: 2,
+      },
     },
   },
   "motorcycle-superbike": {
@@ -361,7 +362,7 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
     harshnessTreatment: "Sharpness trim; keep scream",
     transmissionEvents: "Quick shifts; low variation depth",
     sampleStatus: "hybrid-ready-awaiting-banks",
-    changedCode: ["by-profile.ts:motorcycle-superbike","applyAcousticCatalogTuning"],
+    changedCode: ["by-profile.ts:motorcycle-superbike", "applyAcousticCatalogTuning"],
     baselineCapturePath: "artifacts/audio-lab/prompt-07-catalog/motorcycle-superbike__baseline",
     afterCapturePath: "artifacts/audio-lab/prompt-07-catalog/motorcycle-superbike__after",
     automatedCheck: "pending",
@@ -377,25 +378,21 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
       exhaustPulse: 0.5,
       intakePresence: 0.74,
       mechanicalIntensity: 0.64,
-      bodyResonanceHz: [
-        190,
-        440,
-        960
-      ]
+      bodyResonanceHz: [190, 440, 960],
     },
     experienceOverlay: {
       phases: {
         idleCharacter: 0.7,
         accelerationTexture: 1.32,
         // Raised from 0.48 to 0.80 to close cruise-pull gap (target 8-10 dB)
-        cruiseIntrusiveScale: 0.80,
-        releaseCharacter: 0.42
+        cruiseIntrusiveScale: 0.8,
+        releaseCharacter: 0.42,
       },
       transitionTauSeconds: 0.04,
       variation: {
         depth: 0.007,
-        minEventCooldownSeconds: 5
-      }
+        minEventCooldownSeconds: 5,
+      },
     },
   },
   "big-twin": {
@@ -403,7 +400,8 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
     family: familyForProfile("big-twin"),
     intendedIdentity: "V-twin cruiser — loping uneven pulse, deep exhaust, restrained intake",
     previousSource: "V2 hybrid + V_TWIN",
-    diagnosedProblem: "Can thin out under cruise; unevenness must stay architectural not random noise",
+    diagnosedProblem:
+      "Can thin out under cruise; unevenness must stay architectural not random noise",
     chosenRenderer: "realism-v2-hybrid",
     layerOrderBalance: "Exhaust pulse + idle irregularity; intake quiet",
     rpmLoadShaping: "Low-RPM mass; slow tau",
@@ -411,14 +409,15 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
     harshnessTreatment: "Soft sharpness; no crackle",
     transmissionEvents: "Relaxed shift feel",
     sampleStatus: "hybrid-ready-awaiting-banks",
-    changedCode: ["by-profile.ts:big-twin","applyAcousticCatalogTuning"],
+    changedCode: ["by-profile.ts:big-twin", "applyAcousticCatalogTuning"],
     baselineCapturePath: "artifacts/audio-lab/prompt-07-catalog/big-twin__baseline",
     afterCapturePath: "artifacts/audio-lab/prompt-07-catalog/big-twin__after",
     automatedCheck: "pending",
     humanListeningStatus: "unverified",
     deviceStatus: "unverified",
     outcome: "combustion-tuned",
-    audibleRationale: "Uses muscle-family restraint on intake but V-twin architecture; deeper bass than muscle V8",
+    audibleRationale:
+      "Uses muscle-family restraint on intake but V-twin architecture; deeper bass than muscle V8",
     designFamilyHint: "cross-plane-muscle-v8",
     acousticOverlay: {
       idleIrregularity: 0.58,
@@ -428,11 +427,7 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
       bodyBrightness: 0.3,
       upperRpmEnergy: 0.18,
       loadContrast: 0.76,
-      bodyResonanceHz: [
-        55,
-        120,
-        280
-      ]
+      bodyResonanceHz: [55, 120, 280],
     },
     experienceOverlay: {
       phases: {
@@ -441,17 +436,19 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
         accelerationTexture: 1.14,
         // Raised from 0.7 to 0.92 to close cruise-pull gap (target 8-10 dB)
         cruiseIntrusiveScale: 0.92,
-        releaseCharacter: 0.84
+        releaseCharacter: 0.84,
       },
-      transitionTauSeconds: 0.18
+      transitionTauSeconds: 0.18,
     },
   },
   "wiesn-tractor": {
     profileId: "wiesn-tractor",
     family: familyForProfile("wiesn-tractor"),
-    intendedIdentity: "Heavy mechanical / festival tractor — controlled clatter, low-RPM mass (no dedicated diesel archetype)",
+    intendedIdentity:
+      "Heavy mechanical / festival tractor — controlled clatter, low-RPM mass (no dedicated diesel archetype)",
     previousSource: "ImprovedSynth combustion experience; no ACOUSTIC_ENGINE_BY_PROFILE entry",
-    diagnosedProblem: "No diesel acoustic engine; risk of clipping crackle if sharpness pushed; needs procedural mass",
+    diagnosedProblem:
+      "No diesel acoustic engine; risk of clipping crackle if sharpness pushed; needs procedural mass",
     chosenRenderer: "improved-strategy",
     layerOrderBalance: "Combustion/exhaust/mechanical roles via experience; strategy path",
     rpmLoadShaping: "Very slow tau; heavy idle",
@@ -459,30 +456,32 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
     harshnessTreatment: "No clipping crackle — event density low",
     transmissionEvents: "Sparse events",
     sampleStatus: "asset-pending",
-    changedCode: ["by-profile.ts:wiesn-tractor","applyExperienceCatalogTuning"],
+    changedCode: ["by-profile.ts:wiesn-tractor", "applyExperienceCatalogTuning"],
     baselineCapturePath: "artifacts/audio-lab/prompt-07-catalog/wiesn-tractor__baseline",
     afterCapturePath: "artifacts/audio-lab/prompt-07-catalog/wiesn-tractor__after",
     automatedCheck: "pending",
     humanListeningStatus: "unverified",
     deviceStatus: "unverified",
     outcome: "blocked-assets",
-    audibleRationale: "Catalog has no diesel ID; tractor is closest heavy-mechanical — experience-only until acoustic single exists",
+    audibleRationale:
+      "Catalog has no diesel ID; tractor is closest heavy-mechanical — experience-only until acoustic single exists",
     designFamilyHint: "heavy-mechanical",
-    blocker: "No dedicated diesel/single acoustic engine + no approved recordings; procedural experience tune shipped",
+    blocker:
+      "No dedicated diesel/single acoustic engine + no approved recordings; procedural experience tune shipped",
     experienceOverlay: {
       phases: {
         idleCharacter: 1.18,
         pullAwayTexture: 1.08,
         accelerationTexture: 1.06,
         cruiseIntrusiveScale: 0.82,
-        releaseCharacter: 0.8
+        releaseCharacter: 0.8,
       },
       transitionTauSeconds: 0.58,
       variation: {
         depth: 0.02,
         minEventCooldownSeconds: 12,
-        maxEventVoices: 1
-      }
+        maxEventVoices: 1,
+      },
     },
   },
   "cyber-pulse": {
@@ -498,7 +497,7 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
     harshnessTreatment: "Cruise scale down",
     transmissionEvents: "Gearless",
     sampleStatus: "procedural-only",
-    changedCode: ["by-profile.ts:cyber-pulse","applyExperienceCatalogTuning"],
+    changedCode: ["by-profile.ts:cyber-pulse", "applyExperienceCatalogTuning"],
     baselineCapturePath: "artifacts/audio-lab/prompt-07-catalog/cyber-pulse__baseline",
     afterCapturePath: "artifacts/audio-lab/prompt-07-catalog/cyber-pulse__after",
     automatedCheck: "pending",
@@ -513,8 +512,8 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
         accelerationTexture: 1.18,
         cruiseIntrusiveScale: 0.58,
         regenCharacter: 0.92,
-        releaseCharacter: 0.4
-      }
+        releaseCharacter: 0.4,
+      },
     },
   },
   "electric-hypercar": {
@@ -530,7 +529,7 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
     harshnessTreatment: "Cruise intrusion cut",
     transmissionEvents: "Gearless continuous",
     sampleStatus: "procedural-only",
-    changedCode: ["by-profile.ts:electric-hypercar","applyExperienceCatalogTuning"],
+    changedCode: ["by-profile.ts:electric-hypercar", "applyExperienceCatalogTuning"],
     baselineCapturePath: "artifacts/audio-lab/prompt-07-catalog/electric-hypercar__baseline",
     afterCapturePath: "artifacts/audio-lab/prompt-07-catalog/electric-hypercar__after",
     automatedCheck: "pending",
@@ -547,8 +546,8 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
         cruiseIntrusiveScale: 0.5,
         regenCharacter: 1.02,
         releaseCharacter: 0.44,
-        stopTail: 0.28
-      }
+        stopTail: 0.28,
+      },
     },
   },
   "formula-electric": {
@@ -564,7 +563,7 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
     harshnessTreatment: "Lower cruise",
     transmissionEvents: "No shift clacks",
     sampleStatus: "procedural-only",
-    changedCode: ["by-profile.ts:formula-electric","applyExperienceCatalogTuning"],
+    changedCode: ["by-profile.ts:formula-electric", "applyExperienceCatalogTuning"],
     baselineCapturePath: "artifacts/audio-lab/prompt-07-catalog/formula-electric__baseline",
     afterCapturePath: "artifacts/audio-lab/prompt-07-catalog/formula-electric__after",
     automatedCheck: "pending",
@@ -580,8 +579,8 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
         cruiseIntrusiveScale: 0.48,
         regenCharacter: 0.86,
         releaseCharacter: 0.4,
-        stopTail: 0.22
-      }
+        stopTail: 0.22,
+      },
     },
   },
   "neon-drive": {
@@ -597,7 +596,7 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
     harshnessTreatment: "Cruise down",
     transmissionEvents: "Musical events",
     sampleStatus: "not-applicable",
-    changedCode: ["by-profile.ts:neon-drive","applyExperienceCatalogTuning"],
+    changedCode: ["by-profile.ts:neon-drive", "applyExperienceCatalogTuning"],
     baselineCapturePath: "artifacts/audio-lab/prompt-07-catalog/neon-drive__baseline",
     afterCapturePath: "artifacts/audio-lab/prompt-07-catalog/neon-drive__after",
     automatedCheck: "pending",
@@ -611,8 +610,8 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
         accelerationTexture: 1.16,
         cruiseIntrusiveScale: 0.52,
         regenCharacter: 0.68,
-        releaseCharacter: 0.7
-      }
+        releaseCharacter: 0.7,
+      },
     },
   },
   "space-ship": {
@@ -628,7 +627,7 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
     harshnessTreatment: "Cruise moderate",
     transmissionEvents: "Sparse events",
     sampleStatus: "procedural-only",
-    changedCode: ["by-profile.ts:space-ship","applyExperienceCatalogTuning"],
+    changedCode: ["by-profile.ts:space-ship", "applyExperienceCatalogTuning"],
     baselineCapturePath: "artifacts/audio-lab/prompt-07-catalog/space-ship__baseline",
     afterCapturePath: "artifacts/audio-lab/prompt-07-catalog/space-ship__after",
     automatedCheck: "pending",
@@ -642,11 +641,11 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
         accelerationTexture: 1.2,
         cruiseIntrusiveScale: 0.66,
         releaseCharacter: 0.64,
-        stopTail: 0.88
-      }
+        stopTail: 0.88,
+      },
     },
   },
-  "ufo": {
+  ufo: {
     profileId: "ufo",
     family: familyForProfile("ufo"),
     intendedIdentity: "UFO — hovering vehicle-speed drone with event chirps",
@@ -659,7 +658,7 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
     harshnessTreatment: "Softer accel than space-ship",
     transmissionEvents: "Chirp events",
     sampleStatus: "procedural-only",
-    changedCode: ["by-profile.ts:ufo","applyExperienceCatalogTuning"],
+    changedCode: ["by-profile.ts:ufo", "applyExperienceCatalogTuning"],
     baselineCapturePath: "artifacts/audio-lab/prompt-07-catalog/ufo__baseline",
     afterCapturePath: "artifacts/audio-lab/prompt-07-catalog/ufo__after",
     automatedCheck: "pending",
@@ -672,13 +671,13 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
       phases: {
         accelerationTexture: 1.08,
         cruiseIntrusiveScale: 0.6,
-        releaseCharacter: 0.82
+        releaseCharacter: 0.82,
       },
       variation: {
         depth: 0.02,
         minEventCooldownSeconds: 7,
-        maxEventVoices: 1
-      }
+        maxEventVoices: 1,
+      },
     },
   },
   "speed-boat": {
@@ -694,7 +693,7 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
     harshnessTreatment: "Cruise water balance",
     transmissionEvents: "Splash events",
     sampleStatus: "asset-pending",
-    changedCode: ["by-profile.ts:speed-boat","applyExperienceCatalogTuning"],
+    changedCode: ["by-profile.ts:speed-boat", "applyExperienceCatalogTuning"],
     baselineCapturePath: "artifacts/audio-lab/prompt-07-catalog/speed-boat__baseline",
     afterCapturePath: "artifacts/audio-lab/prompt-07-catalog/speed-boat__after",
     automatedCheck: "pending",
@@ -708,8 +707,8 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
         accelerationTexture: 1.18,
         cruiseIntrusiveScale: 0.62,
         releaseCharacter: 0.66,
-        pullAwayTexture: 1.08
-      }
+        pullAwayTexture: 1.08,
+      },
     },
   },
   "cruise-ship": {
@@ -725,7 +724,7 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
     harshnessTreatment: "High cruise scale (presence as bed)",
     transmissionEvents: "Rare horn-like events",
     sampleStatus: "asset-pending",
-    changedCode: ["by-profile.ts:cruise-ship","applyExperienceCatalogTuning"],
+    changedCode: ["by-profile.ts:cruise-ship", "applyExperienceCatalogTuning"],
     baselineCapturePath: "artifacts/audio-lab/prompt-07-catalog/cruise-ship__baseline",
     afterCapturePath: "artifacts/audio-lab/prompt-07-catalog/cruise-ship__after",
     automatedCheck: "pending",
@@ -739,14 +738,14 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
         accelerationTexture: 1.02,
         cruiseIntrusiveScale: 0.78,
         releaseCharacter: 0.82,
-        stopTail: 0.94
+        stopTail: 0.94,
       },
       variation: {
         depth: 0.008,
         minEventCooldownSeconds: 30,
-        maxEventVoices: 1
+        maxEventVoices: 1,
       },
-      transitionTauSeconds: 0.45
+      transitionTauSeconds: 0.45,
     },
   },
   "santa-sleigh": {
@@ -762,7 +761,7 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
     harshnessTreatment: "Lower cruise for fatigue",
     transmissionEvents: "Bell events",
     sampleStatus: "procedural-only",
-    changedCode: ["by-profile.ts:santa-sleigh","applyExperienceCatalogTuning"],
+    changedCode: ["by-profile.ts:santa-sleigh", "applyExperienceCatalogTuning"],
     baselineCapturePath: "artifacts/audio-lab/prompt-07-catalog/santa-sleigh__baseline",
     afterCapturePath: "artifacts/audio-lab/prompt-07-catalog/santa-sleigh__after",
     automatedCheck: "pending",
@@ -775,13 +774,13 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
       phases: {
         accelerationTexture: 1.1,
         cruiseIntrusiveScale: 0.54,
-        releaseCharacter: 0.7
+        releaseCharacter: 0.7,
       },
       variation: {
         depth: 0.024,
         minEventCooldownSeconds: 11,
-        maxEventVoices: 1
-      }
+        maxEventVoices: 1,
+      },
     },
   },
   "wild-west-carriage": {
@@ -797,7 +796,7 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
     harshnessTreatment: "Moderate cruise",
     transmissionEvents: "Creak events",
     sampleStatus: "asset-pending",
-    changedCode: ["by-profile.ts:wild-west-carriage","applyExperienceCatalogTuning"],
+    changedCode: ["by-profile.ts:wild-west-carriage", "applyExperienceCatalogTuning"],
     baselineCapturePath: "artifacts/audio-lab/prompt-07-catalog/wild-west-carriage__baseline",
     afterCapturePath: "artifacts/audio-lab/prompt-07-catalog/wild-west-carriage__after",
     automatedCheck: "pending",
@@ -810,12 +809,12 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
       phases: {
         accelerationTexture: 1.14,
         cruiseIntrusiveScale: 0.62,
-        releaseCharacter: 0.64
+        releaseCharacter: 0.64,
       },
       variation: {
         minEventCooldownSeconds: 13,
-        maxEventVoices: 1
-      }
+        maxEventVoices: 1,
+      },
     },
   },
   "romanian-85-carriage": {
@@ -831,7 +830,7 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
     harshnessTreatment: "Softer accel",
     transmissionEvents: "Few events",
     sampleStatus: "asset-pending",
-    changedCode: ["by-profile.ts:romanian-85-carriage","applyExperienceCatalogTuning"],
+    changedCode: ["by-profile.ts:romanian-85-carriage", "applyExperienceCatalogTuning"],
     baselineCapturePath: "artifacts/audio-lab/prompt-07-catalog/romanian-85-carriage__baseline",
     afterCapturePath: "artifacts/audio-lab/prompt-07-catalog/romanian-85-carriage__after",
     automatedCheck: "pending",
@@ -844,9 +843,9 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
       phases: {
         accelerationTexture: 1.04,
         cruiseIntrusiveScale: 0.74,
-        releaseCharacter: 0.72
+        releaseCharacter: 0.72,
       },
-      transitionTauSeconds: 0.24
+      transitionTauSeconds: 0.24,
     },
   },
   "laughing-machine": {
@@ -862,7 +861,7 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
     harshnessTreatment: "Low cruise",
     transmissionEvents: "Laugh events gated",
     sampleStatus: "procedural-only",
-    changedCode: ["by-profile.ts:laughing-machine","applyExperienceCatalogTuning"],
+    changedCode: ["by-profile.ts:laughing-machine", "applyExperienceCatalogTuning"],
     baselineCapturePath: "artifacts/audio-lab/prompt-07-catalog/laughing-machine__baseline",
     afterCapturePath: "artifacts/audio-lab/prompt-07-catalog/laughing-machine__after",
     automatedCheck: "pending",
@@ -875,12 +874,12 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
       phases: {
         accelerationTexture: 1.14,
         cruiseIntrusiveScale: 0.46,
-        releaseCharacter: 0.56
+        releaseCharacter: 0.56,
       },
       variation: {
         minEventCooldownSeconds: 5.5,
-        maxEventVoices: 1
-      }
+        maxEventVoices: 1,
+      },
     },
   },
   "farting-car": {
@@ -896,7 +895,7 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
     harshnessTreatment: "Very low cruise",
     transmissionEvents: "Fast event cooldown but single voice",
     sampleStatus: "procedural-only",
-    changedCode: ["by-profile.ts:farting-car","applyExperienceCatalogTuning"],
+    changedCode: ["by-profile.ts:farting-car", "applyExperienceCatalogTuning"],
     baselineCapturePath: "artifacts/audio-lab/prompt-07-catalog/farting-car__baseline",
     afterCapturePath: "artifacts/audio-lab/prompt-07-catalog/farting-car__after",
     automatedCheck: "pending",
@@ -909,12 +908,12 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
       phases: {
         accelerationTexture: 1.12,
         cruiseIntrusiveScale: 0.44,
-        releaseCharacter: 0.94
+        releaseCharacter: 0.94,
       },
       variation: {
         minEventCooldownSeconds: 2.4,
-        maxEventVoices: 1
-      }
+        maxEventVoices: 1,
+      },
     },
   },
   "steam-train": {
@@ -930,7 +929,7 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
     harshnessTreatment: "No clipping events",
     transmissionEvents: "Whistle-like sparse events",
     sampleStatus: "asset-pending",
-    changedCode: ["by-profile.ts:steam-train","applyExperienceCatalogTuning"],
+    changedCode: ["by-profile.ts:steam-train", "applyExperienceCatalogTuning"],
     baselineCapturePath: "artifacts/audio-lab/prompt-07-catalog/steam-train__baseline",
     afterCapturePath: "artifacts/audio-lab/prompt-07-catalog/steam-train__after",
     automatedCheck: "pending",
@@ -943,13 +942,13 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
       phases: {
         accelerationTexture: 1.12,
         cruiseIntrusiveScale: 0.72,
-        releaseCharacter: 0.74
+        releaseCharacter: 0.74,
       },
       variation: {
         minEventCooldownSeconds: 16,
-        maxEventVoices: 1
+        maxEventVoices: 1,
       },
-      transitionTauSeconds: 0.2
+      transitionTauSeconds: 0.2,
     },
   },
   "kazoo-kart": {
@@ -965,7 +964,7 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
     harshnessTreatment: "Lowest cruise in comedy",
     transmissionEvents: "Toy events",
     sampleStatus: "procedural-only",
-    changedCode: ["by-profile.ts:kazoo-kart","applyExperienceCatalogTuning"],
+    changedCode: ["by-profile.ts:kazoo-kart", "applyExperienceCatalogTuning"],
     baselineCapturePath: "artifacts/audio-lab/prompt-07-catalog/kazoo-kart__baseline",
     afterCapturePath: "artifacts/audio-lab/prompt-07-catalog/kazoo-kart__after",
     automatedCheck: "pending",
@@ -978,14 +977,14 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
       phases: {
         accelerationTexture: 1.18,
         cruiseIntrusiveScale: 0.42,
-        releaseCharacter: 0.58
+        releaseCharacter: 0.58,
       },
       variation: {
         depth: 0.016,
         minEventCooldownSeconds: 4,
-        maxEventVoices: 1
+        maxEventVoices: 1,
       },
-      transitionTauSeconds: 0.065
+      transitionTauSeconds: 0.065,
     },
   },
   "turbine-jet": {
@@ -1001,7 +1000,7 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
     harshnessTreatment: "Long tau",
     transmissionEvents: "No pop events",
     sampleStatus: "asset-pending",
-    changedCode: ["by-profile.ts:turbine-jet","applyExperienceCatalogTuning"],
+    changedCode: ["by-profile.ts:turbine-jet", "applyExperienceCatalogTuning"],
     baselineCapturePath: "artifacts/audio-lab/prompt-07-catalog/turbine-jet__baseline",
     afterCapturePath: "artifacts/audio-lab/prompt-07-catalog/turbine-jet__after",
     automatedCheck: "pending",
@@ -1014,12 +1013,12 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
       phases: {
         accelerationTexture: 1.1,
         cruiseIntrusiveScale: 0.74,
-        releaseCharacter: 0.76
+        releaseCharacter: 0.76,
       },
-      transitionTauSeconds: 0.55
+      transitionTauSeconds: 0.55,
     },
   },
-  "helicopter": {
+  helicopter: {
     profileId: "helicopter",
     family: familyForProfile("helicopter"),
     intendedIdentity: "Helicopter — fixed-pitch rotor bed",
@@ -1032,7 +1031,7 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
     harshnessTreatment: "High cruise presence",
     transmissionEvents: "No turbine spool mimic",
     sampleStatus: "asset-pending",
-    changedCode: ["by-profile.ts:helicopter","applyExperienceCatalogTuning"],
+    changedCode: ["by-profile.ts:helicopter", "applyExperienceCatalogTuning"],
     baselineCapturePath: "artifacts/audio-lab/prompt-07-catalog/helicopter__baseline",
     afterCapturePath: "artifacts/audio-lab/prompt-07-catalog/helicopter__after",
     automatedCheck: "pending",
@@ -1045,9 +1044,9 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
       phases: {
         accelerationTexture: 1.06,
         cruiseIntrusiveScale: 0.78,
-        releaseCharacter: 0.76
+        releaseCharacter: 0.76,
       },
-      transitionTauSeconds: 0.32
+      transitionTauSeconds: 0.32,
     },
   },
   "private-jet": {
@@ -1063,7 +1062,7 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
     harshnessTreatment: "Highest jet tau",
     transmissionEvents: "Quiet events",
     sampleStatus: "asset-pending",
-    changedCode: ["by-profile.ts:private-jet","applyExperienceCatalogTuning"],
+    changedCode: ["by-profile.ts:private-jet", "applyExperienceCatalogTuning"],
     baselineCapturePath: "artifacts/audio-lab/prompt-07-catalog/private-jet__baseline",
     afterCapturePath: "artifacts/audio-lab/prompt-07-catalog/private-jet__after",
     automatedCheck: "pending",
@@ -1076,9 +1075,9 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
       phases: {
         accelerationTexture: 1.06,
         cruiseIntrusiveScale: 0.76,
-        releaseCharacter: 0.8
+        releaseCharacter: 0.8,
       },
-      transitionTauSeconds: 0.62
+      transitionTauSeconds: 0.62,
     },
   },
   "open-wind": {
@@ -1094,7 +1093,7 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
     harshnessTreatment: "No mechanical harsh",
     transmissionEvents: "None",
     sampleStatus: "procedural-only",
-    changedCode: ["by-profile.ts:open-wind","applyExperienceCatalogTuning"],
+    changedCode: ["by-profile.ts:open-wind", "applyExperienceCatalogTuning"],
     baselineCapturePath: "artifacts/audio-lab/prompt-07-catalog/open-wind__baseline",
     afterCapturePath: "artifacts/audio-lab/prompt-07-catalog/open-wind__after",
     automatedCheck: "pending",
@@ -1108,9 +1107,9 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
         accelerationTexture: 1.06,
         cruiseIntrusiveScale: 0.78,
         releaseCharacter: 0.84,
-        stopTail: 0.88
+        stopTail: 0.88,
       },
-      transitionTauSeconds: 0.4
+      transitionTauSeconds: 0.4,
     },
   },
   "storm-glider": {
@@ -1126,7 +1125,7 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
     harshnessTreatment: "Event cooldown long",
     transmissionEvents: "Lightning-like sparse",
     sampleStatus: "procedural-only",
-    changedCode: ["by-profile.ts:storm-glider","applyExperienceCatalogTuning"],
+    changedCode: ["by-profile.ts:storm-glider", "applyExperienceCatalogTuning"],
     baselineCapturePath: "artifacts/audio-lab/prompt-07-catalog/storm-glider__baseline",
     afterCapturePath: "artifacts/audio-lab/prompt-07-catalog/storm-glider__after",
     automatedCheck: "pending",
@@ -1139,13 +1138,13 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
       phases: {
         accelerationTexture: 1.16,
         cruiseIntrusiveScale: 0.62,
-        releaseCharacter: 0.84
+        releaseCharacter: 0.84,
       },
       variation: {
         minEventCooldownSeconds: 22,
-        maxEventVoices: 1
+        maxEventVoices: 1,
       },
-      transitionTauSeconds: 0.32
+      transitionTauSeconds: 0.32,
     },
   },
   "maglev-train": {
@@ -1161,7 +1160,7 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
     harshnessTreatment: "Whine via cruise scale",
     transmissionEvents: "Gearless",
     sampleStatus: "procedural-only",
-    changedCode: ["by-profile.ts:maglev-train","applyExperienceCatalogTuning"],
+    changedCode: ["by-profile.ts:maglev-train", "applyExperienceCatalogTuning"],
     baselineCapturePath: "artifacts/audio-lab/prompt-07-catalog/maglev-train__baseline",
     afterCapturePath: "artifacts/audio-lab/prompt-07-catalog/maglev-train__after",
     automatedCheck: "pending",
@@ -1175,9 +1174,9 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
         accelerationTexture: 1.12,
         cruiseIntrusiveScale: 0.66,
         releaseCharacter: 0.78,
-        regenCharacter: 0.62
+        regenCharacter: 0.62,
       },
-      transitionTauSeconds: 0.32
+      transitionTauSeconds: 0.32,
     },
   },
   "high-speed-train": {
@@ -1193,7 +1192,7 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
     harshnessTreatment: "Slightly more accel than maglev",
     transmissionEvents: "Gearless",
     sampleStatus: "procedural-only",
-    changedCode: ["by-profile.ts:high-speed-train","applyExperienceCatalogTuning"],
+    changedCode: ["by-profile.ts:high-speed-train", "applyExperienceCatalogTuning"],
     baselineCapturePath: "artifacts/audio-lab/prompt-07-catalog/high-speed-train__baseline",
     afterCapturePath: "artifacts/audio-lab/prompt-07-catalog/high-speed-train__after",
     automatedCheck: "pending",
@@ -1207,12 +1206,12 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
         accelerationTexture: 1.14,
         cruiseIntrusiveScale: 0.64,
         releaseCharacter: 0.74,
-        regenCharacter: 0.54
+        regenCharacter: 0.54,
       },
-      transitionTauSeconds: 0.28
+      transitionTauSeconds: 0.28,
     },
   },
-  "submarine": {
+  submarine: {
     profileId: "submarine",
     family: familyForProfile("submarine"),
     intendedIdentity: "Submarine — deep motor/env pressure bed",
@@ -1225,7 +1224,7 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
     harshnessTreatment: "Very high release settle",
     transmissionEvents: "Sonar-like rare events",
     sampleStatus: "asset-pending",
-    changedCode: ["by-profile.ts:submarine","applyExperienceCatalogTuning"],
+    changedCode: ["by-profile.ts:submarine", "applyExperienceCatalogTuning"],
     baselineCapturePath: "artifacts/audio-lab/prompt-07-catalog/submarine__baseline",
     afterCapturePath: "artifacts/audio-lab/prompt-07-catalog/submarine__after",
     automatedCheck: "pending",
@@ -1238,13 +1237,13 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
       phases: {
         accelerationTexture: 1.06,
         cruiseIntrusiveScale: 0.76,
-        releaseCharacter: 0.86
+        releaseCharacter: 0.86,
       },
       variation: {
         minEventCooldownSeconds: 14,
-        maxEventVoices: 1
+        maxEventVoices: 1,
       },
-      transitionTauSeconds: 0.48
+      transitionTauSeconds: 0.48,
     },
   },
   "jet-ski": {
@@ -1260,7 +1259,7 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
     harshnessTreatment: "Lower cruise than speed-boat",
     transmissionEvents: "Spray events",
     sampleStatus: "asset-pending",
-    changedCode: ["by-profile.ts:jet-ski","applyExperienceCatalogTuning"],
+    changedCode: ["by-profile.ts:jet-ski", "applyExperienceCatalogTuning"],
     baselineCapturePath: "artifacts/audio-lab/prompt-07-catalog/jet-ski__baseline",
     afterCapturePath: "artifacts/audio-lab/prompt-07-catalog/jet-ski__after",
     automatedCheck: "pending",
@@ -1274,12 +1273,12 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
         accelerationTexture: 1.22,
         cruiseIntrusiveScale: 0.56,
         releaseCharacter: 0.6,
-        pullAwayTexture: 1.1
+        pullAwayTexture: 1.1,
       },
-      transitionTauSeconds: 0.1
+      transitionTauSeconds: 0.1,
     },
   },
-  "snowmobile": {
+  snowmobile: {
     profileId: "snowmobile",
     family: familyForProfile("snowmobile"),
     intendedIdentity: "Snowmobile — two-stroke-ish RPM + snow env",
@@ -1292,7 +1291,7 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
     harshnessTreatment: "Bright but cruise cut",
     transmissionEvents: "No heavy VT",
     sampleStatus: "asset-pending",
-    changedCode: ["by-profile.ts:snowmobile","applyExperienceCatalogTuning"],
+    changedCode: ["by-profile.ts:snowmobile", "applyExperienceCatalogTuning"],
     baselineCapturePath: "artifacts/audio-lab/prompt-07-catalog/snowmobile__baseline",
     afterCapturePath: "artifacts/audio-lab/prompt-07-catalog/snowmobile__after",
     automatedCheck: "pending",
@@ -1305,12 +1304,12 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
       phases: {
         accelerationTexture: 1.2,
         cruiseIntrusiveScale: 0.54,
-        releaseCharacter: 0.58
+        releaseCharacter: 0.58,
       },
-      transitionTauSeconds: 0.085
+      transitionTauSeconds: 0.085,
     },
   },
-  "tank": {
+  tank: {
     profileId: "tank",
     family: familyForProfile("tank"),
     intendedIdentity: "Tank — heavy mechanical tread bed",
@@ -1323,7 +1322,7 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
     harshnessTreatment: "No crackle events",
     transmissionEvents: "Sparse",
     sampleStatus: "asset-pending",
-    changedCode: ["by-profile.ts:tank","applyExperienceCatalogTuning"],
+    changedCode: ["by-profile.ts:tank", "applyExperienceCatalogTuning"],
     baselineCapturePath: "artifacts/audio-lab/prompt-07-catalog/tank__baseline",
     afterCapturePath: "artifacts/audio-lab/prompt-07-catalog/tank__after",
     automatedCheck: "pending",
@@ -1336,9 +1335,9 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
       phases: {
         accelerationTexture: 1.1,
         cruiseIntrusiveScale: 0.72,
-        releaseCharacter: 0.78
+        releaseCharacter: 0.78,
       },
-      transitionTauSeconds: 0.36
+      transitionTauSeconds: 0.36,
     },
   },
   "construction-monster": {
@@ -1354,7 +1353,7 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
     harshnessTreatment: "Beep events gated",
     transmissionEvents: "Single event voice",
     sampleStatus: "asset-pending",
-    changedCode: ["by-profile.ts:construction-monster","applyExperienceCatalogTuning"],
+    changedCode: ["by-profile.ts:construction-monster", "applyExperienceCatalogTuning"],
     baselineCapturePath: "artifacts/audio-lab/prompt-07-catalog/construction-monster__baseline",
     afterCapturePath: "artifacts/audio-lab/prompt-07-catalog/construction-monster__after",
     automatedCheck: "pending",
@@ -1368,13 +1367,13 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
         idleCharacter: 1.08,
         accelerationTexture: 1.16,
         cruiseIntrusiveScale: 0.66,
-        releaseCharacter: 0.72
+        releaseCharacter: 0.72,
       },
       variation: {
         minEventCooldownSeconds: 9,
-        maxEventVoices: 1
+        maxEventVoices: 1,
       },
-      transitionTauSeconds: 0.3
+      transitionTauSeconds: 0.3,
     },
   },
   "horse-gallop": {
@@ -1390,7 +1389,7 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
     harshnessTreatment: "Natural cruise",
     transmissionEvents: "No gear clacks",
     sampleStatus: "asset-pending",
-    changedCode: ["by-profile.ts:horse-gallop","applyExperienceCatalogTuning"],
+    changedCode: ["by-profile.ts:horse-gallop", "applyExperienceCatalogTuning"],
     baselineCapturePath: "artifacts/audio-lab/prompt-07-catalog/horse-gallop__baseline",
     afterCapturePath: "artifacts/audio-lab/prompt-07-catalog/horse-gallop__after",
     automatedCheck: "pending",
@@ -1403,12 +1402,12 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
       phases: {
         accelerationTexture: 1.14,
         cruiseIntrusiveScale: 0.66,
-        releaseCharacter: 0.74
+        releaseCharacter: 0.74,
       },
-      transitionTauSeconds: 0.22
+      transitionTauSeconds: 0.22,
     },
   },
-  "dragon": {
+  dragon: {
     profileId: "dragon",
     family: familyForProfile("dragon"),
     intendedIdentity: "Dragon — cinematic roar/energy (runtime designed)",
@@ -1421,7 +1420,7 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
     harshnessTreatment: "Roar events",
     transmissionEvents: "Not ICE ratios",
     sampleStatus: "procedural-only",
-    changedCode: ["by-profile.ts:dragon","applyExperienceCatalogTuning"],
+    changedCode: ["by-profile.ts:dragon", "applyExperienceCatalogTuning"],
     baselineCapturePath: "artifacts/audio-lab/prompt-07-catalog/dragon__baseline",
     afterCapturePath: "artifacts/audio-lab/prompt-07-catalog/dragon__after",
     automatedCheck: "pending",
@@ -1434,12 +1433,12 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
       phases: {
         accelerationTexture: 1.2,
         cruiseIntrusiveScale: 0.54,
-        releaseCharacter: 0.76
+        releaseCharacter: 0.76,
       },
       variation: {
         minEventCooldownSeconds: 7.5,
-        maxEventVoices: 1
-      }
+        maxEventVoices: 1,
+      },
     },
   },
   "thunder-beast": {
@@ -1455,7 +1454,7 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
     harshnessTreatment: "Longer event gaps",
     transmissionEvents: "Not diesel clatter",
     sampleStatus: "procedural-only",
-    changedCode: ["by-profile.ts:thunder-beast","applyExperienceCatalogTuning"],
+    changedCode: ["by-profile.ts:thunder-beast", "applyExperienceCatalogTuning"],
     baselineCapturePath: "artifacts/audio-lab/prompt-07-catalog/thunder-beast__baseline",
     afterCapturePath: "artifacts/audio-lab/prompt-07-catalog/thunder-beast__after",
     automatedCheck: "pending",
@@ -1468,13 +1467,13 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
       phases: {
         accelerationTexture: 1.14,
         cruiseIntrusiveScale: 0.6,
-        releaseCharacter: 0.84
+        releaseCharacter: 0.84,
       },
       variation: {
         minEventCooldownSeconds: 15,
-        maxEventVoices: 1
+        maxEventVoices: 1,
       },
-      transitionTauSeconds: 0.3
+      transitionTauSeconds: 0.3,
     },
   },
   "retro-arcade": {
@@ -1490,7 +1489,7 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
     harshnessTreatment: "Low cruise",
     transmissionEvents: "Coin events",
     sampleStatus: "not-applicable",
-    changedCode: ["by-profile.ts:retro-arcade","applyExperienceCatalogTuning"],
+    changedCode: ["by-profile.ts:retro-arcade", "applyExperienceCatalogTuning"],
     baselineCapturePath: "artifacts/audio-lab/prompt-07-catalog/retro-arcade__baseline",
     afterCapturePath: "artifacts/audio-lab/prompt-07-catalog/retro-arcade__after",
     automatedCheck: "pending",
@@ -1503,14 +1502,14 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
       phases: {
         accelerationTexture: 1.12,
         cruiseIntrusiveScale: 0.48,
-        releaseCharacter: 0.68
+        releaseCharacter: 0.68,
       },
       variation: {
         depth: 0.006,
         minEventCooldownSeconds: 2.8,
-        maxEventVoices: 1
+        maxEventVoices: 1,
       },
-      transitionTauSeconds: 0.075
+      transitionTauSeconds: 0.075,
     },
   },
   "synthwave-drive": {
@@ -1526,7 +1525,7 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
     harshnessTreatment: "Softer than neon",
     transmissionEvents: "Musical hits",
     sampleStatus: "not-applicable",
-    changedCode: ["by-profile.ts:synthwave-drive","applyExperienceCatalogTuning"],
+    changedCode: ["by-profile.ts:synthwave-drive", "applyExperienceCatalogTuning"],
     baselineCapturePath: "artifacts/audio-lab/prompt-07-catalog/synthwave-drive__baseline",
     afterCapturePath: "artifacts/audio-lab/prompt-07-catalog/synthwave-drive__after",
     automatedCheck: "pending",
@@ -1539,9 +1538,9 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
       phases: {
         accelerationTexture: 1.1,
         cruiseIntrusiveScale: 0.58,
-        releaseCharacter: 0.72
+        releaseCharacter: 0.72,
       },
-      transitionTauSeconds: 0.17
+      transitionTauSeconds: 0.17,
     },
   },
   "deep-bass-pulse": {
@@ -1557,7 +1556,7 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
     harshnessTreatment: "High cruise bed OK",
     transmissionEvents: "Rare hits",
     sampleStatus: "not-applicable",
-    changedCode: ["by-profile.ts:deep-bass-pulse","applyExperienceCatalogTuning"],
+    changedCode: ["by-profile.ts:deep-bass-pulse", "applyExperienceCatalogTuning"],
     baselineCapturePath: "artifacts/audio-lab/prompt-07-catalog/deep-bass-pulse__baseline",
     afterCapturePath: "artifacts/audio-lab/prompt-07-catalog/deep-bass-pulse__after",
     automatedCheck: "pending",
@@ -1570,14 +1569,14 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
       phases: {
         accelerationTexture: 1.04,
         cruiseIntrusiveScale: 0.7,
-        releaseCharacter: 0.74
+        releaseCharacter: 0.74,
       },
       variation: {
         depth: 0.006,
         minEventCooldownSeconds: 9,
-        maxEventVoices: 1
+        maxEventVoices: 1,
       },
-      transitionTauSeconds: 0.22
+      transitionTauSeconds: 0.22,
     },
   },
   "zen-drive": {
@@ -1593,7 +1592,7 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
     harshnessTreatment: "Very high cruise calm",
     transmissionEvents: "Rare bowls",
     sampleStatus: "procedural-only",
-    changedCode: ["by-profile.ts:zen-drive","applyExperienceCatalogTuning"],
+    changedCode: ["by-profile.ts:zen-drive", "applyExperienceCatalogTuning"],
     baselineCapturePath: "artifacts/audio-lab/prompt-07-catalog/zen-drive__baseline",
     afterCapturePath: "artifacts/audio-lab/prompt-07-catalog/zen-drive__after",
     automatedCheck: "pending",
@@ -1606,14 +1605,14 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
       phases: {
         accelerationTexture: 1.02,
         cruiseIntrusiveScale: 0.8,
-        releaseCharacter: 0.88
+        releaseCharacter: 0.88,
       },
       variation: {
         depth: 0.008,
         minEventCooldownSeconds: 20,
-        maxEventVoices: 1
+        maxEventVoices: 1,
       },
-      transitionTauSeconds: 0.55
+      transitionTauSeconds: 0.55,
     },
   },
   "rain-drive": {
@@ -1629,7 +1628,7 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
     harshnessTreatment: "Hiss control via cruise",
     transmissionEvents: "None",
     sampleStatus: "procedural-only",
-    changedCode: ["by-profile.ts:rain-drive","applyExperienceCatalogTuning"],
+    changedCode: ["by-profile.ts:rain-drive", "applyExperienceCatalogTuning"],
     baselineCapturePath: "artifacts/audio-lab/prompt-07-catalog/rain-drive__baseline",
     afterCapturePath: "artifacts/audio-lab/prompt-07-catalog/rain-drive__after",
     automatedCheck: "pending",
@@ -1642,9 +1641,9 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
       phases: {
         accelerationTexture: 1.06,
         cruiseIntrusiveScale: 0.74,
-        releaseCharacter: 0.84
+        releaseCharacter: 0.84,
       },
-      transitionTauSeconds: 0.36
+      transitionTauSeconds: 0.36,
     },
   },
   "ocean-drive": {
@@ -1660,7 +1659,7 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
     harshnessTreatment: "Highest ambient cruise",
     transmissionEvents: "None",
     sampleStatus: "procedural-only",
-    changedCode: ["by-profile.ts:ocean-drive","applyExperienceCatalogTuning"],
+    changedCode: ["by-profile.ts:ocean-drive", "applyExperienceCatalogTuning"],
     baselineCapturePath: "artifacts/audio-lab/prompt-07-catalog/ocean-drive__baseline",
     afterCapturePath: "artifacts/audio-lab/prompt-07-catalog/ocean-drive__after",
     automatedCheck: "pending",
@@ -1673,12 +1672,12 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
       phases: {
         accelerationTexture: 1.02,
         cruiseIntrusiveScale: 0.82,
-        releaseCharacter: 0.9
+        releaseCharacter: 0.9,
       },
-      transitionTauSeconds: 0.65
+      transitionTauSeconds: 0.65,
     },
   },
-  "heartbeat": {
+  heartbeat: {
     profileId: "heartbeat",
     family: familyForProfile("heartbeat"),
     intendedIdentity: "Heartbeat — pulse musical motif",
@@ -1691,7 +1690,7 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
     harshnessTreatment: "Steady bed",
     transmissionEvents: "Pulse events",
     sampleStatus: "not-applicable",
-    changedCode: ["by-profile.ts:heartbeat","applyExperienceCatalogTuning"],
+    changedCode: ["by-profile.ts:heartbeat", "applyExperienceCatalogTuning"],
     baselineCapturePath: "artifacts/audio-lab/prompt-07-catalog/heartbeat__baseline",
     afterCapturePath: "artifacts/audio-lab/prompt-07-catalog/heartbeat__after",
     automatedCheck: "pending",
@@ -1704,14 +1703,14 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
       phases: {
         accelerationTexture: 1.06,
         cruiseIntrusiveScale: 0.72,
-        releaseCharacter: 0.76
+        releaseCharacter: 0.76,
       },
       variation: {
         depth: 0.005,
         minEventCooldownSeconds: 8,
-        maxEventVoices: 1
+        maxEventVoices: 1,
       },
-      transitionTauSeconds: 0.26
+      transitionTauSeconds: 0.26,
     },
   },
   "symphony-cinematic-rock": {
@@ -1727,7 +1726,7 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
     harshnessTreatment: "Cruise arrangement down",
     transmissionEvents: "Hits",
     sampleStatus: "not-applicable",
-    changedCode: ["by-profile.ts:symphony-cinematic-rock","applyExperienceCatalogTuning"],
+    changedCode: ["by-profile.ts:symphony-cinematic-rock", "applyExperienceCatalogTuning"],
     baselineCapturePath: "artifacts/audio-lab/prompt-07-catalog/symphony-cinematic-rock__baseline",
     afterCapturePath: "artifacts/audio-lab/prompt-07-catalog/symphony-cinematic-rock__after",
     automatedCheck: "pending",
@@ -1740,9 +1739,9 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
       phases: {
         accelerationTexture: 1.16,
         cruiseIntrusiveScale: 0.52,
-        releaseCharacter: 0.72
+        releaseCharacter: 0.72,
       },
-      transitionTauSeconds: 0.18
+      transitionTauSeconds: 0.18,
     },
   },
   "symphony-motion-orchestra": {
@@ -1758,8 +1757,9 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
     harshnessTreatment: "Softer",
     transmissionEvents: "Hits",
     sampleStatus: "not-applicable",
-    changedCode: ["by-profile.ts:symphony-motion-orchestra","applyExperienceCatalogTuning"],
-    baselineCapturePath: "artifacts/audio-lab/prompt-07-catalog/symphony-motion-orchestra__baseline",
+    changedCode: ["by-profile.ts:symphony-motion-orchestra", "applyExperienceCatalogTuning"],
+    baselineCapturePath:
+      "artifacts/audio-lab/prompt-07-catalog/symphony-motion-orchestra__baseline",
     afterCapturePath: "artifacts/audio-lab/prompt-07-catalog/symphony-motion-orchestra__after",
     automatedCheck: "pending",
     humanListeningStatus: "unverified",
@@ -1771,9 +1771,9 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
       phases: {
         accelerationTexture: 1.1,
         cruiseIntrusiveScale: 0.56,
-        releaseCharacter: 0.74
+        releaseCharacter: 0.74,
       },
-      transitionTauSeconds: 0.24
+      transitionTauSeconds: 0.24,
     },
   },
   "symphony-neon-run": {
@@ -1789,7 +1789,7 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
     harshnessTreatment: "Bright but cruise cut",
     transmissionEvents: "Hits",
     sampleStatus: "not-applicable",
-    changedCode: ["by-profile.ts:symphony-neon-run","applyExperienceCatalogTuning"],
+    changedCode: ["by-profile.ts:symphony-neon-run", "applyExperienceCatalogTuning"],
     baselineCapturePath: "artifacts/audio-lab/prompt-07-catalog/symphony-neon-run__baseline",
     afterCapturePath: "artifacts/audio-lab/prompt-07-catalog/symphony-neon-run__after",
     automatedCheck: "pending",
@@ -1802,9 +1802,9 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
       phases: {
         accelerationTexture: 1.14,
         cruiseIntrusiveScale: 0.5,
-        releaseCharacter: 0.68
+        releaseCharacter: 0.68,
       },
-      transitionTauSeconds: 0.13
+      transitionTauSeconds: 0.13,
     },
   },
   "world-space-drive": {
@@ -1820,7 +1820,7 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
     harshnessTreatment: "Distinct stop via release",
     transmissionEvents: "Sparse",
     sampleStatus: "procedural-only",
-    changedCode: ["by-profile.ts:world-space-drive","applyExperienceCatalogTuning"],
+    changedCode: ["by-profile.ts:world-space-drive", "applyExperienceCatalogTuning"],
     baselineCapturePath: "artifacts/audio-lab/prompt-07-catalog/world-space-drive__baseline",
     afterCapturePath: "artifacts/audio-lab/prompt-07-catalog/world-space-drive__after",
     automatedCheck: "pending",
@@ -1833,9 +1833,9 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
       phases: {
         accelerationTexture: 1.18,
         cruiseIntrusiveScale: 0.6,
-        releaseCharacter: 0.78
+        releaseCharacter: 0.78,
       },
-      transitionTauSeconds: 0.26
+      transitionTauSeconds: 0.26,
     },
   },
   "world-cyber-city": {
@@ -1851,7 +1851,7 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
     harshnessTreatment: "City events denser",
     transmissionEvents: "Up to 2 voices",
     sampleStatus: "procedural-only",
-    changedCode: ["by-profile.ts:world-cyber-city","applyExperienceCatalogTuning"],
+    changedCode: ["by-profile.ts:world-cyber-city", "applyExperienceCatalogTuning"],
     baselineCapturePath: "artifacts/audio-lab/prompt-07-catalog/world-cyber-city__baseline",
     afterCapturePath: "artifacts/audio-lab/prompt-07-catalog/world-cyber-city__after",
     automatedCheck: "pending",
@@ -1864,13 +1864,13 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
       phases: {
         accelerationTexture: 1.14,
         cruiseIntrusiveScale: 0.54,
-        releaseCharacter: 0.66
+        releaseCharacter: 0.66,
       },
       variation: {
         minEventCooldownSeconds: 6.5,
-        maxEventVoices: 2
+        maxEventVoices: 2,
       },
-      transitionTauSeconds: 0.17
+      transitionTauSeconds: 0.17,
     },
   },
   "world-storm-run": {
@@ -1886,7 +1886,7 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
     harshnessTreatment: "Event gaps",
     transmissionEvents: "World mix",
     sampleStatus: "procedural-only",
-    changedCode: ["by-profile.ts:world-storm-run","applyExperienceCatalogTuning"],
+    changedCode: ["by-profile.ts:world-storm-run", "applyExperienceCatalogTuning"],
     baselineCapturePath: "artifacts/audio-lab/prompt-07-catalog/world-storm-run__baseline",
     afterCapturePath: "artifacts/audio-lab/prompt-07-catalog/world-storm-run__after",
     automatedCheck: "pending",
@@ -1899,13 +1899,13 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
       phases: {
         accelerationTexture: 1.12,
         cruiseIntrusiveScale: 0.58,
-        releaseCharacter: 0.82
+        releaseCharacter: 0.82,
       },
       variation: {
         minEventCooldownSeconds: 15,
-        maxEventVoices: 1
+        maxEventVoices: 1,
       },
-      transitionTauSeconds: 0.2
+      transitionTauSeconds: 0.2,
     },
   },
   "fusion-road-anthem": {
@@ -1921,7 +1921,7 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
     harshnessTreatment: "Music not muscle rumble",
     transmissionEvents: "Hybrid events",
     sampleStatus: "asset-pending",
-    changedCode: ["by-profile.ts:fusion-road-anthem","applyExperienceCatalogTuning"],
+    changedCode: ["by-profile.ts:fusion-road-anthem", "applyExperienceCatalogTuning"],
     baselineCapturePath: "artifacts/audio-lab/prompt-07-catalog/fusion-road-anthem__baseline",
     afterCapturePath: "artifacts/audio-lab/prompt-07-catalog/fusion-road-anthem__after",
     automatedCheck: "pending",
@@ -1934,9 +1934,9 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
       phases: {
         accelerationTexture: 1.14,
         cruiseIntrusiveScale: 0.58,
-        releaseCharacter: 0.52
+        releaseCharacter: 0.52,
       },
-      transitionTauSeconds: 0.13
+      transitionTauSeconds: 0.13,
     },
   },
   "fusion-mechanical-symphony": {
@@ -1952,8 +1952,9 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
     harshnessTreatment: "Brighter accel",
     transmissionEvents: "Events",
     sampleStatus: "asset-pending",
-    changedCode: ["by-profile.ts:fusion-mechanical-symphony","applyExperienceCatalogTuning"],
-    baselineCapturePath: "artifacts/audio-lab/prompt-07-catalog/fusion-mechanical-symphony__baseline",
+    changedCode: ["by-profile.ts:fusion-mechanical-symphony", "applyExperienceCatalogTuning"],
+    baselineCapturePath:
+      "artifacts/audio-lab/prompt-07-catalog/fusion-mechanical-symphony__baseline",
     afterCapturePath: "artifacts/audio-lab/prompt-07-catalog/fusion-mechanical-symphony__after",
     automatedCheck: "pending",
     humanListeningStatus: "unverified",
@@ -1965,9 +1966,9 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
       phases: {
         accelerationTexture: 1.18,
         cruiseIntrusiveScale: 0.54,
-        releaseCharacter: 0.46
+        releaseCharacter: 0.46,
       },
-      transitionTauSeconds: 0.095
+      transitionTauSeconds: 0.095,
     },
   },
   "fusion-midnight-boost": {
@@ -1983,7 +1984,7 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
     harshnessTreatment: "Spool gated",
     transmissionEvents: "Boost release",
     sampleStatus: "asset-pending",
-    changedCode: ["by-profile.ts:fusion-midnight-boost","applyExperienceCatalogTuning"],
+    changedCode: ["by-profile.ts:fusion-midnight-boost", "applyExperienceCatalogTuning"],
     baselineCapturePath: "artifacts/audio-lab/prompt-07-catalog/fusion-midnight-boost__baseline",
     afterCapturePath: "artifacts/audio-lab/prompt-07-catalog/fusion-midnight-boost__after",
     automatedCheck: "pending",
@@ -1996,14 +1997,14 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
       phases: {
         accelerationTexture: 1.16,
         cruiseIntrusiveScale: 0.52,
-        releaseCharacter: 0.72
+        releaseCharacter: 0.72,
       },
       aspirationDynamics: {
         attackSeconds: 0.7,
         decaySeconds: 0.45,
-        minimumReleaseState: 0.58
+        minimumReleaseState: 0.58,
       },
-      transitionTauSeconds: 0.1
+      transitionTauSeconds: 0.1,
     },
   },
   "fusion-future-pulse": {
@@ -2019,7 +2020,7 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
     harshnessTreatment: "No ICE overlay",
     transmissionEvents: "Gearless fusion",
     sampleStatus: "procedural-only",
-    changedCode: ["by-profile.ts:fusion-future-pulse","applyExperienceCatalogTuning"],
+    changedCode: ["by-profile.ts:fusion-future-pulse", "applyExperienceCatalogTuning"],
     baselineCapturePath: "artifacts/audio-lab/prompt-07-catalog/fusion-future-pulse__baseline",
     afterCapturePath: "artifacts/audio-lab/prompt-07-catalog/fusion-future-pulse__after",
     automatedCheck: "pending",
@@ -2033,11 +2034,11 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
         accelerationTexture: 1.18,
         cruiseIntrusiveScale: 0.5,
         releaseCharacter: 0.5,
-        regenCharacter: 0.88
+        regenCharacter: 0.88,
       },
-      transitionTauSeconds: 0.095
+      transitionTauSeconds: 0.095,
     },
-  }
+  },
 };
 
 export function catalogTuningForProfile(profileId: string): CatalogTuningRecord | null {

@@ -1139,8 +1139,8 @@ const HIGH_REV_V10_PERSONALITY: DrivetrainPersonalityConfig = {
   // rpm/kmh: G1=100.8, G2=68.3, G3=50.2, G4=38.5, G5=31.2, G6=24.8
   transmission: {
     ...flatSixBase.transmission,
-    gearRatios: [3.231, 2.188, 1.609, 1.233, 1.000, 0.794],
-    finalDrive: 4.10,
+    gearRatios: [3.231, 2.188, 1.609, 1.233, 1.0, 0.794],
+    finalDrive: 4.1,
     upshiftRpm: { lowLoad: 5400, mediumLoad: 7200, highLoad: 8650 },
     upshiftLoadMedium: 0.34,
     upshiftLoadHigh: 0.68,
