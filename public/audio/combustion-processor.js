@@ -39,7 +39,9 @@ class CombustionExcitationProcessor extends AudioWorkletProcessor {
     this.phase = 0;
     this.bank = 0;
     this.env = 0;
+    this.envTarget = 0;
     this.bright = 0;
+    this.brightTarget = 0;
     this.burst = 0;
     this.burstTarget = 0;
     this.grit = 0;
@@ -165,7 +167,9 @@ class CombustionExcitationProcessor extends AudioWorkletProcessor {
     this.collectorAcc = new Float32Array(TOPOLOGY_COLLECTOR_MAX);
     // Atomic replace: reset aggregate envelopes so modes do not cross-bleed.
     this.env = 0;
+    this.envTarget = 0;
     this.bright = 0;
+    this.brightTarget = 0;
     this.burst = 0;
     this.burstTarget = 0;
     this.phase = 0;
@@ -201,11 +205,13 @@ class CombustionExcitationProcessor extends AudioWorkletProcessor {
   }
 
   firePunch(punch, intensity, sharpness, load) {
-    this.env = Math.min(2.4, this.env + punch * (0.6 + intensity * 0.2));
-    // Increased bright/burst for more spectral texture per fire
-    this.bright = Math.min(1.8, this.bright + punch * sharpness * (0.22 + load * 0.48));
-    // Root-cause §4: use burstTarget with soft attack to prevent click artifacts
-    // Burst ramps toward target over ~0.5ms instead of stepping instantly
+    // Root-cause §clicks: use target variables with soft attack for all envelopes.
+    // The V-twin has sparse pulses (~12 Hz at idle) where instant steps cause clicks.
+    this.envTarget = Math.min(2.4, (this.envTarget || 0) + punch * (0.6 + intensity * 0.2));
+    this.brightTarget = Math.min(
+      1.8,
+      (this.brightTarget || 0) + punch * sharpness * (0.22 + load * 0.48),
+    );
     this.burstTarget = Math.min(
       2.0,
       (this.burstTarget || 0) + punch * (0.38 + load * 0.55) * (0.5 + sharpness * 0.55),
@@ -350,12 +356,20 @@ class CombustionExcitationProcessor extends AudioWorkletProcessor {
         this._collectorPan = 0;
       }
 
-      this.env *= decay;
-      this.bright *= brightDecay;
-      // Root-cause §4: soft attack on burst (~0.5ms = ~24 samples at 48kHz)
-      // Ramp toward target, then decay both together
+      // Root-cause §clicks: soft attack on all envelopes (~0.3ms for env/bright, ~0.5ms for burst)
+      // Prevents clicks from sparse V-twin pulses where instant steps create waveform discontinuities.
+      // Attack coefficients: higher = faster attack
+      const envAttack = 1 - Math.exp(-1 / (sampleRate * 0.0003));
       const burstAttack = 1 - Math.exp(-1 / (sampleRate * 0.0005));
+      // Ramp toward targets
+      this.env += (this.envTarget - this.env) * envAttack;
+      this.bright += (this.brightTarget - this.bright) * envAttack;
       this.burst += (this.burstTarget - this.burst) * burstAttack;
+      // Decay both actual and target values
+      this.env *= decay;
+      this.envTarget = (this.envTarget || 0) * decay;
+      this.bright *= brightDecay;
+      this.brightTarget = (this.brightTarget || 0) * brightDecay;
       this.burst *= burstDecay;
       this.burstTarget = (this.burstTarget || 0) * burstDecay;
       this.grit = this.grit * 0.94 + (this.rand() * 2 - 1) * 0.04 * (0.2 + load);
