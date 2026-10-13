@@ -8,6 +8,7 @@
  */
 
 import type { DriveState } from "@/lib/drive/model";
+import { makeSamplePeakCeilingCurve } from "@/lib/sound/gain-staging/peak-protect";
 import { getNoiseBuffer } from "@/lib/sound/dsp/noise";
 import {
   acousticEngineForProfile,
@@ -67,6 +68,9 @@ import {
   shiftEngagementForProfile,
   type ShiftEngagementStyle,
 } from "@/lib/sound/realism/shift-events";
+
+/** -1.5 dBFS sample ceiling for the engine output peak protect (keeps true peak <= -1 dBTP). */
+const OUTPUT_PEAK_CEILING_LINEAR = Math.pow(10, -1.5 / 20);
 
 export type RealismEngineMode = "current" | "v2" | "v3";
 
@@ -267,7 +271,7 @@ export class HybridCombustionSynth {
   private harshnessShelf: BiquadFilterNode | null = null;
   private saturation: WaveShaperNode | null = null;
   private saturationPostLp: BiquadFilterNode | null = null;
-  private outputLimiter: DynamicsCompressorNode | null = null;
+  private outputLimiter: WaveShaperNode | null = null;
   private supportLp: BiquadFilterNode | null = null;
   private shiftConsumer = new ShiftEventConsumer();
   private shiftIntensity = 0.72;
@@ -536,16 +540,16 @@ export class HybridCombustionSynth {
       this.diagnostics.oversamplingNote = null;
     }
 
-    // Output limiter: soft ceiling to prevent clipping when outputTrimDb pushes levels high.
-    // Configured as a gentle limiter: -3 dBFS threshold, 20:1 ratio, fast attack, short release.
-    // This protects against true peak exceeding -1 dBTP while preserving transient character.
-    if (typeof ctx.createDynamicsCompressor === "function") {
-      const limiter = ctx.createDynamicsCompressor();
-      limiter.threshold.value = -3;
-      limiter.knee.value = 3;
-      limiter.ratio.value = 20;
-      limiter.attack.value = 0.001;
-      limiter.release.value = 0.05;
+    // Output peak protect: a WaveShaper that is linear below ~-2.4 dBFS and soft-clips
+    // into a -1.5 dBFS ceiling. Peak-only by construction: unlike DynamicsCompressorNode
+    // (whose knee, auto makeup gain and detector compress below threshold and flattened
+    // the cruise-to-pull gap), it cannot change the level of anything under the knee.
+    if (typeof ctx.createWaveShaper === "function") {
+      const limiter = ctx.createWaveShaper();
+      limiter.curve = makeSamplePeakCeilingCurve(
+        OUTPUT_PEAK_CEILING_LINEAR,
+      ) as Float32Array<ArrayBuffer>;
+      limiter.oversample = "4x";
       // Route all engine output through the limiter
       this.combustionBus.disconnect();
       this.combustionBus.connect(limiter);
