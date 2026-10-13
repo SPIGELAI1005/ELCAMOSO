@@ -109,7 +109,7 @@ const GT_V8: AcousticEngineConfig = {
   forcedInduction: false,
   bodyBrightness: 0.42,
   redlineRpm: 6500,
-  outputTrimDb: 8.6,
+  outputTrimDb: 13.0,
 };
 
 /**
@@ -150,7 +150,7 @@ const AMERICAN_V8: AcousticEngineConfig = {
   forcedInduction: false,
   bodyBrightness: 0.36,
   redlineRpm: 6000,
-  outputTrimDb: 7.1,
+  outputTrimDb: 12.5,
 };
 
 const FLAT_SIX: AcousticEngineConfig = {
@@ -177,7 +177,7 @@ const FLAT_SIX: AcousticEngineConfig = {
   forcedInduction: false,
   bodyBrightness: 0.58,
   redlineRpm: 9000,
-  outputTrimDb: 9.9,
+  outputTrimDb: 15.5,
 };
 
 const TURBO_I6: AcousticEngineConfig = {
@@ -206,7 +206,7 @@ const TURBO_I6: AcousticEngineConfig = {
   forcedInduction: true,
   bodyBrightness: 0.52,
   redlineRpm: 7000,
-  outputTrimDb: 9.4,
+  outputTrimDb: 15.0,
 };
 
 const V10: AcousticEngineConfig = {
@@ -233,7 +233,7 @@ const V10: AcousticEngineConfig = {
   forcedInduction: false,
   bodyBrightness: 0.64,
   redlineRpm: 8500,
-  outputTrimDb: 4.1,
+  outputTrimDb: 12.5,
 };
 
 const FLAT_PLANE_V8_TRACK: AcousticEngineConfig = {
@@ -266,7 +266,7 @@ const FLAT_PLANE_V8_TRACK: AcousticEngineConfig = {
   // Brighter than GT V8's 0.42 for the flat-plane V8 scream
   bodyBrightness: 0.82,
   redlineRpm: 8600,
-  outputTrimDb: 6.4,
+  outputTrimDb: 13.0,
 };
 
 const RALLY_TURBO_3: AcousticEngineConfig = {
@@ -294,7 +294,7 @@ const RALLY_TURBO_3: AcousticEngineConfig = {
   forcedInduction: true,
   bodyBrightness: 0.58,
   redlineRpm: 6800,
-  outputTrimDb: 9.3,
+  outputTrimDb: 15.0,
 };
 
 const INLINE_4: AcousticEngineConfig = {
@@ -321,7 +321,7 @@ const INLINE_4: AcousticEngineConfig = {
   forcedInduction: false,
   bodyBrightness: 0.7,
   redlineRpm: 14000,
-  outputTrimDb: 11.0,
+  outputTrimDb: 17.0,
 };
 
 const V_TWIN: AcousticEngineConfig = {
@@ -348,7 +348,7 @@ const V_TWIN: AcousticEngineConfig = {
   forcedInduction: false,
   bodyBrightness: 0.32,
   redlineRpm: 5500,
-  outputTrimDb: 9.0,
+  outputTrimDb: 14.5,
 };
 
 /** Sound profile id → acoustic config for Realism V2 combustion. */

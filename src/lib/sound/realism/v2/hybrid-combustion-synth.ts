@@ -267,6 +267,8 @@ export class HybridCombustionSynth {
   private harshnessShelf: BiquadFilterNode | null = null;
   private saturation: WaveShaperNode | null = null;
   private saturationPostLp: BiquadFilterNode | null = null;
+  private outputLimiter: DynamicsCompressorNode | null = null;
+  private supportLp: BiquadFilterNode | null = null;
   private shiftConsumer = new ShiftEventConsumer();
   private shiftIntensity = 0.72;
   private shiftEngagementStyle: ShiftEngagementStyle | null = null;
@@ -438,12 +440,12 @@ export class HybridCombustionSynth {
         return { filter, gain, order, weight };
       });
     }
-    const supportLp = ctx.createBiquadFilter();
-    supportLp.type = "lowpass";
-    supportLp.frequency.value = 1400 + cfg.bodyBrightness * 900;
-    supportLp.Q.value = 0.75;
-    this.supportBus.connect(supportLp);
-    supportLp.connect(buses.body);
+    this.supportLp = ctx.createBiquadFilter();
+    this.supportLp.type = "lowpass";
+    this.supportLp.frequency.value = 1400 + cfg.bodyBrightness * 900;
+    this.supportLp.Q.value = 0.75;
+    this.supportBus.connect(this.supportLp);
+    this.supportLp.connect(buses.body);
     nodes += 1;
 
     // Space: short exhaust-pipe impulse response with decorrelated L/R, mixed under the
@@ -533,6 +535,37 @@ export class HybridCombustionSynth {
       this.diagnostics.rawMechanicalQuality = null;
       this.diagnostics.oversamplingNote = null;
     }
+
+    // Output limiter: soft ceiling to prevent clipping when outputTrimDb pushes levels high.
+    // Configured as a gentle limiter: -3 dBFS threshold, 20:1 ratio, fast attack, short release.
+    // This protects against true peak exceeding -1 dBTP while preserving transient character.
+    if (typeof ctx.createDynamicsCompressor === "function") {
+      const limiter = ctx.createDynamicsCompressor();
+      limiter.threshold.value = -3;
+      limiter.knee.value = 3;
+      limiter.ratio.value = 20;
+      limiter.attack.value = 0.001;
+      limiter.release.value = 0.05;
+      // Route all engine output through the limiter
+      this.combustionBus.disconnect();
+      this.combustionBus.connect(limiter);
+      if (this.harshnessShelf) {
+        this.harshnessShelf.disconnect();
+        this.harshnessShelf.connect(limiter);
+      }
+      if (this.supportLp) {
+        this.supportLp.disconnect();
+        this.supportLp.connect(limiter);
+      }
+      if (this.pipe) {
+        this.pipe.disconnect();
+        this.pipe.connect(limiter);
+      }
+      limiter.connect(buses.body);
+      this.outputLimiter = limiter;
+      nodes += 1;
+    }
+
     this.intakeBus.connect(buses.beds);
     this.sampleBus.connect(buses.body);
 
@@ -877,13 +910,19 @@ export class HybridCombustionSynth {
       );
     });
     this.diagnostics.orderHz = orderHz;
+    // Root-cause §loudness: compute outputTrimLinear once, apply to all output paths
+    const outputTrimLinear = Math.pow(10, (cfg.outputTrimDb ?? 0) / 20);
+
     if (this.supportBus) {
       // Raised floor (0.45) to keep cruise audible; target 8-10 dB pull-cruise gap.
       const supportFloor = 0.45;
       const supportLoad = load * 0.06 + demand * 0.05;
       targetParam(
         this.supportBus.gain,
-        (supportFloor + supportLoad) * (raw?.supportGainScale ?? 1) * gate("combustion"),
+        (supportFloor + supportLoad) *
+          (raw?.supportGainScale ?? 1) *
+          gate("combustion") *
+          outputTrimLinear,
         audioTime,
         0.08,
       );
@@ -891,7 +930,7 @@ export class HybridCombustionSynth {
     if (this.pipeSend) {
       // Pipe energy grows with exhaust pulse strength; overrun lets the pipe ring more.
       const pipeLevel = (0.26 + load * 0.14 + (overrun ? 0.1 : 0)) * (0.7 + cfg.exhaustPulse * 0.4);
-      targetParam(this.pipeSend.gain, pipeLevel * gate("exhaust"), audioTime, 0.1);
+      targetParam(this.pipeSend.gain, pipeLevel * gate("exhaust") * outputTrimLinear, audioTime, 0.1);
     }
     if (this.combustionBus) {
       // Bus level is the one place loudness follows load; the stages before it are
@@ -908,8 +947,7 @@ export class HybridCombustionSynth {
           : shiftPhase === "reengage"
             ? 0.9
             : 1;
-      // Root-cause §3: per-engine outputTrimDb normalizes loudness across engines
-      const outputTrimLinear = Math.pow(10, (cfg.outputTrimDb ?? 0) / 20);
+      // outputTrimLinear is computed earlier and applied to all output paths
       const bodyScaled =
         body *
         phaseMul *
@@ -928,7 +966,8 @@ export class HybridCombustionSynth {
         cfg.intakePresence *
         (raw?.intakeGainScale ?? 1) *
         intakeBias *
-        (overrun ? 0.18 : 1);
+        (overrun ? 0.18 : 1) *
+        outputTrimLinear;
       targetParam(this.intakeBus.gain, intakeGain * gate("intake"), audioTime, 0.05);
       this.diagnostics.intakeGain = intakeGain;
     }
@@ -1506,6 +1545,10 @@ export class HybridCombustionSynth {
     this.saturationPostLp = null;
     this.harshnessShelf?.disconnect();
     this.harshnessShelf = null;
+    this.outputLimiter?.disconnect();
+    this.outputLimiter = null;
+    this.supportLp?.disconnect();
+    this.supportLp = null;
     this.rawMechanical = null;
     this.pipeSend?.disconnect();
     this.pipeSend = null;
