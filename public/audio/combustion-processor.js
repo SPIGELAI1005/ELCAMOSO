@@ -41,6 +41,7 @@ class CombustionExcitationProcessor extends AudioWorkletProcessor {
     this.env = 0;
     this.bright = 0;
     this.burst = 0;
+    this.burstTarget = 0;
     this.grit = 0;
     this.noiseLp = 0;
     this.noiseDc = 0;
@@ -166,6 +167,7 @@ class CombustionExcitationProcessor extends AudioWorkletProcessor {
     this.env = 0;
     this.bright = 0;
     this.burst = 0;
+    this.burstTarget = 0;
     this.phase = 0;
   }
 
@@ -202,9 +204,11 @@ class CombustionExcitationProcessor extends AudioWorkletProcessor {
     this.env = Math.min(2.4, this.env + punch * (0.6 + intensity * 0.2));
     // Increased bright/burst for more spectral texture per fire
     this.bright = Math.min(1.8, this.bright + punch * sharpness * (0.22 + load * 0.48));
-    this.burst = Math.min(
+    // Root-cause §4: use burstTarget with soft attack to prevent click artifacts
+    // Burst ramps toward target over ~0.5ms instead of stepping instantly
+    this.burstTarget = Math.min(
       2.0,
-      this.burst + punch * (0.38 + load * 0.55) * (0.5 + sharpness * 0.55),
+      (this.burstTarget || 0) + punch * (0.38 + load * 0.55) * (0.5 + sharpness * 0.55),
     );
     this.grit = (this.rand() * 2 - 1) * (0.3 + load * 0.6 * sharpness);
   }
@@ -234,7 +238,8 @@ class CombustionExcitationProcessor extends AudioWorkletProcessor {
     const brightDecay = Math.exp(-1 / (sampleRate * edgeTauSeconds));
     const burstDecay = Math.exp(-1 / (sampleRate * burstTauSeconds));
 
-    const burstLpHz = 900 + load * 2600 + sharpness * 1400;
+    // Root-cause §3: cap burstLpHz at 2500 Hz to reduce HF noise that dilutes order share
+    const burstLpHz = Math.min(2500, 900 + load * 1200 + sharpness * 600);
     const burstHpHz = 140 + load * 120;
     const lpCoef = 1 - Math.exp((-2 * Math.PI * burstLpHz) / sampleRate);
     const hpCoef = 1 - Math.exp((-2 * Math.PI * burstHpHz) / sampleRate);
@@ -347,7 +352,12 @@ class CombustionExcitationProcessor extends AudioWorkletProcessor {
 
       this.env *= decay;
       this.bright *= brightDecay;
+      // Root-cause §4: soft attack on burst (~0.5ms = ~24 samples at 48kHz)
+      // Ramp toward target, then decay both together
+      const burstAttack = 1 - Math.exp(-1 / (sampleRate * 0.0005));
+      this.burst += (this.burstTarget - this.burst) * burstAttack;
       this.burst *= burstDecay;
+      this.burstTarget = (this.burstTarget || 0) * burstDecay;
       this.grit = this.grit * 0.94 + (this.rand() * 2 - 1) * 0.04 * (0.2 + load);
 
       const white = this.rand() * 2 - 1;
@@ -363,14 +373,15 @@ class CombustionExcitationProcessor extends AudioWorkletProcessor {
       }
       const wander = 1 + Math.sin(this.wanderPhase) * this.wanderDepth;
 
-      // Texture adds cycle-to-cycle variation for spectral interest.
-      // Scale DOWN with load: more texture at cruise for interest, less at pull so harmonics dominate.
-      // body: main tonal, edge: transient grit, rush: burst noise, texture: continuous variation
+      // Root-cause §3-4: rush dilutes order share and causes launch clicks.
+      // - Reduce rush from 0.75 to 0.28, scale by (1 - 0.5*load) so it fades at pull
+      // - Keep texture floor ≥0.06 to mask isolated pulses at low RPM
+      // - Near-constant intensity: 0.85 + 0.15*intensity instead of 0.6 + 0.4*intensity
       const body = this.env * (0.72 + this.grit * 0.18) * wander;
       const edge = this.bright * this.grit * 0.28;
-      const rush = this.burst * band * 0.75;
-      const texture = band * (0.05 + (1 - load) * 0.04) * (0.6 + this.env * 0.4);
-      const raw = (body + edge + rush + texture) * (0.6 + intensity * 0.4) * 0.88;
+      const rush = this.burst * band * 0.28 * (1 - 0.5 * load);
+      const texture = band * (0.06 + (1 - load) * 0.03) * (0.6 + this.env * 0.4);
+      const raw = (body + edge + rush + texture) * (0.85 + intensity * 0.15) * 0.88;
 
       const sample = raw - this.previousRaw + 0.9975 * this.dcBlocked;
       this.previousRaw = raw;
