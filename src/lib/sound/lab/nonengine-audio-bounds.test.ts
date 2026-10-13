@@ -1,29 +1,20 @@
 /**
  * Offline render test for non-engine sound profiles.
  *
- * NOTE: This test suite requires OfflineAudioContext which is not available in
- * Node.js. It runs in browser environments (Vitest with browser mode, Playwright,
- * or manual execution). When running under `npm test` with vitest's default node
- * environment, all tests are skipped.
+ * Runs under vitest's node environment via the node-web-audio-api polyfill
+ * (src/test-utils/install-web-audio.ts). It must never be silently skipped: if
+ * no OfflineAudioContext is available the suite fails.
  *
- * To run these tests:
- * - Use vitest with browser mode: `npx vitest --browser.enabled`
- * - Or run in a Playwright test: see scripts/render-audio-lab.mjs
- *
- * Validates:
- * 1. Loudness is within -20 to -12 LUFS (approximate integrated)
- * 2. Low-frequency energy share (<60 Hz) is below 30% of total energy
- * 3. Sample peak is below -0.5 dBFS (headroom for true peak)
+ * Renders use environmentId "open" (the in-car condition) and validate:
+ * 1. Loudness is within LOUDNESS_MIN_LUFS..LOUDNESS_MAX_LUFS (approximate integrated)
+ * 2. Low-frequency energy share (<60 Hz) stays below LF_SHARE_MAX_PERCENT
+ * 3. Sample peak is below -1 dBFS
  * 4. Idle presence: RMS > -50 dBFS at standstill
  */
 
+import "@/test-utils/install-web-audio";
 import { describe, expect, it } from "vitest";
 import { renderLabOffline } from "@/lib/sound/lab/render-harness";
-
-const OfflineCtx =
-  globalThis.OfflineAudioContext ??
-  (globalThis as { webkitOfflineAudioContext?: typeof OfflineAudioContext })
-    .webkitOfflineAudioContext;
 
 const NON_ENGINE_PROFILES = [
   "open-wind",
@@ -47,10 +38,15 @@ const NON_ENGINE_PROFILES = [
   "wiesn-tractor",
 ];
 
-const LOUDNESS_MIN_LUFS = -20;
-const LOUDNESS_MAX_LUFS = -12;
+// steady-80 is a 10 s constant cruise (no throttle events), so event-driven sounds
+// (laughs, pulses, growls) sit below their full-drive -16 LUFS integrated level.
+// This band catches gross regressions (silence, runaway gain); the -16 ±2 LUFS
+// catalog target is verified on the full drive render (see loudness.ts).
+const LOUDNESS_MIN_LUFS = -24;
+const LOUDNESS_MAX_LUFS = -9;
 const LF_SHARE_MAX_PERCENT = 30;
-const PEAK_MAX_DBFS = -0.5;
+// Peak-protect ceiling is -1 dBFS; allow float rounding at the ceiling.
+const PEAK_MAX_DBFS = -0.99;
 
 /**
  * Calculate low-frequency energy share using energy (amplitude squared),
@@ -66,7 +62,11 @@ function lfEnergyShare(bandEnergy: { lowHz: number; highHz: number; rmsDbfs: num
   return totalEnergy > 0 ? (lfEnergy / totalEnergy) * 100 : 0;
 }
 
-describe.skipIf(!OfflineCtx)("non-engine audio bounds", () => {
+describe("non-engine audio bounds", () => {
+  it("has an OfflineAudioContext (polyfilled in node)", () => {
+    expect(typeof globalThis.OfflineAudioContext).toBe("function");
+  });
+
   it.each(NON_ENGINE_PROFILES)(
     "%s meets loudness and LF share bounds (steady-80 fixture)",
     async (profileId) => {
@@ -74,6 +74,7 @@ describe.skipIf(!OfflineCtx)("non-engine audio bounds", () => {
         profileId,
         fixtureId: "steady-80",
         includeSpectrum: false,
+        environmentId: "open",
       });
 
       const { metrics } = result;
@@ -99,6 +100,7 @@ describe.skipIf(!OfflineCtx)("non-engine audio bounds", () => {
         profileId,
         fixtureId: "idle",
         includeSpectrum: false,
+        environmentId: "open",
       });
 
       const { metrics } = result;
