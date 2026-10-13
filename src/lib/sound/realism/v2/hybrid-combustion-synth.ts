@@ -808,10 +808,10 @@ export class HybridCombustionSynth {
 
     this.exhaustFormants.forEach((band, i) => {
       const base = 0.26 / (1 + i * 0.48);
-      // Cruise keeps a body; full load adds pressure. Together with the excitation
-      // this holds the cruise-to-full-load span near 12-16 dB (cabin-plausible).
-      const loadLift =
-        0.7 + load * (0.3 + cfg.loadContrast * 0.2) + demand * (0.1 + cfg.loadContrast * 0.1);
+      // Root-cause §2: Near-constant loadLift so exhaust formants are not another
+      // throttle-dependent gain stage. Combined with worklet, support, and bus this
+      // keeps the cruise-to-pull gap at 8-10 dB instead of 14-17 dB.
+      const loadLift = 0.85 + load * 0.15;
       const upperRpm = i > 1 ? rpmNorm * cfg.upperRpmEnergy * (0.12 + load * 0.28) : 0;
       const enrich = 1 + (i > 1 ? load * cfg.highLoadEnrichment * 0.55 + upperRpm : 0);
       const dark = 1 - cfg.bodyBrightness * 0.22;
@@ -864,7 +864,10 @@ export class HybridCombustionSynth {
           ? 0.3 + load * cfg.highLoadEnrichment * 0.7 + rpmNorm * cfg.upperRpmEnergy * 0.5
           : 1;
       // Fundamental weight thins out when the excitation is already dense at high RPM.
-      const lowRpmBody = band.order <= cfg.cylinders / 2 ? 1 - rpmNorm * 0.35 : 1;
+      // Root-cause §4: exclude firing order (cfg.cylinders / 2) from lowRpmBody reduction
+      // so its contribution stays prominent at all RPMs.
+      const firingOrder = cfg.cylinders / 2;
+      const lowRpmBody = band.order < firingOrder ? 1 - rpmNorm * 0.35 : 1;
       // Raised base multiplier (0.34 → 0.52) to boost harmonic content for firing-order share ≥0.55
       targetParam(
         band.gain.gain,
@@ -905,8 +908,15 @@ export class HybridCombustionSynth {
           : shiftPhase === "reengage"
             ? 0.9
             : 1;
+      // Root-cause §3: per-engine outputTrimDb normalizes loudness across engines
+      const outputTrimLinear = Math.pow(10, (cfg.outputTrimDb ?? 0) / 20);
       const bodyScaled =
-        body * phaseMul * (overrun ? 0.7 : 1) * gate("combustion") * this.characterBodyScale();
+        body *
+        phaseMul *
+        (overrun ? 0.7 : 1) *
+        gate("combustion") *
+        this.characterBodyScale() *
+        outputTrimLinear;
       targetParam(this.combustionBus.gain, bodyScaled, audioTime, 0.06);
       this.diagnostics.combustionGain = bodyScaled;
     }

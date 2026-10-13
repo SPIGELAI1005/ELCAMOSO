@@ -214,14 +214,16 @@ function v8Cylinders(
   order: number[],
   collectorForCylinder: (cyl: number) => number,
   primaryForIndex: (i: number) => number,
-  pulseWeight = 1,
+  pulseWeightOrWeights: number | number[] = 1,
 ): CombustionCylinderTopology[] {
   // Even 90° spacing over 720° in firing order.
   return order.map((cylId, i) => ({
     id: cylId,
     firingAngleDegrees: i * 90,
     collectorId: collectorForCylinder(cylId),
-    pulseWeight,
+    pulseWeight: Array.isArray(pulseWeightOrWeights)
+      ? (pulseWeightOrWeights[i] ?? 1)
+      : pulseWeightOrWeights,
     primaryLengthMetres: primaryForIndex(i),
   }));
 }
@@ -229,6 +231,9 @@ function v8Cylinders(
 /**
  * Cross-plane muscle V8: order 1-8-7-2-6-5-4-3, banks → collectors.
  * Odd cylinders → collector 0; even → collector 1. Mild primary-length stagger.
+ * Root-cause §5: Uneven per-bank pulseWeights for order 2 burble character.
+ * Weights alternate [1.18, 0.78, 1.1, 0.72, 1.18, 0.78, 1.1, 0.72] to create
+ * asymmetric bank firing that produces the lumpy V8 idle.
  */
 export const MUSCLE_V8_TOPOLOGY: CombustionTopologyV1 = {
   version: 1,
@@ -240,6 +245,7 @@ export const MUSCLE_V8_TOPOLOGY: CombustionTopologyV1 = {
     [1, 8, 7, 2, 6, 5, 4, 3],
     (cyl) => (cyl % 2 === 1 ? 0 : 1),
     (i) => 0.06 + (i % 4) * 0.035,
+    [1.18, 0.78, 1.1, 0.72, 1.18, 0.78, 1.1, 0.72],
   ),
 };
 

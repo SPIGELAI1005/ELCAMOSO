@@ -70,6 +70,11 @@ export interface AcousticEngineConfig {
   bodyBrightness: number;
   /** Soft redline reference for rpmNorm (personality redline). */
   redlineRpm: number;
+  /**
+   * Per-engine output trim in dB. Applied as a final linear gain multiplier.
+   * Root-cause §3: Normalizes loudness across engines so all hit ~-12.7 LUFS.
+   */
+  outputTrimDb: number;
 }
 
 /** True four-stroke firing frequency: RPM × cylinders / 120. */
@@ -104,6 +109,7 @@ const GT_V8: AcousticEngineConfig = {
   forcedInduction: false,
   bodyBrightness: 0.42,
   redlineRpm: 6500,
+  outputTrimDb: 8.6,
 };
 
 /**
@@ -144,6 +150,7 @@ const AMERICAN_V8: AcousticEngineConfig = {
   forcedInduction: false,
   bodyBrightness: 0.36,
   redlineRpm: 6000,
+  outputTrimDb: 7.1,
 };
 
 const FLAT_SIX: AcousticEngineConfig = {
@@ -170,6 +177,7 @@ const FLAT_SIX: AcousticEngineConfig = {
   forcedInduction: false,
   bodyBrightness: 0.58,
   redlineRpm: 9000,
+  outputTrimDb: 9.9,
 };
 
 const TURBO_I6: AcousticEngineConfig = {
@@ -198,6 +206,7 @@ const TURBO_I6: AcousticEngineConfig = {
   forcedInduction: true,
   bodyBrightness: 0.52,
   redlineRpm: 7000,
+  outputTrimDb: 9.4,
 };
 
 const V10: AcousticEngineConfig = {
@@ -224,6 +233,7 @@ const V10: AcousticEngineConfig = {
   forcedInduction: false,
   bodyBrightness: 0.64,
   redlineRpm: 8500,
+  outputTrimDb: 4.1,
 };
 
 const FLAT_PLANE_V8_TRACK: AcousticEngineConfig = {
@@ -256,6 +266,7 @@ const FLAT_PLANE_V8_TRACK: AcousticEngineConfig = {
   // Brighter than GT V8's 0.42 for the flat-plane V8 scream
   bodyBrightness: 0.82,
   redlineRpm: 8600,
+  outputTrimDb: 6.4,
 };
 
 const RALLY_TURBO_3: AcousticEngineConfig = {
@@ -283,6 +294,7 @@ const RALLY_TURBO_3: AcousticEngineConfig = {
   forcedInduction: true,
   bodyBrightness: 0.58,
   redlineRpm: 6800,
+  outputTrimDb: 9.3,
 };
 
 const INLINE_4: AcousticEngineConfig = {
@@ -309,6 +321,7 @@ const INLINE_4: AcousticEngineConfig = {
   forcedInduction: false,
   bodyBrightness: 0.7,
   redlineRpm: 14000,
+  outputTrimDb: 11.0,
 };
 
 const V_TWIN: AcousticEngineConfig = {
@@ -335,6 +348,7 @@ const V_TWIN: AcousticEngineConfig = {
   forcedInduction: false,
   bodyBrightness: 0.32,
   redlineRpm: 5500,
+  outputTrimDb: 9.0,
 };
 
 /** Sound profile id → acoustic config for Realism V2 combustion. */
