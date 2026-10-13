@@ -79,24 +79,41 @@ export function createHeartbeatLayer(ctx: BaseAudioContext, opts: LayerBaseOpts)
   let bpm = 62;
   let disposed = false;
 
+  /**
+   * One heart sound. Body lives at ~90–110 Hz (audible on car/phone speakers),
+   * with a 2nd harmonic for definition and a very quiet half-frequency partial for
+   * felt weight. Smooth 18 ms attack and exponential tail → no HF clicks.
+   */
   function beat(at: number, tone: number, level: number, which: "lub" | "dub") {
-    const osc = ctx.createOscillator();
+    const dur = which === "lub" ? 0.17 : 0.2;
     const lp = ctx.createBiquadFilter();
-    const g = ctx.createGain();
-    osc.type = "sine";
-    const f0 = which === "lub" ? tone : tone * 0.78;
-    osc.frequency.setValueAtTime(f0, at);
-    osc.frequency.exponentialRampToValueAtTime(Math.max(35, f0 * 0.55), at + 0.08);
     lp.type = "lowpass";
-    lp.frequency.value = which === "lub" ? 180 : 140;
+    lp.frequency.value = 420;
+    lp.Q.value = 0.5;
+    const g = ctx.createGain();
     g.gain.setValueAtTime(0.0001, at);
-    g.gain.exponentialRampToValueAtTime(Math.max(0.0002, level), at + 0.012);
-    g.gain.exponentialRampToValueAtTime(0.0001, at + (which === "lub" ? 0.12 : 0.16));
-    osc.connect(lp);
+    g.gain.exponentialRampToValueAtTime(Math.max(0.0002, level), at + 0.018);
+    g.gain.exponentialRampToValueAtTime(0.0001, at + dur);
     lp.connect(g);
     g.connect(bus);
-    osc.start(at);
-    osc.stop(at + 0.2);
+    const f0 = which === "lub" ? tone : tone * 0.88;
+    const partials: Array<[number, number]> = [
+      [1, 1],
+      [2, 0.28],
+      [0.5, 0.12],
+    ];
+    for (const [mult, amp] of partials) {
+      const osc = ctx.createOscillator();
+      const pg = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(f0 * mult * 1.08, at);
+      osc.frequency.exponentialRampToValueAtTime(f0 * mult * 0.86, at + dur);
+      pg.gain.value = amp;
+      osc.connect(pg);
+      pg.connect(lp);
+      osc.start(at);
+      osc.stop(at + dur + 0.05);
+    }
   }
 
   return {
@@ -112,8 +129,8 @@ export function createHeartbeatLayer(ctx: BaseAudioContext, opts: LayerBaseOpts)
       if (next < t) next = t;
       while (next < t + 0.2) {
         const amp = (opts.level ?? 0.35) * (0.45 + intensity * 0.7);
-        beat(next, 78, amp, "lub");
-        beat(next + interval * 0.28, 70, amp * 0.85, "dub");
+        beat(next, 104, amp, "lub");
+        beat(next + interval * 0.28, 104, amp * 0.8, "dub");
         next += interval;
       }
       targetParam(gain.gain, softGate(0.85), t, 0.2);
