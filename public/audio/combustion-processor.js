@@ -244,8 +244,9 @@ class CombustionExcitationProcessor extends AudioWorkletProcessor {
     const brightDecay = Math.exp(-1 / (sampleRate * edgeTauSeconds));
     const burstDecay = Math.exp(-1 / (sampleRate * burstTauSeconds));
 
-    // Root-cause §3: cap burstLpHz at 2500 Hz to reduce HF noise that dilutes order share
-    const burstLpHz = Math.min(2500, 900 + load * 1200 + sharpness * 600);
+    // Cap burstLpHz at 4200 Hz: keeps some air above 6 kHz (the 2500 Hz cap plus soft attacks
+    // dulled the top end) while HF noise still does not dilute order share.
+    const burstLpHz = Math.min(4200, 900 + load * 1800 + sharpness * 900);
     const burstHpHz = 140 + load * 120;
     const lpCoef = 1 - Math.exp((-2 * Math.PI * burstLpHz) / sampleRate);
     const hpCoef = 1 - Math.exp((-2 * Math.PI * burstHpHz) / sampleRate);
