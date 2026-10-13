@@ -74,21 +74,28 @@ const PENT = [0, 2, 4, 7, 9];
 
 export function createHeartbeatLayer(ctx: BaseAudioContext, opts: LayerBaseOpts): LayerHandle {
   const bus = ctx.createGain();
-  const { gain, handle } = chain(ctx, opts, bus);
+  // High-pass to reduce sub-60 Hz for Tesla speakers
+  const hp = ctx.createBiquadFilter();
+  hp.type = "highpass";
+  hp.frequency.value = 55;
+  hp.Q.value = 0.7;
+  bus.connect(hp);
+  const { gain, handle } = chain(ctx, opts, hp);
   let next = 0;
   let bpm = 62;
   let disposed = false;
 
   function beat(at: number, tone: number, level: number, which: "lub" | "dub") {
+    // Primary beat - shifted up to 90-110 Hz range (missing-fundamental technique)
     const osc = ctx.createOscillator();
     const lp = ctx.createBiquadFilter();
     const g = ctx.createGain();
     osc.type = "sine";
-    const f0 = which === "lub" ? tone : tone * 0.78;
+    const f0 = which === "lub" ? tone : tone * 0.85;
     osc.frequency.setValueAtTime(f0, at);
-    osc.frequency.exponentialRampToValueAtTime(Math.max(35, f0 * 0.55), at + 0.08);
+    osc.frequency.exponentialRampToValueAtTime(Math.max(55, f0 * 0.6), at + 0.08);
     lp.type = "lowpass";
-    lp.frequency.value = which === "lub" ? 180 : 140;
+    lp.frequency.value = which === "lub" ? 220 : 180;
     g.gain.setValueAtTime(0.0001, at);
     g.gain.exponentialRampToValueAtTime(Math.max(0.0002, level), at + 0.012);
     g.gain.exponentialRampToValueAtTime(0.0001, at + (which === "lub" ? 0.12 : 0.16));
@@ -97,6 +104,20 @@ export function createHeartbeatLayer(ctx: BaseAudioContext, opts: LayerBaseOpts)
     g.connect(bus);
     osc.start(at);
     osc.stop(at + 0.2);
+
+    // Second harmonic reinforces perceived bass
+    const harm = ctx.createOscillator();
+    const hg = ctx.createGain();
+    harm.type = "sine";
+    harm.frequency.setValueAtTime(f0 * 2, at);
+    harm.frequency.exponentialRampToValueAtTime(Math.max(90, f0 * 1.2), at + 0.06);
+    hg.gain.setValueAtTime(0.0001, at);
+    hg.gain.exponentialRampToValueAtTime(Math.max(0.0002, level * 0.4), at + 0.01);
+    hg.gain.exponentialRampToValueAtTime(0.0001, at + 0.1);
+    harm.connect(hg);
+    hg.connect(bus);
+    harm.start(at);
+    harm.stop(at + 0.14);
   }
 
   return {
@@ -112,8 +133,8 @@ export function createHeartbeatLayer(ctx: BaseAudioContext, opts: LayerBaseOpts)
       if (next < t) next = t;
       while (next < t + 0.2) {
         const amp = (opts.level ?? 0.35) * (0.45 + intensity * 0.7);
-        beat(next, 78, amp, "lub");
-        beat(next + interval * 0.28, 70, amp * 0.85, "dub");
+        beat(next, 95, amp, "lub");
+        beat(next + interval * 0.28, 88, amp * 0.85, "dub");
         next += interval;
       }
       targetParam(gain.gain, softGate(0.85), t, 0.2);
@@ -165,29 +186,35 @@ export function createArcadeLayer(
   let disposed = false;
   let lastAccel = 0;
   let pulsePhase = audioRandom() * 10;
+  let demandSmooth = 0;
 
   return {
     ...handle,
     update(m, t) {
       if (disposed) return;
+      // Throttle response: affects pitch range and intensity
+      const demand = clamp(m.throttleFast * 0.7 + m.accelFast * 0.9);
+      demandSmooth += (demand - demandSmooth) * Math.min(1, m.dt / 0.12);
       const reg = Math.floor(m.speedSlow * 4);
       const degree = PENT[Math.floor(m.speedSlow * 20) % PENT.length]!;
-      const base = (opts.baseHz ?? 110) * Math.pow(2, reg / 12) * Math.pow(2, degree / 12);
-      targetParam(sq.frequency, clamp(base, 80, 640), t, 0.05);
-      targetParam(tri.frequency, clamp(base * 1.5, 100, 880), t, 0.05);
+      const demandPitchBoost = 1 + demandSmooth * 0.35;
+      const base = (opts.baseHz ?? 110) * Math.pow(2, reg / 12) * Math.pow(2, degree / 12) * demandPitchBoost;
+      targetParam(sq.frequency, clamp(base, 80, 800), t, 0.05);
+      targetParam(tri.frequency, clamp(base * 1.5, 100, 1100), t, 0.05);
       // Phone-safe ceiling keeps the 8-bit character without piercing HF.
-      targetParam(toneLp.frequency, 1100 + m.speedSlow * 600 + m.accelFast * 280, t, 0.14);
-      pulsePhase += m.dt * (3.2 + m.speedSlow * 5.5);
+      targetParam(toneLp.frequency, 1100 + m.speedSlow * 600 + demandSmooth * 500 + m.accelFast * 350, t, 0.14);
+      pulsePhase += m.dt * (3.2 + m.speedSlow * 5.5 + demandSmooth * 4);
       // Soft PWM feel without hard HF square edge.
       const duty = 0.55 + 0.35 * Math.abs(Math.sin(pulsePhase));
-      const pulse = 0.07 + m.speedSlow * 0.1;
+      const demandGainBoost = 1 + demandSmooth * 0.4;
+      const pulse = (0.07 + m.speedSlow * 0.1) * demandGainBoost;
       targetParam(sqG.gain, softGate(pulse * duty * 0.7), t, 0.05);
       targetParam(triG.gain, softGate(pulse * 0.9), t, 0.06);
       if (m.accelFast > 0.55 && lastAccel <= 0.55) sq.frequency.setValueAtTime(base * 1.25, t);
       if (m.regen > 0.45) sq.frequency.setValueAtTime(base * 0.75, t);
       lastAccel = m.accelFast;
-      targetParam(nG.gain, softGate(m.accelFast > 0.4 ? 0.035 : 0.008), t, 0.05);
-      targetParam(gain.gain, softGate((opts.level ?? 0.35) * (0.35 + m.speedSlow * 0.5)), t, 0.08);
+      targetParam(nG.gain, softGate(demandSmooth > 0.3 ? 0.045 + demandSmooth * 0.025 : 0.01), t, 0.05);
+      targetParam(gain.gain, softGate((opts.level ?? 0.35) * (0.35 + m.speedSlow * 0.5 + demandSmooth * 0.2)), t, 0.08);
     },
     dispose() {
       disposed = true;
@@ -203,7 +230,14 @@ export function createSynthwaveLayer(
   opts: LayerBaseOpts & { rootHz?: number },
 ): LayerHandle {
   const bus = ctx.createGain();
-  const root = opts.rootHz ?? 65;
+  // High-pass to reduce sub-60 Hz for Tesla speakers
+  const hp = ctx.createBiquadFilter();
+  hp.type = "highpass";
+  hp.frequency.value = 55;
+  hp.Q.value = 0.7;
+  bus.connect(hp);
+  // Root shifted up to 82 Hz for missing-fundamental bass
+  const root = opts.rootHz ?? 82;
   const ratios = [1, 1.5, 2, 2.5];
   const voices = ratios.map((r, i) => {
     const osc = ctx.createOscillator();
@@ -228,7 +262,16 @@ export function createSynthwaveLayer(
   bass.connect(bassG);
   bassG.connect(bus);
   bass.start();
-  const { gain, handle } = chain(ctx, opts, bus);
+  // Second harmonic for perceived sub-bass
+  const bassHarm = ctx.createOscillator();
+  bassHarm.type = "sine";
+  bassHarm.frequency.value = root * 2;
+  const bassHarmG = ctx.createGain();
+  bassHarmG.gain.value = 0.0001;
+  bassHarm.connect(bassHarmG);
+  bassHarmG.connect(bus);
+  bassHarm.start();
+  const { gain, handle } = chain(ctx, opts, hp);
   let disposed = false;
   let arp = 0;
   let filterEnv = 700;
@@ -255,14 +298,18 @@ export function createSynthwaveLayer(
         );
       });
       const pulse = 0.55 + 0.45 * Math.sin(t * (1.1 + m.speedSlow * 0.7));
-      targetParam(bass.frequency, root * (0.5 + Math.floor(m.speedSlow * 2) * 0.25), t, 0.14);
+      const bassHz = root * (0.5 + Math.floor(m.speedSlow * 2) * 0.25);
+      targetParam(bass.frequency, bassHz, t, 0.14);
+      targetParam(bassHarm.frequency, bassHz * 2, t, 0.14);
       targetParam(bassG.gain, softGate((0.09 + m.accelFast * 0.1) * pulse), t, 0.1);
+      targetParam(bassHarmG.gain, softGate((0.05 + m.accelFast * 0.06) * pulse), t, 0.1);
       targetParam(gain.gain, softGate((opts.level ?? 0.4) * (0.38 + m.speedSlow * 0.42)), t, 0.25);
     },
     dispose() {
       disposed = true;
       voices.forEach(({ osc }) => stopSafe(osc));
       stopSafe(bass);
+      stopSafe(bassHarm);
     },
   };
 }
@@ -276,20 +323,28 @@ export function createSynthwaveLayer(
  * - Pitch drop on the hit (classic 808 envelope)
  * - Clear pulse rate that pumps with motion (sidechain-like gaps between hits)
  * - Between pulses nearly silent so the boom is the character
+ *
+ * Tesla speakers: shifted to 75-150 Hz range using missing-fundamental technique.
  */
 export function createDeepBassPulseLayer(ctx: BaseAudioContext, opts: LayerBaseOpts): LayerHandle {
   const bus = ctx.createGain();
+  // High-pass to reduce sub-60 Hz for Tesla speakers
+  const hp = ctx.createBiquadFilter();
+  hp.type = "highpass";
+  hp.frequency.value = 55;
+  hp.Q.value = 0.7;
+  bus.connect(hp);
   // Tiny residual bed so cabin never goes fully dead between hits.
   const bed = ctx.createOscillator();
   bed.type = "sine";
-  bed.frequency.value = 55;
+  bed.frequency.value = 75;
   const bedG = ctx.createGain();
   bedG.gain.value = 0.0001;
   bed.connect(bedG);
   bedG.connect(bus);
   bed.start();
 
-  const { gain, handle } = chain(ctx, opts, bus);
+  const { gain, handle } = chain(ctx, opts, hp);
   let next = ctx.currentTime + 0.08;
   let bpm = 72;
   let disposed = false;
@@ -297,17 +352,17 @@ export function createDeepBassPulseLayer(ctx: BaseAudioContext, opts: LayerBaseO
   function firePulse(at: number, amp: number, fundamental: number, long: boolean) {
     const dur = long ? 0.42 : 0.28;
 
-    // Sub sine with 808 pitch drop
+    // Primary pulse (shifted up to 80-120 Hz range)
     const sub = ctx.createOscillator();
     const subLp = ctx.createBiquadFilter();
     const subG = ctx.createGain();
     sub.type = "sine";
     subLp.type = "lowpass";
-    subLp.frequency.value = 140;
+    subLp.frequency.value = 200;
     sub.frequency.setValueAtTime(fundamental * 1.15, at);
-    sub.frequency.exponentialRampToValueAtTime(Math.max(38, fundamental * 0.72), at + dur * 0.85);
+    sub.frequency.exponentialRampToValueAtTime(Math.max(60, fundamental * 0.75), at + dur * 0.85);
     subG.gain.setValueAtTime(0.0001, at);
-    subG.gain.exponentialRampToValueAtTime(Math.max(0.0002, amp), at + 0.01);
+    subG.gain.exponentialRampToValueAtTime(Math.max(0.0002, amp * 0.85), at + 0.01);
     subG.gain.exponentialRampToValueAtTime(0.0001, at + dur);
     sub.connect(subLp);
     subLp.connect(subG);
@@ -315,18 +370,32 @@ export function createDeepBassPulseLayer(ctx: BaseAudioContext, opts: LayerBaseO
     sub.start(at);
     sub.stop(at + dur + 0.05);
 
-    // Phone / cabin presence (100–170 Hz) - this is what makes the pulse audible
+    // Second harmonic for missing-fundamental perceived bass
+    const harm = ctx.createOscillator();
+    const harmG = ctx.createGain();
+    harm.type = "sine";
+    harm.frequency.setValueAtTime(fundamental * 2.3, at);
+    harm.frequency.exponentialRampToValueAtTime(Math.max(100, fundamental * 1.5), at + dur * 0.75);
+    harmG.gain.setValueAtTime(0.0001, at);
+    harmG.gain.exponentialRampToValueAtTime(Math.max(0.0002, amp * 0.55), at + 0.008);
+    harmG.gain.exponentialRampToValueAtTime(0.0001, at + dur * 0.8);
+    harm.connect(harmG);
+    harmG.connect(bus);
+    harm.start(at);
+    harm.stop(at + dur + 0.05);
+
+    // Phone / cabin presence (120–200 Hz) - this is what makes the pulse audible
     const mid = ctx.createOscillator();
     const midLp = ctx.createBiquadFilter();
     const midG = ctx.createGain();
     mid.type = "triangle";
     midLp.type = "lowpass";
-    midLp.frequency.value = 260;
+    midLp.frequency.value = 300;
     const midHz = fundamental * 1.85;
     mid.frequency.setValueAtTime(midHz * 1.08, at);
-    mid.frequency.exponentialRampToValueAtTime(Math.max(70, midHz * 0.75), at + dur * 0.7);
+    mid.frequency.exponentialRampToValueAtTime(Math.max(90, midHz * 0.78), at + dur * 0.7);
     midG.gain.setValueAtTime(0.0001, at);
-    midG.gain.exponentialRampToValueAtTime(Math.max(0.0002, amp * 0.7), at + 0.008);
+    midG.gain.exponentialRampToValueAtTime(Math.max(0.0002, amp * 0.65), at + 0.008);
     midG.gain.exponentialRampToValueAtTime(0.0001, at + dur * 0.75);
     mid.connect(midLp);
     midLp.connect(midG);
@@ -341,7 +410,7 @@ export function createDeepBassPulseLayer(ctx: BaseAudioContext, opts: LayerBaseO
     click.frequency.setValueAtTime(420, at);
     click.frequency.exponentialRampToValueAtTime(180, at + 0.04);
     clickG.gain.setValueAtTime(0.0001, at);
-    clickG.gain.exponentialRampToValueAtTime(Math.max(0.0002, amp * 0.22), at + 0.004);
+    clickG.gain.exponentialRampToValueAtTime(Math.max(0.0002, amp * 0.25), at + 0.004);
     clickG.gain.exponentialRampToValueAtTime(0.0001, at + 0.05);
     click.connect(clickG);
     clickG.connect(bus);
@@ -364,7 +433,8 @@ export function createDeepBassPulseLayer(ctx: BaseAudioContext, opts: LayerBaseO
       const horizon = t + 0.22;
       while (next < horizon) {
         const amp = (opts.level ?? 0.7) * (0.55 + intensity * 0.85);
-        const fund = 58 + intensity * 18;
+        // Fundamental shifted up to 78 Hz (was 58)
+        const fund = 78 + intensity * 22;
         firePulse(next, amp, fund, intensity > 0.55);
         // Occasional double-hit under hard accel (pumping EDM feel)
         if (intensity > 0.7 && audioRandom() > 0.55) {
@@ -373,7 +443,7 @@ export function createDeepBassPulseLayer(ctx: BaseAudioContext, opts: LayerBaseO
         next += interval;
       }
 
-      targetParam(bed.frequency, 48 + intensity * 12, t, 0.2);
+      targetParam(bed.frequency, 70 + intensity * 15, t, 0.2);
       targetParam(bedG.gain, softGate(0.03 + intensity * 0.04), t, 0.25);
       targetParam(gain.gain, softGate(0.9 + intensity * 0.25), t, 0.15);
     },
@@ -603,10 +673,16 @@ export function createCreatureBreathLayer(
   const mythic = !!opts.mythic;
   const dark = !!opts.dark;
   const bus = ctx.createGain();
+  // High-pass to reduce sub-60 Hz for Tesla speakers
+  const hp = ctx.createBiquadFilter();
+  hp.type = "highpass";
+  hp.frequency.value = 55;
+  hp.Q.value = 0.7;
+  bus.connect(hp);
   const breath = createLoopingNoise(ctx, dark ? "brown" : "pink", 0.9);
   const bp = ctx.createBiquadFilter();
   bp.type = "bandpass";
-  bp.frequency.value = dark ? 160 : 260;
+  bp.frequency.value = dark ? 180 : 260;
   bp.Q.value = dark ? 0.55 : 0.75;
   const bg = ctx.createGain();
   breath.connect(bp);
@@ -614,12 +690,13 @@ export function createCreatureBreathLayer(
   bg.connect(bus);
   breath.start();
 
+  // Growl shifted up for missing-fundamental bass
   const growl = ctx.createOscillator();
   growl.type = "sawtooth";
-  growl.frequency.value = dark ? 42 : 52;
+  growl.frequency.value = dark ? 75 : 85;
   const glp = ctx.createBiquadFilter();
   glp.type = "lowpass";
-  glp.frequency.value = dark ? 160 : 200;
+  glp.frequency.value = dark ? 220 : 260;
   const gg = ctx.createGain();
   gg.gain.value = 0.0001;
   const drive = createDriveShaper(ctx, dark ? 0.42 : 0.32);
@@ -629,14 +706,15 @@ export function createCreatureBreathLayer(
   gg.connect(bus);
   growl.start();
 
-  const sub = ctx.createOscillator();
-  sub.type = "sine";
-  sub.frequency.value = 36;
-  const subG = ctx.createGain();
-  subG.gain.value = 0.0001;
-  sub.connect(subG);
-  subG.connect(bus);
-  sub.start();
+  // Second harmonic for perceived sub-bass
+  const growlHarm = ctx.createOscillator();
+  growlHarm.type = "sine";
+  growlHarm.frequency.value = dark ? 150 : 170;
+  const ghg = ctx.createGain();
+  ghg.gain.value = 0.0001;
+  growlHarm.connect(ghg);
+  ghg.connect(bus);
+  growlHarm.start();
 
   const wing = createLoopingNoise(ctx, "white", 1.1);
   const wingHp = ctx.createBiquadFilter();
@@ -649,7 +727,7 @@ export function createCreatureBreathLayer(
   wingG.connect(bus);
   wing.start();
 
-  const { gain, handle } = chain(ctx, opts, bus);
+  const { gain, handle } = chain(ctx, opts, hp);
   let disposed = false;
   let phase = audioRandom() * 10;
   let phase2 = audioRandom() * 7;
@@ -667,15 +745,21 @@ export function createCreatureBreathLayer(
       targetParam(bg.gain, softGate(breathLevel), t, 0.28);
       targetParam(
         bp.frequency,
-        (dark ? 140 : 200) + inhale * (dark ? 70 : 110) + m.accelFast * 90 - m.regen * 40,
+        (dark ? 160 : 220) + inhale * (dark ? 80 : 120) + m.accelFast * 100 - m.regen * 40,
         t,
         0.32,
       );
 
-      const growlBase = dark ? 38 : 48;
+      const growlBase = dark ? 70 : 80;
       targetParam(
         growl.frequency,
-        growlBase + m.accelFast * (dark ? 28 : 36) + m.speedSlow * 14 - m.regen * 12,
+        growlBase + m.accelFast * (dark ? 35 : 45) + m.speedSlow * 18 - m.regen * 15,
+        t,
+        0.22,
+      );
+      targetParam(
+        growlHarm.frequency,
+        (growlBase + m.accelFast * (dark ? 35 : 45) + m.speedSlow * 18) * 2,
         t,
         0.22,
       );
@@ -687,14 +771,7 @@ export function createCreatureBreathLayer(
         m.speedSlow * 0.06 -
         m.regen * 0.06;
       targetParam(gg.gain, softGate(Math.max(0.03, growlAmt)), t, 0.18);
-
-      targetParam(sub.frequency, (dark ? 32 : 36) + m.speedSlow * 10, t, 0.35);
-      targetParam(
-        subG.gain,
-        softGate((dark ? 0.1 : 0.05) + m.accelFast * 0.12 + m.bodyLevel * 0.06),
-        t,
-        0.25,
-      );
+      targetParam(ghg.gain, softGate(Math.max(0.015, growlAmt * 0.5)), t, 0.18);
 
       const wingAmt = mythic
         ? softGate(m.speedSlow * 0.16 + m.accelFast * 0.08 + 0.03)
@@ -711,14 +788,18 @@ export function createCreatureBreathLayer(
       disposed = true;
       stopSafe(breath);
       stopSafe(growl);
-      stopSafe(sub);
+      stopSafe(growlHarm);
       stopSafe(wing);
     },
   };
 }
 
-export function createRainLayer(ctx: BaseAudioContext, opts: LayerBaseOpts): LayerHandle {
+export function createRainLayer(
+  ctx: BaseAudioContext,
+  opts: LayerBaseOpts & { idlePresence?: number },
+): LayerHandle {
   const bus = ctx.createGain();
+  const idlePresence = opts.idlePresence ?? 0.45;
   const wash = createLoopingNoise(ctx, "pink", 1);
   const washBp = ctx.createBiquadFilter();
   washBp.type = "bandpass";
@@ -749,6 +830,17 @@ export function createRainLayer(ctx: BaseAudioContext, opts: LayerBaseOpts): Lay
   sprayBp.connect(sprayG);
   sprayG.connect(bus);
   spray.start();
+  // Soft ambient rain on roof (always present, even at standstill)
+  const roof = createLoopingNoise(ctx, "pink", 0.85);
+  const roofBp = ctx.createBiquadFilter();
+  roofBp.type = "bandpass";
+  roofBp.frequency.value = 1600;
+  roofBp.Q.value = 0.5;
+  const roofG = ctx.createGain();
+  roof.connect(roofBp);
+  roofBp.connect(roofG);
+  roofG.connect(bus);
+  roof.start();
   const { gain, handle } = chain(ctx, opts, bus);
   let nextDrop = 0;
   let disposed = false;
@@ -758,6 +850,7 @@ export function createRainLayer(ctx: BaseAudioContext, opts: LayerBaseOpts): Lay
       if (disposed) return;
       const road = smoothstep(5, 70, m.speedKmh);
       const drops = 1 - road * 0.75;
+      const idleFactor = 1 - m.speedSlow;
       // Peak spray in the mid band (~20–55 km/h), not only at full highway wash.
       const midSpray = smoothstep(12, 28, m.speedKmh) * (1 - smoothstep(50, 85, m.speedKmh));
       targetParam(
@@ -768,7 +861,7 @@ export function createRainLayer(ctx: BaseAudioContext, opts: LayerBaseOpts): Lay
       );
       targetParam(
         glassG.gain,
-        softGate(0.06 + drops * 0.18 + midSpray * 0.22 + road * 0.08),
+        softGate(0.06 + drops * 0.18 + midSpray * 0.22 + road * 0.08 + idleFactor * idlePresence * 0.12),
         t,
         0.32,
       );
@@ -778,11 +871,20 @@ export function createRainLayer(ctx: BaseAudioContext, opts: LayerBaseOpts): Lay
         t,
         0.25,
       );
+      // Roof rain is always present for cozy cabin feel
+      targetParam(
+        roofG.gain,
+        softGate(idlePresence * (0.18 + idleFactor * 0.22) + road * 0.08),
+        t,
+        0.4,
+      );
       washBp.frequency.setTargetAtTime(1400 + road * 1800 + midSpray * 400, t, 0.35);
       sprayBp.frequency.setTargetAtTime(1200 + midSpray * 900 + road * 600, t, 0.3);
       if (nextDrop < t) nextDrop = t;
-      const dropRate = 4 + drops * 18;
-      while (nextDrop < t + 0.12 && drops > 0.15) {
+      // Drop rate increases at standstill (hear individual drops on glass)
+      const dropRate = 4 + drops * 18 + idleFactor * 8;
+      const dropAmp = drops > 0.15 || idleFactor > 0.5 ? Math.max(drops, idleFactor * 0.6) : 0;
+      while (nextDrop < t + 0.12 && dropAmp > 0.15) {
         const at = nextDrop;
         const src = createLoopingNoise(ctx, "white", 1);
         const bp = ctx.createBiquadFilter();
@@ -793,7 +895,7 @@ export function createRainLayer(ctx: BaseAudioContext, opts: LayerBaseOpts): Lay
         const pan = ctx.createStereoPanner();
         pan.pan.value = (audioRandom() - 0.5) * 1.5;
         g.gain.setValueAtTime(0.0001, at);
-        g.gain.exponentialRampToValueAtTime(0.08 * drops, at + 0.002);
+        g.gain.exponentialRampToValueAtTime(0.08 * dropAmp, at + 0.002);
         g.gain.exponentialRampToValueAtTime(0.0001, at + 0.04);
         src.connect(bp);
         bp.connect(g);
@@ -803,9 +905,10 @@ export function createRainLayer(ctx: BaseAudioContext, opts: LayerBaseOpts): Lay
         src.stop(at + 0.06);
         nextDrop += (1 / dropRate) * (0.6 + audioRandom() * 0.8);
       }
+      const idleLevel = idlePresence * idleFactor * 0.55;
       targetParam(
         gain.gain,
-        softGate((opts.level ?? 0.45) * (0.32 + road * 0.5 + midSpray * 0.2)),
+        softGate((opts.level ?? 0.45) * (0.32 + road * 0.5 + midSpray * 0.2 + idleLevel)),
         t,
         0.28,
       );
@@ -815,19 +918,28 @@ export function createRainLayer(ctx: BaseAudioContext, opts: LayerBaseOpts): Lay
       stopSafe(wash);
       stopSafe(glass);
       stopSafe(spray);
+      stopSafe(roof);
     },
   };
 }
 
 export function createOceanWaveLayer(ctx: BaseAudioContext, opts: LayerBaseOpts): LayerHandle {
   const bus = ctx.createGain();
+  // High-pass to reduce sub-60 Hz for Tesla speakers
+  const hp = ctx.createBiquadFilter();
+  hp.type = "highpass";
+  hp.frequency.value = 55;
+  hp.Q.value = 0.7;
+  bus.connect(hp);
+  // Swell: bandpass 80-200 Hz instead of pure lowpass for missing-fundamental bass
   const swell = createLoopingNoise(ctx, "brown", 0.7);
-  const swellLp = ctx.createBiquadFilter();
-  swellLp.type = "lowpass";
-  swellLp.frequency.value = 200;
+  const swellBp = ctx.createBiquadFilter();
+  swellBp.type = "bandpass";
+  swellBp.frequency.value = 140;
+  swellBp.Q.value = 0.5;
   const swellG = ctx.createGain();
-  swell.connect(swellLp);
-  swellLp.connect(swellG);
+  swell.connect(swellBp);
+  swellBp.connect(swellG);
   swellG.connect(bus);
   swell.start();
   const foam = createLoopingNoise(ctx, "pink", 1);
@@ -840,7 +952,7 @@ export function createOceanWaveLayer(ctx: BaseAudioContext, opts: LayerBaseOpts)
   foamBp.connect(foamG);
   foamG.connect(bus);
   foam.start();
-  const { gain, handle } = chain(ctx, opts, bus);
+  const { gain, handle } = chain(ctx, opts, hp);
   let disposed = false;
   let phase = audioRandom() * 20;
   return {
@@ -852,18 +964,18 @@ export function createOceanWaveLayer(ctx: BaseAudioContext, opts: LayerBaseOpts)
       const wave = 0.55 + 0.45 * Math.sin(phase) * Math.sin(phase * 0.37 + 1.2);
       targetParam(
         swellG.gain,
-        softGate(0.28 + wave * 0.42 + m.accelFast * 0.25 + m.speedSlow * 0.06),
+        softGate(0.32 + wave * 0.48 + m.accelFast * 0.28 + m.speedSlow * 0.08),
         t,
         0.45,
       );
       targetParam(
         foamG.gain,
-        softGate(0.1 + m.speedSlow * 0.2 + wave * 0.28 + m.accelFast * 0.12),
+        softGate(0.12 + m.speedSlow * 0.22 + wave * 0.32 + m.accelFast * 0.14),
         t,
         0.4,
       );
       foamBp.frequency.setTargetAtTime(550 + m.speedSlow * 700 + wave * 200, t, 0.55);
-      swellLp.frequency.setTargetAtTime(140 + wave * 80 + m.accelFast * 60, t, 0.5);
+      swellBp.frequency.setTargetAtTime(100 + wave * 60 + m.accelFast * 40, t, 0.5);
       targetParam(
         gain.gain,
         softGate((opts.level ?? 0.45) * (0.38 + wave * 0.25 + m.speedSlow * 0.22)),
@@ -881,18 +993,25 @@ export function createOceanWaveLayer(ctx: BaseAudioContext, opts: LayerBaseOpts)
 
 export function createMaglevLayer(ctx: BaseAudioContext, opts: LayerBaseOpts): LayerHandle {
   const bus = ctx.createGain();
+  // High-pass to reduce sub-60 Hz for Tesla speakers
+  const hp = ctx.createBiquadFilter();
+  hp.type = "highpass";
+  hp.frequency.value = 55;
+  hp.Q.value = 0.7;
+  bus.connect(hp);
+  // Propulsion hum shifted to 95 Hz
   const prop = ctx.createOscillator();
   prop.type = "sine";
-  prop.frequency.value = 80;
+  prop.frequency.value = 95;
   const pg = ctx.createGain();
   const guide = ctx.createOscillator();
   guide.type = "triangle";
-  guide.frequency.value = 120;
+  guide.frequency.value = 140;
   const gg = ctx.createGain();
-  // Steady guideway hum so low speed is never silent.
+  // Steady guideway hum so low speed is never silent (shifted up)
   const idle = ctx.createOscillator();
   idle.type = "sine";
-  idle.frequency.value = 52;
+  idle.frequency.value = 78;
   const idleG = ctx.createGain();
   idleG.gain.value = 0.0001;
   pg.gain.value = 0.0001;
@@ -915,23 +1034,25 @@ export function createMaglevLayer(ctx: BaseAudioContext, opts: LayerBaseOpts): L
   airHp.connect(ag);
   ag.connect(bus);
   air.start();
-  const { gain, handle } = chain(ctx, opts, bus);
+  const { gain, handle } = chain(ctx, opts, hp);
   let disposed = false;
   return {
     ...handle,
     update(m, t) {
       if (disposed) return;
       const v = m.speedSlow;
+      const demand = clamp(m.throttleFast * 0.6 + m.accelFast * 0.8);
       const idleAmt = 1 - v;
-      targetParam(prop.frequency, 48 + v * 180, t, 0.25);
-      targetParam(guide.frequency, 78 + v * 140, t, 0.3);
-      targetParam(idle.frequency, 48 + v * 12, t, 0.4);
-      targetParam(pg.gain, softGate(0.1 + v * 0.16), t, 0.25);
-      targetParam(gg.gain, softGate(0.07 + v * 0.12), t, 0.3);
-      targetParam(idleG.gain, softGate(0.06 + idleAmt * 0.08 + m.accelFast * 0.04), t, 0.35);
-      targetParam(ag.gain, softGate(0.04 + v * 0.32), t, 0.35);
+      // Frequencies shifted up for Tesla speakers
+      targetParam(prop.frequency, 75 + v * 200 + demand * 40, t, 0.25);
+      targetParam(guide.frequency, 110 + v * 160 + demand * 25, t, 0.3);
+      targetParam(idle.frequency, 72 + v * 18, t, 0.4);
+      targetParam(pg.gain, softGate(0.12 + v * 0.18 + demand * 0.08), t, 0.25);
+      targetParam(gg.gain, softGate(0.08 + v * 0.14 + demand * 0.05), t, 0.3);
+      targetParam(idleG.gain, softGate(0.08 + idleAmt * 0.1 + demand * 0.06), t, 0.35);
+      targetParam(ag.gain, softGate(0.05 + v * 0.35), t, 0.35);
       airHp.frequency.setTargetAtTime(500 + v * 2400, t, 0.4);
-      targetParam(gain.gain, softGate((opts.level ?? 0.45) * (0.32 + v * 0.62)), t, 0.3);
+      targetParam(gain.gain, softGate((opts.level ?? 0.45) * (0.38 + v * 0.58)), t, 0.3);
     },
     dispose() {
       disposed = true;
@@ -946,13 +1067,21 @@ export function createMaglevLayer(ctx: BaseAudioContext, opts: LayerBaseOpts): L
 /**
  * Night-drive neon: gated bass pulse + bright square energy.
  * No chord stabs or ringing accents (those read as bells).
+ * Uses missing-fundamental technique for Tesla speakers.
  */
 export function createNeonPulseLayer(ctx: BaseAudioContext, opts: LayerBaseOpts): LayerHandle {
   const bus = ctx.createGain();
+  // High-pass to reduce sub-60 Hz for Tesla speakers
+  const hp = ctx.createBiquadFilter();
+  hp.type = "highpass";
+  hp.frequency.value = 55;
+  hp.Q.value = 0.7;
+  bus.connect(hp);
 
+  // Bass shifted up to 85 Hz
   const bass = ctx.createOscillator();
   bass.type = "sine";
-  bass.frequency.value = 70;
+  bass.frequency.value = 85;
   const bassDrive = createDriveShaper(ctx, 0.35);
   const bg = ctx.createGain();
   bg.gain.value = 0.0001;
@@ -1011,7 +1140,7 @@ export function createNeonPulseLayer(ctx: BaseAudioContext, opts: LayerBaseOpts)
   gBp.connect(gG);
   gG.connect(bus);
 
-  const { gain, handle } = chain(ctx, opts, bus);
+  const { gain, handle } = chain(ctx, opts, hp);
   bass.start();
   punch.start();
   tone.start();
@@ -1038,8 +1167,9 @@ export function createNeonPulseLayer(ctx: BaseAudioContext, opts: LayerBaseOpts)
       const pulse = Math.pow(0.5 + 0.5 * raw, 2.4);
       const valley = 0.22 + pulse * 0.78;
 
-      targetParam(bass.frequency, 58 + m.speedSlow * 48 + demand * 22 - m.regen * 12, t, 0.08);
-      targetParam(punch.frequency, 118 + demand * 90 + pulse * 30, t, 0.08);
+      // Bass frequencies shifted up for Tesla speakers
+      targetParam(bass.frequency, 78 + m.speedSlow * 52 + demand * 26 - m.regen * 14, t, 0.08);
+      targetParam(punch.frequency, 130 + demand * 100 + pulse * 35, t, 0.08);
       targetParam(
         tone.frequency,
         190 + demand * 260 + Math.max(0, m.accelFast) * 80 - m.regen * 45,
