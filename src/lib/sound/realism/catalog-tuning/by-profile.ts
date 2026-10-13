@@ -52,7 +52,8 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
       phases: {
         idleCharacter: 0.95,
         accelerationTexture: 1.14,
-        cruiseIntrusiveScale: 0.64,
+        // Raised from 0.64 to 0.88 to close cruise-pull gap (target 8-10 dB)
+        cruiseIntrusiveScale: 0.88,
         releaseCharacter: 0.46
       }
     },
@@ -60,12 +61,12 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
   "american-muscle-v8": {
     profileId: "american-muscle-v8",
     family: familyForProfile("american-muscle-v8"),
-    intendedIdentity: "Cross-plane muscle V8 — textured exhaust pulse groups, restrained intake",
+    intendedIdentity: "Cross-plane muscle V8 — textured exhaust pulse groups, restrained intake, LUMPY IDLE BURBLE",
     previousSource: "V2 hybrid + AMERICAN_V8; V3 raw-mechanical opt-in pilot",
-    diagnosedProblem: "Pilot review: risk of modeling all unevenness as global random firing; intake/whine historically too present",
+    diagnosedProblem: "Pilot review: risk of modeling all unevenness as global random firing; intake/whine historically too present; ORDER 2 (half-order burble) must be audible",
     chosenRenderer: "realism-v3-raw-mechanical-opt-in",
-    layerOrderBalance: "Bank/exhaust pulse groups dominate; intake restrained; mechanical soft",
-    rpmLoadShaping: "Idle lope; load opens exhaust mass; cruise restrained",
+    layerOrderBalance: "Bank/exhaust pulse groups dominate; intake restrained; mechanical soft; ORDER 2 BURBLE MUST BE PROMINENT",
+    rpmLoadShaping: "Idle lope; load opens exhaust mass; cruise at spec level",
     bassBodyAdjustment: "Deeper body resonances vs GT; low-order body via formants (supportWeights are crank-order metadata; live only with VITE_COMBUSTION_PROFILE_ORDER_BANDS)",
     harshnessTreatment: "Soften metallic grit; keep burble-adjacent overrun",
     transmissionEvents: "Shift choreography + intensity; V3 pilots share path",
@@ -77,13 +78,14 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
     humanListeningStatus: "unverified",
     deviceStatus: "unverified",
     outcome: "combustion-tuned",
-    audibleRationale: "Stronger lope/exhaust vs GT; intentionally lower upperRpmEnergy so it does not race-whine",
+    audibleRationale: "Stronger lope/exhaust vs GT; intentionally lower upperRpmEnergy so it does not race-whine; ORDER 2 BURBLE restored via high idleIrregularity",
     designFamilyHint: "cross-plane-muscle-v8",
     acousticOverlay: {
       exhaustPulse: 0.99,
       intakePresence: 0.22,
       mechanicalIntensity: 0.2,
-      idleIrregularity: 0.42,
+      // Raised to 0.72 to restore lumpy idle (was 0.42, measurement showed 0.12 CV vs 0.21 target)
+      idleIrregularity: 0.72,
       bodyBrightness: 0.33,
       loadContrast: 0.9,
       upperRpmEnergy: 0.26,
@@ -102,10 +104,12 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
     },
     experienceOverlay: {
       phases: {
-        idleCharacter: 1.12,
+        // Raised idleCharacter for stronger lope
+        idleCharacter: 1.22,
         pullAwayTexture: 1.16,
         accelerationTexture: 1.2,
-        cruiseIntrusiveScale: 0.62,
+        // Raised from 0.62 to 0.92 to close cruise-pull gap
+        cruiseIntrusiveScale: 0.92,
         releaseCharacter: 0.82
       }
     },
@@ -150,7 +154,8 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
       phases: {
         idleCharacter: 0.86,
         accelerationTexture: 1.26,
-        cruiseIntrusiveScale: 0.56,
+        // Raised from 0.56 to 0.84 to close cruise-pull gap (target 8-10 dB)
+        cruiseIntrusiveScale: 0.84,
         releaseCharacter: 0.45
       }
     },
@@ -189,7 +194,8 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
     experienceOverlay: {
       phases: {
         accelerationTexture: 1.2,
-        cruiseIntrusiveScale: 0.56,
+        // Raised from 0.56 to 0.84 to close cruise-pull gap (target 8-10 dB)
+        cruiseIntrusiveScale: 0.84,
         releaseCharacter: 0.72,
         idleCharacter: 0.9
       },
@@ -239,7 +245,8 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
       phases: {
         idleCharacter: 0.8,
         accelerationTexture: 1.28,
-        cruiseIntrusiveScale: 0.5,
+        // Raised from 0.5 to 0.82 to close cruise-pull gap (target 8-10 dB)
+        cruiseIntrusiveScale: 0.82,
         releaseCharacter: 0.48
       },
       transitionTauSeconds: 0.05
@@ -284,7 +291,8 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
       phases: {
         idleCharacter: 0.76,
         accelerationTexture: 1.3,
-        cruiseIntrusiveScale: 0.5,
+        // Raised from 0.5 to 0.82 to close cruise-pull gap (target 8-10 dB)
+        cruiseIntrusiveScale: 0.82,
         releaseCharacter: 0.56
       },
       transitionTauSeconds: 0.042
@@ -324,7 +332,8 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
     experienceOverlay: {
       phases: {
         accelerationTexture: 1.22,
-        cruiseIntrusiveScale: 0.52,
+        // Raised from 0.52 to 0.84 to close cruise-pull gap (target 8-10 dB)
+        cruiseIntrusiveScale: 0.84,
         releaseCharacter: 0.84
       },
       aspirationDynamics: {
@@ -378,7 +387,8 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
       phases: {
         idleCharacter: 0.7,
         accelerationTexture: 1.32,
-        cruiseIntrusiveScale: 0.48,
+        // Raised from 0.48 to 0.80 to close cruise-pull gap (target 8-10 dB)
+        cruiseIntrusiveScale: 0.80,
         releaseCharacter: 0.42
       },
       transitionTauSeconds: 0.04,
@@ -429,7 +439,8 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
         idleCharacter: 1.16,
         pullAwayTexture: 1.1,
         accelerationTexture: 1.14,
-        cruiseIntrusiveScale: 0.7,
+        // Raised from 0.7 to 0.92 to close cruise-pull gap (target 8-10 dB)
+        cruiseIntrusiveScale: 0.92,
         releaseCharacter: 0.84
       },
       transitionTauSeconds: 0.18
