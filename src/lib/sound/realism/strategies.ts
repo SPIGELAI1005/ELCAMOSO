@@ -830,7 +830,7 @@ const baseStrategies: ProfileStrategy[] = [
         createFartCadenceLayer(ctx, {
           id: "gas-cadence",
           destination: buses.accents,
-          tone: 95,
+          tone: 115,
           level: 1.3,
           idlePresence: 0.85,
         }),
@@ -844,7 +844,7 @@ const baseStrategies: ProfileStrategy[] = [
               everySeconds: 2.0,
               jitter: 0.9,
               level: 0.62,
-              tone: 68,
+              tone: 105,
               onlyOnLift: true,
             },
           ],

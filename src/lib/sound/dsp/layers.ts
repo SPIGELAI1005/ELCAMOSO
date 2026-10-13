@@ -1057,10 +1057,16 @@ export function createImpactLayer(
             ? 0.05
             : 0.04 + audioRandom() * 0.04;
         g.gain.setValueAtTime(0.0001, at);
-        g.gain.exponentialRampToValueAtTime(
-          Math.max(0.0002, amp * (softThump ? 0.85 : 1)),
-          at + 0.004,
-        );
+        if (kind === "cobble") {
+          // Cobbles: a 7 ms linear attack. The old 4 ms exponential ramp from
+          // -80 dB was effectively a ~1 ms step → audible HF tick on every stone.
+          g.gain.linearRampToValueAtTime(Math.max(0.0002, amp), at + 0.007);
+        } else {
+          g.gain.exponentialRampToValueAtTime(
+            Math.max(0.0002, amp * (softThump ? 0.85 : 1)),
+            at + 0.004,
+          );
+        }
         g.gain.exponentialRampToValueAtTime(0.0001, at + dur);
         src.connect(bp);
         bp.connect(g);
@@ -1071,10 +1077,13 @@ export function createImpactLayer(
         if (!softThump && (kind === "cobble" || audioRandom() > 0.7)) {
           const osc = ctx.createOscillator();
           const og = ctx.createGain();
-          osc.type = "triangle";
+          // Cobble ring is a sine with a soft 6 ms attack (a triangle with a 2 ms
+          // exponential ramp produced a broadband click per stone).
+          osc.type = kind === "cobble" ? "sine" : "triangle";
           osc.frequency.value = tone * (kind === "cobble" ? 1.8 : 0.4);
           og.gain.setValueAtTime(0.0001, at);
-          og.gain.exponentialRampToValueAtTime(Math.max(0.0002, amp * 0.45), at + 0.002);
+          if (kind === "cobble") og.gain.linearRampToValueAtTime(Math.max(0.0002, amp * 0.35), at + 0.006);
+          else og.gain.exponentialRampToValueAtTime(Math.max(0.0002, amp * 0.45), at + 0.002);
           og.gain.exponentialRampToValueAtTime(0.0001, at + 0.1);
           osc.connect(og);
           og.connect(pan);
@@ -1378,8 +1387,10 @@ export function createLaughCadenceLayer(
     f2.type = "bandpass";
     f2.frequency.value = 1250;
     f2.Q.value = 7;
+    // Linear onsets: an exponential ramp from -80 dB lands almost all of its rise in
+    // the last ~2 ms, which made every "ha" start with an HF tick.
     g.gain.setValueAtTime(0.0001, at);
-    g.gain.exponentialRampToValueAtTime(Math.max(0.0002, amp), at + 0.018);
+    g.gain.linearRampToValueAtTime(Math.max(0.0002, amp), at + 0.022);
     g.gain.exponentialRampToValueAtTime(0.0001, at + dur * 0.9);
     osc.connect(f1);
     f1.connect(f2);
@@ -1393,11 +1404,11 @@ export function createLaughCadenceLayer(
     br.loop = true;
     const hp = ctx.createBiquadFilter();
     hp.type = "bandpass";
-    hp.frequency.value = 2100;
-    hp.Q.value = 1.2;
+    hp.frequency.value = 1700;
+    hp.Q.value = 1.8;
     const bg = ctx.createGain();
     bg.gain.setValueAtTime(0.0001, at);
-    bg.gain.exponentialRampToValueAtTime(Math.max(0.0002, amp * 0.45), at + 0.012);
+    bg.gain.linearRampToValueAtTime(Math.max(0.0002, amp * 0.45), at + 0.02);
     bg.gain.exponentialRampToValueAtTime(0.0001, at + dur * 0.7);
     br.connect(hp);
     hp.connect(bg);
@@ -1480,10 +1491,13 @@ export function createFartCadenceLayer(
     osc.type = "sawtooth";
     const startHz = tone * (1.15 + audioRandom() * 0.35);
     osc.frequency.setValueAtTime(startHz, at);
-    osc.frequency.exponentialRampToValueAtTime(Math.max(28, tone * 0.4), at + dur);
+    // Glide floor stays above ~70 Hz: the old 28 Hz floor put ~20 % of the
+    // energy below 60 Hz where car speakers only produce mud.
+    osc.frequency.exponentialRampToValueAtTime(Math.max(72, tone * 0.62), at + dur);
     mod.type = "sine";
     mod.frequency.value = 10 + audioRandom() * 22;
-    mg.gain.value = 35 + audioRandom() * 55;
+    // FM depth scaled to the pitch so the wobble never dips into sub-bass.
+    mg.gain.value = Math.min(startHz * 0.3, 35 + audioRandom() * 40);
     mod.connect(mg);
     mg.connect(osc.frequency);
     lp.type = "lowpass";
@@ -1847,11 +1861,12 @@ function fireOneShot(
     const mod = ctx.createOscillator();
     const mg = ctx.createGain();
     osc.type = "sawtooth";
-    osc.frequency.setValueAtTime(tone * (1.2 + audioRandom() * 0.4), at);
-    osc.frequency.exponentialRampToValueAtTime(tone * 0.4, at + dur);
+    const fartStart = tone * (1.2 + audioRandom() * 0.4);
+    osc.frequency.setValueAtTime(fartStart, at);
+    osc.frequency.exponentialRampToValueAtTime(Math.max(72, tone * 0.62), at + dur);
     mod.type = "sine";
     mod.frequency.value = 11 + audioRandom() * 20;
-    mg.gain.value = 40 + audioRandom() * 50;
+    mg.gain.value = Math.min(fartStart * 0.3, 40 + audioRandom() * 40);
     mod.connect(mg);
     mg.connect(osc.frequency);
     lp.type = "lowpass";
@@ -1942,7 +1957,7 @@ function fireOneShot(
       f2.Q.value = 7;
       const amp = level * ampScale * (i === 0 ? 1.05 : 0.9 - i * 0.06);
       g.gain.setValueAtTime(0.0001, t0);
-      g.gain.exponentialRampToValueAtTime(Math.max(0.0002, amp), t0 + 0.02);
+      g.gain.linearRampToValueAtTime(Math.max(0.0002, amp), t0 + 0.022);
       g.gain.exponentialRampToValueAtTime(0.0001, t0 + spacing * 0.88);
       osc.connect(f1);
       f1.connect(f2);
@@ -1957,11 +1972,11 @@ function fireOneShot(
         br.loop = true;
         const hp = ctx.createBiquadFilter();
         hp.type = "bandpass";
-        hp.frequency.value = 2100;
-        hp.Q.value = 1.2;
+        hp.frequency.value = 1700;
+        hp.Q.value = 1.8;
         const bg = ctx.createGain();
         bg.gain.setValueAtTime(0.0001, t0);
-        bg.gain.exponentialRampToValueAtTime(Math.max(0.0002, amp * 0.4), t0 + 0.012);
+        bg.gain.linearRampToValueAtTime(Math.max(0.0002, amp * 0.4), t0 + 0.02);
         bg.gain.exponentialRampToValueAtTime(0.0001, t0 + spacing * 0.7);
         br.connect(hp);
         hp.connect(bg);
