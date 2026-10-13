@@ -58,20 +58,26 @@ function readFlag(name: string, defaultOn: boolean): boolean {
   return defaultOn;
 }
 
-/** Opt-in pilot for american-muscle-v8 and race-car only. Default off. */
+/** Default ON since spec §P0-5: combustion topology should be active by default. */
+const TOPOLOGY_PILOT_DEFAULT_ON = true;
+
+/** Default ON (P0-5): explicit cylinder topology for all 9 combustion profiles. */
 export function isCombustionTopologyPilotEnabled(): boolean {
-  let viteLiteral = false;
+  let viteLiteral: boolean | null = null;
   try {
     const raw = import.meta.env?.["VITE_COMBUSTION_TOPOLOGY_PILOT"];
-    const v = raw != null ? String(raw).trim().toLowerCase() : "";
-    viteLiteral = v === "1" || v === "true" || v === "yes";
+    if (raw != null) {
+      const v = String(raw).trim().toLowerCase();
+      if (v === "1" || v === "true" || v === "yes") viteLiteral = true;
+      else if (v === "0" || v === "false" || v === "no") viteLiteral = false;
+    }
   } catch {
-    viteLiteral = false;
+    viteLiteral = null;
   }
+  if (viteLiteral !== null) return viteLiteral;
   return (
-    viteLiteral ||
-    readFlag("VITE_COMBUSTION_TOPOLOGY_PILOT", false) ||
-    readFlag("ELCAMOSO_COMBUSTION_TOPOLOGY_PILOT", false)
+    readFlag("VITE_COMBUSTION_TOPOLOGY_PILOT", TOPOLOGY_PILOT_DEFAULT_ON) ||
+    readFlag("ELCAMOSO_COMBUSTION_TOPOLOGY_PILOT", TOPOLOGY_PILOT_DEFAULT_ON)
   );
 }
 

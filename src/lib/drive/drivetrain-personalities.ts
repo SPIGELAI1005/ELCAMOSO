@@ -1133,10 +1133,12 @@ const HIGH_REV_V10_PERSONALITY: DrivetrainPersonalityConfig = {
       mechanicalIntensity: 0.58,
     },
   },
+  // Huracan-inspired 7-speed DCT: wider 1st/2nd spread (1.60 vs 1.21 before).
+  // rpm/kmh: G1=82, G2=51, G3=38, G4=31, G5=25, G6=20, G7=18
   transmission: {
     ...flatSixBase.transmission,
-    gearRatios: [3.13, 2.59, 1.88, 1.52, 1.24, 1.04, 0.85],
-    finalDrive: 3.15,
+    gearRatios: [3.91, 2.44, 1.81, 1.46, 1.18, 0.97, 0.84],
+    finalDrive: 3.73,
     upshiftRpm: { lowLoad: 5000, mediumLoad: 6800, highLoad: 8150 },
     upshiftLoadMedium: 0.34,
     upshiftLoadHigh: 0.68,
@@ -1217,10 +1219,12 @@ const FLAT_PLANE_V8_TRACK_PERSONALITY: DrivetrainPersonalityConfig = {
       mechanicalIntensity: 0.66,
     },
   },
+  // Z06-inspired 8-speed DCT: track-appropriate ratios, finalDrive 2.73.
+  // rpm/kmh: G1=101, G2=66, G3=46, G4=35, G5=28, G6=23, G7=19, G8=14
   transmission: {
     ...flatSixBase.transmission,
-    gearRatios: [2.91, 1.76, 1.22, 0.88, 0.65, 0.51, 0.4, 0.33],
-    finalDrive: 5.56,
+    gearRatios: [4.56, 2.97, 2.08, 1.60, 1.27, 1.03, 0.85, 0.65],
+    finalDrive: 2.73,
     upshiftRpm: { lowLoad: 5200, mediumLoad: 7000, highLoad: 8250 },
     upshiftLoadMedium: 0.32,
     upshiftLoadHigh: 0.66,
@@ -1359,12 +1363,14 @@ const RALLY_TURBO_3_PERSONALITY: DrivetrainPersonalityConfig = {
     ...turboSixBase.transient,
     scheduler: {
       ...turboSixBase.transient.scheduler,
-      turboFlutter: { probability: 0.62, cooldownMs: 700, minLoad: 0.34, minRpmNorm: 0.34 },
-      wastegate: { probability: 0.48, cooldownMs: 900, minLoad: 0.42, minRpmNorm: 0.38 },
-      exhaustPop: { probability: 0.32, cooldownMs: 1300, minPriorThrottle: 0.34 },
+      // Rally flutter/wastegate: raised minLoad gates to reduce cruise events
+      turboFlutter: { probability: 0.58, cooldownMs: 800, minLoad: 0.42, minRpmNorm: 0.38 },
+      wastegate: { probability: 0.44, cooldownMs: 1000, minLoad: 0.48, minRpmNorm: 0.42 },
+      exhaustPop: { probability: 0.28, cooldownMs: 1400, minPriorThrottle: 0.38 },
     },
-    upshiftStrength: 1,
-    downshiftStrength: 0.94,
+    // Reduced shift strength to address click regression with topology enabled
+    upshiftStrength: 0.85,
+    downshiftStrength: 0.82,
     revMatchStrength: 0.84,
     overrunStrength: 0.92,
     highLoadThreshold: 0.32,

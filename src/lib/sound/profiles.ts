@@ -171,17 +171,19 @@ const GT_BOX = {
   shiftSmoothing: 0.16,
 };
 
-// Racing V10 (high-rev-v10): 7 gears, 850 idle, 8500 redline
+// Racing V10 (high-rev-v10): 7-speed DCT, wider 1st/2nd spread (Huracan-inspired)
+// rpm/kmh: G1=119, G2=74, G3=55, G4=45, G5=36, G6=30, G7=26
 const V10_BOX = {
-  gearRatios: [115, 95, 69, 56, 46, 38, 31],
+  gearRatios: [119, 74, 55, 45, 36, 30, 26],
   idleRpm: 850,
   redlineRpm: 8500,
   shiftSmoothing: 0.08,
 };
 
-// Race Car (flat-plane-v8-track): 8 gears, 900 idle, 8600 redline - fastest DCT
+// Race Car (flat-plane-v8-track): 8-speed DCT (Z06-inspired), finalDrive 2.73
+// rpm/kmh: G1=101, G2=66, G3=46, G4=36, G5=28, G6=23, G7=19, G8=14
 const TRACK_V8_BOX = {
-  gearRatios: [120, 90, 70, 56, 45, 38, 32, 27],
+  gearRatios: [101, 66, 46, 36, 28, 23, 19, 14],
   idleRpm: 900,
   redlineRpm: 8600,
   shiftSmoothing: 0.06,

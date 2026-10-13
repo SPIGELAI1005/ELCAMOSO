@@ -200,12 +200,13 @@ class CombustionExcitationProcessor extends AudioWorkletProcessor {
 
   firePunch(punch, intensity, sharpness, load) {
     this.env = Math.min(2.4, this.env + punch * (0.6 + intensity * 0.2));
-    this.bright = Math.min(1.5, this.bright + punch * sharpness * (0.18 + load * 0.42));
+    // Increased bright/burst for more spectral texture per fire
+    this.bright = Math.min(1.8, this.bright + punch * sharpness * (0.22 + load * 0.48));
     this.burst = Math.min(
-      1.6,
-      this.burst + punch * (0.3 + load * 0.5) * (0.45 + sharpness * 0.55),
+      2.0,
+      this.burst + punch * (0.38 + load * 0.55) * (0.5 + sharpness * 0.55),
     );
-    this.grit = (this.rand() * 2 - 1) * (0.25 + load * 0.55 * sharpness);
+    this.grit = (this.rand() * 2 - 1) * (0.3 + load * 0.6 * sharpness);
   }
 
   process(_inputs, outputs, parameters) {
@@ -238,9 +239,11 @@ class CombustionExcitationProcessor extends AudioWorkletProcessor {
     const lpCoef = 1 - Math.exp((-2 * Math.PI * burstLpHz) / sampleRate);
     const hpCoef = 1 - Math.exp((-2 * Math.PI * burstHpHz) / sampleRate);
 
-    const ampSpread = 0.06 + (1 - load) * 0.1 + irregularity * 0.45;
+    // Moderate amplitude spread increase for cycle-to-cycle variation (spectral texture).
+    // Balanced: enough texture to avoid static buzzer but not excessive for turbo profiles.
+    const ampSpread = 0.08 + (1 - load) * 0.10 + irregularity * 0.48;
     const rateComp = Math.min(2, Math.max(0.6, Math.pow(100 / Math.max(20, firingHz), 0.35)));
-    const timeSpread = 0.012 + irregularity * 0.12;
+    const timeSpread = 0.015 + irregularity * 0.12;
     const wanderInc = (this.wanderRate * 2 * Math.PI) / sampleRate;
     const topology = this.topology;
 
@@ -360,10 +363,13 @@ class CombustionExcitationProcessor extends AudioWorkletProcessor {
       }
       const wander = 1 + Math.sin(this.wanderPhase) * this.wanderDepth;
 
-      const body = this.env * (0.76 + this.grit * 0.16) * wander;
-      const edge = this.bright * this.grit * 0.22;
-      const rush = this.burst * band * 0.6;
-      const raw = (body + edge + rush) * (0.6 + intensity * 0.4) * 0.8;
+      // Increased texture components for spectral flatness 0.03-0.08 vs 0.008-0.036.
+      // body: main tonal, edge: transient grit, rush: burst noise, texture: continuous variation
+      const body = this.env * (0.72 + this.grit * 0.18) * wander;
+      const edge = this.bright * this.grit * 0.28;
+      const rush = this.burst * band * 0.75;
+      const texture = band * (0.04 + load * 0.06) * (0.6 + this.env * 0.4);
+      const raw = (body + edge + rush + texture) * (0.6 + intensity * 0.4) * 0.85;
 
       const sample = raw - this.previousRaw + 0.9975 * this.dcBlocked;
       this.previousRaw = raw;

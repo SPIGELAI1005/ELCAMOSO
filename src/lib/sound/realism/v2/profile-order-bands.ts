@@ -39,23 +39,29 @@ function readFlag(name: string, defaultOn: boolean): boolean {
   return defaultOn;
 }
 
+/** Default ON since spec §P0-4: profile order bands should be active by default. */
+const ORDER_BANDS_DEFAULT_ON = true;
+
 /**
  * When true, HybridCombustionSynth builds order bands from supportRatios/supportWeights.
- * Default OFF so production timbre matches the previous three-band construction.
+ * Default ON (P0-4): profile-specific order bands provide better firing character.
  */
 export function isProfileOrderBandsEnabled(): boolean {
-  let viteLiteral = false;
+  let viteLiteral: boolean | null = null;
   try {
     const raw = import.meta.env?.["VITE_COMBUSTION_PROFILE_ORDER_BANDS"];
-    const v = raw != null ? String(raw).trim().toLowerCase() : "";
-    viteLiteral = v === "1" || v === "true" || v === "yes";
+    if (raw != null) {
+      const v = String(raw).trim().toLowerCase();
+      if (v === "1" || v === "true" || v === "yes") viteLiteral = true;
+      else if (v === "0" || v === "false" || v === "no") viteLiteral = false;
+    }
   } catch {
-    viteLiteral = false;
+    viteLiteral = null;
   }
+  if (viteLiteral !== null) return viteLiteral;
   return (
-    viteLiteral ||
-    readFlag("VITE_COMBUSTION_PROFILE_ORDER_BANDS", false) ||
-    readFlag("ELCAMOSO_COMBUSTION_PROFILE_ORDER_BANDS", false)
+    readFlag("VITE_COMBUSTION_PROFILE_ORDER_BANDS", ORDER_BANDS_DEFAULT_ON) ||
+    readFlag("ELCAMOSO_COMBUSTION_PROFILE_ORDER_BANDS", ORDER_BANDS_DEFAULT_ON)
   );
 }
 

@@ -566,12 +566,14 @@ describe("HybridCombustionSynth phase + load", () => {
     const low = synth.getDiagnostics().orderHz;
     synth.update(state({ rpm: 4500, throttle: 0.3, load: 0.3 }), 0.2);
     const high = synth.getDiagnostics().orderHz;
-    expect(low).toHaveLength(3);
-    // V8: half order, firing order (4/rev) and 2× firing order.
-    expect(low[1]).toBeCloseTo((1500 / 60) * 4, 1);
-    expect(high[1]).toBeCloseTo((4500 / 60) * 4, 1);
-    expect(high[0]).toBeLessThan(high[1]!);
-    expect(high[2]).toBeGreaterThan(high[1]!);
+    // Profile order bands enabled: GT V8 supportRatios give 6 bands
+    // [0.25, 0.5, 0.75, 1.0, 1.25, 1.5] × firing order → indices 0-5
+    expect(low).toHaveLength(6);
+    // V8 firing order = 4 pulses/rev, at 1500 RPM → 100 Hz (index 3)
+    expect(low[3]).toBeCloseTo((1500 / 60) * 4, 1);
+    expect(high[3]).toBeCloseTo((4500 / 60) * 4, 1);
+    expect(high[0]).toBeLessThan(high[3]!);
+    expect(high[5]).toBeGreaterThan(high[3]!);
     synth.dispose();
   });
 

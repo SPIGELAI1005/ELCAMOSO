@@ -343,11 +343,11 @@ export class HybridCombustionSynth {
 
     let nodes = 0;
     this.combustionBus = ctx.createGain();
-    this.combustionBus.gain.value = 0.4;
+    this.combustionBus.gain.value = 0.58;
     this.intakeBus = ctx.createGain();
-    this.intakeBus.gain.value = 0.26;
+    this.intakeBus.gain.value = 0.32;
     this.supportBus = ctx.createGain();
-    this.supportBus.gain.value = 0.12;
+    this.supportBus.gain.value = 0.18;
     this.sampleBus = ctx.createGain();
     this.sampleBus.gain.value = 0.0001;
     nodes += 4;
@@ -769,13 +769,14 @@ export class HybridCombustionSynth {
     // Transient choreography - scheduler (powertrain) or legacy edge detection.
     this.tickTransients(state, speedKmh, audioTime);
 
-    // Combustion energy: load changes timbre path, not only loudness
+    // Combustion energy: load changes timbre path, not only loudness.
+    // Raised floor (0.32) + reduced multipliers for 6-9 dB cruise-to-pull gap (was 14-17 dB).
     let intensity =
-      0.18 +
-      demand * 0.34 +
-      load * 0.32 +
-      rpmNorm * 0.14 * (0.45 + demand * 0.55) +
-      load * demand * cfg.highLoadEnrichment * 0.2;
+      0.32 +
+      demand * 0.24 +
+      load * 0.22 +
+      rpmNorm * 0.12 * (0.45 + demand * 0.55) +
+      load * demand * cfg.highLoadEnrichment * 0.15;
     if (raw) {
       // At fixed RPM, load still opens pulse energy (not a global gain knob).
       intensity *= 0.9 + load * 0.22 + demand * (0.08 + raw.loadBalanceBias * 0.1);
@@ -881,8 +882,9 @@ export class HybridCombustionSynth {
     });
     this.diagnostics.orderHz = orderHz;
     if (this.supportBus) {
-      const supportFloor = 0.22;
-      const supportLoad = load * 0.08 + demand * 0.06;
+      // Raised floor (0.38) to keep cruise audible; target 6-9 dB pull-cruise gap.
+      const supportFloor = 0.38;
+      const supportLoad = load * 0.06 + demand * 0.05;
       targetParam(
         this.supportBus.gain,
         (supportFloor + supportLoad) * (raw?.supportGainScale ?? 1) * gate("combustion"),
@@ -897,11 +899,11 @@ export class HybridCombustionSynth {
     }
     if (this.combustionBus) {
       // Bus level is the one place loudness follows load; the stages before it are
-      // mostly timbre so the chain does not compound into a 25 dB idle-to-WOT span.
-      // Baseline showed 15-17 dB pull-cruise gap vs target 8-10 dB. Add part-throttle
-      // floor so cruise is audible and reduce the dynamic range.
-      const partThrottleFloor = 0.52;
-      const loadContrib = load * 0.18 + demand * 0.16;
+      // mostly timbre so the chain does not compound into a large cruise-to-pull gap.
+      // Raised floor (0.72) and reduced load contribution to target 6-9 dB gap (was 14-17 dB).
+      // Overall engine loudness raised to match World sounds (~-13 LUFS).
+      const partThrottleFloor = 0.72;
+      const loadContrib = load * 0.12 + demand * 0.1;
       const body =
         (partThrottleFloor + loadContrib) *
         (1 + bark * 0.5) *
@@ -1271,11 +1273,11 @@ export class HybridCombustionSynth {
     if (peak <= 0.001) return;
 
     // Spec §NEW-D: Remove broadband clicks at gear changes with proper shift envelope.
-    // Longer attack times (was 5/12/8ms, now 12/20/10ms) and filter warmup before gain
-    // ramp prevents the abrupt leading edge that causes click artifacts.
+    // Longer attack times and filter warmup before gain ramp prevents click artifacts.
+    // Rally car regression fix: softer turbo attack (14ms), longer shift attack (16ms).
     const t = Math.max(audioTime, this.lastUpdateTime) + 0.002;
-    const attack = voiceId === "thump" ? 0.02 : voiceId === "turbo" ? 0.01 : 0.012;
-    const decayTau = Math.max(0.025, variant.decayMs / 1000 / 3.2);
+    const attack = voiceId === "thump" ? 0.024 : voiceId === "turbo" ? 0.014 : 0.016;
+    const decayTau = Math.max(0.03, variant.decayMs / 1000 / 3);
 
     // Start filter transition slightly before gain ramp for warmup
     const filterWarmup = 0.004;
@@ -1291,17 +1293,17 @@ export class HybridCombustionSynth {
     g.linearRampToValueAtTime(peak, t + filterWarmup + attack);
     const attackEnd = t + filterWarmup + attack;
     if (kind === "turbo-flutter") {
-      // Compressor-surge chatter: a handful of decaying bursts around 30 Hz.
+      // Compressor-surge chatter: softer bursts with exponential transitions to reduce clicks.
       let tt = attackEnd;
       let p = peak;
-      for (let k = 0; k < 5; k += 1) {
-        tt += 0.016;
-        g.linearRampToValueAtTime(p * 0.3, tt);
-        tt += 0.016;
-        p *= 0.78;
-        g.linearRampToValueAtTime(p, tt);
+      for (let k = 0; k < 4; k += 1) {
+        tt += 0.022;
+        g.setTargetAtTime(p * 0.35, tt, 0.008);
+        tt += 0.022;
+        p *= 0.72;
+        g.setTargetAtTime(p, tt, 0.008);
       }
-      g.setTargetAtTime(0.0001, tt, decayTau);
+      g.setTargetAtTime(0.0001, tt + 0.01, decayTau);
     } else if (kind === "overrun") {
       // Overrun crackle: irregular micro-bursts riding the decay instead of one swell.
       let tt = attackEnd;
