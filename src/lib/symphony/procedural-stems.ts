@@ -38,13 +38,18 @@ export function generateProceduralStemBuffer(
         sample *= 0.7 + 0.3 * Math.sin(2 * Math.PI * t * 0.25);
         break;
       case "bass":
-        sample = 0.28 * Math.sin(2 * Math.PI * 55 * t);
-        if (phase < 0.08) sample *= 1.4;
+        // Use 82 Hz fundamental + 164 Hz harmonic for Tesla speaker compatibility
+        // (missing-fundamental technique: brain perceives ~40 Hz from 80-160 Hz)
+        sample = 0.22 * Math.sin(2 * Math.PI * 82 * t) +
+                 0.12 * Math.sin(2 * Math.PI * 164 * t);
+        if (phase < 0.08) sample *= 1.35;
         break;
       case "pulse": {
         const hit = phase < 0.05 || (beat % 2 === 1 && phase < 0.04);
         sample = hit ? (rnd() * 2 - 1) * 0.35 * (1 - phase * 8) : 0;
-        sample += 0.05 * Math.sin(2 * Math.PI * 80 * t);
+        // 95 Hz + 190 Hz for Tesla speaker compatibility
+        sample += 0.04 * Math.sin(2 * Math.PI * 95 * t) +
+                  0.025 * Math.sin(2 * Math.PI * 190 * t);
         break;
       }
       case "noise":

@@ -28,13 +28,13 @@ export function createStemPlayer(
 
   const bus = ctx.createGain();
   bus.gain.value = pack.packGain;
-  // High-pass filter to reduce sub-60 Hz content for Tesla speakers
-  const hp = ctx.createBiquadFilter();
-  hp.type = "highpass";
-  hp.frequency.value = 55;
-  hp.Q.value = 0.6;
-  bus.connect(hp);
-  hp.connect(destination);
+  // Gentle shelf at low end - procedural stems already use 80+ Hz fundamentals
+  const shelf = ctx.createBiquadFilter();
+  shelf.type = "lowshelf";
+  shelf.frequency.value = 60;
+  shelf.gain.value = -4;
+  bus.connect(shelf);
+  shelf.connect(destination);
 
   const voices: StemVoice[] = [];
   const targets: StemGainTargets = {};
@@ -105,7 +105,7 @@ export function createStemPlayer(
         /* */
       }
       try {
-        hp.disconnect();
+        shelf.disconnect();
       } catch {
         /* */
       }

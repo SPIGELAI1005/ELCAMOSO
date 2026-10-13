@@ -48,13 +48,13 @@ export function createWorldLayerPlayer(
 ) {
   const bus = ctx.createGain();
   bus.gain.value = 0.0001;
-  // High-pass filter for Tesla speakers - reduces sub-60 Hz content
-  const hp = ctx.createBiquadFilter();
-  hp.type = "highpass";
-  hp.frequency.value = 55;
-  hp.Q.value = 0.6;
-  bus.connect(hp);
-  hp.connect(destination);
+  // Gentle low shelf for Tesla speakers - keeps 60-200 Hz body
+  const shelf = ctx.createBiquadFilter();
+  shelf.type = "lowshelf";
+  shelf.frequency.value = 55;
+  shelf.gain.value = -6;
+  bus.connect(shelf);
+  shelf.connect(destination);
 
   const voices: LayerVoice[] = [];
   const targets: Partial<Record<WorldLayerId, number>> = {};
@@ -154,7 +154,7 @@ export function createWorldLayerPlayer(
         /* */
       }
       try {
-        hp.disconnect();
+        shelf.disconnect();
       } catch {
         /* */
       }

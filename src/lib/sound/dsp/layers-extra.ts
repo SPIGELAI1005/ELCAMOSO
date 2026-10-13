@@ -74,52 +74,43 @@ const PENT = [0, 2, 4, 7, 9];
 
 export function createHeartbeatLayer(ctx: BaseAudioContext, opts: LayerBaseOpts): LayerHandle {
   const bus = ctx.createGain();
-  // High-pass to reduce sub-60 Hz for Tesla speakers
-  const hp = ctx.createBiquadFilter();
-  hp.type = "highpass";
-  hp.frequency.value = 55;
-  hp.Q.value = 0.7;
-  bus.connect(hp);
-  const { gain, handle } = chain(ctx, opts, hp);
+  // Gentle low shelf instead of high-pass to preserve warmth while reducing sub-bass
+  const shelf = ctx.createBiquadFilter();
+  shelf.type = "lowshelf";
+  shelf.frequency.value = 50;
+  shelf.gain.value = -8;
+  bus.connect(shelf);
+  const { gain, handle } = chain(ctx, opts, shelf);
   let next = 0;
   let bpm = 62;
   let disposed = false;
 
   function beat(at: number, tone: number, level: number, which: "lub" | "dub") {
-    // Primary beat - shifted up to 90-110 Hz range (missing-fundamental technique)
-    // Softened envelope to reduce clicks
+    // Clean heartbeat thud - single sine with very smooth envelope to avoid clicks
     const osc = ctx.createOscillator();
     const lp = ctx.createBiquadFilter();
     const g = ctx.createGain();
     osc.type = "sine";
-    const f0 = which === "lub" ? tone : tone * 0.88;
+    const f0 = which === "lub" ? tone : tone * 0.9;
+    // Slow frequency sweep for organic feel
     osc.frequency.setValueAtTime(f0, at);
-    osc.frequency.exponentialRampToValueAtTime(Math.max(60, f0 * 0.65), at + 0.1);
+    osc.frequency.exponentialRampToValueAtTime(Math.max(55, f0 * 0.7), at + 0.15);
+    // Gentle lowpass to remove harmonics that cause clicks
     lp.type = "lowpass";
-    lp.frequency.value = which === "lub" ? 200 : 165;
-    // Softer attack (0.02s instead of 0.012s) and smoother release
+    lp.frequency.value = which === "lub" ? 180 : 150;
+    lp.Q.value = 0.5;
+    // Very smooth envelope: slow attack, slow release, no sharp transitions
+    const attackTime = 0.035;
+    const releaseTime = which === "lub" ? 0.18 : 0.22;
     g.gain.setValueAtTime(0.0001, at);
-    g.gain.linearRampToValueAtTime(Math.max(0.0002, level * 0.85), at + 0.022);
-    g.gain.exponentialRampToValueAtTime(0.0001, at + (which === "lub" ? 0.14 : 0.18));
+    g.gain.linearRampToValueAtTime(level * 0.75, at + attackTime);
+    g.gain.setValueAtTime(level * 0.75, at + attackTime + 0.02);
+    g.gain.linearRampToValueAtTime(0.0001, at + releaseTime);
     osc.connect(lp);
     lp.connect(g);
     g.connect(bus);
     osc.start(at);
-    osc.stop(at + 0.22);
-
-    // Second harmonic reinforces perceived bass - also softened
-    const harm = ctx.createOscillator();
-    const hg = ctx.createGain();
-    harm.type = "sine";
-    harm.frequency.setValueAtTime(f0 * 2, at);
-    harm.frequency.exponentialRampToValueAtTime(Math.max(95, f0 * 1.3), at + 0.08);
-    hg.gain.setValueAtTime(0.0001, at);
-    hg.gain.linearRampToValueAtTime(Math.max(0.0002, level * 0.35), at + 0.018);
-    hg.gain.exponentialRampToValueAtTime(0.0001, at + 0.12);
-    harm.connect(hg);
-    hg.connect(bus);
-    harm.start(at);
-    harm.stop(at + 0.16);
+    osc.stop(at + releaseTime + 0.05);
   }
 
   return {
@@ -675,12 +666,12 @@ export function createCreatureBreathLayer(
   const mythic = !!opts.mythic;
   const dark = !!opts.dark;
   const bus = ctx.createGain();
-  // High-pass to reduce sub-60 Hz for Tesla speakers
-  const hp = ctx.createBiquadFilter();
-  hp.type = "highpass";
-  hp.frequency.value = 55;
-  hp.Q.value = 0.7;
-  bus.connect(hp);
+  // Gentle low-shelf for Tesla speakers - keeps 60-200 Hz body
+  const shelf = ctx.createBiquadFilter();
+  shelf.type = "lowshelf";
+  shelf.frequency.value = 50;
+  shelf.gain.value = -6;
+  bus.connect(shelf);
   const breath = createLoopingNoise(ctx, dark ? "brown" : "pink", 0.9);
   const bp = ctx.createBiquadFilter();
   bp.type = "bandpass";
@@ -729,7 +720,7 @@ export function createCreatureBreathLayer(
   wingG.connect(bus);
   wing.start();
 
-  const { gain, handle } = chain(ctx, opts, hp);
+  const { gain, handle } = chain(ctx, opts, shelf);
   let disposed = false;
   let phase = audioRandom() * 10;
   let phase2 = audioRandom() * 7;
@@ -1012,12 +1003,12 @@ export function createOceanWaveLayer(ctx: BaseAudioContext, opts: LayerBaseOpts)
 
 export function createMaglevLayer(ctx: BaseAudioContext, opts: LayerBaseOpts): LayerHandle {
   const bus = ctx.createGain();
-  // High-pass to reduce sub-60 Hz for Tesla speakers
-  const hp = ctx.createBiquadFilter();
-  hp.type = "highpass";
-  hp.frequency.value = 55;
-  hp.Q.value = 0.7;
-  bus.connect(hp);
+  // Gentle low-shelf for Tesla speakers - keeps 60-200 Hz body
+  const shelf = ctx.createBiquadFilter();
+  shelf.type = "lowshelf";
+  shelf.frequency.value = 50;
+  shelf.gain.value = -6;
+  bus.connect(shelf);
   // Propulsion hum shifted to 95 Hz
   const prop = ctx.createOscillator();
   prop.type = "sine";
@@ -1053,7 +1044,7 @@ export function createMaglevLayer(ctx: BaseAudioContext, opts: LayerBaseOpts): L
   airHp.connect(ag);
   ag.connect(bus);
   air.start();
-  const { gain, handle } = chain(ctx, opts, hp);
+  const { gain, handle } = chain(ctx, opts, shelf);
   let disposed = false;
   return {
     ...handle,
@@ -1090,12 +1081,12 @@ export function createMaglevLayer(ctx: BaseAudioContext, opts: LayerBaseOpts): L
  */
 export function createNeonPulseLayer(ctx: BaseAudioContext, opts: LayerBaseOpts): LayerHandle {
   const bus = ctx.createGain();
-  // High-pass to reduce sub-60 Hz for Tesla speakers
-  const hp = ctx.createBiquadFilter();
-  hp.type = "highpass";
-  hp.frequency.value = 55;
-  hp.Q.value = 0.7;
-  bus.connect(hp);
+  // Gentle low-shelf for Tesla speakers - keeps 60-200 Hz body
+  const shelf = ctx.createBiquadFilter();
+  shelf.type = "lowshelf";
+  shelf.frequency.value = 50;
+  shelf.gain.value = -6;
+  bus.connect(shelf);
 
   // Bass shifted up to 85 Hz
   const bass = ctx.createOscillator();
@@ -1159,7 +1150,7 @@ export function createNeonPulseLayer(ctx: BaseAudioContext, opts: LayerBaseOpts)
   gBp.connect(gG);
   gG.connect(bus);
 
-  const { gain, handle } = chain(ctx, opts, hp);
+  const { gain, handle } = chain(ctx, opts, shelf);
   bass.start();
   punch.start();
   tone.start();
