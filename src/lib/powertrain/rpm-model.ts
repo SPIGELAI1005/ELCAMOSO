@@ -15,13 +15,13 @@ export function rpmFromSpeedAndGear(
   gear: number,
   profile: PowertrainProfile,
 ): number {
-  if (gear < 1) return profile.engine.idleRpm * 0.5;
+  const idle = profileIdleRpm(profile);
+  if (gear < 1) return idle;
   const ratio = profile.transmission.gearRatios[gear - 1];
-  if (ratio == null) return profile.engine.idleRpm;
+  if (ratio == null) return idle;
   const wheelRpm = wheelRpmFromSpeedKmh(speedKmh, profile.wheelCircumferenceM);
   const raw = wheelRpm * ratio * profile.transmission.finalDrive;
-  const floor = profile.engine.idleRpm * 0.85;
-  return clamp(raw, floor, profile.engine.redlineRpm);
+  return clamp(raw, idle, profile.engine.redlineRpm);
 }
 
 /** Inverse of rpmFromSpeedAndGear - road speed for a locked ratio at the given RPM. */
@@ -73,14 +73,15 @@ export function rpmTrackTarget(
 
 export function rpmTrackTargetEx(ctx: RpmTrackContext, profile: PowertrainProfile): number {
   const { speedKmh, gear, driverDemand } = ctx;
+  const idle = profileIdleRpm(profile);
+
   if (gear < 1) {
-    return profile.engine.idleRpm * (0.45 + driverDemand * 0.15);
+    return idle + driverDemand * (profile.engine.redlineRpm - idle) * 0.15;
   }
 
   const mechanical = rpmFromSpeedAndGear(speedKmh, gear, profile);
   const slip = profile.transmission.slip;
   const launchSpeed = slip?.launchSpeedKmh ?? 4;
-  const idle = profileIdleRpm(profile);
 
   if (speedKmh <= launchSpeed) {
     return rpmAtCreep(speedKmh, gear, driverDemand, profile);
@@ -95,7 +96,7 @@ export function rpmTrackTargetEx(ctx: RpmTrackContext, profile: PowertrainProfil
     target = mechanical + maxSlipRpm * (tc.slipGain ?? 0.65);
   }
 
-  return clamp(target, idle * 0.9, profile.engine.redlineRpm);
+  return clamp(target, idle, profile.engine.redlineRpm);
 }
 
 /** RPM at very low speed in gear - idle + optional launch slip from throttle. */
@@ -105,10 +106,10 @@ export function rpmAtCreep(
   throttle: number,
   profile: PowertrainProfile,
 ): number {
-  if (gear < 1) {
-    return profile.engine.idleRpm * (0.45 + throttle * 0.15);
-  }
   const idle = profileIdleRpm(profile);
+  if (gear < 1) {
+    return idle + throttle * (profile.engine.redlineRpm - idle) * 0.15;
+  }
   const mechanical = rpmFromSpeedAndGear(speedKmh, gear, profile);
   const launchSpeed = profile.transmission.slip?.launchSpeedKmh ?? 4;
   if (speedKmh > launchSpeed) return mechanical;
@@ -120,7 +121,7 @@ export function rpmAtCreep(
   // Blend toward mechanical as speed rises through the launch window.
   const blend = clamp(speedKmh / Math.max(0.5, launchSpeed), 0, 1);
   const slipped = Math.max(mechanical, rev);
-  return clamp(mechanical * blend + slipped * (1 - blend), idle * 0.9, profile.engine.redlineRpm);
+  return clamp(mechanical * blend + slipped * (1 - blend), idle, profile.engine.redlineRpm);
 }
 
 export function normalizeRpm(rpm: number, profile: PowertrainProfile): number {
@@ -149,7 +150,7 @@ export function rateLimitRpm(
 
 export function applyRedlineProtection(rpm: number, profile: PowertrainProfile): number {
   const hard = profile.engine.redlineRpm;
-  const floor = profile.engine.idleRpm * 0.5;
+  const floor = profileIdleRpm(profile);
   return clamp(rpm, floor, hard);
 }
 

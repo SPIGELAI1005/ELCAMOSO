@@ -206,7 +206,7 @@ export function computeDriveState({
   }
   // Mechanical RPM from the physical slope - launch slip only below walking pace.
   const launchSlip = kmh < 8 ? throttle * 450 : throttle * 40;
-  const targetRpm = Math.min(t.redlineRpm, Math.max(t.idleRpm * 0.9, rpmInGear(gear) + launchSlip));
+  const targetRpm = Math.min(t.redlineRpm, Math.max(t.idleRpm, rpmInGear(gear) + launchSlip));
   const shiftWindow = Math.max(0.04, (feel.shiftMs / 1000) * (1.15 - feel.revMatch * 0.5));
   const shift = clamp(dt / (t.shiftSmoothing * (shiftWindow / 0.16)), 0, 1);
   const rpm = previous.rpm + (targetRpm - previous.rpm) * shift;
