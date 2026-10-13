@@ -171,11 +171,28 @@ const GT_BOX = {
   shiftSmoothing: 0.16,
 };
 
-const RACE_BOX = {
-  gearRatios: [114, 80, 58, 46, 38, 32],
+// Racing V10 (high-rev-v10): 7 gears, 850 idle, 8500 redline
+const V10_BOX = {
+  gearRatios: [115, 95, 69, 56, 46, 38, 31],
   idleRpm: 850,
   redlineRpm: 8500,
-  shiftSmoothing: 0.09,
+  shiftSmoothing: 0.08,
+};
+
+// Race Car (flat-plane-v8-track): 8 gears, 900 idle, 8600 redline - fastest DCT
+const TRACK_V8_BOX = {
+  gearRatios: [120, 90, 70, 56, 45, 38, 32, 27],
+  idleRpm: 900,
+  redlineRpm: 8600,
+  shiftSmoothing: 0.06,
+};
+
+// Rally Car (rally-turbo-3): 5 gears, 950 idle, 6800 redline - sequential short gearing
+const RALLY_BOX = {
+  gearRatios: [130, 85, 62, 48, 40],
+  idleRpm: 950,
+  redlineRpm: 6800,
+  shiftSmoothing: 0.1,
 };
 
 const BUILT_IN_SOUND_PROFILES: SoundProfile[] = [
@@ -225,7 +242,7 @@ const BUILT_IN_SOUND_PROFILES: SoundProfile[] = [
         { kind: "wind", level: 0.2, tone: 1800, speedScale: 1 },
       ],
     },
-    transmission: RACE_BOX,
+    transmission: V10_BOX,
   },
   {
     id: "cyber-pulse",
@@ -270,7 +287,7 @@ const BUILT_IN_SOUND_PROFILES: SoundProfile[] = [
         { kind: "crowd", level: 0.08, tone: 700, speedScale: 0.3, surge: 0.12 },
       ],
     },
-    transmission: { ...RACE_BOX, shiftSmoothing: 0.06, redlineRpm: 8600 },
+    transmission: TRACK_V8_BOX,
   },
   {
     id: "rally-car",
@@ -300,7 +317,7 @@ const BUILT_IN_SOUND_PROFILES: SoundProfile[] = [
         { kind: "whistle", everySeconds: 9, jitter: 4, level: 0.1, tone: 3200, speedLinked: true },
       ],
     },
-    transmission: { ...GT_BOX, redlineRpm: 7400, shiftSmoothing: 0.1 },
+    transmission: RALLY_BOX,
   },
   {
     id: "space-ship",
@@ -594,7 +611,7 @@ const BUILT_IN_SOUND_PROFILES: SoundProfile[] = [
       coreLevel: 0.55,
       signals: [],
     },
-    transmission: { ...RACE_BOX, idleRpm: 1400, redlineRpm: 11000, shiftSmoothing: 0.07 },
+    transmission: { ...V10_BOX, idleRpm: 1400, redlineRpm: 11000, shiftSmoothing: 0.07 },
   },
   {
     id: "turbine-jet",
