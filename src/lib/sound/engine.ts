@@ -13,7 +13,11 @@ import { audioRandom, seedAudioRandom } from "@/lib/sound/rng";
 import type { SoundSnippet } from "@/lib/sound/snippets";
 import { createMasterBus, type MasterBus } from "@/lib/sound/realism/master-bus";
 import { ImprovedSynth } from "@/lib/sound/realism/improved-synth";
-import { loudnessForProfile } from "@/lib/sound/realism/loudness";
+import {
+  loudnessForProfile,
+  makeupDbForProfile,
+  makeupStageSettings,
+} from "@/lib/sound/realism/loudness";
 import type { DynamicLayerDebugInfo, SynthesisMode } from "@/lib/sound/realism/types";
 import type { AudioLayerRole } from "@/lib/sound/profile-experience-config";
 import { DynamicDriveSynth } from "@/lib/sound/dynamic-drive/synth";
@@ -155,6 +159,9 @@ export class SoundEngine {
   /** @deprecated Prompt 08 — peak protect replaces DynamicsCompressor-as-limiter. */
   private limiter: DynamicsCompressorNode | null = null;
   private boostGain: GainNode | null = null;
+  /** Catalog loudness makeup (non-engine profiles) after the user-volume stage. */
+  private makeupGain: GainNode | null = null;
+  private makeupLimiter: DynamicsCompressorNode | null = null;
   private peakProtect: PeakProtectStage | null = null;
   private analyser: AnalyserNode | null = null;
   private meterBuffer: Float32Array<ArrayBuffer> | null = null;
@@ -484,11 +491,28 @@ export class SoundEngine {
     const linear = this.computeMasterLinear() * scale;
     this.lastMasterTarget = linear;
     const t = this.now();
+    this.applyCatalogMakeup(t);
     if (linear <= 0) {
       this.master.gain.setValueAtTime(0, t);
       return;
     }
     this.master.gain.setTargetAtTime(linear, t, Math.max(0.04, timeConstant));
+  }
+
+  private appliedMakeupDb: number | null = null;
+
+  private applyCatalogMakeup(t: number) {
+    if (!this.makeupGain || !this.makeupLimiter) return;
+    const db = this.profile ? makeupDbForProfile(this.profile.id) : 0;
+    if (db === this.appliedMakeupDb) return;
+    const first = this.appliedMakeupDb === null;
+    this.appliedMakeupDb = db;
+    const stage = makeupStageSettings(db);
+    const linear = 10 ** (stage.gainDb / 20);
+    if (first) this.makeupGain.gain.setValueAtTime(linear, t);
+    else this.makeupGain.gain.setTargetAtTime(linear, t, 0.15);
+    this.makeupLimiter.threshold.setValueAtTime(stage.thresholdDb, t);
+    this.makeupLimiter.ratio.setValueAtTime(stage.ratio, t);
   }
 
   private now() {
@@ -619,9 +643,26 @@ export class SoundEngine {
     boostGain.gain.value = 10 ** (this.outputBoostDb / 20);
     boostGain.connect(preAnalyser);
 
+    // Catalog makeup: PROFILE_LOUDNESS trims are capped by the user-stage ceiling,
+    // so quiet non-engine sounds could never reach -16 LUFS. Makeup is applied
+    // after the ceiling, with a fast peak limiter that is only engaged (ratio > 1)
+    // when the profile receives more than MAKEUP_LIMITER_ENGAGE_DB of makeup. Engines have 0 dB.
+    const makeupLimiter = ctx.createDynamicsCompressor();
+    makeupLimiter.threshold.value = 0;
+    makeupLimiter.knee.value = 0;
+    makeupLimiter.ratio.value = 1;
+    makeupLimiter.attack.value = 0.001;
+    makeupLimiter.release.value = 0.12;
+    makeupLimiter.connect(boostGain);
+    const makeupGain = ctx.createGain();
+    makeupGain.gain.value = 1;
+    makeupGain.connect(makeupLimiter);
+    this.makeupGain = makeupGain;
+    this.makeupLimiter = makeupLimiter;
+
     const master = ctx.createGain();
     master.gain.value = 0;
-    master.connect(boostGain);
+    master.connect(makeupGain);
 
     const cabinIn = ctx.createGain();
     const cabinLow = ctx.createBiquadFilter();
@@ -2333,6 +2374,9 @@ export class SoundEngine {
     this.peakProtect?.dispose();
     this.peakProtect = null;
     this.boostGain = null;
+    this.makeupGain = null;
+    this.makeupLimiter = null;
+    this.appliedMakeupDb = null;
     this.limiter = null;
     this.analyser = null;
     this.meterBuffer = null;
