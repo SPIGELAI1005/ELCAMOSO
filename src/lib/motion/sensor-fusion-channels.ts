@@ -77,13 +77,30 @@ export function alignReceivedAt(sampleTimestamp: number, receivedAt: number): nu
   return receivedAt;
 }
 
+/**
+ * Dead-reckon speed from last GPS fix using IMU acceleration.
+ * Applies stronger extrapolation when IMU is fresh and trusted.
+ *
+ * @param speedMs - Last known speed in m/s
+ * @param accelMs2 - Longitudinal acceleration from IMU
+ * @param ageMs - Time since last GPS fix
+ * @param maxAgeMs - Maximum age for extrapolation (default 1200ms)
+ * @param imuTrustFactor - 0..1 confidence in IMU data (default 0.5)
+ */
 export function extrapolateSpeedMs(
   speedMs: number,
   accelMs2: number | null,
   ageMs: number,
   maxAgeMs = 1200,
+  imuTrustFactor = 0.5,
 ): number {
   if (ageMs <= 0 || ageMs > maxAgeMs) return speedMs;
-  const rate = accelMs2 ?? 0;
-  return Math.max(0, speedMs + rate * (ageMs / 1000) * 0.12);
+  if (accelMs2 === null || !Number.isFinite(accelMs2)) return speedMs;
+
+  const dtSec = ageMs / 1000;
+  const ageFrac = Math.min(1, ageMs / maxAgeMs);
+  const blendFactor = 0.18 + imuTrustFactor * 0.42 * (1 - ageFrac * 0.5);
+  const delta = accelMs2 * dtSec * blendFactor;
+
+  return Math.max(0, speedMs + delta);
 }
