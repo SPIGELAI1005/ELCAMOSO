@@ -120,23 +120,28 @@ export function buildCombustionSampleBank(
   
   const bankEntries: CombustionSampleEntry[] = loops
     .filter((entry) => entry.sourceRpm !== undefined) // Only include loops with valid sourceRpm
-    .map((entry) => ({
-      assetId: entry.assetId,
-      personalityId: profileId,
-      rpmRef: entry.sourceRpm!,
-      load: loadRegionFromManifest(entry.regime, entry.loadAnchor, entry.sourceRpm ?? 0),
-      loadAnchor: entry.loadAnchor,
-      character: entry.regime.startsWith("on-load")
-        ? "on-load"
-        : entry.regime.startsWith("off-load")
-          ? "off-load"
-          : entry.regime.startsWith("overrun")
-            ? "overrun"
-            : "idle",
-      loopSeconds: { start: entry.loopStartSeconds, end: entry.loopEndSeconds },
-      gain: dbToGain(entry.gainTrimDb),
-      permittedPlaybackRate: entry.permittedPlaybackRate,
-    }));
+    .map((entry) => {
+      const base = {
+        assetId: entry.assetId,
+        personalityId: profileId,
+        rpmRef: entry.sourceRpm!,
+        load: loadRegionFromManifest(entry.regime, entry.loadAnchor, entry.sourceRpm ?? 0),
+        loadAnchor: entry.loadAnchor,
+        character: entry.regime.startsWith("on-load")
+          ? "on-load" as const
+          : entry.regime.startsWith("off-load")
+            ? "off-load" as const
+            : entry.regime.startsWith("overrun")
+              ? "overrun" as const
+              : "idle" as const,
+        loopSeconds: { start: entry.loopStartSeconds, end: entry.loopEndSeconds },
+        gain: dbToGain(entry.gainTrimDb),
+      };
+      if (entry.permittedPlaybackRate) {
+        return { ...base, permittedPlaybackRate: entry.permittedPlaybackRate };
+      }
+      return base;
+    });
   
   return {
     personalityId: profileId,

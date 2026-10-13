@@ -9,6 +9,7 @@ import type {
   SamplePackIndex,
   SamplePackProfileManifest,
   SamplePackProfileSummary,
+  DeliveryFormat,
 } from "./types";
 import { isEntryApproved } from "./types";
 
@@ -73,6 +74,12 @@ import worldCyberCityManifest from "./manifests/world-cyber-city.json";
 import worldSpaceDriveManifest from "./manifests/world-space-drive.json";
 import worldStormRunManifest from "./manifests/world-storm-run.json";
 import zenDriveManifest from "./manifests/zen-drive.json";
+
+// M4A delivery manifests (for AAC-encoded assets with gapless loop handling)
+import horseGallopM4aManifest from "./manifests-m4a/horse-gallop.json";
+import romanian85CarriageM4aManifest from "./manifests-m4a/romanian-85-carriage.json";
+import santaSleighM4aManifest from "./manifests-m4a/santa-sleigh.json";
+import wildWestCarriageM4aManifest from "./manifests-m4a/wild-west-carriage.json";
 
 /** Package index with profile summaries. */
 export const SAMPLE_PACK_INDEX: SamplePackIndex = indexData as SamplePackIndex;
@@ -141,6 +148,24 @@ const PROFILE_MANIFESTS: Record<string, SamplePackProfileManifest> = {
   "zen-drive": zenDriveManifest as SamplePackProfileManifest,
 };
 
+/** M4A delivery manifests keyed by profile ID. */
+const M4A_PROFILE_MANIFESTS: Record<string, SamplePackProfileManifest> = {
+  "horse-gallop": horseGallopM4aManifest as SamplePackProfileManifest,
+  "romanian-85-carriage": romanian85CarriageM4aManifest as SamplePackProfileManifest,
+  "santa-sleigh": santaSleighM4aManifest as SamplePackProfileManifest,
+  "wild-west-carriage": wildWestCarriageM4aManifest as SamplePackProfileManifest,
+};
+
+/** Profile IDs that have M4A delivery manifests available. */
+export const M4A_AVAILABLE_PROFILES = Object.keys(M4A_PROFILE_MANIFESTS);
+
+/**
+ * Check if a profile has M4A delivery manifests available.
+ */
+export function hasM4aManifest(profileId: string): boolean {
+  return profileId in M4A_PROFILE_MANIFESTS;
+}
+
 /**
  * List of combustion profile IDs that use RPM/load sample banks.
  */
@@ -171,10 +196,19 @@ export type SystemProfileId = (typeof SYSTEM_PROFILE_IDS)[number];
 
 /**
  * Get the manifest for a profile.
+ * @param profileId - The profile ID to look up.
+ * @param format - Optional delivery format (defaults to "wav"). When "m4a" and
+ *   available, returns the M4A delivery manifest with AAC gapless loop metadata.
  */
 export function getProfileManifest(
   profileId: string,
+  format?: DeliveryFormat,
 ): SamplePackProfileManifest | null {
+  // If M4A format requested and available, use M4A manifest
+  if (format === "m4a" && profileId in M4A_PROFILE_MANIFESTS) {
+    return M4A_PROFILE_MANIFESTS[profileId] ?? null;
+  }
+  // Fall back to WAV manifest
   return PROFILE_MANIFESTS[profileId] ?? null;
 }
 
@@ -218,31 +252,45 @@ export function isSystemProfile(profileId: string): boolean {
 
 /**
  * Get all entries for a profile.
+ * @param profileId - The profile ID.
+ * @param format - Optional delivery format for manifest selection.
  */
-export function getProfileEntries(profileId: string): SamplePackEntry[] {
-  const manifest = getProfileManifest(profileId);
+export function getProfileEntries(
+  profileId: string,
+  format?: DeliveryFormat,
+): SamplePackEntry[] {
+  const manifest = getProfileManifest(profileId, format);
   return manifest?.entries ?? [];
 }
 
 /**
  * Get only approved entries for a profile.
  */
-export function getApprovedProfileEntries(profileId: string): SamplePackEntry[] {
-  return getProfileEntries(profileId).filter(isEntryApproved);
+export function getApprovedProfileEntries(
+  profileId: string,
+  format?: DeliveryFormat,
+): SamplePackEntry[] {
+  return getProfileEntries(profileId, format).filter(isEntryApproved);
 }
 
 /**
  * Get loop entries for a profile.
  */
-export function getProfileLoops(profileId: string): SamplePackEntry[] {
-  return getProfileEntries(profileId).filter((e) => e.kind === "loop");
+export function getProfileLoops(
+  profileId: string,
+  format?: DeliveryFormat,
+): SamplePackEntry[] {
+  return getProfileEntries(profileId, format).filter((e) => e.kind === "loop");
 }
 
 /**
  * Get one-shot entries for a profile.
  */
-export function getProfileOneShots(profileId: string): SamplePackEntry[] {
-  return getProfileEntries(profileId).filter((e) => e.kind === "one-shot");
+export function getProfileOneShots(
+  profileId: string,
+  format?: DeliveryFormat,
+): SamplePackEntry[] {
+  return getProfileEntries(profileId, format).filter((e) => e.kind === "one-shot");
 }
 
 /**

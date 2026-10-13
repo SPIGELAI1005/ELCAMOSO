@@ -1,16 +1,26 @@
 # Sample Pack Hosting Guide
 
-This guide explains how to host the ELCAMOSO sample pack WAV files for production use.
+This guide explains how to host the ELCAMOSO sample pack audio files for production use.
 
 ## Overview
 
-The sample pack system provides 1,112 audio files (627 MB) across 60 profile folders. These premium WAV files are stored separately from the public repository.
+The sample pack system provides 1,112+ audio files across 60 profile folders. These premium audio files are stored separately from the public repository.
 
 **Key Points:**
-- WAV files are 48 kHz, 24-bit mono
+- Original WAV files: 48 kHz, 24-bit mono (627 MB total)
+- AAC delivery files: 128 kbps M4A with gapless loop metadata (~60 MB)
 - Files must NOT be committed to the public repo
-- Production delivery uses signed URLs with checksum verification
-- Development can use a local folder
+- Production delivery uses checksum verification
+- Development can use a local folder or same-origin path
+
+## Delivery Formats
+
+| Format | Extension | Size | Use Case |
+|--------|-----------|------|----------|
+| WAV | `.wav` | 627 MB | Development, max quality |
+| AAC | `.m4a` | ~60 MB | **Production (default)** |
+
+The AAC format is the default for production. It provides excellent quality at ~10% of WAV size, with gapless loop handling built into the manifests.
 
 ## File Structure
 
@@ -57,11 +67,74 @@ sample-packs/
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `VITE_SAMPLE_PACK_BASE_URL` | Base URL for sample assets | `/sample-packs` |
+| `VITE_SAMPLE_PACK_FORMAT` | Delivery format: `m4a` or `wav` | `m4a` |
 | `VITE_SAMPLE_PACKS_ALLOW_UNAPPROVED` | Allow unapproved entries | `0` |
 
 ## Production Hosting
 
-### Option 1: CDN with Signed URLs (Recommended)
+### Option 1: Vercel Blob (Recommended)
+
+ELCAMOSO sample packs are hosted on Vercel Blob storage. This provides:
+- Global edge caching
+- Automatic CORS for Vercel-deployed apps
+- Immutable URLs for long-term caching
+
+**Configuration:**
+```bash
+# .env.production
+VITE_SAMPLE_PACK_BASE_URL=https://<your-blob-store>.public.blob.vercel-storage.com/sample-packs
+VITE_SAMPLE_PACK_FORMAT=m4a
+```
+
+**Vercel Blob CORS Notes:**
+- Blob stores created via the Vercel dashboard automatically allow CORS from your Vercel deployments
+- For custom domains, add them to the Vercel project's domains list
+- Files are served with `Cache-Control: public, max-age=31536000, immutable`
+
+**Upload structure:**
+```
+sample-packs/
+├── american-muscle-v8/
+│   ├── idle_loop.m4a
+│   └── ...
+├── horse-gallop/
+│   ├── idle_standstill.m4a
+│   └── ...
+└── [60 profile folders]
+```
+
+### Option 2: Same-Origin Path (Simple)
+
+Serve sample packs from the same domain as the app, avoiding CORS entirely.
+
+**Setup with Vercel:**
+1. Configure a rewrite in `vercel.json`:
+   ```json
+   {
+     "rewrites": [
+       {
+         "source": "/sample-packs/:path*",
+         "destination": "https://<your-blob-store>.public.blob.vercel-storage.com/sample-packs/:path*"
+       }
+     ]
+   }
+   ```
+
+2. Use the relative path:
+   ```bash
+   VITE_SAMPLE_PACK_BASE_URL=/sample-packs
+   ```
+
+**Benefits:**
+- No CORS headers needed
+- Simpler debugging
+- Works with any storage backend
+
+**Setup with static hosting:**
+1. Place files in `public/sample-packs/` (for dev) or configure your server to serve from a storage bucket
+2. Use the relative path: `VITE_SAMPLE_PACK_BASE_URL=/sample-packs`
+
+### Option 3: External CDN
 
 1. **Upload files to cloud storage:**
    - S3, Cloudflare R2, Google Cloud Storage, or similar
@@ -72,7 +145,6 @@ sample-packs/
    ```bash
    # .env.production
    VITE_SAMPLE_PACK_BASE_URL=https://your-cdn.example.com/sample-packs
-   SOUND_ASSET_SIGNING_SECRET=your-secret-key
    ```
 
 3. **CORS Configuration:**
@@ -85,7 +157,12 @@ sample-packs/
    }
    ```
 
-### Option 2: Self-Hosted with Nginx
+4. **Cache Headers:**
+   ```
+   Cache-Control: public, max-age=31536000, immutable
+   ```
+
+### Option 4: Self-Hosted with Nginx
 
 1. **Configure Nginx:**
    ```nginx
@@ -93,8 +170,7 @@ sample-packs/
      location /sample-packs/ {
        alias /var/www/elcamoso-samples/;
        add_header Access-Control-Allow-Origin "https://www.elcamoso.com";
-       add_header Cache-Control "public, max-age=31536000";
-       expires 1y;
+       add_header Cache-Control "public, max-age=31536000, immutable";
      }
    }
    ```
@@ -104,38 +180,42 @@ sample-packs/
    VITE_SAMPLE_PACK_BASE_URL=https://assets.elcamoso.com/sample-packs
    ```
 
-## Compressed Delivery (Optional)
+## AAC Delivery Format
 
-For reduced bandwidth, transcode WAV files to AAC or Opus:
+The M4A (AAC-LC) format is the default for production. It provides ~90% size reduction with excellent quality.
 
-### Using the Transcode Script
+### Gapless Loop Handling
 
+AAC encoding adds encoder priming (1024 samples) that can cause clicks at loop points. The delivery manifests handle this automatically:
+
+1. **Loops are pre-padded:** 2048 samples of audio from the end of the loop are prepended, and 2048 samples from the start are appended
+2. **Manifest loop points are pre-adjusted:** `loopStartSeconds` and `loopEndSeconds` already account for the padding
+3. **Encoder priming detection:** If the browser's decoder doesn't strip encoder priming (buffer is ~1024 samples longer than expected), the loader adds 1024/48000 seconds to loop points
+4. **Loop duration is explicit:** `loopEnd = loopStart + sourceSamples/sampleRate`, never derived from `buffer.duration`
+
+### Format Selection
+
+Set the format via environment variable:
 ```bash
-# Install ffmpeg
-# macOS: brew install ffmpeg
-# Ubuntu: apt-get install ffmpeg
+# Use AAC (default)
+VITE_SAMPLE_PACK_FORMAT=m4a
 
-# Run the transcode script
-npm run samples:transcode -- --format aac --quality 192
+# Use WAV (development/max quality)
+VITE_SAMPLE_PACK_FORMAT=wav
 ```
 
-The script creates a parallel folder structure with compressed files:
-
-```
-sample-packs-aac/
-├── american-muscle-v8/
-│   ├── idle_loop.m4a
-│   └── ...
-└── ...
-```
+When `m4a` is selected, the loader uses delivery manifests (in `manifests-m4a/`) that have:
+- M4A file paths and checksums
+- `delivery` block with gapless loop metadata
+- Original WAV path/checksum for reference
 
 ### Transcode Formats
 
-| Format | Extension | Typical Size | Quality |
-|--------|-----------|--------------|---------|
-| AAC | `.m4a` | 10-15% of WAV | Excellent |
-| Opus | `.opus` | 8-12% of WAV | Excellent |
-| MP3 | `.mp3` | 10-15% of WAV | Good |
+| Format | Extension | Typical Size | Quality | Gapless Support |
+|--------|-----------|--------------|---------|-----------------|
+| AAC | `.m4a` | 10-15% of WAV | Excellent | ✓ Built-in |
+| Opus | `.opus` | 8-12% of WAV | Excellent | Manual |
+| MP3 | `.mp3` | 10-15% of WAV | Good | No |
 
 ### Browser Compatibility
 
@@ -143,10 +223,10 @@ sample-packs-aac/
 |--------|--------|---------|--------|---------------|
 | WAV | ✓ | ✓ | ✓ | ✓ |
 | AAC | ✓ | ✓ | ✓ | ✓ |
-| Opus | ✓ | ✓ | ✓* | ? |
+| Opus | ✓ | ✓ | ✓* | ✓ |
 | MP3 | ✓ | ✓ | ✓ | ✓ |
 
-*Safari 15+
+*Safari 17+ for WebM/CAF containers
 
 ## Approval Gating
 

@@ -3,7 +3,7 @@
  * Controls which sample entries can be loaded based on approval status.
  */
 
-import type { SamplePackEntry, SamplePackApproval } from "./types";
+import type { SamplePackEntry, SamplePackApproval, DeliveryFormat } from "./types";
 import { isEntryApproved, isEntryUnknown } from "./types";
 import { getProfileEntries, getProfileManifest } from "./catalog";
 
@@ -158,9 +158,14 @@ export function filterApprovedEntries(
 
 /**
  * Get loadable entries for a profile with approval gating applied.
+ * @param profileId - The profile ID.
+ * @param format - Optional delivery format for manifest selection.
  */
-export function getLoadableEntries(profileId: string): SamplePackEntry[] {
-  const entries = getProfileEntries(profileId);
+export function getLoadableEntries(
+  profileId: string,
+  format?: DeliveryFormat,
+): SamplePackEntry[] {
+  const entries = getProfileEntries(profileId, format);
   return filterApprovedEntries(entries);
 }
 
@@ -182,10 +187,15 @@ export interface ProfileApprovalStatus {
 
 /**
  * Get approval status for a profile.
+ * @param profileId - The profile ID.
+ * @param format - Optional delivery format for manifest selection.
  */
-export function getProfileApprovalStatus(profileId: string): ProfileApprovalStatus {
-  const entries = getProfileEntries(profileId);
-  const loadable = getLoadableEntries(profileId);
+export function getProfileApprovalStatus(
+  profileId: string,
+  format?: DeliveryFormat,
+): ProfileApprovalStatus {
+  const entries = getProfileEntries(profileId, format);
+  const loadable = getLoadableEntries(profileId, format);
   
   const approvedCount = entries.filter(isEntryApproved).length;
   const unknownCount = entries.filter(isEntryUnknown).length;

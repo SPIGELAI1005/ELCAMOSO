@@ -1,11 +1,23 @@
 /**
  * Sample Pack Asset Delivery
  * Handles lazy loading of sample assets with caching and checksum verification.
+ * Supports both WAV and AAC (m4a) formats with gapless loop handling.
  */
 
-import type { SamplePackEntry } from "./types";
-import { filterApprovedEntries, getLoadableEntries } from "./approval";
-import { getProfileManifest } from "./catalog";
+import type { SamplePackEntry, DeliveryFormat, DeliveryInfo } from "./types";
+import { getLoadableEntries } from "./approval";
+
+/**
+ * Get the configured delivery format.
+ * Reads from VITE_SAMPLE_PACK_FORMAT (default: m4a).
+ */
+export function getDeliveryFormat(): DeliveryFormat {
+  if (typeof import.meta !== "undefined" && import.meta.env) {
+    const format = import.meta.env["VITE_SAMPLE_PACK_FORMAT"];
+    if (format === "wav" || format === "m4a") return format;
+  }
+  return "m4a";
+}
 
 /**
  * Asset base URL configuration.
@@ -50,6 +62,129 @@ export async function verifyChecksum(
 }
 
 /**
+ * Gapless loop point adjustment for AAC-encoded audio.
+ * 
+ * AAC encoders add 1024 samples of priming delay. The MP4 edit list can tell
+ * decoders to skip it, but some don't. This function detects which case we're
+ * in and adjusts loop points accordingly.
+ * 
+ * Loops are encoded with 2048 samples of padding on each side:
+ * - Pre-roll: last 2048 samples of the loop body prepended
+ * - Tail: first 2048 samples of the loop body appended
+ * 
+ * The manifest's loopStartSeconds/loopEndSeconds already include the 2048-sample
+ * pre-roll offset. If the decoder didn't strip the encoder priming, we need to
+ * add another 1024/48000 seconds.
+ */
+export interface GaplessAdjustment {
+  /** Start offset in seconds (0 for WAV, adjusted for AAC if needed). */
+  startOffsetSeconds: number;
+  /** Loop start in seconds (manifest value, possibly adjusted for AAC). */
+  loopStartSeconds: number;
+  /** Loop end in seconds (computed from loopStart + sourceSamples/sampleRate). */
+  loopEndSeconds: number;
+  /** Whether encoder priming offset was applied. */
+  primingAdjusted: boolean;
+}
+
+/**
+ * Detect if the decoder applied the MP4 edit list (stripped encoder priming).
+ * Per gaplessRule: if buffer.length >= decodedSamplesReference + encoderDelaySamples,
+ * the decoder did NOT apply the MP4 edit list, so priming is present.
+ */
+export function detectEncoderPrimingPresent(
+  buffer: AudioBuffer,
+  delivery: DeliveryInfo,
+): boolean {
+  // decodedSamplesReference is the expected length when priming IS stripped
+  // If buffer is ~1024 samples longer, priming wasn't stripped
+  const threshold = delivery.decodedSamplesReference + delivery.encoderDelaySamples;
+  return buffer.length >= threshold;
+}
+
+/**
+ * Calculate gapless loop adjustment for an entry.
+ * 
+ * For WAV: returns the manifest values unchanged.
+ * For AAC: checks if encoder priming needs to be added, computes correct loopEnd.
+ */
+export function calculateGaplessAdjustment(
+  entry: SamplePackEntry,
+  buffer: AudioBuffer,
+): GaplessAdjustment {
+  const delivery = entry.delivery;
+  const sampleRate = entry.sampleRateHz || 48000;
+  
+  // WAV or no delivery info: use manifest values directly
+  if (!delivery) {
+    const loopStart =
+      entry.kind === "loop" && "loopStartSeconds" in entry
+        ? (entry.loopStartSeconds ?? 0)
+        : 0;
+    const loopEnd =
+      entry.kind === "loop" && "loopEndSeconds" in entry
+        ? (entry.loopEndSeconds ?? buffer.duration)
+        : buffer.duration;
+    
+    return {
+      startOffsetSeconds: 0,
+      loopStartSeconds: loopStart,
+      loopEndSeconds: loopEnd,
+      primingAdjusted: false,
+    };
+  }
+  
+  // AAC: detect if priming needs adjustment
+  const primingPresent = detectEncoderPrimingPresent(buffer, delivery);
+  const primingOffsetSeconds = primingPresent
+    ? delivery.encoderDelaySamples / sampleRate
+    : 0;
+  
+  // Get manifest loop points
+  let loopStart =
+    entry.kind === "loop" && "loopStartSeconds" in entry
+      ? (entry.loopStartSeconds ?? 0)
+      : 0;
+  
+  // For one-shots, start is 0 unless priming adjustment needed
+  const startOffset = entry.kind === "one-shot" ? primingOffsetSeconds : 0;
+  
+  // Adjust loop start if priming present
+  if (primingPresent && entry.kind === "loop") {
+    loopStart += primingOffsetSeconds;
+  }
+  
+  // Calculate loopEnd from sourceSamples (never from buffer.duration)
+  const loopDurationSeconds = delivery.sourceSamples / sampleRate;
+  const loopEnd = loopStart + loopDurationSeconds;
+  
+  return {
+    startOffsetSeconds: startOffset,
+    loopStartSeconds: loopStart,
+    loopEndSeconds: loopEnd,
+    primingAdjusted: primingPresent,
+  };
+}
+
+/**
+ * Apply gapless adjustment to get final playback loop points.
+ * Returns times in samples for Web Audio scheduling.
+ */
+export function getLoopPointsSamples(
+  entry: SamplePackEntry,
+  buffer: AudioBuffer,
+): { loopStart: number; loopEnd: number; startOffset: number } {
+  const adjustment = calculateGaplessAdjustment(entry, buffer);
+  const sampleRate = buffer.sampleRate;
+  
+  return {
+    loopStart: Math.round(adjustment.loopStartSeconds * sampleRate),
+    loopEnd: Math.round(adjustment.loopEndSeconds * sampleRate),
+    startOffset: Math.round(adjustment.startOffsetSeconds * sampleRate),
+  };
+}
+
+/**
  * Asset load result.
  */
 export interface AssetLoadResult {
@@ -59,6 +194,8 @@ export interface AssetLoadResult {
   checksumValid: boolean;
   fromCache: boolean;
   loadTimeMs: number;
+  /** Gapless adjustment info (present for AAC assets). */
+  gaplessAdjustment?: GaplessAdjustment | undefined;
 }
 
 /**
@@ -135,6 +272,10 @@ export async function loadAsset(
   if (!options.skipCache) {
     const cached = getCachedBuffer(entry.assetId);
     if (cached) {
+      // Recalculate gapless adjustment from cached buffer
+      const gaplessAdjustment = entry.delivery
+        ? calculateGaplessAdjustment(entry, cached)
+        : undefined;
       return {
         assetId: entry.assetId,
         buffer: cached,
@@ -142,6 +283,7 @@ export async function loadAsset(
         checksumValid: true,
         fromCache: true,
         loadTimeMs: performance.now() - startTime,
+        gaplessAdjustment,
       };
     }
   }
@@ -201,6 +343,11 @@ export async function loadAsset(
     // Decode audio
     const decoded = await audioContext.decodeAudioData(arrayBuffer.slice(0));
     
+    // Calculate gapless adjustment for AAC assets
+    const gaplessAdjustment = entry.delivery
+      ? calculateGaplessAdjustment(entry, decoded)
+      : undefined;
+    
     // Cache the decoded buffer
     if (!options.skipCache) {
       setCachedBuffer(entry.assetId, decoded);
@@ -213,6 +360,7 @@ export async function loadAsset(
       checksumValid,
       fromCache: false,
       loadTimeMs: performance.now() - startTime,
+      gaplessAdjustment,
     };
   } catch (error) {
     pendingLoads.delete(entry.assetId);
@@ -231,6 +379,9 @@ export async function loadAsset(
 
 /**
  * Load all assets for a profile with concurrent loading.
+ * @param audioContext - Web Audio context for decoding.
+ * @param profileId - Profile ID to load assets for.
+ * @param options - Loading options including format selection.
  */
 export async function loadProfileAssets(
   audioContext: BaseAudioContext,
@@ -239,10 +390,13 @@ export async function loadProfileAssets(
     signal?: AbortSignal | null;
     concurrency?: number;
     onProgress?: (loaded: number, total: number) => void;
+    /** Delivery format - uses m4a manifests when available. */
+    format?: DeliveryFormat;
   } = {},
 ): Promise<ProfileAssetsLoadResult> {
   const startTime = performance.now();
-  const entries = getLoadableEntries(profileId);
+  const format = options.format ?? getDeliveryFormat();
+  const entries = getLoadableEntries(profileId, format);
   const concurrency = Math.max(1, options.concurrency ?? 4);
   
   const results: AssetLoadResult[] = [];
@@ -328,13 +482,18 @@ export async function preloadEntries(
 
 /**
  * Check if assets are available locally (dev mode).
+ * @param profileId - Profile ID to check.
+ * @param format - Optional delivery format for manifest selection.
  */
-export async function checkLocalAssets(profileId: string): Promise<{
+export async function checkLocalAssets(
+  profileId: string,
+  format?: DeliveryFormat,
+): Promise<{
   available: boolean;
   missing: string[];
   checked: number;
 }> {
-  const entries = getLoadableEntries(profileId);
+  const entries = getLoadableEntries(profileId, format ?? getDeliveryFormat());
   const missing: string[] = [];
   
   for (const entry of entries.slice(0, 5)) {

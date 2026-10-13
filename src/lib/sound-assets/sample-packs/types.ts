@@ -95,6 +95,36 @@ export interface SamplePackPlaybackRate {
 }
 
 /**
+ * Supported delivery formats for assets.
+ */
+export type DeliveryFormat = "wav" | "m4a";
+
+/**
+ * AAC/M4A delivery metadata for gapless loop handling.
+ * Present when loading from m4a manifests.
+ */
+export interface DeliveryInfo {
+  container: "mp4";
+  codec: "aac-lc";
+  mimeType: "audio/mp4";
+  bitrateKbps: number;
+  sampleRateHz: number;
+  channels: number;
+  /** Original audio sample count (before padding/priming). */
+  sourceSamples: number;
+  /** Encoder priming delay samples (typically 1024 for AAC). */
+  encoderDelaySamples: number;
+  /** Tail padding samples appended (typically 2048). */
+  appendedTailSamples: number;
+  /** Pre-roll samples for loops (typically 2048). */
+  preRollSamples?: number;
+  /** Expected decoded buffer length for reference. */
+  decodedSamplesReference: number;
+  /** Human-readable rule for handling gapless playback. */
+  gaplessRule: string;
+}
+
+/**
  * Base entry shared by all sample types.
  */
 export interface SamplePackEntryBase {
@@ -114,6 +144,14 @@ export interface SamplePackEntryBase {
   license: HybridLicenseRecord;
   acquisitionPriority: number;
   notes: string;
+  /** Original WAV asset path (present in m4a delivery manifests). */
+  sourceAssetPath?: string | undefined;
+  /** Original WAV checksum (present in m4a delivery manifests). */
+  sourceChecksumSha256?: string | undefined;
+  /** File size in bytes (present in m4a delivery manifests). */
+  fileSizeBytes?: number | undefined;
+  /** AAC delivery metadata for gapless loop handling. */
+  delivery?: DeliveryInfo | undefined;
 }
 
 /**
@@ -148,7 +186,7 @@ export interface NonCombustionLoopEntry extends SamplePackEntryBase {
   /** Optional gait for horse profiles. */
   gait?: "walk" | "trot" | "canter" | "gallop";
   /** Surface type for texture. */
-  surface?: "dirt" | "cobble" | "snow" | "water" | "gravel";
+  surface?: "dirt" | "cobble" | "snow" | "water" | "gravel" | "asphalt";
   /** BPM for musical loops. */
   bpm?: number;
 }
