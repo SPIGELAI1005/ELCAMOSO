@@ -729,27 +729,46 @@ export const EXPANSION_STRATEGIES: ProfileStrategy[] = [
           id: "growl",
           destination: buses.body,
           dark: true,
-          level: 0.46,
+          level: 0.58,
         }),
         createResonantBodyLayer(ctx, {
           id: "pressure",
           destination: buses.body,
-          freqs: [42, 64, 96],
-          level: 0.34,
+          freqs: [85, 130, 180],
+          level: 0.45,
+        }),
+        // Quiet felt sub under the 70–180 Hz growl (keeps ~10–20 % below 60 Hz).
+        createResonantBodyLayer(ctx, {
+          id: "sub",
+          destination: buses.body,
+          freqs: [48],
+          level: 1.4,
+        }),
+        createFilteredNoiseLayer(ctx, {
+          id: "body-rumble",
+          destination: buses.body,
+          color: "brown",
+          filterType: "bandpass",
+          tone: 115,
+          q: 0.5,
+          level: 0.32,
+          speedWeight: 0.4,
+          throttleWeight: 0.3,
         }),
         createFilteredNoiseLayer(ctx, {
           id: "turbulence",
           destination: buses.beds,
           color: "brown",
-          filterType: "lowpass",
-          tone: 280,
-          level: 0.18,
+          filterType: "bandpass",
+          tone: 200,
+          q: 0.55,
+          level: 0.26,
         }),
         createOneShotEventLayer(ctx, {
           id: "thunder",
           destination: buses.accents,
           level: 1,
-          events: [{ kind: "thunder", everySeconds: 22, jitter: 10, level: 0.14, tone: 58 }],
+          events: [{ kind: "thunder", everySeconds: 22, jitter: 10, level: 0.18, tone: 95 }],
         }),
       ];
     },
@@ -758,17 +777,23 @@ export const EXPANSION_STRATEGIES: ProfileStrategy[] = [
     id: "retro-arcade",
     build(ctx, buses) {
       return [
-        createArcadeLayer(ctx, { id: "arcade", destination: buses.body, level: 0.4 }),
+        createArcadeLayer(ctx, { id: "arcade", destination: buses.body, level: 1.18, baseHz: 110 }),
+        createResonantBodyLayer(ctx, {
+          id: "8bit-body",
+          destination: buses.body,
+          freqs: [95, 145, 190],
+          level: 0.25,
+        }),
         createFilteredNoiseLayer(ctx, {
           id: "cabinet",
           destination: buses.beds,
           color: "pink",
           filterType: "bandpass",
           tone: 520,
-          q: 0.8,
-          level: 0.07,
-          speedWeight: 0.6,
-          throttleWeight: 0.15,
+          q: 0.7,
+          level: 0.16,
+          speedWeight: 0.55,
+          throttleWeight: 0.4,
         }),
       ];
     },
@@ -777,7 +802,13 @@ export const EXPANSION_STRATEGIES: ProfileStrategy[] = [
     id: "synthwave-drive",
     build(ctx, buses) {
       return [
-        createSynthwaveLayer(ctx, { id: "synthwave", destination: buses.body, level: 0.42 }),
+        createSynthwaveLayer(ctx, { id: "synthwave", destination: buses.body, level: 1.22, rootHz: 90 }),
+        createResonantBodyLayer(ctx, {
+          id: "synth-bass",
+          destination: buses.body,
+          freqs: [82, 130, 180],
+          level: 0.28,
+        }),
         createFilteredNoiseLayer(ctx, {
           id: "air",
           destination: buses.beds,
@@ -785,7 +816,7 @@ export const EXPANSION_STRATEGIES: ProfileStrategy[] = [
           filterType: "bandpass",
           tone: 2800,
           q: 0.7,
-          level: 0.05,
+          level: 0.1,
         }),
       ];
     },
@@ -809,24 +840,43 @@ export const EXPANSION_STRATEGIES: ProfileStrategy[] = [
         createWindLayer(ctx, {
           id: "wind",
           destination: buses.beds,
-          level: 0.45,
+          level: 1.25,
+          idlePresence: 0.9,
           bands: [
-            { tone: 200, level: 0.25, q: 0.6 },
-            { tone: 900, level: 0.45, q: 0.7 },
-            { tone: 2400, level: 0.15, q: 0.8 },
+            { tone: 115, level: 0.26, q: 0.45 },
+            { tone: 200, level: 0.35, q: 0.55 },
+            { tone: 900, level: 0.52, q: 0.65 },
+            { tone: 2400, level: 0.22, q: 0.75 },
           ],
         }),
         createResonantBodyLayer(ctx, {
           id: "drone",
           destination: buses.body,
-          freqs: [55, 82],
-          level: 0.18,
+          freqs: [85, 130, 175],
+          level: 0.48,
+        }),
+        createResonantBodyLayer(ctx, {
+          id: "sub",
+          destination: buses.body,
+          freqs: [52],
+          level: 0.75,
+        }),
+        createFilteredNoiseLayer(ctx, {
+          id: "body-warmth",
+          destination: buses.body,
+          color: "brown",
+          filterType: "bandpass",
+          tone: 125,
+          q: 0.45,
+          level: 0.28,
+          speedWeight: 0.3,
+          throttleWeight: 0.15,
         }),
         createOneShotEventLayer(ctx, {
           id: "chimes",
           destination: buses.accents,
           level: 1,
-          events: [{ kind: "bell", everySeconds: 55, jitter: 28, level: 0.05, tone: 1320 }],
+          events: [{ kind: "bell", everySeconds: 55, jitter: 28, level: 0.1, tone: 1320 }],
         }),
       ];
     },
@@ -835,8 +885,24 @@ export const EXPANSION_STRATEGIES: ProfileStrategy[] = [
     id: "rain-drive",
     build(ctx, buses) {
       return [
-        createRainLayer(ctx, { id: "rain", destination: buses.beds, level: 0.36 }),
-        createWindLayer(ctx, { id: "air", destination: buses.beds, level: 0.08 }),
+        createRainLayer(ctx, { id: "rain", destination: buses.beds, level: 1.15, idlePresence: 0.92 }),
+        createWindLayer(ctx, {
+          id: "air",
+          destination: buses.beds,
+          level: 0.35,
+          idlePresence: 0.6,
+          bands: [
+            { tone: 105, level: 0.22, q: 0.4 },
+            { tone: 260, level: 0.32, q: 0.55 },
+            { tone: 1100, level: 0.42, q: 0.65 },
+          ],
+        }),
+        createResonantBodyLayer(ctx, {
+          id: "cabin-warmth",
+          destination: buses.body,
+          freqs: [90, 140, 185],
+          level: 0.32,
+        }),
         createFilteredNoiseLayer(ctx, {
           id: "glass-mid",
           destination: buses.accents,
@@ -844,8 +910,8 @@ export const EXPANSION_STRATEGIES: ProfileStrategy[] = [
           filterType: "bandpass",
           tone: 3200,
           q: 1.1,
-          level: 0.06,
-          speedWeight: 0.7,
+          level: 0.12,
+          speedWeight: 0.65,
           throttleWeight: 0.2,
         }),
       ];
@@ -855,13 +921,23 @@ export const EXPANSION_STRATEGIES: ProfileStrategy[] = [
     id: "ocean-drive",
     build(ctx, buses) {
       return [
-        createOceanWaveLayer(ctx, { id: "ocean", destination: buses.beds, level: 0.5 }),
-        createWindLayer(ctx, { id: "wind", destination: buses.beds, level: 0.16 }),
+        createOceanWaveLayer(ctx, { id: "ocean", destination: buses.beds, level: 1.35 }),
+        createWindLayer(ctx, {
+          id: "wind",
+          destination: buses.beds,
+          level: 0.42,
+          idlePresence: 0.75,
+          bands: [
+            { tone: 100, level: 0.2, q: 0.4 },
+            { tone: 280, level: 0.32, q: 0.55 },
+            { tone: 1200, level: 0.38, q: 0.65 },
+          ],
+        }),
         createResonantBodyLayer(ctx, {
           id: "deep",
           destination: buses.body,
-          freqs: [42, 65],
-          level: 0.16,
+          freqs: [85, 130, 180],
+          level: 0.45,
         }),
       ];
     },

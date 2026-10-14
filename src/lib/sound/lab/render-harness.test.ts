@@ -1,20 +1,17 @@
+import "@/test-utils/install-web-audio";
 import { describe, expect, it } from "vitest";
 import { assertLabCaptureMetadata } from "@/lib/sound/lab/capture-metadata";
 import { renderLabOffline } from "@/lib/sound/lab/render-harness";
 
-const OfflineCtx =
-  globalThis.OfflineAudioContext ??
-  (globalThis as { webkitOfflineAudioContext?: typeof OfflineAudioContext })
-    .webkitOfflineAudioContext;
-
 describe("audio lab render harness", () => {
-  it.skipIf(!OfflineCtx)(
+  it(
     "renders a short production-engine offline capture with metadata",
     async () => {
       const result = await renderLabOffline({
         profileId: "gt-v8",
         fixtureId: "idle",
         includeSpectrum: false,
+        environmentId: "open",
       });
       assertLabCaptureMetadata(result.metadata);
       expect(result.metadata.profileId).toBe("gt-v8");

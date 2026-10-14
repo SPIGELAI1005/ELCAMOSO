@@ -35,8 +35,15 @@ export function phaseRoleGain(role: AudioLayerRole, motion: ReturnType<typeof mo
   const accelerating = motion.throttleFast > 0.45 || motion.accelMps2 > 0.7;
   const releasing = motion.overrun || (motion.speedKmh > 5 && motion.throttleFast < 0.08 && motion.accelMps2 < -0.2);
   const regenerating = motion.regen > 0.2;
+  const engineRoles = ["combustion", "motor", "exhaust", "intake"] as const;
+  const isAmbientProfile = !config.availableRoles.some((r) => (engineRoles as readonly string[]).includes(r));
   if (stopped) {
-    if (role === "event" || role === "environment" || role === "regen") return 0.18;
+    if (isAmbientProfile) {
+      return phase.idleCharacter;
+    }
+    if (role === "event" || role === "environment" || role === "regen") {
+      return 0.55;
+    }
     return phase.idleCharacter;
   }
   if (regenerating) {

@@ -33,6 +33,13 @@ export interface WorldLayerSpec {
   level: number;
   /** Centre tone Hz */
   tone: number;
+  /**
+   * Optional quiet low partial (Hz, typically 45–55) mixed into a drone so the
+   * world keeps some felt body below 60 Hz while 70–150 Hz carries the bass.
+   */
+  subHz?: number;
+  /** Sub partial level relative to the drone (0..1, default 0.35). */
+  subLevel?: number;
 }
 
 export interface WorldStateGains {

@@ -31,20 +31,30 @@ export function generateProceduralStemBuffer(
     switch (stem.procedural) {
       case "pad":
       case "warm":
+        // Warmer harmonics starting at 130 Hz for reduced LF energy
         sample =
-          0.12 * Math.sin(2 * Math.PI * 110 * t) +
-          0.08 * Math.sin(2 * Math.PI * 164.8 * t + 0.3) +
-          0.04 * Math.sin(2 * Math.PI * 220 * t);
+          0.10 * Math.sin(2 * Math.PI * 130 * t) +
+          0.08 * Math.sin(2 * Math.PI * 195 * t + 0.3) +
+          0.05 * Math.sin(2 * Math.PI * 260 * t);
         sample *= 0.7 + 0.3 * Math.sin(2 * Math.PI * t * 0.25);
         break;
       case "bass":
-        sample = 0.28 * Math.sin(2 * Math.PI * 55 * t);
-        if (phase < 0.08) sample *= 1.4;
+        // 110 Hz + 220 Hz + 330 Hz for Tesla speaker bass perception
+        // Missing-fundamental technique: brain perceives ~55 Hz from 110-220-330 Hz
+        sample = 0.16 * Math.sin(2 * Math.PI * 110 * t) +
+                 0.12 * Math.sin(2 * Math.PI * 220 * t) +
+                 0.05 * Math.sin(2 * Math.PI * 330 * t);
+        {
+          const env = phase < 0.04 ? 1 + 0.3 * (1 - phase / 0.04) : 1;
+          sample *= env;
+        }
         break;
       case "pulse": {
         const hit = phase < 0.05 || (beat % 2 === 1 && phase < 0.04);
         sample = hit ? (rnd() * 2 - 1) * 0.35 * (1 - phase * 8) : 0;
-        sample += 0.05 * Math.sin(2 * Math.PI * 80 * t);
+        // 95 Hz + 190 Hz for Tesla speaker compatibility
+        sample += 0.04 * Math.sin(2 * Math.PI * 95 * t) +
+                  0.025 * Math.sin(2 * Math.PI * 190 * t);
         break;
       }
       case "noise":

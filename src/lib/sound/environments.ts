@@ -185,7 +185,11 @@ export const ENVIRONMENTS: EnvironmentPreset[] = [
 export const DEFAULT_ENVIRONMENT_ID = "open";
 
 export function getEnvironment(id: string | null | undefined): EnvironmentPreset {
-  return ENVIRONMENTS.find((e) => e.id === id) ?? ENVIRONMENTS[0]!;
+  return (
+    ENVIRONMENTS.find((e) => e.id === id) ??
+    ENVIRONMENTS.find((e) => e.id === DEFAULT_ENVIRONMENT_ID) ??
+    ENVIRONMENTS[0]!
+  );
 }
 
 /** Complete, in-range layer mix from any partial stored value. */

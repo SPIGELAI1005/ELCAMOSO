@@ -368,9 +368,14 @@ export function createFilteredNoiseLayer(
 
 export function createWindLayer(
   ctx: BaseAudioContext,
-  opts: LayerBaseOpts & { bands?: { tone: number; level: number; q?: number }[] },
+  opts: LayerBaseOpts & {
+    bands?: { tone: number; level: number; q?: number }[];
+    /** Idle presence (0–1): soft wind heard at standstill. Default 0. */
+    idlePresence?: number;
+  },
 ): LayerHandle {
   const bus = ctx.createGain();
+  const idlePresence = opts.idlePresence ?? 0;
   const bands = opts.bands ?? [
     { tone: 280, level: 0.35, q: 0.7 },
     { tone: 1200, level: 0.55, q: 0.8 },
@@ -401,10 +406,13 @@ export function createWindLayer(
       const gust = 0.75 + 0.25 * Math.sin(gustPhase) * Math.sin(gustPhase * 0.37 + 1.7);
       const speedGate = softGate(Math.pow(Math.max(0, (m.speedKmh - 8) / 100), 0.7), 0.01);
       const bright = m.accelFast * 0.25;
-      const level = (opts.level ?? 0.45) * speedGate * gust * (1 + bright);
+      const idleFactor = 1 - m.speedSlow;
+      const idleContrib = idlePresence * idleFactor * 0.92 * (0.85 + 0.15 * Math.sin(gustPhase * 0.6));
+      const level = (opts.level ?? 0.45) * (speedGate * gust * (1 + bright) + idleContrib * 1.8);
       targetParam(gain.gain, softGate(level), t, 0.4);
       nodes.forEach(({ bp, g, band }, i) => {
-        targetParam(bp.frequency, band.tone * (0.85 + m.speedSlow * 0.5 + bright * 0.2), t, 0.5);
+        const idleFreqShift = idlePresence > 0 && m.speedKmh < 5 ? 0.7 : 1;
+        targetParam(bp.frequency, band.tone * idleFreqShift * (0.85 + m.speedSlow * 0.5 + bright * 0.2), t, 0.5);
         targetParam(g.gain, band.level * (i === 2 ? 0.28 + m.speedSlow * 0.45 : 1), t, 0.45);
       });
       targetParam(panner.pan, Math.sin(t * 0.09) * 0.7 * m.stereoWidth, t, 0.6);
@@ -594,8 +602,16 @@ export function createRotorLayer(
   opts: LayerBaseOpts & { blades?: number; tone?: number },
 ): LayerHandle {
   const bus = ctx.createGain();
-  const { gain, panner, handle } = attachChain(ctx, opts, bus);
+  // High-pass to reduce sub-60 Hz content for Tesla speakers
+  const hp = ctx.createBiquadFilter();
+  hp.type = "highpass";
+  hp.frequency.value = 55;
+  hp.Q.value = 0.7;
+  bus.connect(hp);
+  const { gain, panner, handle } = attachChain(ctx, opts, hp);
   const blades = opts.blades ?? 4;
+  // Use 80 Hz fundamental (missing-fundamental: perceived as low but plays 80-160 Hz)
+  const baseTone = opts.tone ?? 80;
   let next = 0;
   let step = 0;
   let disposed = false;
@@ -618,19 +634,34 @@ export function createRotorLayer(
         pan.pan.linearRampToValueAtTime(step % 2 === 0 ? 0.15 : -0.15, at + 0.1);
         pan.connect(bus);
 
+        // Primary thump: missing-fundamental technique (play 80 Hz + 160 Hz, brain perceives ~40 Hz)
         const boom = ctx.createOscillator();
         const bg = ctx.createGain();
         boom.type = "sine";
-        const f0 = (opts.tone ?? 42) * variation;
+        const f0 = baseTone * variation;
         boom.frequency.setValueAtTime(f0, at);
-        boom.frequency.exponentialRampToValueAtTime(Math.max(18, f0 * 0.55), at + 0.12);
+        boom.frequency.exponentialRampToValueAtTime(Math.max(60, f0 * 0.7), at + 0.12);
         bg.gain.setValueAtTime(0.0001, at);
-        bg.gain.exponentialRampToValueAtTime(Math.max(0.0002, slap * 0.9), at + 0.008);
+        bg.gain.exponentialRampToValueAtTime(Math.max(0.0002, slap * 0.75), at + 0.008);
         bg.gain.exponentialRampToValueAtTime(0.0001, at + 0.16);
         boom.connect(bg);
         bg.connect(pan);
         boom.start(at);
         boom.stop(at + 0.2);
+
+        // Second harmonic for perceived low end
+        const harm = ctx.createOscillator();
+        const hg = ctx.createGain();
+        harm.type = "sine";
+        harm.frequency.setValueAtTime(f0 * 2, at);
+        harm.frequency.exponentialRampToValueAtTime(Math.max(100, f0 * 1.4), at + 0.1);
+        hg.gain.setValueAtTime(0.0001, at);
+        hg.gain.exponentialRampToValueAtTime(Math.max(0.0002, slap * 0.45), at + 0.006);
+        hg.gain.exponentialRampToValueAtTime(0.0001, at + 0.12);
+        harm.connect(hg);
+        hg.connect(pan);
+        harm.start(at);
+        harm.stop(at + 0.16);
 
         const whoosh = createLoopingNoise(ctx, "pink", 1);
         const bp = ctx.createBiquadFilter();
@@ -814,13 +845,20 @@ function waterRegimes(kmh: number, throttle: number, accel: number, outboard: bo
  * Lanz-style single-cylinder two-stroke hot-bulb character:
  * absurdly slow RPM, individual enormous combustion events, flywheel inertia.
  * Throttle raises pulse strength before cadence climbs.
+ * Uses missing-fundamental technique (90 Hz + harmonics) for Tesla speakers.
  */
 export function createHotBulbTractorLayer(
   ctx: BaseAudioContext,
   opts: LayerBaseOpts & { idleRpm?: number; peakRpm?: number },
 ): LayerHandle {
   const bus = ctx.createGain();
-  const { gain, panner, handle } = attachChain(ctx, opts, bus);
+  // High-pass to reduce sub-60 Hz for Tesla speakers
+  const hp = ctx.createBiquadFilter();
+  hp.type = "highpass";
+  hp.frequency.value = 55;
+  hp.Q.value = 0.7;
+  bus.connect(hp);
+  const { gain, panner, handle } = attachChain(ctx, opts, hp);
   const idleRpm = opts.idleRpm ?? 280;
   const peakRpm = opts.peakRpm ?? 630;
   let next = 0;
@@ -854,20 +892,20 @@ export function createHotBulbTractorLayer(
         const micro = 1 + (audioRandom() - 0.5) * 0.03;
         const uneven = stroke % 5 === 0 ? 0.82 : stroke % 3 === 0 ? 1.08 : 1;
 
-        // Enormous pressure event (low-mid, not sub-only)
+        // Primary pressure event (missing-fundamental: 90 Hz perceived as deeper)
         const osc = ctx.createOscillator();
         const lp = ctx.createBiquadFilter();
         const og = ctx.createGain();
         osc.type = "sine";
-        const f0 = 70 * micro * (0.92 + m.throttleFast * 0.12);
+        const f0 = 95 * micro * (0.92 + m.throttleFast * 0.12);
         osc.frequency.setValueAtTime(f0, at);
-        osc.frequency.exponentialRampToValueAtTime(Math.max(28, f0 * 0.45), at + 0.12);
+        osc.frequency.exponentialRampToValueAtTime(Math.max(55, f0 * 0.55), at + 0.12);
         lp.type = "lowpass";
-        lp.frequency.setValueAtTime(380 + pulseStrength * 220, at);
-        lp.frequency.exponentialRampToValueAtTime(140, at + 0.16);
+        lp.frequency.setValueAtTime(400 + pulseStrength * 240, at);
+        lp.frequency.exponentialRampToValueAtTime(180, at + 0.16);
         og.gain.setValueAtTime(0.0001, at);
         og.gain.exponentialRampToValueAtTime(
-          Math.max(0.0002, pulseStrength * 0.95 * uneven),
+          Math.max(0.0002, pulseStrength * 0.8 * uneven),
           at + 0.008,
         );
         og.gain.exponentialRampToValueAtTime(0.0001, at + 0.22);
@@ -877,11 +915,28 @@ export function createHotBulbTractorLayer(
         osc.start(at);
         osc.stop(at + 0.26);
 
+        // Second harmonic for perceived low-end weight
+        const harm = ctx.createOscillator();
+        const hg = ctx.createGain();
+        harm.type = "sine";
+        harm.frequency.setValueAtTime(f0 * 2, at);
+        harm.frequency.exponentialRampToValueAtTime(Math.max(90, f0 * 1.1), at + 0.1);
+        hg.gain.setValueAtTime(0.0001, at);
+        hg.gain.exponentialRampToValueAtTime(
+          Math.max(0.0002, pulseStrength * 0.45 * uneven),
+          at + 0.006,
+        );
+        hg.gain.exponentialRampToValueAtTime(0.0001, at + 0.18);
+        harm.connect(hg);
+        hg.connect(bus);
+        harm.start(at);
+        harm.stop(at + 0.22);
+
         // Exhaust stack puff
         const puff = createLoopingNoise(ctx, "brown", 1);
         const bp = ctx.createBiquadFilter();
         bp.type = "bandpass";
-        bp.frequency.value = 160 + audioRandom() * 80;
+        bp.frequency.value = 180 + audioRandom() * 100;
         bp.Q.value = 1.1;
         const pg = ctx.createGain();
         pg.gain.setValueAtTime(0.0001, at);
@@ -1002,10 +1057,16 @@ export function createImpactLayer(
             ? 0.05
             : 0.04 + audioRandom() * 0.04;
         g.gain.setValueAtTime(0.0001, at);
-        g.gain.exponentialRampToValueAtTime(
-          Math.max(0.0002, amp * (softThump ? 0.85 : 1)),
-          at + 0.004,
-        );
+        if (kind === "cobble") {
+          // Cobbles: a 7 ms linear attack. The old 4 ms exponential ramp from
+          // -80 dB was effectively a ~1 ms step → audible HF tick on every stone.
+          g.gain.linearRampToValueAtTime(Math.max(0.0002, amp), at + 0.007);
+        } else {
+          g.gain.exponentialRampToValueAtTime(
+            Math.max(0.0002, amp * (softThump ? 0.85 : 1)),
+            at + 0.004,
+          );
+        }
         g.gain.exponentialRampToValueAtTime(0.0001, at + dur);
         src.connect(bp);
         bp.connect(g);
@@ -1016,10 +1077,13 @@ export function createImpactLayer(
         if (!softThump && (kind === "cobble" || audioRandom() > 0.7)) {
           const osc = ctx.createOscillator();
           const og = ctx.createGain();
-          osc.type = "triangle";
+          // Cobble ring is a sine with a soft 6 ms attack (a triangle with a 2 ms
+          // exponential ramp produced a broadband click per stone).
+          osc.type = kind === "cobble" ? "sine" : "triangle";
           osc.frequency.value = tone * (kind === "cobble" ? 1.8 : 0.4);
           og.gain.setValueAtTime(0.0001, at);
-          og.gain.exponentialRampToValueAtTime(Math.max(0.0002, amp * 0.45), at + 0.002);
+          if (kind === "cobble") og.gain.linearRampToValueAtTime(Math.max(0.0002, amp * 0.35), at + 0.006);
+          else og.gain.exponentialRampToValueAtTime(Math.max(0.0002, amp * 0.45), at + 0.002);
           og.gain.exponentialRampToValueAtTime(0.0001, at + 0.1);
           osc.connect(og);
           og.connect(pan);
@@ -1064,15 +1128,19 @@ export function createCreakLayer(
   let next = 0;
   let step = 0;
   let disposed = false;
+  let demandSmooth = 0;
   return {
     ...handle,
     update(m, t) {
       if (disposed) return;
-      const rate = 0.25 + m.speedSlow * 1.4 + Math.abs(m.accelFast) * 0.6;
+      // Throttle response: faster and louder creaks under demand
+      const demand = clamp(m.throttleFast * 0.6 + m.accelFast * 0.8);
+      demandSmooth += (demand - demandSmooth) * Math.min(1, m.dt / 0.2);
+      const rate = 0.25 + m.speedSlow * 1.4 + Math.abs(m.accelFast) * 0.6 + demandSmooth * 0.8;
       const interval = 1 / Math.max(0.15, rate);
       if (next < t) next = t + 0.4;
       if (t + 0.05 < next) {
-        targetParam(gain.gain, softGate((opts.level ?? 0.12) * (0.2 + m.speedSlow)), t, 0.3);
+        targetParam(gain.gain, softGate((opts.level ?? 0.12) * (0.2 + m.speedSlow + demandSmooth * 0.3)), t, 0.3);
         return;
       }
       const at = Math.max(t, next);
@@ -1088,15 +1156,16 @@ export function createCreakLayer(
       osc.frequency.setValueAtTime(tone * (up ? 0.85 : 1.1), at);
       osc.frequency.linearRampToValueAtTime(tone * (up ? 1.15 : 0.8), at + dur);
       wobble.type = "sine";
-      wobble.frequency.value = 5 + audioRandom() * 4;
-      wGain.gain.value = opts.metal ? 35 : 18;
+      wobble.frequency.value = 5 + audioRandom() * 4 + demandSmooth * 3;
+      wGain.gain.value = (opts.metal ? 35 : 18) * (1 + demandSmooth * 0.4);
       wobble.connect(wGain);
       wGain.connect(osc.detune);
       bp.type = "bandpass";
       bp.frequency.value = tone * (opts.metal ? 4.5 : 3);
       bp.Q.value = opts.metal ? 8 : 5;
+      const demandLevelBoost = 1 + demandSmooth * 0.45;
       g.gain.setValueAtTime(0.0001, at);
-      g.gain.linearRampToValueAtTime((opts.level ?? 0.12) * (0.4 + m.speedSlow), at + 0.1);
+      g.gain.linearRampToValueAtTime((opts.level ?? 0.12) * (0.4 + m.speedSlow) * demandLevelBoost, at + 0.1);
       g.gain.exponentialRampToValueAtTime(0.0001, at + dur);
       osc.connect(bp);
       bp.connect(g);
@@ -1106,7 +1175,8 @@ export function createCreakLayer(
       osc.stop(at + dur + 0.05);
       wobble.stop(at + dur + 0.05);
       step += 1;
-      next = at + interval * (0.8 + audioRandom() * 0.5);
+      // Faster creaks under demand
+      next = at + interval * (0.8 + audioRandom() * 0.5) * (1 - demandSmooth * 0.25);
       targetParam(panner.pan, (audioRandom() - 0.5) * 0.4, t, 0.4);
     },
     dispose() {
@@ -1124,6 +1194,7 @@ export function createCreakLayer(
  * - Canter: three-beat + suspension
  * - Gallop: four distinct beats with a longer gathered flight after the lead
  * Hoof impact = short body thud + brief brown grit (not white hiss).
+ * Throttle/accel response: harder strikes under demand.
  */
 export function createHoofLayer(
   ctx: BaseAudioContext,
@@ -1134,8 +1205,9 @@ export function createHoofLayer(
   let next = 0;
   let disposed = false;
   const horses = opts.horses ?? 1;
+  let demandSmooth = 0;
 
-  function fireHoof(at: number, tone: number, level: number, hard: boolean, limb: number) {
+  function fireHoof(at: number, tone: number, level: number, hard: boolean, limb: number, demand: number) {
     // Dirt / turf grit: brown, not white, and very short.
     const src = createLoopingNoise(ctx, "brown", 1);
     const bp = ctx.createBiquadFilter();
@@ -1145,8 +1217,9 @@ export function createHoofLayer(
     bp.frequency.exponentialRampToValueAtTime(gritTone * 0.45, at + 0.04);
     bp.Q.value = 3.2;
     const g = ctx.createGain();
+    const demandBoost = 1 + demand * 0.5;
     g.gain.setValueAtTime(0.0001, at);
-    g.gain.exponentialRampToValueAtTime(Math.max(0.0002, level * (hard ? 0.55 : 0.35)), at + 0.002);
+    g.gain.exponentialRampToValueAtTime(Math.max(0.0002, level * (hard ? 0.55 : 0.35) * demandBoost), at + 0.002);
     g.gain.exponentialRampToValueAtTime(0.0001, at + 0.045);
     const pan = ctx.createStereoPanner();
     // Hind leftish, fore rightish for a readable stride stereo image.
@@ -1167,7 +1240,7 @@ export function createHoofLayer(
     body.frequency.exponentialRampToValueAtTime(thud * 0.55, at + 0.07);
     bg.gain.setValueAtTime(0.0001, at);
     bg.gain.exponentialRampToValueAtTime(
-      Math.max(0.0002, level * (hard ? 0.85 : 0.55)),
+      Math.max(0.0002, level * (hard ? 0.85 : 0.55) * demandBoost),
       at + 0.004,
     );
     bg.gain.exponentialRampToValueAtTime(0.0001, at + 0.1);
@@ -1181,15 +1254,20 @@ export function createHoofLayer(
     ...handle,
     update(m, t) {
       if (disposed) return;
+      // Throttle/accel affects gait intensity
+      const demand = clamp(m.throttleFast * 0.6 + m.accelFast * 0.8);
+      demandSmooth += (demand - demandSmooth) * Math.min(1, m.dt / 0.25);
       const gait = gaitPhase(m.speedKmh);
-      const cadence = gait.rate * (horses === 1 ? 1 : horses === 2 ? 1.05 : 1.12);
+      // Throttle can push gait faster
+      const demandCadenceBoost = 1 + demandSmooth * 0.3;
+      const cadence = gait.rate * (horses === 1 ? 1 : horses === 2 ? 1.05 : 1.12) * demandCadenceBoost;
       const interval = 1 / Math.max(0.35, cadence);
       if (next < t) next = t;
       const horizon = t + 0.28;
       while (next < horizon) {
         const pattern = gait.pattern;
         // One full stride of footfalls, then wait for the next stride.
-        const strideGain = (opts.level ?? 0.35) * (0.35 + m.speedSlow * 0.9);
+        const strideGain = (opts.level ?? 0.35) * (0.35 + m.speedSlow * 0.9 + demandSmooth * 0.25);
         for (let i = 0; i < pattern.length; i += 1) {
           const offset = pattern[i]!;
           const hard = i === pattern.length - 1;
@@ -1200,12 +1278,14 @@ export function createHoofLayer(
             strideGain * (0.88 + audioRandom() * 0.14),
             hard,
             i,
+            demandSmooth,
           );
         }
-        // Gathered flight: extra silence after the lead (esp. gallop).
-        next += interval * (gait.flight + audioRandom() * 0.04);
+        // Gathered flight: extra silence after the lead (esp. gallop). Less silence under demand.
+        const flightFactor = gait.flight * (1 - demandSmooth * 0.2);
+        next += interval * (flightFactor + audioRandom() * 0.04);
       }
-      targetParam(gain.gain, softGate(0.9), t, 0.2);
+      targetParam(gain.gain, softGate(0.9 + demandSmooth * 0.15), t, 0.2);
       targetParam(panner.pan, Math.sin(t * 0.11) * 0.12 * m.stereoWidth, t, 0.4);
     },
     dispose() {
@@ -1307,8 +1387,10 @@ export function createLaughCadenceLayer(
     f2.type = "bandpass";
     f2.frequency.value = 1250;
     f2.Q.value = 7;
+    // Linear onsets: an exponential ramp from -80 dB lands almost all of its rise in
+    // the last ~2 ms, which made every "ha" start with an HF tick.
     g.gain.setValueAtTime(0.0001, at);
-    g.gain.exponentialRampToValueAtTime(Math.max(0.0002, amp), at + 0.018);
+    g.gain.linearRampToValueAtTime(Math.max(0.0002, amp), at + 0.022);
     g.gain.exponentialRampToValueAtTime(0.0001, at + dur * 0.9);
     osc.connect(f1);
     f1.connect(f2);
@@ -1322,11 +1404,11 @@ export function createLaughCadenceLayer(
     br.loop = true;
     const hp = ctx.createBiquadFilter();
     hp.type = "bandpass";
-    hp.frequency.value = 2100;
-    hp.Q.value = 1.2;
+    hp.frequency.value = 1700;
+    hp.Q.value = 1.8;
     const bg = ctx.createGain();
     bg.gain.setValueAtTime(0.0001, at);
-    bg.gain.exponentialRampToValueAtTime(Math.max(0.0002, amp * 0.45), at + 0.012);
+    bg.gain.linearRampToValueAtTime(Math.max(0.0002, amp * 0.45), at + 0.02);
     bg.gain.exponentialRampToValueAtTime(0.0001, at + dur * 0.7);
     br.connect(hp);
     hp.connect(bg);
@@ -1370,7 +1452,9 @@ export function createLaughCadenceLayer(
           next += gap * (0.9 + audioRandom() * 0.3);
         }
       }
-      const presence = softGate(0.55 + demand * 0.7, 0.02);
+      const idleFactor = clamp(1 - demand * 2);
+      const idlePresenceBoost = idleFactor * 0.35;
+      const presence = softGate(0.6 + demand * 0.7 + idlePresenceBoost, 0.02);
       targetParam(gain.gain, presence, t, 0.18);
       targetParam(panner.pan, Math.sin(t * 0.21) * 0.25 * m.stereoWidth, t, 0.35);
     },
@@ -1383,16 +1467,19 @@ export function createLaughCadenceLayer(
 /**
  * Comic gas cadence for Farting Car.
  * Bubbly low blats that densify and deepen with throttle / hard accel.
+ * Idle presence adds occasional soft bubbles at standstill.
  */
 export function createFartCadenceLayer(
   ctx: BaseAudioContext,
-  opts: LayerBaseOpts & { tone?: number },
+  opts: LayerBaseOpts & { tone?: number; idlePresence?: number },
 ): LayerHandle {
   const bus = ctx.createGain();
   const { gain, panner, handle } = attachChain(ctx, opts, bus);
   let next = ctx.currentTime + 0.15;
+  let nextIdle = ctx.currentTime + 0.8;
   let disposed = false;
   let lastThrottle = 0;
+  const idlePresence = opts.idlePresence ?? 0.4;
 
   function fireBlat(at: number, tone: number, amp: number, long: boolean) {
     const dur = long ? 0.28 + audioRandom() * 0.35 : 0.1 + audioRandom() * 0.16;
@@ -1404,10 +1491,13 @@ export function createFartCadenceLayer(
     osc.type = "sawtooth";
     const startHz = tone * (1.15 + audioRandom() * 0.35);
     osc.frequency.setValueAtTime(startHz, at);
-    osc.frequency.exponentialRampToValueAtTime(Math.max(28, tone * 0.4), at + dur);
+    // Glide floor stays above ~70 Hz: the old 28 Hz floor put ~20 % of the
+    // energy below 60 Hz where car speakers only produce mud.
+    osc.frequency.exponentialRampToValueAtTime(Math.max(72, tone * 0.62), at + dur);
     mod.type = "sine";
     mod.frequency.value = 10 + audioRandom() * 22;
-    mg.gain.value = 35 + audioRandom() * 55;
+    // FM depth scaled to the pitch so the wobble never dips into sub-bass.
+    mg.gain.value = Math.min(startHz * 0.3, 35 + audioRandom() * 40);
     mod.connect(mg);
     mg.connect(osc.frequency);
     lp.type = "lowpass";
@@ -1443,6 +1533,41 @@ export function createFartCadenceLayer(
     return dur;
   }
 
+  function fireIdleBubble(at: number, tone: number, amp: number) {
+    const dur = 0.08 + audioRandom() * 0.1;
+    const startHz = 110 + audioRandom() * 70;
+    const lp = ctx.createBiquadFilter();
+    lp.type = "lowpass";
+    lp.frequency.value = 800 + audioRandom() * 200;
+    lp.Q.value = 0.5;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, at);
+    g.gain.linearRampToValueAtTime(Math.max(0.0002, amp * 0.7), at + 0.015);
+    g.gain.exponentialRampToValueAtTime(0.0001, at + dur);
+    const osc = ctx.createOscillator();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(startHz, at);
+    osc.frequency.exponentialRampToValueAtTime(Math.max(70, startHz * 0.6), at + dur);
+    osc.connect(lp);
+    lp.connect(g);
+    g.connect(bus);
+    osc.start(at);
+    osc.stop(at + dur + 0.02);
+    const harm = ctx.createOscillator();
+    const hg = ctx.createGain();
+    harm.type = "sine";
+    harm.frequency.setValueAtTime(startHz * 2, at);
+    harm.frequency.exponentialRampToValueAtTime(Math.max(120, startHz * 1.2), at + dur);
+    hg.gain.setValueAtTime(0.0001, at);
+    hg.gain.linearRampToValueAtTime(Math.max(0.0002, amp * 0.4), at + 0.012);
+    hg.gain.exponentialRampToValueAtTime(0.0001, at + dur * 0.85);
+    harm.connect(hg);
+    hg.connect(bus);
+    harm.start(at);
+    harm.stop(at + dur + 0.02);
+    return dur;
+  }
+
   return {
     ...handle,
     update(m, t) {
@@ -1465,7 +1590,21 @@ export function createFartCadenceLayer(
           next += gap * (0.95 + audioRandom() * 0.25);
         }
       }
-      targetParam(gain.gain, softGate(0.5 + demand * 0.75, 0.02), t, 0.16);
+
+      // Idle bubbles when demand is very low
+      if (idlePresence > 0 && demand < 0.08) {
+        if (nextIdle < t) nextIdle = t;
+        const idleHorizon = t + 0.35;
+        while (nextIdle < idleHorizon) {
+          const tone = (opts.tone ?? 95) * 0.55;
+          const amp = (opts.level ?? 0.55) * idlePresence * 1.8;
+          fireIdleBubble(nextIdle, tone, amp);
+          nextIdle += 0.6 + audioRandom() * 1.4;
+        }
+      }
+
+      const presence = Math.max(0.35, softGate(0.5 + demand * 0.75, 0.02));
+      targetParam(gain.gain, presence, t, 0.16);
       targetParam(panner.pan, (audioRandom() - 0.5) * 0.35 * m.stereoWidth, t, 0.4);
     },
     dispose() {
@@ -1722,11 +1861,12 @@ function fireOneShot(
     const mod = ctx.createOscillator();
     const mg = ctx.createGain();
     osc.type = "sawtooth";
-    osc.frequency.setValueAtTime(tone * (1.2 + audioRandom() * 0.4), at);
-    osc.frequency.exponentialRampToValueAtTime(tone * 0.4, at + dur);
+    const fartStart = tone * (1.2 + audioRandom() * 0.4);
+    osc.frequency.setValueAtTime(fartStart, at);
+    osc.frequency.exponentialRampToValueAtTime(Math.max(72, tone * 0.62), at + dur);
     mod.type = "sine";
     mod.frequency.value = 11 + audioRandom() * 20;
-    mg.gain.value = 40 + audioRandom() * 50;
+    mg.gain.value = Math.min(fartStart * 0.3, 40 + audioRandom() * 40);
     mod.connect(mg);
     mg.connect(osc.frequency);
     lp.type = "lowpass";
@@ -1817,7 +1957,7 @@ function fireOneShot(
       f2.Q.value = 7;
       const amp = level * ampScale * (i === 0 ? 1.05 : 0.9 - i * 0.06);
       g.gain.setValueAtTime(0.0001, t0);
-      g.gain.exponentialRampToValueAtTime(Math.max(0.0002, amp), t0 + 0.02);
+      g.gain.linearRampToValueAtTime(Math.max(0.0002, amp), t0 + 0.022);
       g.gain.exponentialRampToValueAtTime(0.0001, t0 + spacing * 0.88);
       osc.connect(f1);
       f1.connect(f2);
@@ -1832,11 +1972,11 @@ function fireOneShot(
         br.loop = true;
         const hp = ctx.createBiquadFilter();
         hp.type = "bandpass";
-        hp.frequency.value = 2100;
-        hp.Q.value = 1.2;
+        hp.frequency.value = 1700;
+        hp.Q.value = 1.8;
         const bg = ctx.createGain();
         bg.gain.setValueAtTime(0.0001, t0);
-        bg.gain.exponentialRampToValueAtTime(Math.max(0.0002, amp * 0.4), t0 + 0.012);
+        bg.gain.linearRampToValueAtTime(Math.max(0.0002, amp * 0.4), t0 + 0.02);
         bg.gain.exponentialRampToValueAtTime(0.0001, t0 + spacing * 0.7);
         br.connect(hp);
         hp.connect(bg);
