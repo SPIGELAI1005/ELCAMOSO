@@ -86,6 +86,8 @@ export interface AcousticEngineConfig {
    * saturator so pulse irregularity becomes dense intermodulation (rasp / burble)
    * instead of a clean firing-order hum. Level and drive rise with load.
    */
+  /** Optional synth-level lift-off / downshift exhaust pops (probability per event, level). */
+  liftPops?: { probability: number; level: number };
   growl?: { centersHz: number[]; q: number; drive: number; level: number; lowpassHz: number };
 }
 
@@ -162,13 +164,14 @@ const AMERICAN_V8: AcousticEngineConfig = {
   // v8depth: half orders (0.5, 1.5) from cylinder-to-cylinder variation and a strong
   // order 1/2 bank burble; firing order 4 no longer dominates as a pure hum.
   supportRatios: [0.5, 1, 1.5, 2, 3, 4, 6],
-  supportWeights: [0.34, 0.74, 0.32, 0.9, 0.42, 0.36, 0.3],
+  supportWeights: [0.4, 0.82, 0.36, 1, 0.42, 0.32, 0.26],
   forcedInduction: false,
   bodyBrightness: 0.36,
   redlineRpm: 6000,
-  outputTrimDb: 12.2,
+  outputTrimDb: 8.1,
   throttleGapDb: 0,
-  growl: { centersHz: [210, 430], q: 0.9, drive: 0.75, level: 0.07, lowpassHz: 2400 },
+  liftPops: { probability: 0.85, level: 0.35 },
+  growl: { centersHz: [170, 330], q: 0.85, drive: 0.85, level: 0.11, lowpassHz: 2000 },
 };
 
 const FLAT_SIX: AcousticEngineConfig = {

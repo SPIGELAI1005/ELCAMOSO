@@ -155,9 +155,13 @@ class CombustionExcitationProcessor extends AudioWorkletProcessor {
     }
     const cycleLope = Number.isFinite(raw.cycleLope) ? Math.min(1, Math.max(0, raw.cycleLope)) : 0;
     this.cycleGain = 1;
+    const noiseScale = Number.isFinite(raw.noiseScale)
+      ? Math.min(1, Math.max(0, raw.noiseScale))
+      : 1;
     this.topology = {
       version: 1,
       cycleLope,
+      noiseScale,
       cycleDegrees: cycle,
       cylinderCount: count,
       cylinders,
@@ -415,8 +419,11 @@ class CombustionExcitationProcessor extends AudioWorkletProcessor {
       // - Near-constant intensity: 0.85 + 0.15*intensity instead of 0.6 + 0.4*intensity
       const body = this.env * (0.72 + this.grit * 0.18) * wander;
       const edge = this.bright * this.grit * 0.28;
-      const rush = this.burst * band * 0.28 * (1 - 0.5 * load);
-      const texture = band * (0.06 + (1 - load) * 0.03) * (0.6 + this.env * 0.4);
+      // Optional per-topology broadband scale: the noise floor is load-gated so cruise stays clean.
+      const ns = topology ? topology.noiseScale : 1;
+      const nsLoad = ns >= 1 ? 1 : ns + (1 - ns) * load * load;
+      const rush = this.burst * band * 0.28 * (1 - 0.5 * load) * nsLoad;
+      const texture = band * (0.06 + (1 - load) * 0.03) * (0.6 + this.env * 0.4) * nsLoad;
       const raw = (body + edge + rush + texture) * (0.85 + intensity * 0.15) * 0.88;
 
       const sample = raw - this.previousRaw + 0.9975 * this.dcBlocked;

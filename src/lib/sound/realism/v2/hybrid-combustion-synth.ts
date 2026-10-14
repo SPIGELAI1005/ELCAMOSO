@@ -135,6 +135,38 @@ export interface HybridCombustionDiagnostics {
   shiftEngagementStyle: ShiftEngagementStyle | null;
 }
 
+/**
+ * Pressure impulse for an exhaust pop: smooth rise (no step), exponential decay, a little
+ * band-limited combustion noise, and a small negative rebound. Starts and ends at zero.
+ */
+function buildPopImpulse(
+  ctx: BaseAudioContext,
+  seconds: number,
+  riseTau: number,
+  decayTau: number,
+  noiseAmt: number,
+  seed: number,
+): AudioBuffer {
+  const sr = ctx.sampleRate;
+  const n = Math.max(32, Math.round(seconds * sr));
+  const buf = ctx.createBuffer(1, n, sr);
+  const d = buf.getChannelData(0);
+  let r = seed >>> 0 || 1;
+  let lp = 0;
+  const lpc = 1 - Math.exp((-2 * Math.PI * 1200) / sr);
+  for (let i = 0; i < n; i += 1) {
+    const t = i / sr;
+    r = (r * 1664525 + 1013904223) >>> 0;
+    lp += ((r / 0xffffffff) * 2 - 1 - lp) * lpc;
+    const env = (1 - Math.exp(-t / riseTau)) * Math.exp(-t / decayTau);
+    const rebound = -0.22 * Math.exp(-Math.pow((t - decayTau * 2.2) / (decayTau * 1.1), 2));
+    const fade = i > n - 64 ? (n - i) / 64 : 1;
+    d[i] = (env * (1 - noiseAmt + noiseAmt * lp * 3) + rebound) * fade;
+  }
+  d[0] = 0;
+  return buf;
+}
+
 /** Asymmetric soft saturator for the growl path (even + odd harmonics, bounded). */
 function growlCurve(drive: number, length = 1024): Float32Array {
   const k = 1.5 + Math.min(1, Math.max(0, drive)) * 3.5;
@@ -204,6 +236,8 @@ const VOICE_PEAK: Record<TransientVoiceId, number> = {
 };
 /** Variant intensity x strength never collapses a pulse to inaudible; it scales 40-100 %. */
 const PULSE_FLOOR = 0.4;
+/** Exhaust-pop impulse level into the pop chain (calibrated on offline renders). */
+const POP_LEVEL = 1.2;
 
 /** Transients every tier renders once gears are active. Everything else is Drive+ / Demo. */
 const CORE_TRANSIENT_KINDS: ReadonlySet<TransientKind> = new Set<TransientKind>([
@@ -264,6 +298,18 @@ export class HybridCombustionSynth {
     lp: BiquadFilterNode;
     gain: GainNode;
   } | null = null;
+  private popChain: {
+    input: GainNode;
+    out: GainNode;
+    modes: BiquadFilterNode[];
+    popBuf: AudioBuffer;
+    crackleBuf: AudioBuffer;
+    modeHz: number[];
+  } | null = null;
+  private popRng = 0x9e3779b9;
+  private popPrevDemand = 0;
+  private popPrevDownshift = false;
+  private popLastAt = -10;
   private turboWhistle: { oscs: OscillatorNode[]; gain: GainNode } | null = null;
   private bov: { src: AudioBufferSourceNode; filter: BiquadFilterNode; gain: GainNode } | null =
     null;
@@ -760,6 +806,69 @@ export class HybridCombustionSynth {
       ...(cfg.forcedInduction ? { turbo: makeVoice("turbo", "white", "bandpass", 1500, 2.0) } : {}),
     };
 
+    // Exhaust pop chain: pressure impulse → body low-pass + pipe-mode resonators → mild
+    // saturation → high-mid cut. Sounds like fuel lighting off in the pipe, not a raw noise slap.
+    if (typeof ctx.createWaveShaper === "function" && typeof ctx.createBuffer === "function") {
+      const input = ctx.createGain();
+      input.gain.value = 1;
+      const sum = ctx.createGain();
+      sum.gain.value = 1;
+      const body = ctx.createBiquadFilter();
+      body.type = "lowpass";
+      body.frequency.value = 190;
+      body.Q.value = 0.9;
+      input.connect(body);
+      body.connect(sum);
+      const modeHz = cfg.exhaustFormantsHz
+        .slice(0, 3)
+        .map((hz, i) => Math.min(620, Math.max(70, hz * (i === 0 ? 0.85 : 1))));
+      const modes = modeHz.map((hz, i) => {
+        const f = ctx.createBiquadFilter();
+        f.type = "bandpass";
+        f.frequency.value = hz;
+        f.Q.value = 6 - i * 1.2;
+        const g = ctx.createGain();
+        g.gain.value = 1.6 / (1 + i * 0.6);
+        input.connect(f);
+        f.connect(g);
+        g.connect(sum);
+        return f;
+      });
+      const shaper = ctx.createWaveShaper();
+      shaper.curve = growlCurve(0.55) as Float32Array<ArrayBuffer>;
+      shaper.oversample = "2x";
+      const cut = ctx.createBiquadFilter();
+      cut.type = "highshelf";
+      cut.frequency.value = 800;
+      cut.gain.value = -10;
+      const lp = ctx.createBiquadFilter();
+      lp.type = "lowpass";
+      lp.frequency.value = 3200;
+      lp.Q.value = 0.6;
+      const hp = ctx.createBiquadFilter();
+      hp.type = "highpass";
+      hp.frequency.value = 40;
+      hp.Q.value = 0.7;
+      const out = ctx.createGain();
+      out.gain.value = 1;
+      sum.connect(shaper);
+      shaper.connect(hp);
+      hp.connect(cut);
+      cut.connect(lp);
+      lp.connect(out);
+      // Pops live in the exhaust, so they ride the body bus with the engine (not accents).
+      out.connect(buses.body);
+      this.popChain = {
+        input,
+        out,
+        modes,
+        modeHz,
+        popBuf: buildPopImpulse(ctx, 0.07, 0.0009, 0.009, 0.25, 0x51a7),
+        crackleBuf: buildPopImpulse(ctx, 0.025, 0.0004, 0.0028, 0.6, 0x7c3),
+      };
+      nodes += 10 + modes.length * 2;
+    }
+
     this.nodeEstimate = nodes;
     this.diagnostics.cylinders = cfg.cylinders;
     this.diagnostics.sampleAssisted = false;
@@ -981,12 +1090,31 @@ export class HybridCombustionSynth {
       targetParam(band.filter.Q, 1.2 + demand * 0.5, audioTime, 0.1);
     });
 
+    // Lift-off / downshift exhaust pops (profiles with cfg.liftPops): unburned fuel lighting
+    // off in a hot pipe after a meaningful lift at speed. Deterministic RNG, with cooldown.
+    if (cfg.liftPops && this.popChain && this.advancedTransients) {
+      const lift = this.popPrevDemand - demand > 0.35 && demand < 0.5 && rpm > 1800;
+      const downshift =
+        shifting && pt?.shiftDirection === "down" && !this.popPrevDownshift && rpm > 2000;
+      if ((lift || downshift) && audioTime - this.popLastAt > 1.6) {
+        if (this.popRand() < cfg.liftPops.probability) {
+          this.popLastAt = audioTime;
+          const strength = cfg.liftPops.level * (0.6 + rpmNorm * 0.6);
+          this.firePopSequence(downshift ? "rev-match" : "overrun", strength, audioTime + 0.05);
+        }
+        if (lift) this.popPrevDemand = 0;
+      }
+      this.popPrevDownshift = shifting && pt?.shiftDirection === "down";
+    }
+    // Recent-peak demand (decays over ~6 s) so a smoothed throttle lift is still detected.
+    this.popPrevDemand = Math.max(demand, this.popPrevDemand - dt * 0.15);
+
     if (this.growl && cfg.growl) {
       // Drive rises with load so the saturator turns pulse irregularity into growl on pull;
       // cruise keeps a softer burble. Overrun lets it crackle a little through the pipe.
       const drive = 0.6 + load * 1.6 + demand * 0.6 + (overrun ? 0.5 : 0);
       targetParam(this.growl.drive.gain, drive, audioTime, 0.06);
-      const level = cfg.growl.level * (0.5 + load * 0.4 + demand * 0.1) * (overrun ? 0.8 : 1);
+      const level = cfg.growl.level * (0.68 + load * 0.22 + demand * 0.1) * (overrun ? 0.8 : 1);
       targetParam(this.growl.gain.gain, level, audioTime, 0.06);
       targetParam(
         this.growl.lp.frequency,
@@ -1144,10 +1272,10 @@ export class HybridCombustionSynth {
     if (this.overrun) {
       const on = overrun && rpm > 1200 && demand < 0.18 && this.priorLoad > 0.28;
       const level = on
-        ? (0.045 + Math.min(0.07, (rpmNorm - 0.15) * 0.1)) * cfg.overrunCharacter
+        ? (0.045 + Math.min(0.07, (rpmNorm - 0.15) * 0.1)) * cfg.overrunCharacter * 0.5
         : 0.0001;
       targetParam(this.overrun.gain.gain, level * gate("exhaust"), audioTime, on ? 0.04 : 0.09);
-      targetParam(this.overrun.filter.frequency, 460 + rpmNorm * 380, audioTime, 0.1);
+      targetParam(this.overrun.filter.frequency, 320 + rpmNorm * 260, audioTime, 0.1);
       if (on && !this.lastOverrun) this.diagnostics.eventCounts.overrun += 1;
     }
     this.lastOverrun = overrun;
@@ -1463,10 +1591,18 @@ export class HybridCombustionSynth {
     const voice = this.voices[voiceId];
     if (!voice) return;
     const { kind, variant, strength } = input;
-    const peak =
+    let peak =
       VOICE_PEAK[voiceId] *
       (PULSE_FLOOR + (1 - PULSE_FLOOR) * clamp01(variant.intensity * strength));
     if (peak <= 0.001) return;
+    // Heavy-exhaust profiles: gear changes are heard through the engine note, not a woody
+    // high-mid noise slap - keep the shift noise low and below ~400 Hz.
+    const softShift = voiceId === "shift" && Boolean(this.cfg?.liftPops);
+    if (voiceId === "pop" && this.popChain) {
+      this.firePopSequence(kind, peak, audioTime);
+      this.diagnostics.transientCounts[kind] = (this.diagnostics.transientCounts[kind] ?? 0) + 1;
+      return;
+    }
 
     // Spec §NEW-D: Remove broadband clicks at gear changes with proper shift envelope.
     // Longer attack times and filter warmup before gain ramp prevents click artifacts.
@@ -1479,8 +1615,13 @@ export class HybridCombustionSynth {
     const filterWarmup = 0.008;
     voice.filter.frequency.cancelScheduledValues(t);
     voice.filter.frequency.setValueAtTime(voice.filter.frequency.value, t);
-    voice.filter.frequency.setTargetAtTime(variant.filterHz, t, 0.006);
+    voice.filter.frequency.setTargetAtTime(
+      softShift ? Math.min(380, variant.filterHz * 0.55) : variant.filterHz,
+      t,
+      0.006,
+    );
 
+    if (softShift) peak *= 0.4;
     const g = voice.gain.gain;
     g.cancelScheduledValues(t + filterWarmup);
     g.setValueAtTime(Math.max(0.0001, g.value), t + filterWarmup);
@@ -1676,6 +1817,54 @@ export class HybridCombustionSynth {
     }
   }
 
+  private popRand(): number {
+    this.popRng = (this.popRng * 1664525 + 1013904223) >>> 0;
+    return this.popRng / 0x100000000;
+  }
+
+  /** One or more exhaust pops (randomised pitch / level), then a short crackle tail. */
+  private firePopSequence(kind: TransientKind, peak: number, audioTime: number) {
+    const chain = this.popChain;
+    const ctx = this.ctx;
+    if (!chain || !ctx) return;
+    let t = Math.max(audioTime, this.lastUpdateTime) + 0.004;
+    const multi = kind === "rev-match" ? 0.25 : 0.6;
+    const r = this.popRand();
+    const count = r < multi * 0.35 ? 3 : r < multi ? 2 : 1;
+    // Re-tune pipe modes slightly per event (pipe temperature / gas speed varies).
+    const detune = 0.92 + this.popRand() * 0.16;
+    chain.modes.forEach((f, i) => {
+      f.frequency.setValueAtTime(chain.modeHz[i]! * detune, t);
+    });
+    const play = (buf: AudioBuffer, at: number, level: number, rate: number) => {
+      const src = ctx.createBufferSource();
+      src.buffer = buf;
+      src.playbackRate.value = rate;
+      const g = ctx.createGain();
+      g.gain.value = level;
+      src.connect(g);
+      g.connect(chain.input);
+      src.start(at);
+      src.onended = () => {
+        src.disconnect();
+        g.disconnect();
+      };
+    };
+    let level = peak * POP_LEVEL;
+    for (let k = 0; k < count; k += 1) {
+      play(chain.popBuf, t, level * (0.75 + this.popRand() * 0.4), 0.85 + this.popRand() * 0.3);
+      t += 0.045 + this.popRand() * 0.07;
+      level *= 0.62 + this.popRand() * 0.25;
+    }
+    const tail = 3 + Math.floor(this.popRand() * 5);
+    let cl = peak * POP_LEVEL * 0.32;
+    for (let k = 0; k < tail; k += 1) {
+      t += 0.018 + this.popRand() * 0.045;
+      play(chain.crackleBuf, t, cl * (0.5 + this.popRand() * 0.7), 0.8 + this.popRand() * 0.5);
+      cl *= 0.8;
+    }
+  }
+
   /** Blow-off / wastegate "pssh" with a short flutter, soft edges (no clicks). */
   private fireBlowOff(spool: number, audioTime: number, gateLevel: number) {
     if (!this.bov) return;
@@ -1759,6 +1948,11 @@ export class HybridCombustionSynth {
       this.overrun.filter.disconnect();
       this.overrun.gain.disconnect();
       this.overrun = null;
+    }
+    if (this.popChain) {
+      this.popChain.input.disconnect();
+      this.popChain.out.disconnect();
+      this.popChain = null;
     }
     if (this.growl) {
       this.growl.filters.forEach((f) => f.disconnect());
