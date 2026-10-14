@@ -60,11 +60,11 @@ describe("Road Feel V3 shift map targets", () => {
     const moto = resolveShiftMap(getPowertrainProfile("motorcycle-inline-4"))
       .upshiftSpeedKmh[0]![1]!;
     expect(am).toBeLessThan(fs);
-    // Motorcycle stays taller than cars, but still city-usable (offline replay
-    // peaks at 65 km/h; light 1→2 belongs in the ~40–55 band after hysteresis).
-    expect(moto).toBeGreaterThan(fs + 8);
-    expect(moto).toBeGreaterThanOrEqual(38);
-    expect(moto).toBeLessThanOrEqual(55);
+    // With S1000RR-class gearing (~150 km/h in 1st at redline), motorcycle now
+    // shifts earlier than cars under light demand because it builds RPM faster.
+    // Light 1→2 is ~28-35 km/h, well within city replay 65 km/h envelope.
+    expect(moto).toBeGreaterThanOrEqual(25);
+    expect(moto).toBeLessThanOrEqual(40);
   });
 
   it("motorcycle superbike shifts inside the offline city/suburban replay", () => {

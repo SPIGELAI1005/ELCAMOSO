@@ -820,9 +820,11 @@ const BASE_DRIVETRAIN_PERSONALITIES: DrivetrainPersonalityConfig[] = [
     id: "motorcycle-inline-4",
     name: "Motorcycle Inline-4",
     engine: { idleRpm: 1200, redlineRpm: 14000 },
+    // S1000RR-class gearing: ~150 km/h in 1st at redline (was 218 km/h, too tall).
+    // rpm/kmh in 1st = 3.5 × 3.0 × 1000 / (1.88 × 60) = 93.1 → 14000/93.1 = 150.4 km/h
     transmission: {
-      gearRatios: [2.85, 2.05, 1.58, 1.32, 1.14, 1.0],
-      finalDrive: 2.54,
+      gearRatios: [3.5, 2.55, 1.95, 1.62, 1.38, 1.2],
+      finalDrive: 3.0,
       upshiftRpm: { lowLoad: 9000, mediumLoad: 11000, highLoad: 13200 },
       upshiftLoadMedium: 0.34,
       upshiftLoadHigh: 0.66,
@@ -1120,8 +1122,9 @@ const HIGH_REV_V10_PERSONALITY: DrivetrainPersonalityConfig = {
   id: "high-rev-v10",
   name: "High-Rev V10",
   engine: {
-    idleRpm: 850,
-    redlineRpm: 8500,
+    // Spec §4.5: idle 1000, redline 9000
+    idleRpm: 1000,
+    redlineRpm: 9000,
     acoustic: {
       cylinders: 10,
       architecture: "v10-even",
@@ -1131,15 +1134,18 @@ const HIGH_REV_V10_PERSONALITY: DrivetrainPersonalityConfig = {
       mechanicalIntensity: 0.58,
     },
   },
+  // Spec §4.5: 6-speed ASG-type (LFA-class): 3.231/2.188/1.609/1.233/1.000/0.794
+  // Final drive 4.10, tyre 2.19 m (315/30 R20)
+  // rpm/kmh: G1=100.8, G2=68.3, G3=50.2, G4=38.5, G5=31.2, G6=24.8
   transmission: {
     ...flatSixBase.transmission,
-    gearRatios: [3.13, 2.59, 1.88, 1.52, 1.24, 1.04, 0.85],
-    finalDrive: 3.15,
-    upshiftRpm: { lowLoad: 5000, mediumLoad: 6800, highLoad: 8150 },
+    gearRatios: [3.231, 2.188, 1.609, 1.233, 1.0, 0.794],
+    finalDrive: 4.1,
+    upshiftRpm: { lowLoad: 5400, mediumLoad: 7200, highLoad: 8650 },
     upshiftLoadMedium: 0.34,
     upshiftLoadHigh: 0.68,
     upshiftHysteresisRpm: 300,
-    downshiftBaseRpm: 3300,
+    downshiftBaseRpm: 3500,
     downshiftHysteresisRpm: 360,
     postUpshiftBlockMs: 360,
     kickdown: {
@@ -1160,18 +1166,19 @@ const HIGH_REV_V10_PERSONALITY: DrivetrainPersonalityConfig = {
     },
     idle: {
       ...flatSixBase.transmission.idle,
-      stoppedInGearRpm: 850,
+      stoppedInGearRpm: 1000,
       revLimitFraction: 0.58,
     },
     redline: { softFraction: 0.975, maxDownshiftFraction: 0.96 },
     rpm: {
       trackTau: 0.045,
-      maxRateRpmPerSec: 6900,
+      maxRateRpmPerSec: 7200,
       upshiftEasePower: 1.55,
       downshiftEasePower: 1.3,
     },
   },
-  wheelCircumferenceM: 2.04,
+  // Spec §4.5: tyre 2.19 m
+  wheelCircumferenceM: 2.19,
   throttle: { attackTau: 0.055, releaseTau: 0.17, directWeight: 0.64 },
   overrun: {
     probability: 0.22,
@@ -1204,8 +1211,9 @@ const FLAT_PLANE_V8_TRACK_PERSONALITY: DrivetrainPersonalityConfig = {
   id: "flat-plane-v8-track",
   name: "Flat-Plane V8 Track",
   engine: {
-    idleRpm: 900,
-    redlineRpm: 8600,
+    // Spec §4.6: idle 1000, redline 9000
+    idleRpm: 1000,
+    redlineRpm: 9000,
     acoustic: {
       cylinders: 8,
       architecture: "flat-plane-v8",
@@ -1215,15 +1223,18 @@ const FLAT_PLANE_V8_TRACK_PERSONALITY: DrivetrainPersonalityConfig = {
       mechanicalIntensity: 0.66,
     },
   },
+  // Spec §4.6: 458-type 7-speed DCT: 3.08/2.18/1.63/1.29/1.03/0.84/0.69
+  // Final drive 5.14, tyre 2.07 m (305/30 R20). Replaces the 8-speed 5.56 set.
+  // rpm/kmh: G1=127.5, G2=90.2, G3=67.5, G4=53.4, G5=42.6, G6=34.8, G7=28.6
   transmission: {
     ...flatSixBase.transmission,
-    gearRatios: [2.91, 1.76, 1.22, 0.88, 0.65, 0.51, 0.4, 0.33],
-    finalDrive: 5.56,
-    upshiftRpm: { lowLoad: 5200, mediumLoad: 7000, highLoad: 8250 },
+    gearRatios: [3.08, 2.18, 1.63, 1.29, 1.03, 0.84, 0.69],
+    finalDrive: 5.14,
+    upshiftRpm: { lowLoad: 5400, mediumLoad: 7200, highLoad: 8650 },
     upshiftLoadMedium: 0.32,
     upshiftLoadHigh: 0.66,
     upshiftHysteresisRpm: 280,
-    downshiftBaseRpm: 3500,
+    downshiftBaseRpm: 3700,
     downshiftHysteresisRpm: 340,
     postUpshiftBlockMs: 320,
     kickdown: {
@@ -1244,18 +1255,19 @@ const FLAT_PLANE_V8_TRACK_PERSONALITY: DrivetrainPersonalityConfig = {
     },
     idle: {
       ...flatSixBase.transmission.idle,
-      stoppedInGearRpm: 900,
+      stoppedInGearRpm: 1000,
       revLimitFraction: 0.6,
     },
     redline: { softFraction: 0.975, maxDownshiftFraction: 0.965 },
     rpm: {
       trackTau: 0.04,
-      maxRateRpmPerSec: 7400,
+      maxRateRpmPerSec: 7600,
       upshiftEasePower: 1.48,
       downshiftEasePower: 1.25,
     },
   },
-  wheelCircumferenceM: 2.05,
+  // Spec §4.6: tyre 2.07 m
+  wheelCircumferenceM: 2.07,
   throttle: { attackTau: 0.05, releaseTau: 0.16, directWeight: 0.66 },
   overrun: {
     probability: 0.28,
@@ -1301,10 +1313,13 @@ const RALLY_TURBO_3_PERSONALITY: DrivetrainPersonalityConfig = {
       forcedInduction: true,
     },
   },
+  // GR Yaris 6-speed per spec §4: final drive 3.941 (gears 1-4), 3.350 (gears 5-6).
+  // Effective ratios with base finalDrive 3.941: gears 5-6 scaled by 3.350/3.941.
+  // rpm/kmh: G1=117.4, G2=74.2, G3=50.9, G4=39.0, G5=28.2, G6=23.6
   transmission: {
     ...turboSixBase.transmission,
-    gearRatios: [2.92, 1.88, 1.38, 1.09, 0.91],
-    finalDrive: 4.1,
+    gearRatios: [3.538, 2.238, 1.535, 1.177, 0.85, 0.712],
+    finalDrive: 3.941,
     upshiftRpm: { lowLoad: 4100, mediumLoad: 5500, highLoad: 6500 },
     upshiftLoadMedium: 0.35,
     upshiftLoadHigh: 0.68,
@@ -1341,7 +1356,7 @@ const RALLY_TURBO_3_PERSONALITY: DrivetrainPersonalityConfig = {
       downshiftEasePower: 1.3,
     },
   },
-  wheelCircumferenceM: 2.0,
+  wheelCircumferenceM: 1.98,
   throttle: { attackTau: 0.06, releaseTau: 0.18, directWeight: 0.63 },
   overrun: {
     probability: 0.52,
@@ -1354,12 +1369,14 @@ const RALLY_TURBO_3_PERSONALITY: DrivetrainPersonalityConfig = {
     ...turboSixBase.transient,
     scheduler: {
       ...turboSixBase.transient.scheduler,
-      turboFlutter: { probability: 0.62, cooldownMs: 700, minLoad: 0.34, minRpmNorm: 0.34 },
-      wastegate: { probability: 0.48, cooldownMs: 900, minLoad: 0.42, minRpmNorm: 0.38 },
-      exhaustPop: { probability: 0.32, cooldownMs: 1300, minPriorThrottle: 0.34 },
+      // Rally flutter/wastegate: raised minLoad gates to reduce cruise events
+      turboFlutter: { probability: 0.58, cooldownMs: 800, minLoad: 0.42, minRpmNorm: 0.38 },
+      wastegate: { probability: 0.44, cooldownMs: 1000, minLoad: 0.48, minRpmNorm: 0.42 },
+      exhaustPop: { probability: 0.28, cooldownMs: 1400, minPriorThrottle: 0.38 },
     },
-    upshiftStrength: 1,
-    downshiftStrength: 0.94,
+    // Reduced shift strength to address click regression with topology enabled
+    upshiftStrength: 0.85,
+    downshiftStrength: 0.82,
     revMatchStrength: 0.84,
     overrunStrength: 0.92,
     highLoadThreshold: 0.32,

@@ -375,7 +375,8 @@ export class PowertrainSimulator {
       rpm = rateLimitRpm(rpm || tracked, tracked, dtSafe, rpmMaxRate);
       rpm = applyRedlineProtection(rpm, this.profile);
     } else {
-      const idleTarget = this.profile.engine.idleRpm * (0.45 + (pedal ?? 0) * 0.12);
+      // Idle: use the configured idle RPM (was erroneously 0.45x which caused 308-544 vs 680-1200)
+      const idleTarget = this.profile.engine.idleRpm * (1.0 + (pedal ?? 0) * 0.08);
       rpm = smoothRpm(rpm, idleTarget, dtSafe, 0.14);
     }
 

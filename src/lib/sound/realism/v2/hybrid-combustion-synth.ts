@@ -8,6 +8,7 @@
  */
 
 import type { DriveState } from "@/lib/drive/model";
+import { makeSamplePeakCeilingCurve } from "@/lib/sound/gain-staging/peak-protect";
 import { getNoiseBuffer } from "@/lib/sound/dsp/noise";
 import {
   acousticEngineForProfile,
@@ -68,6 +69,9 @@ import {
   type ShiftEngagementStyle,
 } from "@/lib/sound/realism/shift-events";
 
+/** -1.5 dBFS sample ceiling for the engine output peak protect (keeps true peak <= -1 dBTP). */
+const OUTPUT_PEAK_CEILING_LINEAR = Math.pow(10, -1.5 / 20);
+
 export type RealismEngineMode = "current" | "v2" | "v3";
 
 export interface HybridBuildOptions {
@@ -97,11 +101,7 @@ export interface HybridCombustionDiagnostics {
   audioContextState: string;
   sampleState: "unavailable" | "loading" | "ready" | "partial" | "failed";
   sampleFallbackReason:
-    | "none"
-    | "no-approved-assets"
-    | "no-load-bank"
-    | "rate-out-of-range"
-    | "decode-failed";
+    "none" | "no-approved-assets" | "no-load-bank" | "rate-out-of-range" | "decode-failed";
   activeSampleIds: string[];
   /**
    * Required Muscle pilot regions with no approved sample entry.
@@ -208,7 +208,6 @@ const LEGACY_BARK_DELAY = 0.13;
 /** Pipe-IR early reflections for a ~1 m exhaust tract plus a short diffuse tail. */
 const PIPE_IR_SECONDS = 0.07;
 
-
 /**
  * Drop-in orchestrator for combustion profiles under Realism V2.2.
  */
@@ -272,6 +271,8 @@ export class HybridCombustionSynth {
   private harshnessShelf: BiquadFilterNode | null = null;
   private saturation: WaveShaperNode | null = null;
   private saturationPostLp: BiquadFilterNode | null = null;
+  private outputLimiter: WaveShaperNode | null = null;
+  private supportLp: BiquadFilterNode | null = null;
   private shiftConsumer = new ShiftEventConsumer();
   private shiftIntensity = 0.72;
   private shiftEngagementStyle: ShiftEngagementStyle | null = null;
@@ -343,11 +344,11 @@ export class HybridCombustionSynth {
 
     let nodes = 0;
     this.combustionBus = ctx.createGain();
-    this.combustionBus.gain.value = 0.4;
+    this.combustionBus.gain.value = 0.66;
     this.intakeBus = ctx.createGain();
-    this.intakeBus.gain.value = 0.26;
+    this.intakeBus.gain.value = 0.38;
     this.supportBus = ctx.createGain();
-    this.supportBus.gain.value = 0.12;
+    this.supportBus.gain.value = 0.24;
     this.sampleBus = ctx.createGain();
     this.sampleBus.gain.value = 0.0001;
     nodes += 4;
@@ -443,12 +444,12 @@ export class HybridCombustionSynth {
         return { filter, gain, order, weight };
       });
     }
-    const supportLp = ctx.createBiquadFilter();
-    supportLp.type = "lowpass";
-    supportLp.frequency.value = 1400 + cfg.bodyBrightness * 900;
-    supportLp.Q.value = 0.75;
-    this.supportBus.connect(supportLp);
-    supportLp.connect(buses.body);
+    this.supportLp = ctx.createBiquadFilter();
+    this.supportLp.type = "lowpass";
+    this.supportLp.frequency.value = 1400 + cfg.bodyBrightness * 900;
+    this.supportLp.Q.value = 0.75;
+    this.supportBus.connect(this.supportLp);
+    this.supportLp.connect(buses.body);
     nodes += 1;
 
     // Space: short exhaust-pipe impulse response with decorrelated L/R, mixed under the
@@ -538,6 +539,37 @@ export class HybridCombustionSynth {
       this.diagnostics.rawMechanicalQuality = null;
       this.diagnostics.oversamplingNote = null;
     }
+
+    // Output peak protect: a WaveShaper that is linear below ~-2.4 dBFS and soft-clips
+    // into a -1.5 dBFS ceiling. Peak-only by construction: unlike DynamicsCompressorNode
+    // (whose knee, auto makeup gain and detector compress below threshold and flattened
+    // the cruise-to-pull gap), it cannot change the level of anything under the knee.
+    if (typeof ctx.createWaveShaper === "function") {
+      const limiter = ctx.createWaveShaper();
+      limiter.curve = makeSamplePeakCeilingCurve(
+        OUTPUT_PEAK_CEILING_LINEAR,
+      ) as Float32Array<ArrayBuffer>;
+      limiter.oversample = "4x";
+      // Route all engine output through the limiter
+      this.combustionBus.disconnect();
+      this.combustionBus.connect(limiter);
+      if (this.harshnessShelf) {
+        this.harshnessShelf.disconnect();
+        this.harshnessShelf.connect(limiter);
+      }
+      if (this.supportLp) {
+        this.supportLp.disconnect();
+        this.supportLp.connect(limiter);
+      }
+      if (this.pipe) {
+        this.pipe.disconnect();
+        this.pipe.connect(limiter);
+      }
+      limiter.connect(buses.body);
+      this.outputLimiter = limiter;
+      nodes += 1;
+    }
+
     this.intakeBus.connect(buses.beds);
     this.sampleBus.connect(buses.body);
 
@@ -626,11 +658,14 @@ export class HybridCombustionSynth {
       nodes += 3;
       return { id, noise, filter, gain };
     };
+    // Spec §NEW-D: Lower Q values reduce filter ringing that can cause click artifacts.
+    // Click regression fix: further reduced Q for softer transients.
+    // Shift: Q 0.9→0.75; Thump: Q 1.2→1.0; Pop: Q 1.3→1.1
     this.voices = {
-      shift: makeVoice("shift", "pink", "bandpass", 760, 1.1),
-      thump: makeVoice("thump", "brown", "lowpass", 160, 1.6),
-      pop: makeVoice("pop", "pink", "bandpass", 520, 1.5),
-      ...(cfg.forcedInduction ? { turbo: makeVoice("turbo", "white", "bandpass", 1500, 2.4) } : {}),
+      shift: makeVoice("shift", "pink", "bandpass", 760, 0.75),
+      thump: makeVoice("thump", "brown", "lowpass", 160, 1.0),
+      pop: makeVoice("pop", "pink", "bandpass", 520, 1.1),
+      ...(cfg.forcedInduction ? { turbo: makeVoice("turbo", "white", "bandpass", 1500, 2.0) } : {}),
     };
 
     this.nodeEstimate = nodes;
@@ -748,29 +783,31 @@ export class HybridCombustionSynth {
 
     const rpmNorm = Math.min(1, rpm / Math.max(1, cfg.redlineRpm));
     const idleGate = Math.max(0, 1 - rpmNorm * 2.2) * Math.max(0, 1 - demand * 2);
-    // Idle lope fades with RPM / demand, but combustion never becomes perfectly periodic:
-    // a light-load floor keeps 2-5 % cycle variation at cruise (worklet scales it further).
+    // Spec §NEW-C: Cycle-to-cycle combustion variation breaks up the "static buzzer" sound.
+    // Idle lope fades with RPM / demand, but combustion never becomes perfectly periodic.
+    // Raised floor (0.08 + light-load 0.06) keeps 8-14% cycle variation at cruise so
+    // engines don't sound like a constant-pitch tone generator. Worklet ampSpread/timeSpread
+    // scale this further into per-fire amplitude jitter (ampSpread = 0.06 + irregularity*0.45).
     const raw = this.rawMechanical;
     const irregularity = Math.min(
       1,
-      cfg.idleIrregularity *
-        (raw?.idleIrregularityScale ?? 1) *
-        idleGate *
-        (overrun ? 0.35 : 1) +
-        0.05 +
-        (1 - load) * 0.04,
+      cfg.idleIrregularity * (raw?.idleIrregularityScale ?? 1) * idleGate * (overrun ? 0.35 : 1) +
+        0.08 +
+        (1 - load) * 0.06,
     );
 
     // Transient choreography - scheduler (powertrain) or legacy edge detection.
     this.tickTransients(state, speedKmh, audioTime);
 
-    // Combustion energy: load changes timbre path, not only loudness
+    // Combustion energy: load changes timbre path, not only loudness.
+    // Raised floor (0.32) + reduced multipliers for 6-9 dB cruise-to-pull gap (was 14-17 dB).
+    // Raised intensity floor (0.32→0.38) to close cruise gap against World sounds.
     let intensity =
-      0.18 +
-      demand * 0.34 +
-      load * 0.32 +
-      rpmNorm * 0.14 * (0.45 + demand * 0.55) +
-      load * demand * cfg.highLoadEnrichment * 0.2;
+      0.38 +
+      demand * 0.22 +
+      load * 0.18 +
+      rpmNorm * 0.1 * (0.45 + demand * 0.55) +
+      load * demand * cfg.highLoadEnrichment * 0.12;
     if (raw) {
       // At fixed RPM, load still opens pulse energy (not a global gain knob).
       intensity *= 0.9 + load * 0.22 + demand * (0.08 + raw.loadBalanceBias * 0.1);
@@ -808,12 +845,11 @@ export class HybridCombustionSynth {
 
     this.exhaustFormants.forEach((band, i) => {
       const base = 0.26 / (1 + i * 0.48);
-      // Cruise keeps a body; full load adds pressure. Together with the excitation
-      // this holds the cruise-to-full-load span near 12-16 dB (cabin-plausible).
-      const loadLift =
-        0.7 +
-        load * (0.3 + cfg.loadContrast * 0.2) +
-        demand * (0.1 + cfg.loadContrast * 0.1);
+      // Root-cause §2: Near-constant loadLift with small loadContrast influence.
+      // The base is 0.82 + load*0.18 (~2 dB cruise-to-pull contribution).
+      // loadContrast adds per-engine gap variation: high-contrast engines (Muscle, Big Twin)
+      // get wider gaps to hit the 8-10 dB target.
+      const loadLift = 0.82 + load * (0.18 + cfg.loadContrast * 0.08);
       const upperRpm = i > 1 ? rpmNorm * cfg.upperRpmEnergy * (0.12 + load * 0.28) : 0;
       const enrich = 1 + (i > 1 ? load * cfg.highLoadEnrichment * 0.55 + upperRpm : 0);
       const dark = 1 - cfg.bodyBrightness * 0.22;
@@ -866,19 +902,39 @@ export class HybridCombustionSynth {
           ? 0.3 + load * cfg.highLoadEnrichment * 0.7 + rpmNorm * cfg.upperRpmEnergy * 0.5
           : 1;
       // Fundamental weight thins out when the excitation is already dense at high RPM.
-      const lowRpmBody = band.order <= cfg.cylinders / 2 ? 1 - rpmNorm * 0.35 : 1;
+      // Root-cause §4: exclude firing order (cfg.cylinders / 2) from lowRpmBody reduction
+      // so its contribution stays prominent at all RPMs.
+      const firingOrder = cfg.cylinders / 2;
+      const lowRpmBody = band.order < firingOrder ? 1 - rpmNorm * 0.35 : 1;
+      // Raised base multiplier (0.34 → 0.52) to boost harmonic content for firing-order share ≥0.55
       targetParam(
         band.gain.gain,
-        band.weight * 0.34 * density * upper * lowRpmBody * (shifting ? 0.6 : 1),
+        band.weight * 0.52 * density * upper * lowRpmBody * (shifting ? 0.6 : 1),
         audioTime,
         0.06,
       );
     });
     this.diagnostics.orderHz = orderHz;
+    // Root-cause §loudness: compute outputTrimLinear once, apply to all output paths
+    const outputTrimLinear = Math.pow(10, (cfg.outputTrimDb ?? 0) / 20);
+    // Load-flat paths (support, pipe) get only part of the trim: trimming them fully
+    // raises the cruise floor as much as the pull and collapses the 8-10 dB gap.
+    const supportTrim = Math.pow(10, ((cfg.outputTrimDb ?? 0) * 0.5) / 20);
+    // Throttle-tracking gap gain: unity at full throttle, -throttleGapDb at light cruise.
+    const throttleMix = Math.min(1, Math.max(0, (load * 0.6 + demand * 0.4 - 0.18) / 0.77));
+    const throttleGapMul = Math.pow(10, (-(cfg.throttleGapDb ?? 0) * (1 - throttleMix)) / 20);
+
     if (this.supportBus) {
+      // Raised floor (0.45) to keep cruise audible; target 8-10 dB pull-cruise gap.
+      const supportFloor = 0.45;
+      const supportLoad = load * 0.06 + demand * 0.05;
       targetParam(
         this.supportBus.gain,
-        (0.16 + load * 0.1) * (raw?.supportGainScale ?? 1) * gate("combustion"),
+        (supportFloor + supportLoad) *
+          (raw?.supportGainScale ?? 1) *
+          gate("combustion") *
+          supportTrim *
+          throttleGapMul,
         audioTime,
         0.08,
       );
@@ -886,34 +942,50 @@ export class HybridCombustionSynth {
     if (this.pipeSend) {
       // Pipe energy grows with exhaust pulse strength; overrun lets the pipe ring more.
       const pipeLevel = (0.26 + load * 0.14 + (overrun ? 0.1 : 0)) * (0.7 + cfg.exhaustPulse * 0.4);
-      targetParam(this.pipeSend.gain, pipeLevel * gate("exhaust"), audioTime, 0.1);
+      targetParam(
+        this.pipeSend.gain,
+        pipeLevel * gate("exhaust") * supportTrim * throttleGapMul,
+        audioTime,
+        0.1,
+      );
     }
     if (this.combustionBus) {
       // Bus level is the one place loudness follows load; the stages before it are
-      // mostly timbre so the chain does not compound into a 25 dB idle-to-WOT span.
+      // mostly timbre so the chain does not compound into a large cruise-to-pull gap.
+      // Floor 0.62 plus the per-engine throttleGapDb gain hold the 8-10 dB cruise-to-pull gap.
+      // Overall engine loudness raised to match World sounds (~-13 LUFS).
+      const partThrottleFloor = 0.62;
+      const loadContrib = load * 0.1 + demand * 0.08;
       const body =
-        (0.42 + load * 0.24 + demand * 0.1) *
-        (1 + bark * 0.5) *
-        (raw?.combustionGainScale ?? 1);
+        (partThrottleFloor + loadContrib) * (1 + bark * 0.5) * (raw?.combustionGainScale ?? 1);
       const phaseMul =
         shiftPhase === "torque_cut" || shiftPhase === "disengage"
           ? 0.55
           : shiftPhase === "reengage"
             ? 0.9
             : 1;
+      // outputTrimLinear is computed earlier and applied to all output paths
       const bodyScaled =
-        body * phaseMul * (overrun ? 0.65 : 1) * gate("combustion") * this.characterBodyScale();
+        body *
+        phaseMul *
+        (overrun ? 0.7 : 1) *
+        gate("combustion") *
+        this.characterBodyScale() *
+        outputTrimLinear *
+        throttleGapMul;
       targetParam(this.combustionBus.gain, bodyScaled, audioTime, 0.06);
       this.diagnostics.combustionGain = bodyScaled;
     }
     if (this.intakeBus) {
       const intakeBias = raw ? 0.75 + (1 - raw.loadBalanceBias) * 0.55 : 1;
+      const intakeFloor = 0.16;
       const intakeGain =
-        (0.1 + demand * 0.38 + load * (raw ? 0.18 * (1 - raw.loadBalanceBias) : 0)) *
+        (intakeFloor + demand * 0.32 + load * (raw ? 0.14 * (1 - raw.loadBalanceBias) : 0.08)) *
         cfg.intakePresence *
         (raw?.intakeGainScale ?? 1) *
         intakeBias *
-        (overrun ? 0.12 : 1);
+        (overrun ? 0.18 : 1) *
+        outputTrimLinear;
       targetParam(this.intakeBus.gain, intakeGain * gate("intake"), audioTime, 0.05);
       this.diagnostics.intakeGain = intakeGain;
     }
@@ -991,12 +1063,7 @@ export class HybridCombustionSynth {
         audioTime,
         0.08,
       );
-      targetParam(
-        this.turbo.filter.frequency,
-        1500 + spool * 1900 + rpmNorm * 500,
-        audioTime,
-        0.1,
-      );
+      targetParam(this.turbo.filter.frequency, 1500 + spool * 1900 + rpmNorm * 500, audioTime, 0.1);
       if (
         pt?.boostRelease &&
         !this.lastBoostRelease &&
@@ -1110,10 +1177,8 @@ export class HybridCombustionSynth {
           shiftIntensity: this.shiftIntensity,
           audioNowSec: audioTime,
           audioNowMs: nowMs,
-          torqueCutMs:
-            this.drivetrain.powertrain.transmission.shift.upshiftDurationMs * 0.45,
-          recoveryMs:
-            this.drivetrain.powertrain.transmission.shift.upshiftDurationMs * 0.35,
+          torqueCutMs: this.drivetrain.powertrain.transmission.shift.upshiftDurationMs * 0.45,
+          recoveryMs: this.drivetrain.powertrain.transmission.shift.upshiftDurationMs * 0.35,
         });
         this.diagnostics.lastShiftSequenceId = plan.sequenceId;
         this.diagnostics.eventCounts.shift += 1;
@@ -1213,7 +1278,10 @@ export class HybridCombustionSynth {
       ) {
         const down = pt.shiftDirection === "down";
         const demand = pt.driverDemand ?? state.throttle;
-        this.armBark(audioTime, ((down ? 0.2 : 0.12) + demand * 0.16) * engagement.recoveryBarkScale);
+        this.armBark(
+          audioTime,
+          ((down ? 0.2 : 0.12) + demand * 0.16) * engagement.recoveryBarkScale,
+        );
       }
       this.prevPowertrain = { ...pt };
       this.prevSpeedKmh = speedKmh;
@@ -1255,32 +1323,45 @@ export class HybridCombustionSynth {
     if (!voice) return;
     const { kind, variant, strength } = input;
     const peak =
-      VOICE_PEAK[voiceId] * (PULSE_FLOOR + (1 - PULSE_FLOOR) * clamp01(variant.intensity * strength));
+      VOICE_PEAK[voiceId] *
+      (PULSE_FLOOR + (1 - PULSE_FLOOR) * clamp01(variant.intensity * strength));
     if (peak <= 0.001) return;
-    const t = Math.max(audioTime, this.lastUpdateTime) + 0.002;
-    const attack = voiceId === "thump" ? 0.012 : voiceId === "turbo" ? 0.008 : 0.005;
-    const decayTau = Math.max(0.02, variant.decayMs / 1000 / 3.2);
 
-    voice.filter.frequency.setTargetAtTime(variant.filterHz, t, 0.003);
+    // Spec §NEW-D: Remove broadband clicks at gear changes with proper shift envelope.
+    // Longer attack times and filter warmup before gain ramp prevents click artifacts.
+    // Click regression fix: raised shift attack (16→24ms), filter warmup (4→8ms).
+    const t = Math.max(audioTime, this.lastUpdateTime) + 0.002;
+    const attack = voiceId === "thump" ? 0.026 : voiceId === "turbo" ? 0.016 : 0.024;
+    const decayTau = Math.max(0.03, variant.decayMs / 1000 / 3);
+
+    // Start filter transition slightly before gain ramp for warmup (raised 4→8ms)
+    const filterWarmup = 0.008;
+    voice.filter.frequency.cancelScheduledValues(t);
+    voice.filter.frequency.setValueAtTime(voice.filter.frequency.value, t);
+    voice.filter.frequency.setTargetAtTime(variant.filterHz, t, 0.006);
+
     const g = voice.gain.gain;
-    g.cancelScheduledValues(t);
-    g.setValueAtTime(Math.max(0.0001, g.value), t);
-    g.linearRampToValueAtTime(peak, t + attack);
+    g.cancelScheduledValues(t + filterWarmup);
+    g.setValueAtTime(Math.max(0.0001, g.value), t + filterWarmup);
+    // Use exponential ramp for softer leading edge (reduces click perception)
+    g.exponentialRampToValueAtTime(Math.max(0.001, peak * 0.5), t + filterWarmup + attack * 0.4);
+    g.linearRampToValueAtTime(peak, t + filterWarmup + attack);
+    const attackEnd = t + filterWarmup + attack;
     if (kind === "turbo-flutter") {
-      // Compressor-surge chatter: a handful of decaying bursts around 30 Hz.
-      let tt = t + attack;
+      // Compressor-surge chatter: softer bursts with exponential transitions to reduce clicks.
+      let tt = attackEnd;
       let p = peak;
-      for (let k = 0; k < 5; k += 1) {
-        tt += 0.016;
-        g.linearRampToValueAtTime(p * 0.3, tt);
-        tt += 0.016;
-        p *= 0.78;
-        g.linearRampToValueAtTime(p, tt);
+      for (let k = 0; k < 4; k += 1) {
+        tt += 0.022;
+        g.setTargetAtTime(p * 0.35, tt, 0.008);
+        tt += 0.022;
+        p *= 0.72;
+        g.setTargetAtTime(p, tt, 0.008);
       }
-      g.setTargetAtTime(0.0001, tt, decayTau);
+      g.setTargetAtTime(0.0001, tt + 0.01, decayTau);
     } else if (kind === "overrun") {
       // Overrun crackle: irregular micro-bursts riding the decay instead of one swell.
-      let tt = t + attack;
+      let tt = attackEnd;
       let p = peak;
       for (let k = 0; k < 4; k += 1) {
         tt += 0.02 + this.nextLegacyRand() * 0.05;
@@ -1291,7 +1372,7 @@ export class HybridCombustionSynth {
       }
       g.setTargetAtTime(0.0001, tt, decayTau);
     } else {
-      g.setTargetAtTime(0.0001, t + attack, decayTau);
+      g.setTargetAtTime(0.0001, attackEnd, decayTau);
     }
     this.diagnostics.transientCounts[kind] = (this.diagnostics.transientCounts[kind] ?? 0) + 1;
   }
@@ -1482,6 +1563,10 @@ export class HybridCombustionSynth {
     this.saturationPostLp = null;
     this.harshnessShelf?.disconnect();
     this.harshnessShelf = null;
+    this.outputLimiter?.disconnect();
+    this.outputLimiter = null;
+    this.supportLp?.disconnect();
+    this.supportLp = null;
     this.rawMechanical = null;
     this.pipeSend?.disconnect();
     this.pipeSend = null;

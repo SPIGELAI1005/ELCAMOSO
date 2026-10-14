@@ -171,11 +171,34 @@ const GT_BOX = {
   shiftSmoothing: 0.16,
 };
 
-const RACE_BOX = {
-  gearRatios: [114, 80, 58, 46, 38, 32],
-  idleRpm: 850,
-  redlineRpm: 8500,
-  shiftSmoothing: 0.09,
+// Racing V10 (high-rev-v10): Spec §4.5 - 6-speed ASG-type (LFA-class)
+// Ratios: 3.231/2.188/1.609/1.233/1.000/0.794, final 4.10, tyre 2.19m
+// rpm/kmh: G1=101, G2=68, G3=50, G4=38, G5=31, G6=25
+const V10_BOX = {
+  gearRatios: [101, 68, 50, 38, 31, 25],
+  idleRpm: 1000,
+  redlineRpm: 9000,
+  shiftSmoothing: 0.08,
+};
+
+// Race Car (flat-plane-v8-track): Spec §4.6 - 458-type 7-speed DCT
+// Ratios: 3.08/2.18/1.63/1.29/1.03/0.84/0.69, final 5.14, tyre 2.07m
+// rpm/kmh: G1=128, G2=90, G3=68, G4=53, G5=43, G6=35, G7=29
+const TRACK_V8_BOX = {
+  gearRatios: [128, 90, 68, 53, 43, 35, 29],
+  idleRpm: 1000,
+  redlineRpm: 9000,
+  shiftSmoothing: 0.06,
+};
+
+// Rally Car (rally-turbo-3): 6-speed GR Yaris per spec §4
+// Final drive 3.941 (gears 1-4), 3.350 (gears 5-6), wheel 1.98m
+// rpm/kmh = ratio × finalDrive × 1000 / (1.98 × 60)
+const RALLY_BOX = {
+  gearRatios: [117, 74, 51, 39, 28, 24],
+  idleRpm: 950,
+  redlineRpm: 6800,
+  shiftSmoothing: 0.1,
 };
 
 const BUILT_IN_SOUND_PROFILES: SoundProfile[] = [
@@ -225,7 +248,7 @@ const BUILT_IN_SOUND_PROFILES: SoundProfile[] = [
         { kind: "wind", level: 0.2, tone: 1800, speedScale: 1 },
       ],
     },
-    transmission: RACE_BOX,
+    transmission: V10_BOX,
   },
   {
     id: "cyber-pulse",
@@ -270,7 +293,7 @@ const BUILT_IN_SOUND_PROFILES: SoundProfile[] = [
         { kind: "crowd", level: 0.08, tone: 700, speedScale: 0.3, surge: 0.12 },
       ],
     },
-    transmission: { ...RACE_BOX, shiftSmoothing: 0.06, redlineRpm: 8600 },
+    transmission: TRACK_V8_BOX,
   },
   {
     id: "rally-car",
@@ -300,7 +323,7 @@ const BUILT_IN_SOUND_PROFILES: SoundProfile[] = [
         { kind: "whistle", everySeconds: 9, jitter: 4, level: 0.1, tone: 3200, speedLinked: true },
       ],
     },
-    transmission: { ...GT_BOX, redlineRpm: 7400, shiftSmoothing: 0.1 },
+    transmission: RALLY_BOX,
   },
   {
     id: "space-ship",
@@ -594,7 +617,7 @@ const BUILT_IN_SOUND_PROFILES: SoundProfile[] = [
       coreLevel: 0.55,
       signals: [],
     },
-    transmission: { ...RACE_BOX, idleRpm: 1400, redlineRpm: 11000, shiftSmoothing: 0.07 },
+    transmission: { ...V10_BOX, idleRpm: 1400, redlineRpm: 11000, shiftSmoothing: 0.07 },
   },
   {
     id: "turbine-jet",

@@ -1948,6 +1948,7 @@ class DriveSession {
       backend: synthesisMode,
       sampleState: hybrid?.sampleState ?? null,
       sampleFallbackReason: hybrid?.sampleFallbackReason ?? null,
+      combustionExcitationMode: hybrid?.excitationMode ?? null,
       dynamicLayers,
       meter: this.safeMeter(),
       perf: this.perf,

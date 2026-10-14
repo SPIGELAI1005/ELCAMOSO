@@ -149,6 +149,7 @@ function readAudio(input: {
   backend: string;
   sampleState?: string | null;
   sampleFallbackReason?: string | null;
+  combustionExcitationMode?: "worklet" | "fallback" | "none" | null;
   synthesisMode: string;
   dynamicLayers: DynamicLayerDebugInfo[];
   meter: MeterReading | null;
@@ -169,6 +170,7 @@ function readAudio(input: {
         : "not-applicable",
     sampleState: input.sampleState ?? null,
     sampleFallbackReason: input.sampleFallbackReason ?? null,
+    combustionExcitationMode: input.combustionExcitationMode ?? null,
     synthesisMode: input.synthesisMode,
     dynamicLayers: allLayers,
     activeLayers: steady.length ? steady : active,
@@ -214,6 +216,7 @@ export function collectDriveDiagnostics(input: {
   backend?: string;
   sampleState?: string | null;
   sampleFallbackReason?: string | null;
+  combustionExcitationMode?: "worklet" | "fallback" | "none" | null;
   dynamicLayers: DynamicLayerDebugInfo[];
   meter: MeterReading | null;
   perf: AudioPerf;
@@ -230,6 +233,7 @@ export function collectDriveDiagnostics(input: {
       backend: input.backend ?? input.synthesisMode,
       sampleState: input.sampleState ?? null,
       sampleFallbackReason: input.sampleFallbackReason ?? null,
+      combustionExcitationMode: input.combustionExcitationMode ?? null,
       dynamicLayers: input.dynamicLayers,
       meter: input.meter,
       perf: input.perf,

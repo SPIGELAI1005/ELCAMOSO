@@ -41,17 +41,23 @@ export function isCombustionWorkletReady(ctx?: BaseAudioContext) {
 }
 
 export function ensureCombustionWorklet(ctx: BaseAudioContext): Promise<boolean> {
-  if (!("audioWorklet" in ctx) || !ctx.audioWorklet) return Promise.resolve(false);
+  if (!("audioWorklet" in ctx) || !ctx.audioWorklet) {
+    console.warn("[CombustionExcitation] AudioWorklet not supported; using tonal fallback");
+    return Promise.resolve(false);
+  }
   if (readyContexts.has(ctx)) return Promise.resolve(true);
   const pending = loadPromises.get(ctx);
   if (pending) return pending;
   const promise = (async () => {
     try {
       if (!ctx.audioWorklet) return false;
+      console.log("[CombustionExcitation] Loading combustion-processor worklet...");
       await ctx.audioWorklet.addModule("/audio/combustion-processor.js");
       readyContexts.add(ctx);
+      console.log("[CombustionExcitation] Worklet loaded successfully");
       return true;
-    } catch {
+    } catch (err) {
+      console.warn("[CombustionExcitation] Worklet failed to load; using tonal fallback", err);
       return false;
     } finally {
       loadPromises.delete(ctx);
@@ -61,87 +67,148 @@ export function ensureCombustionWorklet(ctx: BaseAudioContext): Promise<boolean>
   return promise;
 }
 
+/**
+ * Tonal fallback excitation when AudioWorklet is unavailable.
+ * Uses multiple oscillators at firing-order harmonics instead of noise AM,
+ * producing an obviously synthetic but still engine-like rumble.
+ */
 function createFallbackExcitation(ctx: BaseAudioContext): CombustionExcitationHandle {
+  console.log("[CombustionExcitation] Creating tonal fallback excitation");
+
+  const fundamental = ctx.createOscillator();
+  fundamental.type = "sawtooth";
+  fundamental.frequency.value = 40;
+
+  const harmonic2 = ctx.createOscillator();
+  harmonic2.type = "triangle";
+  harmonic2.frequency.value = 80;
+
+  const harmonic3 = ctx.createOscillator();
+  harmonic3.type = "triangle";
+  harmonic3.frequency.value = 120;
+
+  const harmonic4 = ctx.createOscillator();
+  harmonic4.type = "sine";
+  harmonic4.frequency.value = 160;
+
+  const fundamentalGain = ctx.createGain();
+  fundamentalGain.gain.value = 0.32;
+  const h2Gain = ctx.createGain();
+  h2Gain.gain.value = 0.22;
+  const h3Gain = ctx.createGain();
+  h3Gain.gain.value = 0.14;
+  const h4Gain = ctx.createGain();
+  h4Gain.gain.value = 0.08;
+
+  const harmonicMix = ctx.createGain();
+  harmonicMix.gain.value = 0.5;
+
   const noise = ctx.createBufferSource();
   noise.buffer = getNoiseBuffer(ctx, "brown");
   noise.loop = true;
-  const am = ctx.createGain();
-  am.gain.value = 0.42;
-  const tone = ctx.createOscillator();
-  tone.type = "triangle";
-  tone.frequency.value = 40;
-  const toneGain = ctx.createGain();
-  toneGain.gain.value = 0.12;
-  const mix = ctx.createGain();
-  mix.gain.value = 0.45;
+  const noiseGain = ctx.createGain();
+  noiseGain.gain.value = 0.06;
+
   const shaper = ctx.createWaveShaper();
   const curve = new Float32Array(256);
   for (let i = 0; i < 256; i += 1) {
     const x = i / 128 - 1;
-    curve[i] = Math.tanh(x * (2.2 + i * 0.002));
+    curve[i] = Math.tanh(x * 2.8);
   }
   shaper.curve = curve;
+
   const tilt = ctx.createBiquadFilter();
   tilt.type = "lowshelf";
-  tilt.frequency.value = 260;
-  tilt.gain.value = 5;
+  tilt.frequency.value = 180;
+  tilt.gain.value = 6;
+
   const body = ctx.createBiquadFilter();
   body.type = "lowpass";
-  body.frequency.value = 900;
-  body.Q.value = 0.65;
-  // Preserve a restrained broadband pressure edge for upper formants. The
-  // previous fallback sent only the low-passed body onward, starving intake
-  // and high-RPM resonances whenever AudioWorklet was unavailable.
-  const edgeHp = ctx.createBiquadFilter();
-  edgeHp.type = "highpass";
-  edgeHp.frequency.value = 720;
-  edgeHp.Q.value = 0.55;
-  const edgeGain = ctx.createGain();
-  edgeGain.gain.value = 0.035;
+  body.frequency.value = 800;
+  body.Q.value = 0.7;
 
-  noise.connect(am);
-  tone.connect(toneGain);
-  toneGain.connect(am.gain);
-  am.connect(shaper);
+  const presence = ctx.createBiquadFilter();
+  presence.type = "peaking";
+  presence.frequency.value = 320;
+  presence.Q.value = 1.2;
+  presence.gain.value = 4;
+
+  const mix = ctx.createGain();
+  mix.gain.value = 0.45;
+
+  fundamental.connect(fundamentalGain);
+  harmonic2.connect(h2Gain);
+  harmonic3.connect(h3Gain);
+  harmonic4.connect(h4Gain);
+  fundamentalGain.connect(harmonicMix);
+  h2Gain.connect(harmonicMix);
+  h3Gain.connect(harmonicMix);
+  h4Gain.connect(harmonicMix);
+
+  noise.connect(noiseGain);
+  noiseGain.connect(harmonicMix);
+
+  harmonicMix.connect(shaper);
   shaper.connect(tilt);
   tilt.connect(body);
-  body.connect(mix);
-  shaper.connect(edgeHp);
-  edgeHp.connect(edgeGain);
-  edgeGain.connect(mix);
+  body.connect(presence);
+  presence.connect(mix);
+
+  fundamental.start();
+  harmonic2.start();
+  harmonic3.start();
+  harmonic4.start();
   noise.start();
-  tone.start();
 
   return {
     node: mix,
     mode: "fallback",
-    setParams({ firingHz, intensity, irregularity, load, sharpness, audioTime }) {
+    setParams({ firingHz, intensity, load, sharpness, audioTime }) {
       const hz = Math.max(8, Math.min(400, firingHz));
-      tone.frequency.setTargetAtTime(hz, audioTime, 0.04);
-      const depth = 0.035 + intensity * (0.1 + load * 0.08) * (0.8 + sharpness * 0.2);
-      toneGain.gain.setTargetAtTime(depth * (1 + irregularity * 0.12), audioTime, 0.05);
-      mix.gain.setTargetAtTime(0.28 + intensity * 0.38, audioTime, 0.06);
-      tilt.gain.setTargetAtTime(4 + load * 2.5 - sharpness * 0.8, audioTime, 0.08);
-      body.frequency.setTargetAtTime(620 + load * 520 + sharpness * 180, audioTime, 0.08);
-      edgeHp.frequency.setTargetAtTime(620 + load * 580 + sharpness * 320, audioTime, 0.08);
-      edgeGain.gain.setTargetAtTime(0.018 + load * sharpness * 0.085, audioTime, 0.06);
+      fundamental.frequency.setTargetAtTime(hz, audioTime, 0.035);
+      harmonic2.frequency.setTargetAtTime(hz * 2, audioTime, 0.035);
+      harmonic3.frequency.setTargetAtTime(hz * 3, audioTime, 0.035);
+      harmonic4.frequency.setTargetAtTime(hz * 4, audioTime, 0.035);
+
+      const baseLevel = 0.18 + intensity * 0.35;
+      fundamentalGain.gain.setTargetAtTime(baseLevel * (0.85 + load * 0.15), audioTime, 0.05);
+      h2Gain.gain.setTargetAtTime(baseLevel * 0.65 * (0.7 + sharpness * 0.3), audioTime, 0.05);
+      h3Gain.gain.setTargetAtTime(baseLevel * 0.4 * (0.6 + sharpness * 0.4), audioTime, 0.05);
+      h4Gain.gain.setTargetAtTime(baseLevel * 0.22 * sharpness, audioTime, 0.05);
+
+      noiseGain.gain.setTargetAtTime(0.03 + load * 0.05, audioTime, 0.06);
+      mix.gain.setTargetAtTime(0.3 + intensity * 0.4, audioTime, 0.06);
+
+      tilt.gain.setTargetAtTime(5 + load * 3, audioTime, 0.08);
+      body.frequency.setTargetAtTime(600 + load * 400 + sharpness * 200, audioTime, 0.08);
+      presence.frequency.setTargetAtTime(hz * 2.5, audioTime, 0.08);
+      presence.gain.setTargetAtTime(3 + load * 2, audioTime, 0.08);
     },
     dispose() {
       try {
-        tone.stop();
+        fundamental.stop();
+        harmonic2.stop();
+        harmonic3.stop();
+        harmonic4.stop();
         noise.stop();
       } catch {
         /* already stopped */
       }
-      tone.disconnect();
+      fundamental.disconnect();
+      harmonic2.disconnect();
+      harmonic3.disconnect();
+      harmonic4.disconnect();
+      fundamentalGain.disconnect();
+      h2Gain.disconnect();
+      h3Gain.disconnect();
+      h4Gain.disconnect();
+      harmonicMix.disconnect();
       noise.disconnect();
-      am.disconnect();
-      toneGain.disconnect();
+      noiseGain.disconnect();
       shaper.disconnect();
       tilt.disconnect();
       body.disconnect();
-      edgeHp.disconnect();
-      edgeGain.disconnect();
+      presence.disconnect();
       mix.disconnect();
     },
   };
@@ -149,6 +216,7 @@ function createFallbackExcitation(ctx: BaseAudioContext): CombustionExcitationHa
 
 function createWorkletExcitation(ctx: BaseAudioContext): CombustionExcitationHandle | null {
   try {
+    console.log("[CombustionExcitation] Creating worklet excitation node");
     const node = new AudioWorkletNode(ctx, "elcamoso-combustion-excitation", {
       numberOfInputs: 0,
       numberOfOutputs: 1,
@@ -187,7 +255,8 @@ function createWorkletExcitation(ctx: BaseAudioContext): CombustionExcitationHan
         node.disconnect();
       },
     };
-  } catch {
+  } catch (err) {
+    console.warn("[CombustionExcitation] Failed to create worklet node", err);
     return null;
   }
 }

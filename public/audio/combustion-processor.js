@@ -39,8 +39,11 @@ class CombustionExcitationProcessor extends AudioWorkletProcessor {
     this.phase = 0;
     this.bank = 0;
     this.env = 0;
+    this.envTarget = 0;
     this.bright = 0;
+    this.brightTarget = 0;
     this.burst = 0;
+    this.burstTarget = 0;
     this.grit = 0;
     this.noiseLp = 0;
     this.noiseDc = 0;
@@ -164,8 +167,11 @@ class CombustionExcitationProcessor extends AudioWorkletProcessor {
     this.collectorAcc = new Float32Array(TOPOLOGY_COLLECTOR_MAX);
     // Atomic replace: reset aggregate envelopes so modes do not cross-bleed.
     this.env = 0;
+    this.envTarget = 0;
     this.bright = 0;
+    this.brightTarget = 0;
     this.burst = 0;
+    this.burstTarget = 0;
     this.phase = 0;
   }
 
@@ -199,13 +205,18 @@ class CombustionExcitationProcessor extends AudioWorkletProcessor {
   }
 
   firePunch(punch, intensity, sharpness, load) {
-    this.env = Math.min(2.4, this.env + punch * (0.6 + intensity * 0.2));
-    this.bright = Math.min(1.5, this.bright + punch * sharpness * (0.18 + load * 0.42));
-    this.burst = Math.min(
-      1.6,
-      this.burst + punch * (0.3 + load * 0.5) * (0.45 + sharpness * 0.55),
+    // Root-cause §clicks: use target variables with soft attack for all envelopes.
+    // The V-twin has sparse pulses (~12 Hz at idle) where instant steps cause clicks.
+    this.envTarget = Math.min(2.4, (this.envTarget || 0) + punch * (0.6 + intensity * 0.2));
+    this.brightTarget = Math.min(
+      1.8,
+      (this.brightTarget || 0) + punch * sharpness * (0.22 + load * 0.48),
     );
-    this.grit = (this.rand() * 2 - 1) * (0.25 + load * 0.55 * sharpness);
+    this.burstTarget = Math.min(
+      2.0,
+      (this.burstTarget || 0) + punch * (0.38 + load * 0.55) * (0.5 + sharpness * 0.55),
+    );
+    this.grit = (this.rand() * 2 - 1) * (0.3 + load * 0.6 * sharpness);
   }
 
   process(_inputs, outputs, parameters) {
@@ -233,14 +244,18 @@ class CombustionExcitationProcessor extends AudioWorkletProcessor {
     const brightDecay = Math.exp(-1 / (sampleRate * edgeTauSeconds));
     const burstDecay = Math.exp(-1 / (sampleRate * burstTauSeconds));
 
-    const burstLpHz = 900 + load * 2600 + sharpness * 1400;
+    // Cap burstLpHz at 4200 Hz: keeps some air above 6 kHz (the 2500 Hz cap plus soft attacks
+    // dulled the top end) while HF noise still does not dilute order share.
+    const burstLpHz = Math.min(4200, 900 + load * 1800 + sharpness * 900);
     const burstHpHz = 140 + load * 120;
     const lpCoef = 1 - Math.exp((-2 * Math.PI * burstLpHz) / sampleRate);
     const hpCoef = 1 - Math.exp((-2 * Math.PI * burstHpHz) / sampleRate);
 
-    const ampSpread = 0.06 + (1 - load) * 0.1 + irregularity * 0.45;
+    // Cycle-to-cycle amplitude jitter: more variation at cruise, less at high load for clean harmonics.
+    // irregularity contribution also reduced at high load to keep firing share ~0.55+.
+    const ampSpread = 0.06 + (1 - load) * 0.12 + irregularity * (0.32 + (1 - load) * 0.16);
     const rateComp = Math.min(2, Math.max(0.6, Math.pow(100 / Math.max(20, firingHz), 0.35)));
-    const timeSpread = 0.012 + irregularity * 0.12;
+    const timeSpread = 0.015 + irregularity * 0.12;
     const wanderInc = (this.wanderRate * 2 * Math.PI) / sampleRate;
     const topology = this.topology;
 
@@ -342,9 +357,22 @@ class CombustionExcitationProcessor extends AudioWorkletProcessor {
         this._collectorPan = 0;
       }
 
+      // Root-cause §clicks: soft attack on all envelopes (~0.3ms for env/bright, ~0.5ms for burst)
+      // Prevents clicks from sparse V-twin pulses where instant steps create waveform discontinuities.
+      // Attack coefficients: higher = faster attack
+      const envAttack = 1 - Math.exp(-1 / (sampleRate * 0.0003));
+      const burstAttack = 1 - Math.exp(-1 / (sampleRate * 0.0005));
+      // Ramp toward targets
+      this.env += (this.envTarget - this.env) * envAttack;
+      this.bright += (this.brightTarget - this.bright) * envAttack;
+      this.burst += (this.burstTarget - this.burst) * burstAttack;
+      // Decay both actual and target values
       this.env *= decay;
+      this.envTarget = (this.envTarget || 0) * decay;
       this.bright *= brightDecay;
+      this.brightTarget = (this.brightTarget || 0) * brightDecay;
       this.burst *= burstDecay;
+      this.burstTarget = (this.burstTarget || 0) * burstDecay;
       this.grit = this.grit * 0.94 + (this.rand() * 2 - 1) * 0.04 * (0.2 + load);
 
       const white = this.rand() * 2 - 1;
@@ -360,10 +388,15 @@ class CombustionExcitationProcessor extends AudioWorkletProcessor {
       }
       const wander = 1 + Math.sin(this.wanderPhase) * this.wanderDepth;
 
-      const body = this.env * (0.76 + this.grit * 0.16) * wander;
-      const edge = this.bright * this.grit * 0.22;
-      const rush = this.burst * band * 0.6;
-      const raw = (body + edge + rush) * (0.6 + intensity * 0.4) * 0.8;
+      // Root-cause §3-4: rush dilutes order share and causes launch clicks.
+      // - Reduce rush from 0.75 to 0.28, scale by (1 - 0.5*load) so it fades at pull
+      // - Keep texture floor ≥0.06 to mask isolated pulses at low RPM
+      // - Near-constant intensity: 0.85 + 0.15*intensity instead of 0.6 + 0.4*intensity
+      const body = this.env * (0.72 + this.grit * 0.18) * wander;
+      const edge = this.bright * this.grit * 0.28;
+      const rush = this.burst * band * 0.28 * (1 - 0.5 * load);
+      const texture = band * (0.06 + (1 - load) * 0.03) * (0.6 + this.env * 0.4);
+      const raw = (body + edge + rush + texture) * (0.85 + intensity * 0.15) * 0.88;
 
       const sample = raw - this.previousRaw + 0.9975 * this.dcBlocked;
       this.previousRaw = raw;

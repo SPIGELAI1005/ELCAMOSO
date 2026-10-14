@@ -46,9 +46,19 @@ describe("combustion topology presets", () => {
   });
 
   it("maps pilot profiles and rejects others", () => {
+    // All 9 combustion profiles now have topology definitions
     expect(combustionTopologyForProfile("american-muscle-v8")?.cylinderCount).toBe(8);
     expect(combustionTopologyForProfile("race-car")?.cylinderCount).toBe(8);
-    expect(combustionTopologyForProfile("gt-v8")).toBeNull();
+    expect(combustionTopologyForProfile("gt-v8")?.cylinderCount).toBe(8);
+    expect(combustionTopologyForProfile("flat-six-sport")?.cylinderCount).toBe(6);
+    expect(combustionTopologyForProfile("turbo-inline-6")?.cylinderCount).toBe(6);
+    expect(combustionTopologyForProfile("racing-v10")?.cylinderCount).toBe(10);
+    expect(combustionTopologyForProfile("rally-car")?.cylinderCount).toBe(3);
+    expect(combustionTopologyForProfile("motorcycle-superbike")?.cylinderCount).toBe(4);
+    expect(combustionTopologyForProfile("big-twin")?.cylinderCount).toBe(2);
+    // Non-combustion profiles return null
+    expect(combustionTopologyForProfile("cyber-pulse")).toBeNull();
+    expect(combustionTopologyForProfile("space-ship")).toBeNull();
   });
 
   it("gives muscle cross-plane bank routing distinct from flat-plane alternating collectors", () => {

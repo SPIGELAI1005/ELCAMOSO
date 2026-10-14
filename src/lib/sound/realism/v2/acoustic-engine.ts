@@ -70,6 +70,17 @@ export interface AcousticEngineConfig {
   bodyBrightness: number;
   /** Soft redline reference for rpmNorm (personality redline). */
   redlineRpm: number;
+  /**
+   * Per-engine output trim in dB. Applied as a final linear gain multiplier.
+   * Root-cause §3: Normalizes loudness across engines so all hit ~-12.7 LUFS.
+   */
+  outputTrimDb: number;
+  /**
+   * Extra cruise-to-pull level contrast in dB, applied as a throttle-tracking gain on
+   * every output path ahead of the peak protect. Full throttle is unity, so peaks are
+   * unchanged and only part-throttle drops. Optional; 0 when unset.
+   */
+  throttleGapDb?: number;
 }
 
 /** True four-stroke firing frequency: RPM × cylinders / 120. */
@@ -104,6 +115,8 @@ const GT_V8: AcousticEngineConfig = {
   forcedInduction: false,
   bodyBrightness: 0.42,
   redlineRpm: 6500,
+  outputTrimDb: 18.2,
+  throttleGapDb: 0.4,
 };
 
 /**
@@ -118,8 +131,10 @@ const AMERICAN_V8: AcousticEngineConfig = {
   architecture: "cross-plane-v8-lope",
   banks: "v90",
   architectureCode: 1,
-  // Design: stronger idle lope than GT; matches personality acoustic hint (~0.42).
-  idleIrregularity: 0.4,
+  // Design: strong idle lope (25-35% amplitude jitter) with visible pulse irregularity.
+  // Spec §NEW-E: American Muscle V8 needs its idle lope to be audible and characterful.
+  // Raised from 0.55 to 0.68 to restore lumpy idle (0.21 → 0.12 regression).
+  idleIrregularity: 0.68,
   exhaustPulse: 0.98,
   intakePresence: 0.26,
   mechanicalIntensity: 0.2,
@@ -134,11 +149,17 @@ const AMERICAN_V8: AcousticEngineConfig = {
   exhaustFormantsHz: [78, 156, 312, 580],
   intakeFormantsHz: [360, 820, 1380],
   bodyResonanceHz: [86, 172, 390],
-  supportRatios: [1, 2, 2.5, 3, 4],
-  supportWeights: [0.88, 0.66, 0.14, 0.3, 0.11],
+  // Cross-plane half-orders (2, 6) define the V8 burble character.
+  // Crank order 2 = engine half-order (burble), order 6 = 3× half-order rumble.
+  // Order 4 is the firing order - raised from 0.15 to 0.48 to lift firing share to ≥0.55
+  // while keeping order-2 above 0.15 for the burble character.
+  supportRatios: [1, 2, 2.5, 3, 4, 6],
+  supportWeights: [0.88, 0.82, 0.14, 0.3, 0.48, 0.38],
   forcedInduction: false,
   bodyBrightness: 0.36,
   redlineRpm: 6000,
+  outputTrimDb: 16.0,
+  throttleGapDb: 2.0,
 };
 
 const FLAT_SIX: AcousticEngineConfig = {
@@ -165,6 +186,8 @@ const FLAT_SIX: AcousticEngineConfig = {
   forcedInduction: false,
   bodyBrightness: 0.58,
   redlineRpm: 9000,
+  outputTrimDb: 18.8,
+  throttleGapDb: 1.2,
 };
 
 const TURBO_I6: AcousticEngineConfig = {
@@ -173,24 +196,28 @@ const TURBO_I6: AcousticEngineConfig = {
   architecture: "inline-6",
   banks: "inline",
   architectureCode: 0,
-  idleIrregularity: 0.09,
-  exhaustPulse: 0.52,
-  intakePresence: 0.48,
-  mechanicalIntensity: 0.36,
-  combustionSharpness: 0.5,
+  // Spec §NEW-E: Turbo I6 was near-silent at idle and cruise - raise exhaustPulse and
+  // idle character. Even-firing I6 is smooth, but still needs audible presence.
+  idleIrregularity: 0.14,
+  exhaustPulse: 0.68,
+  intakePresence: 0.52,
+  mechanicalIntensity: 0.4,
+  combustionSharpness: 0.52,
   highLoadEnrichment: 0.7,
-  loadContrast: 0.64,
-  upperRpmEnergy: 0.58,
-  intakeLoadResponse: 0.68,
-  overrunCharacter: 0.32,
+  loadContrast: 0.58,
+  upperRpmEnergy: 0.62,
+  intakeLoadResponse: 0.72,
+  overrunCharacter: 0.35,
   exhaustFormantsHz: [108, 215, 430, 820],
   intakeFormantsHz: [540, 1160, 2200],
   bodyResonanceHz: [125, 275, 570],
   supportRatios: [1, 2, 3, 4, 5],
   supportWeights: [0.8, 0.45, 0.28, 0.14, 0.08],
   forcedInduction: true,
-  bodyBrightness: 0.48,
+  bodyBrightness: 0.52,
   redlineRpm: 7000,
+  outputTrimDb: 18.7,
+  throttleGapDb: 1.8,
 };
 
 const V10: AcousticEngineConfig = {
@@ -217,6 +244,7 @@ const V10: AcousticEngineConfig = {
   forcedInduction: false,
   bodyBrightness: 0.64,
   redlineRpm: 8500,
+  outputTrimDb: 18.7,
 };
 
 const FLAT_PLANE_V8_TRACK: AcousticEngineConfig = {
@@ -225,25 +253,31 @@ const FLAT_PLANE_V8_TRACK: AcousticEngineConfig = {
   architecture: "flat-plane-v8",
   banks: "v90",
   // Contract v1: flat-plane-v8 is code 6. Code 5 is single only.
+  // Spec §NEW-E: Race Car must sound distinct from GT V8 - flat-plane has even bank
+  // alternation, sharper/brighter character, and higher-frequency exhaust resonance.
   architectureCode: 6,
-  idleIrregularity: 0.08,
-  exhaustPulse: 0.7,
-  intakePresence: 0.76,
-  mechanicalIntensity: 0.66,
-  combustionSharpness: 0.76,
-  highLoadEnrichment: 0.82,
-  loadContrast: 0.8,
-  upperRpmEnergy: 0.9,
-  intakeLoadResponse: 0.86,
-  overrunCharacter: 0.4,
-  exhaustFormantsHz: [145, 290, 620, 1240, 1900],
-  intakeFormantsHz: [820, 1700, 3200],
-  bodyResonanceHz: [155, 350, 840],
+  idleIrregularity: 0.06,
+  // Higher exhaust pulse and sharper combustion than GT V8's 0.72/0.43
+  exhaustPulse: 0.78,
+  intakePresence: 0.82,
+  mechanicalIntensity: 0.72,
+  combustionSharpness: 0.82,
+  highLoadEnrichment: 0.88,
+  loadContrast: 0.84,
+  upperRpmEnergy: 0.94,
+  intakeLoadResponse: 0.9,
+  overrunCharacter: 0.45,
+  // Higher formant centers than GT V8 for the "scream" characteristic
+  exhaustFormantsHz: [160, 320, 680, 1360, 2100],
+  intakeFormantsHz: [920, 1850, 3400],
+  bodyResonanceHz: [175, 380, 920],
   supportRatios: [1, 2, 3, 4, 6, 8],
-  supportWeights: [0.68, 0.4, 0.34, 0.22, 0.12, 0.06],
+  supportWeights: [0.65, 0.42, 0.36, 0.24, 0.14, 0.07],
   forcedInduction: false,
-  bodyBrightness: 0.76,
+  // Brighter than GT V8's 0.42 for the flat-plane V8 scream
+  bodyBrightness: 0.82,
   redlineRpm: 8600,
+  outputTrimDb: 17.7,
 };
 
 const RALLY_TURBO_3: AcousticEngineConfig = {
@@ -271,6 +305,8 @@ const RALLY_TURBO_3: AcousticEngineConfig = {
   forcedInduction: true,
   bodyBrightness: 0.58,
   redlineRpm: 6800,
+  outputTrimDb: 19.2,
+  throttleGapDb: 3.1,
 };
 
 const INLINE_4: AcousticEngineConfig = {
@@ -297,6 +333,8 @@ const INLINE_4: AcousticEngineConfig = {
   forcedInduction: false,
   bodyBrightness: 0.7,
   redlineRpm: 14000,
+  outputTrimDb: 21.2,
+  throttleGapDb: 2.3,
 };
 
 const V_TWIN: AcousticEngineConfig = {
@@ -323,6 +361,8 @@ const V_TWIN: AcousticEngineConfig = {
   forcedInduction: false,
   bodyBrightness: 0.32,
   redlineRpm: 5500,
+  outputTrimDb: 18.0,
+  throttleGapDb: 2.8,
 };
 
 /** Sound profile id → acoustic config for Realism V2 combustion. */

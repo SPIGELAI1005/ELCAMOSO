@@ -203,6 +203,10 @@ function AudioSection({ frame }: { frame: DriveDiagnosticsFrame }) {
   return (
     <Section title="Audio">
       <MetricRow label="Backend actually active" value={audio.backend} />
+      <MetricRow
+        label="Combustion excitation"
+        value={audio.combustionExcitationMode ?? "-"}
+      />
       <MetricRow label="Recorded engine bank" value={audio.recordedSampleBank} />
       <MetricRow label="Sample loading" value={audio.sampleState ?? "-"} />
       <MetricRow label="Sample fallback" value={audio.sampleFallbackReason ?? "-"} />

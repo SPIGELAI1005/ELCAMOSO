@@ -166,8 +166,9 @@ describe("Silent Capture / JourneyTraceV1", () => {
 
   it("replays same trace with different engines (reinterpretation)", () => {
     const trace = makeReplayTrace();
+    // Use profiles with more distinct gearing: GT V8 (NA, 6 gears) vs Rally Car (turbo 3-cyl, 6 gears)
     const a = new JourneyTraceReplaySource(trace, { profileId: "gt-v8" });
-    const b = new JourneyTraceReplaySource(trace, { profileId: "racing-v10" });
+    const b = new JourneyTraceReplaySource(trace, { profileId: "rally-car" });
     const frames = Array.from({ length: 28 }, () => ({ a: a.next(0.1), b: b.next(0.1) }));
     expect(frames.every((frame) => frame.a && frame.b)).toBe(true);
     expect(frames.every((frame) => frame.a!.speed === frame.b!.speed)).toBe(true);

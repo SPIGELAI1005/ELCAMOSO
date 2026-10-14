@@ -113,11 +113,15 @@ describe("drivetrain personalities", () => {
     const rally = resolveDrivetrain(getProfile("rally-car")).personality;
     const flatSix = resolveDrivetrain(getProfile("flat-six-sport")).personality;
 
-    expect(v10.transmission.gearRatios).toHaveLength(7);
-    expect(track.transmission.gearRatios).toHaveLength(8);
-    expect(rally.transmission.gearRatios).toHaveLength(5);
+    // Spec §4.5: Racing V10 is 6-speed ASG-type (LFA-class)
+    expect(v10.transmission.gearRatios).toHaveLength(6);
+    // Spec §4.6: Race Car is 7-speed DCT (458-type)
+    expect(track.transmission.gearRatios).toHaveLength(7);
+    expect(rally.transmission.gearRatios).toHaveLength(6); // GR Yaris 6-speed per spec §4
     expect(flatSix.transmission.gearRatios).toHaveLength(7);
-    expect(track.engine.redlineRpm).not.toBe(flatSix.engine.redlineRpm);
+    // Track V8 and Flat-Six now both have 9000 redline per spec;
+    // verify distinct by comparing final drive instead (5.14 vs 3.44)
+    expect(track.transmission.finalDrive).not.toBe(flatSix.transmission.finalDrive);
     expect(rally.transient.aspiration).toBe("turbo");
     expect(v10.transmission.shift.upshiftDurationMs).toBeGreaterThan(
       track.transmission.shift.upshiftDurationMs,
