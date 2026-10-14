@@ -34,6 +34,8 @@ export interface CombustionTopologyV1 {
   cylinders: CombustionCylinderTopology[];
   collectors: CombustionCollectorTopology[];
   soundSpeedMetresPerSecond: number;
+  /** Optional per-720° random gain depth (0..1) scaled by irregularity in the worklet. */
+  cycleLope?: number;
 }
 
 export type TopologyValidationIssue = { path: string; message: string };
@@ -105,7 +107,11 @@ export function validateCombustionTopology(input: unknown): {
 } {
   const issues: TopologyValidationIssue[] = [];
   if (!input || typeof input !== "object") {
-    return { ok: false, topology: null, issues: [{ path: "", message: "topology must be an object" }] };
+    return {
+      ok: false,
+      topology: null,
+      issues: [{ path: "", message: "topology must be an object" }],
+    };
   }
   const t = input as Partial<CombustionTopologyV1>;
   if (t.version !== COMBUSTION_TOPOLOGY_VERSION) {
@@ -128,7 +134,11 @@ export function validateCombustionTopology(input: unknown): {
   if (!Array.isArray(t.cylinders) || t.cylinders.length !== t.cylinderCount) {
     issues.push({ path: "cylinders", message: "length must equal cylinderCount" });
   }
-  if (!Array.isArray(t.collectors) || t.collectors.length < 1 || t.collectors.length > TOPOLOGY_COLLECTOR_MAX) {
+  if (
+    !Array.isArray(t.collectors) ||
+    t.collectors.length < 1 ||
+    t.collectors.length > TOPOLOGY_COLLECTOR_MAX
+  ) {
     issues.push({
       path: "collectors",
       message: `1..${TOPOLOGY_COLLECTOR_MAX} collectors required`,
@@ -163,7 +173,11 @@ export function validateCombustionTopology(input: unknown): {
     } else {
       cylinderIds.add(cyl.id);
     }
-    if (!Number.isFinite(cyl.firingAngleDegrees) || cyl.firingAngleDegrees < 0 || cyl.firingAngleDegrees >= cycle) {
+    if (
+      !Number.isFinite(cyl.firingAngleDegrees) ||
+      cyl.firingAngleDegrees < 0 ||
+      cyl.firingAngleDegrees >= cycle
+    ) {
       issues.push({
         path: `cylinders[${i}].firingAngleDegrees`,
         message: `finite in [0, ${cycle})`,
@@ -205,6 +219,9 @@ export function validateCombustionTopology(input: unknown): {
       cylinders,
       collectors: (t.collectors as CombustionCollectorTopology[]).map((c) => ({ id: c.id })),
       soundSpeedMetresPerSecond: soundSpeed,
+      ...(Number.isFinite(t.cycleLope) && (t.cycleLope as number) > 0
+        ? { cycleLope: Math.min(1, t.cycleLope as number) }
+        : {}),
     },
     issues: [],
   };
@@ -213,7 +230,7 @@ export function validateCombustionTopology(input: unknown): {
 function v8Cylinders(
   order: number[],
   collectorForCylinder: (cyl: number) => number,
-  primaryForIndex: (i: number) => number,
+  primaryForIndex: (i: number, cyl: number) => number,
   pulseWeightOrWeights: number | number[] = 1,
 ): CombustionCylinderTopology[] {
   // Even 90° spacing over 720° in firing order.
@@ -224,7 +241,7 @@ function v8Cylinders(
     pulseWeight: Array.isArray(pulseWeightOrWeights)
       ? (pulseWeightOrWeights[i] ?? 1)
       : pulseWeightOrWeights,
-    primaryLengthMetres: primaryForIndex(i),
+    primaryLengthMetres: primaryForIndex(i, cylId),
   }));
 }
 
@@ -240,12 +257,17 @@ export const MUSCLE_V8_TOPOLOGY: CombustionTopologyV1 = {
   cycleDegrees: 720,
   cylinderCount: 8,
   collectors: [{ id: 0 }, { id: 1 }],
+  cycleLope: 0.45,
   soundSpeedMetresPerSecond: TOPOLOGY_SOUND_SPEED_DEFAULT,
   cylinders: v8Cylinders(
     [1, 8, 7, 2, 6, 5, 4, 3],
     (cyl) => (cyl % 2 === 1 ? 0 : 1),
-    (i) => 0.06 + (i % 4) * 0.035,
-    [1.18, 0.78, 1.1, 0.72, 1.18, 0.78, 1.1, 0.72],
+    // v8depth: true-dual exhaust - the even bank's pipe path is ~0.6 m longer, so its
+    // pulses arrive late and the 90° train turns uneven at the tailpipe (burble).
+    (i, cyl) => 0.06 + (i % 4) * 0.035 + (cyl % 2 === 0 ? 0.6 : 0),
+    // Non-repeating per-cylinder weights: cylinder-to-cylinder variation gives
+    // half-order (0.5 / 1.5) content, not only the period-4 bank lope.
+    [1.22, 0.8, 1.08, 0.7, 1.15, 0.86, 1.12, 0.74],
   ),
 };
 

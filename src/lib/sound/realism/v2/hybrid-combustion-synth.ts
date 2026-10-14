@@ -135,6 +135,19 @@ export interface HybridCombustionDiagnostics {
   shiftEngagementStyle: ShiftEngagementStyle | null;
 }
 
+/** Asymmetric soft saturator for the growl path (even + odd harmonics, bounded). */
+function growlCurve(drive: number, length = 1024): Float32Array {
+  const k = 1.5 + Math.min(1, Math.max(0, drive)) * 3.5;
+  const curve = new Float32Array(length);
+  const norm = Math.tanh(k);
+  for (let i = 0; i < length; i += 1) {
+    const x = (i / (length - 1)) * 2 - 1;
+    const y = Math.tanh(k * (x + 0.18 * x * x)) / norm;
+    curve[i] = Math.max(-1, Math.min(1, y));
+  }
+  return curve;
+}
+
 function targetParam(param: AudioParam, value: number, t: number, tau: number) {
   param.setTargetAtTime(value, t, Math.max(0.01, tau));
 }
@@ -243,6 +256,17 @@ export class HybridCombustionSynth {
     gain: GainNode;
     spool: number;
   } | null = null;
+  private growl: {
+    filters: BiquadFilterNode[];
+    drive: GainNode;
+    shaper: WaveShaperNode;
+    hp: BiquadFilterNode;
+    lp: BiquadFilterNode;
+    gain: GainNode;
+  } | null = null;
+  private turboWhistle: { oscs: OscillatorNode[]; gain: GainNode } | null = null;
+  private bov: { src: AudioBufferSourceNode; filter: BiquadFilterNode; gain: GainNode } | null =
+    null;
   private voices: Partial<Record<TransientVoiceId, TransientVoice>> = {};
   private sampleVoices = new Map<string, SampleVoice>();
   private sampleBus: GainNode | null = null;
@@ -256,6 +280,8 @@ export class HybridCombustionSynth {
   private lastShiftPhase: ShiftPhase | "idle" = "idle";
   private lastOverrun = false;
   private lastBoostRelease = false;
+  private bovPrevDemand = 0;
+  private bovLastAt = -10;
   private lastUpdateTime = 0;
   private priorLoad = 0;
   private barkStart = 0;
@@ -407,6 +433,42 @@ export class HybridCombustionSynth {
       nodes += 2;
       return { filter, gain };
     });
+
+    // Load-driven exhaust growl (profiles with cfg.growl): mid-band pulses → soft saturator.
+    if (cfg.growl && typeof ctx.createWaveShaper === "function") {
+      const g = cfg.growl;
+      const drive = ctx.createGain();
+      drive.gain.value = 1;
+      const filters = g.centersHz.map((hz) => {
+        const f = ctx.createBiquadFilter();
+        f.type = "bandpass";
+        f.frequency.value = hz;
+        f.Q.value = g.q;
+        this.excitation!.node.connect(f);
+        f.connect(drive);
+        return f;
+      });
+      const shaper = ctx.createWaveShaper();
+      shaper.curve = growlCurve(g.drive) as Float32Array<ArrayBuffer>;
+      shaper.oversample = "2x";
+      const lp = ctx.createBiquadFilter();
+      lp.type = "lowpass";
+      lp.frequency.value = g.lowpassHz;
+      lp.Q.value = 0.6;
+      const gain = ctx.createGain();
+      gain.gain.value = 0.0001;
+      const hp = ctx.createBiquadFilter();
+      hp.type = "highpass";
+      hp.frequency.value = 55;
+      hp.Q.value = 0.7;
+      drive.connect(shaper);
+      shaper.connect(hp);
+      hp.connect(lp);
+      lp.connect(gain);
+      gain.connect(this.combustionBus!);
+      this.growl = { filters, drive, shaper, hp, lp, gain };
+      nodes += filters.length + 4;
+    }
 
     // Intake formants
     this.intakeFormants = cfg.intakeFormantsHz.map((hz, i) => {
@@ -632,6 +694,36 @@ export class HybridCombustionSynth {
       src.start();
       this.turbo = { src, filter, gain, spool: 0 };
       nodes += 3;
+
+      // Compressor whistle: narrow tonal pair (slightly detuned blades) that rises with spool.
+      const wg = ctx.createGain();
+      wg.gain.value = 0.0001;
+      const oscs = [1, 1.013].map((ratio) => {
+        const o = ctx.createOscillator();
+        o.type = "sine";
+        o.frequency.value = 2600 * ratio;
+        o.connect(wg);
+        o.start();
+        return o;
+      });
+      wg.connect(buses.accents);
+      this.turboWhistle = { oscs, gain: wg };
+      // Blow-off "pssh": white noise through a sweeping bandpass, enveloped on boost release.
+      const bsrc = ctx.createBufferSource();
+      bsrc.buffer = getNoiseBuffer(ctx, "white");
+      bsrc.loop = true;
+      const bf = ctx.createBiquadFilter();
+      bf.type = "bandpass";
+      bf.frequency.value = 3000;
+      bf.Q.value = 0.8;
+      const bg = ctx.createGain();
+      bg.gain.value = 0.0001;
+      bsrc.connect(bf);
+      bf.connect(bg);
+      bg.connect(buses.accents);
+      bsrc.start();
+      this.bov = { src: bsrc, filter: bf, gain: bg };
+      nodes += 6;
     }
 
     // Persistent transient voices - noise → filter → gain, envelopes scheduled per event.
@@ -889,6 +981,21 @@ export class HybridCombustionSynth {
       targetParam(band.filter.Q, 1.2 + demand * 0.5, audioTime, 0.1);
     });
 
+    if (this.growl && cfg.growl) {
+      // Drive rises with load so the saturator turns pulse irregularity into growl on pull;
+      // cruise keeps a softer burble. Overrun lets it crackle a little through the pipe.
+      const drive = 0.6 + load * 1.6 + demand * 0.6 + (overrun ? 0.5 : 0);
+      targetParam(this.growl.drive.gain, drive, audioTime, 0.06);
+      const level = cfg.growl.level * (0.5 + load * 0.4 + demand * 0.1) * (overrun ? 0.8 : 1);
+      targetParam(this.growl.gain.gain, level, audioTime, 0.06);
+      targetParam(
+        this.growl.lp.frequency,
+        cfg.growl.lowpassHz * (0.75 + load * 0.4),
+        audioTime,
+        0.1,
+      );
+    }
+
     // Engine-order resonators track crank speed tightly; weight rises with load.
     const revHz = Math.max(0, rpm / 60);
     const orderHz: number[] = [];
@@ -1064,12 +1171,46 @@ export class HybridCombustionSynth {
         0.08,
       );
       targetParam(this.turbo.filter.frequency, 1500 + spool * 1900 + rpmNorm * 500, audioTime, 0.1);
+      // Throttle-lift blow-off: demand collapses while the turbo is still spooled.
+      if (this.bov) {
+        const lift = this.bovPrevDemand - demand;
+        const liftTrigger = this.bovPrevDemand > 0.45 && demand < 0.2 && lift > 0.25;
+        const shiftTrigger =
+          shifting && shiftPhase === "torque_cut" && this.lastShiftPhase !== "torque_cut";
+        if ((liftTrigger || shiftTrigger) && spool >= 0.35 && audioTime - this.bovLastAt > 1.2) {
+          this.bovLastAt = audioTime;
+          this.fireBlowOff(
+            spool * (shiftTrigger && !liftTrigger ? 0.55 : 1),
+            audioTime,
+            gate("boost"),
+          );
+        }
+        this.bovPrevDemand = demand;
+      }
+      if (this.turboWhistle) {
+        // Whistle: only audible once boost builds; follows spool² and load, never a constant tone.
+        const w = spool > 0.08 ? spool * spool * (0.35 + load * 0.65) * 0.035 : 0.0001;
+        targetParam(
+          this.turboWhistle.gain.gain,
+          Math.max(0.0001, w) * gate("boost"),
+          audioTime,
+          0.12,
+        );
+        const hz = 2200 + spool * 3400 + rpmNorm * 700;
+        this.turboWhistle.oscs.forEach((o, i) =>
+          targetParam(o.frequency, hz * (i === 0 ? 1 : 1.013), audioTime, 0.15),
+        );
+      }
       if (
         pt?.boostRelease &&
         !this.lastBoostRelease &&
         this.turbo.spool >= (dynamics?.minimumReleaseState || 0.55)
       ) {
         this.diagnostics.eventCounts.boostRelease += 1;
+        if (this.bov && audioTime - this.bovLastAt > 1.2) {
+          this.bovLastAt = audioTime;
+          this.fireBlowOff(this.turbo.spool, audioTime, gate("boost"));
+        }
         if (this.advancedTransients && this.pools) {
           this.firePulse(
             {
@@ -1535,6 +1676,33 @@ export class HybridCombustionSynth {
     }
   }
 
+  /** Blow-off / wastegate "pssh" with a short flutter, soft edges (no clicks). */
+  private fireBlowOff(spool: number, audioTime: number, gateLevel: number) {
+    if (!this.bov) return;
+    const t = Math.max(audioTime, this.lastUpdateTime) + 0.004;
+    const peak = (0.04 + spool * 0.06) * gateLevel;
+    const g = this.bov.gain.gain;
+    const f = this.bov.filter.frequency;
+    f.cancelScheduledValues(t);
+    f.setValueAtTime(Math.max(400, f.value), t);
+    f.setTargetAtTime(3600, t, 0.004);
+    f.setTargetAtTime(1500, t + 0.05, 0.12);
+    g.cancelScheduledValues(t);
+    g.setValueAtTime(Math.max(0.0001, g.value), t);
+    g.setTargetAtTime(peak, t, 0.012);
+    // Flutter: a few soft dips riding the decay (compressor surge chatter).
+    let tt = t + 0.06;
+    let p = peak;
+    for (let k = 0; k < 3; k += 1) {
+      g.setTargetAtTime(p * 0.45, tt, 0.01);
+      tt += 0.028;
+      p *= 0.78;
+      g.setTargetAtTime(p, tt, 0.01);
+      tt += 0.028;
+    }
+    g.setTargetAtTime(0.0001, tt, 0.11);
+  }
+
   dispose() {
     this.disposed = true;
     this.excitation?.dispose();
@@ -1591,6 +1759,33 @@ export class HybridCombustionSynth {
       this.overrun.filter.disconnect();
       this.overrun.gain.disconnect();
       this.overrun = null;
+    }
+    if (this.growl) {
+      this.growl.filters.forEach((f) => f.disconnect());
+      this.growl.drive.disconnect();
+      this.growl.shaper.disconnect();
+      this.growl.hp.disconnect();
+      this.growl.lp.disconnect();
+      this.growl.gain.disconnect();
+      this.growl = null;
+    }
+    if (this.turboWhistle) {
+      this.turboWhistle.oscs.forEach((o) => {
+        try {
+          o.stop();
+        } catch {
+          /* already stopped */
+        }
+        o.disconnect();
+      });
+      this.turboWhistle.gain.disconnect();
+      this.turboWhistle = null;
+    }
+    if (this.bov) {
+      stopNoise(this.bov.src);
+      this.bov.filter.disconnect();
+      this.bov.gain.disconnect();
+      this.bov = null;
     }
     if (this.turbo) {
       stopNoise(this.turbo.src);

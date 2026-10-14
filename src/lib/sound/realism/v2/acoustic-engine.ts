@@ -81,6 +81,12 @@ export interface AcousticEngineConfig {
    * unchanged and only part-throttle drops. Optional; 0 when unset.
    */
   throttleGapDb?: number;
+  /**
+   * Optional load-driven exhaust growl: mid-band excitation driven into a soft
+   * saturator so pulse irregularity becomes dense intermodulation (rasp / burble)
+   * instead of a clean firing-order hum. Level and drive rise with load.
+   */
+  growl?: { centersHz: number[]; q: number; drive: number; level: number; lowpassHz: number };
 }
 
 /** True four-stroke firing frequency: RPM × cylinders / 120. */
@@ -136,8 +142,8 @@ const AMERICAN_V8: AcousticEngineConfig = {
   // Raised from 0.55 to 0.68 to restore lumpy idle (0.21 → 0.12 regression).
   idleIrregularity: 0.68,
   exhaustPulse: 0.98,
-  intakePresence: 0.26,
-  mechanicalIntensity: 0.2,
+  intakePresence: 0.4,
+  mechanicalIntensity: 0.32,
   // Design: slightly softer edge so body/exhaust dominate over metallic grit.
   combustionSharpness: 0.5,
   highLoadEnrichment: 0.66,
@@ -145,21 +151,24 @@ const AMERICAN_V8: AcousticEngineConfig = {
   upperRpmEnergy: 0.3,
   intakeLoadResponse: 0.58,
   // Design: more lift-off character than GT (burble-adjacent, still NA).
-  overrunCharacter: 0.55,
-  exhaustFormantsHz: [78, 156, 312, 580],
+  overrunCharacter: 0.68,
+  exhaustFormantsHz: [125, 235, 470, 860],
   intakeFormantsHz: [360, 820, 1380],
-  bodyResonanceHz: [86, 172, 390],
+  bodyResonanceHz: [92, 185, 410],
   // Cross-plane half-orders (2, 6) define the V8 burble character.
   // Crank order 2 = engine half-order (burble), order 6 = 3× half-order rumble.
   // Order 4 is the firing order - raised from 0.15 to 0.48 to lift firing share to ≥0.55
   // while keeping order-2 above 0.15 for the burble character.
-  supportRatios: [1, 2, 2.5, 3, 4, 6],
-  supportWeights: [0.88, 0.82, 0.14, 0.3, 0.48, 0.38],
+  // v8depth: half orders (0.5, 1.5) from cylinder-to-cylinder variation and a strong
+  // order 1/2 bank burble; firing order 4 no longer dominates as a pure hum.
+  supportRatios: [0.5, 1, 1.5, 2, 3, 4, 6],
+  supportWeights: [0.34, 0.74, 0.32, 0.9, 0.42, 0.36, 0.3],
   forcedInduction: false,
   bodyBrightness: 0.36,
   redlineRpm: 6000,
-  outputTrimDb: 16.0,
-  throttleGapDb: 2.0,
+  outputTrimDb: 12.2,
+  throttleGapDb: 0,
+  growl: { centersHz: [210, 430], q: 0.9, drive: 0.75, level: 0.07, lowpassHz: 2400 },
 };
 
 const FLAT_SIX: AcousticEngineConfig = {

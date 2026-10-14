@@ -104,7 +104,11 @@ class CombustionExcitationProcessor extends AudioWorkletProcessor {
       this.clearTopology();
       return;
     }
-    if (!Array.isArray(raw.collectors) || raw.collectors.length < 1 || raw.collectors.length > TOPOLOGY_COLLECTOR_MAX) {
+    if (
+      !Array.isArray(raw.collectors) ||
+      raw.collectors.length < 1 ||
+      raw.collectors.length > TOPOLOGY_COLLECTOR_MAX
+    ) {
       this.clearTopology();
       return;
     }
@@ -122,7 +126,11 @@ class CombustionExcitationProcessor extends AudioWorkletProcessor {
     }
     const cylinders = [];
     for (const cyl of raw.cylinders) {
-      if (!cyl || !Number.isFinite(cyl.firingAngleDegrees) || !collectorIds.has(cyl.collectorId | 0)) {
+      if (
+        !cyl ||
+        !Number.isFinite(cyl.firingAngleDegrees) ||
+        !collectorIds.has(cyl.collectorId | 0)
+      ) {
         this.clearTopology();
         return;
       }
@@ -131,7 +139,9 @@ class CombustionExcitationProcessor extends AudioWorkletProcessor {
         this.clearTopology();
         return;
       }
-      const weight = Number.isFinite(cyl.pulseWeight) ? Math.min(4, Math.max(0.01, cyl.pulseWeight)) : 1;
+      const weight = Number.isFinite(cyl.pulseWeight)
+        ? Math.min(4, Math.max(0.01, cyl.pulseWeight))
+        : 1;
       const length = Number.isFinite(cyl.primaryLengthMetres)
         ? Math.min(2, Math.max(0, cyl.primaryLengthMetres))
         : 0;
@@ -143,8 +153,11 @@ class CombustionExcitationProcessor extends AudioWorkletProcessor {
         primaryLengthMetres: length,
       });
     }
+    const cycleLope = Number.isFinite(raw.cycleLope) ? Math.min(1, Math.max(0, raw.cycleLope)) : 0;
+    this.cycleGain = 1;
     this.topology = {
       version: 1,
+      cycleLope,
       cycleDegrees: cycle,
       cylinderCount: count,
       cylinders,
@@ -269,7 +282,14 @@ class CombustionExcitationProcessor extends AudioWorkletProcessor {
         const prev = this.crankPhaseDegrees;
         let next = prev + advance;
         const cycle = topology.cycleDegrees;
-        if (next >= cycle) next -= cycle;
+        if (next >= cycle) {
+          next -= cycle;
+          // Optional per-cycle lope (cam overlap / mixture variation): one random gain per 720°,
+          // scaled by irregularity so it lives at idle and fades with load (order-½ lumpiness).
+          if (topology.cycleLope > 0) {
+            this.cycleGain = 1 + (this.rand() - 0.5) * 2 * topology.cycleLope * irregularity;
+          }
+        }
 
         if (this.collectorAcc) this.collectorAcc.fill(0);
 
@@ -280,7 +300,7 @@ class CombustionExcitationProcessor extends AudioWorkletProcessor {
               const cyl = topology.cylinders[c];
               if (angleCrossed(prev, next, cyl.firingAngleDegrees, cycle)) {
                 this.fireIndex = (this.fireIndex + 1) & 0xffff;
-                let punch = (0.7 + load * 0.3) * cyl.pulseWeight;
+                let punch = (0.7 + load * 0.3) * cyl.pulseWeight * (this.cycleGain || 1);
                 punch *= (1 + (this.rand() - 0.5) * ampSpread * (1 + timeSpread)) * rateComp;
                 punchIn = punch;
               }
@@ -318,9 +338,10 @@ class CombustionExcitationProcessor extends AudioWorkletProcessor {
         }
         this.crankPhaseDegrees = next;
         // Mild collector stereo from independent bank energy (geometry ≠ final cabin mix).
-        this._collectorPan = collector0 + collector1 > 1e-8
-          ? (collector1 - collector0) / (collector0 + collector1 + 1e-8)
-          : 0;
+        this._collectorPan =
+          collector0 + collector1 > 1e-8
+            ? (collector1 - collector0) / (collector0 + collector1 + 1e-8)
+            : 0;
       } else {
         // Legacy aggregate impulse train
         const phaseIncBase = firingHz / sampleRate;
