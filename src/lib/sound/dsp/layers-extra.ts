@@ -85,14 +85,18 @@ export function createHeartbeatLayer(ctx: BaseAudioContext, opts: LayerBaseOpts)
    * felt weight. Smooth 18 ms attack and exponential tail → no HF clicks.
    */
   function beat(at: number, tone: number, level: number, which: "lub" | "dub") {
-    const dur = which === "lub" ? 0.17 : 0.2;
+    const dur = which === "lub" ? 0.2 : 0.22;
     const lp = ctx.createBiquadFilter();
     lp.type = "lowpass";
     lp.frequency.value = 420;
     lp.Q.value = 0.5;
     const g = ctx.createGain();
+    // 22 ms linear attack, a short hold, then the tail. The hold lowers the
+    // crest factor so the catalog makeup limiter barely works (its 1 ms gain
+    // swings on the old needle-shaped beats produced HF ticks).
     g.gain.setValueAtTime(0.0001, at);
-    g.gain.exponentialRampToValueAtTime(Math.max(0.0002, level), at + 0.018);
+    g.gain.linearRampToValueAtTime(Math.max(0.0002, level), at + 0.022);
+    g.gain.setValueAtTime(Math.max(0.0002, level), at + dur * 0.42);
     g.gain.exponentialRampToValueAtTime(0.0001, at + dur);
     lp.connect(g);
     g.connect(bus);

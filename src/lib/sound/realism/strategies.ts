@@ -549,18 +549,21 @@ const baseStrategies: ProfileStrategy[] = [
           horses: 1,
           tone: 320,
           level: 0.28,
+          softOnset: true,
         }),
         createImpactLayer(ctx, {
           id: "cobbles",
           destination: buses.beds,
           kind: "cobble",
           level: 0.3,
+          softOnset: true,
         }),
         createCreakLayer(ctx, {
           id: "heavy-creak",
           destination: buses.accents,
           tone: 140,
           metal: true,
+          smooth: true,
           level: 0.16,
         }),
         createFilteredNoiseLayer(ctx, {
@@ -852,8 +855,10 @@ const baseStrategies: ProfileStrategy[] = [
         createResonantBodyLayer(ctx, {
           id: "rumble-body",
           destination: buses.body,
-          freqs: [85, 130, 185],
-          level: 0.32,
+          // Fundamental just under 60 Hz for weight, the rest 85–150 Hz where
+          // Tesla door speakers still play it as body.
+          freqs: [56, 88, 118, 150],
+          level: 0.56,
         }),
         createFilteredNoiseLayer(ctx, {
           id: "exhaust-hiss",
