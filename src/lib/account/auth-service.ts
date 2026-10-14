@@ -36,10 +36,7 @@ import {
   readPendingEmailOtp,
   savePendingEmailOtp,
 } from "@/lib/account/email-otp-pending";
-import {
-  EmailOtpProviderError,
-  getEmailOtpProvider,
-} from "@/lib/account/email-otp-provider";
+import { EmailOtpProviderError, getEmailOtpProvider } from "@/lib/account/email-otp-provider";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -87,6 +84,33 @@ export interface CompleteGoogleSignInResult extends CompleteGoogleSignInPublicRe
   sessionToken: string;
 }
 
+/** Write-through to Postgres (account_sessions) when DATABASE_URL is set. Never blocks sign-in. */
+async function persistSessionDurably(session: AccountSession): Promise<void> {
+  if (!process.env["DATABASE_URL"]) return;
+  try {
+    const { persistAccountSession } = await import("@/lib/admin/admin-store.server");
+    await persistAccountSession(session);
+  } catch (error) {
+    console.error(
+      "[account] session persist failed",
+      error instanceof Error ? error.message : error,
+    );
+  }
+}
+
+async function revokeSessionDurably(rawToken: string): Promise<void> {
+  if (!process.env["DATABASE_URL"]) return;
+  try {
+    const { revokeAccountSession } = await import("@/lib/admin/admin-store.server");
+    await revokeAccountSession(rawToken);
+  } catch (error) {
+    console.error(
+      "[account] session revoke failed",
+      error instanceof Error ? error.message : error,
+    );
+  }
+}
+
 function createSessionToken(): string {
   return createMagicLinkToken();
 }
@@ -111,6 +135,7 @@ export function createSessionFromVerifiedEmail(
     createdAt: now,
   };
   saveAccountSession(session);
+  void persistSessionDurably(session);
   return {
     sessionToken: mintAccountSessionTicket(session),
     userId,
@@ -163,7 +188,9 @@ export async function requestEmailOtp(input: {
     now,
   });
   if (!limited.ok) {
-    throw new Error(`Please wait ${secondsRemaining(limited.retryAfterMs)}s before requesting another code.`);
+    throw new Error(
+      `Please wait ${secondsRemaining(limited.retryAfterMs)}s before requesting another code.`,
+    );
   }
 
   savePendingEmailOtp(normalized, input.returnTo ?? "/drive", now);
@@ -208,7 +235,9 @@ export async function verifyEmailOtp(input: {
 
   const limited = assertEmailOtpVerifyAllowed({ email: normalized, now });
   if (!limited.ok) {
-    throw new Error(`Too many attempts. Wait ${secondsRemaining(limited.retryAfterMs)}s and try again.`);
+    throw new Error(
+      `Too many attempts. Wait ${secondsRemaining(limited.retryAfterMs)}s and try again.`,
+    );
   }
 
   try {
@@ -225,7 +254,10 @@ export async function verifyEmailOtp(input: {
     if (error instanceof EmailOtpProviderError && error.code === "invalid_or_expired") {
       throw new Error("That code is invalid or has expired.");
     }
-    if (error instanceof Error && /six-digit|valid email|not configured|Too many/i.test(error.message)) {
+    if (
+      error instanceof Error &&
+      /six-digit|valid email|not configured|Too many/i.test(error.message)
+    ) {
       throw error;
     }
     throw new Error("That code is invalid or has expired.");
@@ -337,7 +369,10 @@ export function requireAccountSession(sessionToken: string, now = Date.now()): A
 
 export function signOutAccount(sessionToken: string): void {
   const session = getAccountSession(sessionToken);
-  if (session) deleteAccountSession(session.token);
+  if (session) {
+    deleteAccountSession(session.token);
+    void revokeSessionDurably(session.token);
+  }
   deleteAccountSession(sessionToken);
 }
 

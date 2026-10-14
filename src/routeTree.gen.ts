@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AboutRouteImport } from './routes/about'
+import { Route as AdminRouteImport } from './routes/admin'
 import { Route as CalibrateRouteImport } from './routes/calibrate'
 import { Route as DebugRouteImport } from './routes/debug'
 import { Route as DemoRouteImport } from './routes/demo'
@@ -53,6 +54,7 @@ import { Route as LegalPrivacyRouteImport } from './routes/legal/privacy'
 import { Route as LegalTermsRouteImport } from './routes/legal/terms'
 import { Route as PairTokenRouteImport } from './routes/pair_.$token'
 import { Route as UpgradeTokenRouteImport } from './routes/upgrade.$token'
+import { Route as ApiAdminMeRouteImport } from './routes/api/admin/me'
 import { Route as ApiBillingCheckoutRouteImport } from './routes/api/billing/checkout'
 import { Route as ApiBillingPortalRouteImport } from './routes/api/billing/portal'
 import { Route as ApiSoundAssetsDeliveryRouteImport } from './routes/api/sound-assets/delivery'
@@ -72,6 +74,11 @@ const IndexRoute = IndexRouteImport.update({
 const AboutRoute = AboutRouteImport.update({
   id: '/about',
   path: '/about',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminRoute = AdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CalibrateRoute = CalibrateRouteImport.update({
@@ -284,6 +291,11 @@ const UpgradeTokenRoute = UpgradeTokenRouteImport.update({
   path: '/upgrade/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAdminMeRoute = ApiAdminMeRouteImport.update({
+  id: '/api/admin/me',
+  path: '/api/admin/me',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiBillingCheckoutRoute = ApiBillingCheckoutRouteImport.update({
   id: '/api/billing/checkout',
   path: '/api/billing/checkout',
@@ -340,6 +352,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/legal': typeof LegalRouteRouteWithChildren
   '/about': typeof AboutRoute
+  '/admin': typeof AdminRoute
   '/calibrate': typeof CalibrateRoute
   '/debug': typeof DebugRouteWithChildren
   '/demo': typeof DemoRoute
@@ -381,6 +394,7 @@ export interface FileRoutesByFullPath {
   '/pair/$token': typeof PairTokenRoute
   '/upgrade/$token': typeof UpgradeTokenRoute
   '/legal/': typeof LegalIndexRoute
+  '/api/admin/me': typeof ApiAdminMeRoute
   '/api/billing/checkout': typeof ApiBillingCheckoutRoute
   '/api/billing/portal': typeof ApiBillingPortalRoute
   '/api/sound-assets/delivery': typeof ApiSoundAssetsDeliveryRoute
@@ -395,6 +409,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/admin': typeof AdminRoute
   '/calibrate': typeof CalibrateRoute
   '/debug': typeof DebugRouteWithChildren
   '/demo': typeof DemoRoute
@@ -436,6 +451,7 @@ export interface FileRoutesByTo {
   '/pair/$token': typeof PairTokenRoute
   '/upgrade/$token': typeof UpgradeTokenRoute
   '/legal': typeof LegalIndexRoute
+  '/api/admin/me': typeof ApiAdminMeRoute
   '/api/billing/checkout': typeof ApiBillingCheckoutRoute
   '/api/billing/portal': typeof ApiBillingPortalRoute
   '/api/sound-assets/delivery': typeof ApiSoundAssetsDeliveryRoute
@@ -452,6 +468,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/legal': typeof LegalRouteRouteWithChildren
   '/about': typeof AboutRoute
+  '/admin': typeof AdminRoute
   '/calibrate': typeof CalibrateRoute
   '/debug': typeof DebugRouteWithChildren
   '/demo': typeof DemoRoute
@@ -493,6 +510,7 @@ export interface FileRoutesById {
   '/pair_/$token': typeof PairTokenRoute
   '/upgrade/$token': typeof UpgradeTokenRoute
   '/legal/': typeof LegalIndexRoute
+  '/api/admin/me': typeof ApiAdminMeRoute
   '/api/billing/checkout': typeof ApiBillingCheckoutRoute
   '/api/billing/portal': typeof ApiBillingPortalRoute
   '/api/sound-assets/delivery': typeof ApiSoundAssetsDeliveryRoute
@@ -510,6 +528,7 @@ export interface FileRouteTypes {
     | '/'
     | '/legal'
     | '/about'
+    | '/admin'
     | '/calibrate'
     | '/debug'
     | '/demo'
@@ -551,6 +570,7 @@ export interface FileRouteTypes {
     | '/pair/$token'
     | '/upgrade/$token'
     | '/legal/'
+    | '/api/admin/me'
     | '/api/billing/checkout'
     | '/api/billing/portal'
     | '/api/sound-assets/delivery'
@@ -565,6 +585,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/about'
+    | '/admin'
     | '/calibrate'
     | '/debug'
     | '/demo'
@@ -606,6 +627,7 @@ export interface FileRouteTypes {
     | '/pair/$token'
     | '/upgrade/$token'
     | '/legal'
+    | '/api/admin/me'
     | '/api/billing/checkout'
     | '/api/billing/portal'
     | '/api/sound-assets/delivery'
@@ -621,6 +643,7 @@ export interface FileRouteTypes {
     | '/'
     | '/legal'
     | '/about'
+    | '/admin'
     | '/calibrate'
     | '/debug'
     | '/demo'
@@ -662,6 +685,7 @@ export interface FileRouteTypes {
     | '/pair_/$token'
     | '/upgrade/$token'
     | '/legal/'
+    | '/api/admin/me'
     | '/api/billing/checkout'
     | '/api/billing/portal'
     | '/api/sound-assets/delivery'
@@ -678,6 +702,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   LegalRouteRoute: typeof LegalRouteRouteWithChildren
   AboutRoute: typeof AboutRoute
+  AdminRoute: typeof AdminRoute
   CalibrateRoute: typeof CalibrateRoute
   DebugRoute: typeof DebugRouteWithChildren
   DemoRoute: typeof DemoRoute
@@ -704,6 +729,7 @@ export interface RootRouteChildren {
   ConnectSessionIdRoute: typeof ConnectSessionIdRoute
   PairTokenRoute: typeof PairTokenRoute
   UpgradeTokenRoute: typeof UpgradeTokenRoute
+  ApiAdminMeRoute: typeof ApiAdminMeRoute
   ApiBillingCheckoutRoute: typeof ApiBillingCheckoutRoute
   ApiBillingPortalRoute: typeof ApiBillingPortalRoute
   ApiSoundAssetsDeliveryRoute: typeof ApiSoundAssetsDeliveryRoute
@@ -728,6 +754,13 @@ declare module '@tanstack/react-router' {
       path: '/about'
       fullPath: '/about'
       preLoaderRoute: typeof AboutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/calibrate': {
@@ -1024,6 +1057,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof UpgradeTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/admin/me': {
+      id: '/api/admin/me'
+      path: '/api/admin/me'
+      fullPath: '/api/admin/me'
+      preLoaderRoute: typeof ApiAdminMeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/billing/checkout': {
       id: '/api/billing/checkout'
       path: '/api/billing/checkout'
@@ -1179,6 +1219,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   LegalRouteRoute: LegalRouteRouteWithChildren,
   AboutRoute: AboutRoute,
+  AdminRoute: AdminRoute,
   CalibrateRoute: CalibrateRoute,
   DebugRoute: DebugRouteWithChildren,
   DemoRoute: DemoRoute,
@@ -1205,6 +1246,7 @@ const rootRouteChildren: RootRouteChildren = {
   ConnectSessionIdRoute: ConnectSessionIdRoute,
   PairTokenRoute: PairTokenRoute,
   UpgradeTokenRoute: UpgradeTokenRoute,
+  ApiAdminMeRoute: ApiAdminMeRoute,
   ApiBillingCheckoutRoute: ApiBillingCheckoutRoute,
   ApiBillingPortalRoute: ApiBillingPortalRoute,
   ApiSoundAssetsDeliveryRoute: ApiSoundAssetsDeliveryRoute,

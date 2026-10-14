@@ -1,6 +1,7 @@
 import { relations, sql } from "drizzle-orm";
 import {
   boolean,
+  index,
   integer,
   jsonb,
   pgEnum,
@@ -29,12 +30,15 @@ export const billingPlanEnum = pgEnum("billing_plan", ["FREE", "DRIVE_PLUS"]);
 
 export const billingIntervalEnum = pgEnum("billing_interval", ["month", "year"]);
 
+export const userRoleEnum = pgEnum("user_role", ["user", "admin"]);
+
 export const users = pgTable(
   "users",
   {
     id: uuid("id").primaryKey().defaultRandom(),
     email: text("email"),
     stripeCustomerId: text("stripe_customer_id"),
+    role: userRoleEnum("role").notNull().default("user"),
     createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" })
       .notNull()
@@ -407,3 +411,37 @@ export const rewardCockpitThemes = pgTable(
 
 export type RewardClaimRow = typeof rewardClaims.$inferSelect;
 export type RewardDiscountReservationRow = typeof rewardDiscountReservations.$inferSelect;
+
+/** Durable account sessions (hash of the opaque session token, never the raw token). */
+export const accountSessions = pgTable(
+  "account_sessions",
+  {
+    tokenHash: text("token_hash").primaryKey(),
+    userId: text("user_id").notNull(),
+    email: text("email").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+    expiresAt: timestamp("expires_at", { withTimezone: true, mode: "date" }).notNull(),
+    revokedAt: timestamp("revoked_at", { withTimezone: true, mode: "date" }),
+    lastSeenAt: timestamp("last_seen_at", { withTimezone: true, mode: "date" }),
+  },
+  (table) => [index("account_sessions_user_id_idx").on(table.userId)],
+);
+
+/** Append-only log of admin actions. */
+export const adminAuditLog = pgTable(
+  "admin_audit_log",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    adminUserId: text("admin_user_id").notNull(),
+    adminEmail: text("admin_email").notNull(),
+    action: text("action").notNull(),
+    target: text("target"),
+    before: jsonb("before"),
+    after: jsonb("after"),
+    at: timestamp("at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+  },
+  (table) => [index("admin_audit_log_at_idx").on(table.at)],
+);
+
+export type AccountSessionRow = typeof accountSessions.$inferSelect;
+export type AdminAuditLogRow = typeof adminAuditLog.$inferSelect;
