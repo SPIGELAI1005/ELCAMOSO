@@ -1,0 +1,741 @@
+{
+  "version": 1,
+  "generator": "elcamoso_samples/generate_all.py",
+  "sampleRateHz": 48000,
+  "bitDepth": 16,
+  "channelFormat": "mono",
+  "profiles": [
+    {
+      "profileId": "ambient",
+      "manifest": "ambient/manifest.json",
+      "quality": "good",
+      "qualityNote": "",
+      "loops": 10,
+      "oneShots": 3,
+      "entryQuality": {
+        "good": 13
+      },
+      "demoReel": "demo_reels/ambient.mp3"
+    },
+    {
+      "profileId": "american-muscle-v8",
+      "manifest": "american-muscle-v8/manifest.json",
+      "quality": "good",
+      "qualityNote": "Physical firing-order synthesis.",
+      "loops": 22,
+      "oneShots": 23,
+      "entryQuality": {
+        "good": 45
+      },
+      "demoReel": "demo_reels/american-muscle-v8.mp3"
+    },
+    {
+      "profileId": "big-twin",
+      "manifest": "big-twin/manifest.json",
+      "quality": "approximate",
+      "qualityNote": "Physical firing-order synthesis.",
+      "loops": 22,
+      "oneShots": 23,
+      "entryQuality": {
+        "approximate": 45
+      },
+      "demoReel": "demo_reels/big-twin.mp3"
+    },
+    {
+      "profileId": "construction-monster",
+      "manifest": "construction-monster/manifest.json",
+      "quality": "approximate",
+      "qualityNote": "",
+      "loops": 5,
+      "oneShots": 8,
+      "entryQuality": {
+        "approximate": 13
+      },
+      "demoReel": "demo_reels/construction-monster.mp3"
+    },
+    {
+      "profileId": "cruise-ship",
+      "manifest": "cruise-ship/manifest.json",
+      "quality": "approximate",
+      "qualityNote": "",
+      "loops": 7,
+      "oneShots": 5,
+      "entryQuality": {
+        "approximate": 12
+      },
+      "demoReel": "demo_reels/cruise-ship.mp3"
+    },
+    {
+      "profileId": "cyber-pulse",
+      "manifest": "cyber-pulse/manifest.json",
+      "quality": "approximate",
+      "qualityNote": "",
+      "loops": 8,
+      "oneShots": 6,
+      "entryQuality": {
+        "approximate": 14
+      },
+      "demoReel": "demo_reels/cyber-pulse.mp3"
+    },
+    {
+      "profileId": "deep-bass-pulse",
+      "manifest": "deep-bass-pulse/manifest.json",
+      "quality": "good",
+      "qualityNote": "LF share capped at 20 % by the 70 Hz guard; carried by 90/135 Hz harmonics.",
+      "loops": 7,
+      "oneShots": 4,
+      "entryQuality": {
+        "good": 11
+      },
+      "demoReel": "demo_reels/deep-bass-pulse.mp3"
+    },
+    {
+      "profileId": "dragon",
+      "manifest": "dragon/manifest.json",
+      "quality": "approximate",
+      "qualityNote": "Creature voice is stylized.",
+      "loops": 7,
+      "oneShots": 10,
+      "entryQuality": {
+        "approximate": 17
+      },
+      "demoReel": "demo_reels/dragon.mp3"
+    },
+    {
+      "profileId": "electric-hypercar",
+      "manifest": "electric-hypercar/manifest.json",
+      "quality": "good",
+      "qualityNote": "2-speed Taycan-style gearing, motor orders 4/8/12 + 31-tooth mesh.",
+      "loops": 11,
+      "oneShots": 10,
+      "entryQuality": {
+        "good": 21
+      },
+      "demoReel": "demo_reels/electric-hypercar.mp3"
+    },
+    {
+      "profileId": "farting-car",
+      "manifest": "farting-car/manifest.json",
+      "quality": "approximate",
+      "qualityNote": "",
+      "loops": 7,
+      "oneShots": 10,
+      "entryQuality": {
+        "approximate": 17
+      },
+      "demoReel": "demo_reels/farting-car.mp3"
+    },
+    {
+      "profileId": "flat-six-sport",
+      "manifest": "flat-six-sport/manifest.json",
+      "quality": "good",
+      "qualityNote": "Physical firing-order synthesis.",
+      "loops": 22,
+      "oneShots": 23,
+      "entryQuality": {
+        "good": 45
+      },
+      "demoReel": "demo_reels/flat-six-sport.mp3"
+    },
+    {
+      "profileId": "formula-electric",
+      "manifest": "formula-electric/manifest.json",
+      "quality": "good",
+      "qualityNote": "",
+      "loops": 11,
+      "oneShots": 8,
+      "entryQuality": {
+        "good": 19
+      },
+      "demoReel": "demo_reels/formula-electric.mp3"
+    },
+    {
+      "profileId": "fusion-future-pulse",
+      "manifest": "fusion-future-pulse/manifest.json",
+      "quality": "approximate",
+      "qualityNote": "Stylized synthesized music bed; real app stems are richer.",
+      "loops": 7,
+      "oneShots": 2,
+      "entryQuality": {
+        "approximate": 9
+      },
+      "demoReel": "demo_reels/fusion-future-pulse.mp3"
+    },
+    {
+      "profileId": "fusion-mechanical-symphony",
+      "manifest": "fusion-mechanical-symphony/manifest.json",
+      "quality": "approximate",
+      "qualityNote": "Stylized synthesized music bed; real app stems are richer.",
+      "loops": 7,
+      "oneShots": 2,
+      "entryQuality": {
+        "approximate": 9
+      },
+      "demoReel": "demo_reels/fusion-mechanical-symphony.mp3"
+    },
+    {
+      "profileId": "fusion-midnight-boost",
+      "manifest": "fusion-midnight-boost/manifest.json",
+      "quality": "approximate",
+      "qualityNote": "Stylized synthesized music bed; real app stems are richer.",
+      "loops": 7,
+      "oneShots": 2,
+      "entryQuality": {
+        "approximate": 9
+      },
+      "demoReel": "demo_reels/fusion-midnight-boost.mp3"
+    },
+    {
+      "profileId": "fusion-road-anthem",
+      "manifest": "fusion-road-anthem/manifest.json",
+      "quality": "approximate",
+      "qualityNote": "V8 machine layer + rock-ish bed.",
+      "loops": 7,
+      "oneShots": 2,
+      "entryQuality": {
+        "approximate": 9
+      },
+      "demoReel": "demo_reels/fusion-road-anthem.mp3"
+    },
+    {
+      "profileId": "gt-v8",
+      "manifest": "gt-v8/manifest.json",
+      "quality": "good",
+      "qualityNote": "Physical firing-order synthesis.",
+      "loops": 22,
+      "oneShots": 23,
+      "entryQuality": {
+        "good": 45
+      },
+      "demoReel": "demo_reels/gt-v8.mp3"
+    },
+    {
+      "profileId": "heartbeat",
+      "manifest": "heartbeat/manifest.json",
+      "quality": "approximate",
+      "qualityNote": "Loop length is matched at d=0.5; idle/pull loops use the same length (slight tempo rounding).",
+      "loops": 5,
+      "oneShots": 3,
+      "entryQuality": {
+        "approximate": 8
+      },
+      "demoReel": "demo_reels/heartbeat.mp3"
+    },
+    {
+      "profileId": "helicopter",
+      "manifest": "helicopter/manifest.json",
+      "quality": "approximate",
+      "qualityNote": "",
+      "loops": 7,
+      "oneShots": 5,
+      "entryQuality": {
+        "approximate": 12
+      },
+      "demoReel": "demo_reels/helicopter.mp3"
+    },
+    {
+      "profileId": "high-speed-train",
+      "manifest": "high-speed-train/manifest.json",
+      "quality": "approximate",
+      "qualityNote": "",
+      "loops": 8,
+      "oneShots": 7,
+      "entryQuality": {
+        "approximate": 15
+      },
+      "demoReel": "demo_reels/high-speed-train.mp3"
+    },
+    {
+      "profileId": "horse-gallop",
+      "manifest": "horse-gallop/manifest.json",
+      "quality": "approximate",
+      "qualityNote": "Hoof/gait rhythm good; breath/snort/lip-flutter/neigh are synthesized vocal approximations (neigh: needs-recording for realism). v2 (13 Oct): asphalt shod-hoof model, humanized gaits, modal bells. v2 (13 Oct): asphalt shod-hoof model, humanized gaits, modal bells. v2 (13 Oct): asphalt shod-hoof model, humanized gaits, modal bells.",
+      "loops": 18,
+      "oneShots": 31,
+      "entryQuality": {
+        "approximate": 33,
+        "needs-recording": 3,
+        "good": 13
+      },
+      "demoReel": "demo_reels/horse-gallop.mp3"
+    },
+    {
+      "profileId": "jet-ski",
+      "manifest": "jet-ski/manifest.json",
+      "quality": "approximate",
+      "qualityNote": "",
+      "loops": 8,
+      "oneShots": 7,
+      "entryQuality": {
+        "approximate": 15
+      },
+      "demoReel": "demo_reels/jet-ski.mp3"
+    },
+    {
+      "profileId": "kazoo-kart",
+      "manifest": "kazoo-kart/manifest.json",
+      "quality": "good",
+      "qualityNote": "A kazoo is buzz+comb formant; synthesis is convincing.",
+      "loops": 7,
+      "oneShots": 5,
+      "entryQuality": {
+        "good": 12
+      },
+      "demoReel": "demo_reels/kazoo-kart.mp3"
+    },
+    {
+      "profileId": "laughing-machine",
+      "manifest": "laughing-machine/manifest.json",
+      "quality": "needs-recording",
+      "qualityNote": "Formant-synth laugh is clearly artificial.",
+      "loops": 5,
+      "oneShots": 10,
+      "entryQuality": {
+        "needs-recording": 15
+      },
+      "demoReel": "demo_reels/laughing-machine.mp3"
+    },
+    {
+      "profileId": "maglev-train",
+      "manifest": "maglev-train/manifest.json",
+      "quality": "approximate",
+      "qualityNote": "No wheel/rail joints by design.",
+      "loops": 7,
+      "oneShots": 5,
+      "entryQuality": {
+        "approximate": 12
+      },
+      "demoReel": "demo_reels/maglev-train.mp3"
+    },
+    {
+      "profileId": "motorcycle-superbike",
+      "manifest": "motorcycle-superbike/manifest.json",
+      "quality": "good",
+      "qualityNote": "Physical firing-order synthesis.",
+      "loops": 22,
+      "oneShots": 23,
+      "entryQuality": {
+        "good": 45
+      },
+      "demoReel": "demo_reels/motorcycle-superbike.mp3"
+    },
+    {
+      "profileId": "neon-drive",
+      "manifest": "neon-drive/manifest.json",
+      "quality": "approximate",
+      "qualityNote": "Stylized synthesized music bed; real app stems are richer.",
+      "loops": 7,
+      "oneShots": 4,
+      "entryQuality": {
+        "approximate": 11
+      },
+      "demoReel": "demo_reels/neon-drive.mp3"
+    },
+    {
+      "profileId": "ocean-drive",
+      "manifest": "ocean-drive/manifest.json",
+      "quality": "good",
+      "qualityNote": "",
+      "loops": 5,
+      "oneShots": 5,
+      "entryQuality": {
+        "good": 10
+      },
+      "demoReel": "demo_reels/ocean-drive.mp3"
+    },
+    {
+      "profileId": "open-wind",
+      "manifest": "open-wind/manifest.json",
+      "quality": "good",
+      "qualityNote": "",
+      "loops": 7,
+      "oneShots": 5,
+      "entryQuality": {
+        "good": 12
+      },
+      "demoReel": "demo_reels/open-wind.mp3"
+    },
+    {
+      "profileId": "private-jet",
+      "manifest": "private-jet/manifest.json",
+      "quality": "good",
+      "qualityNote": "Heard from cabin (LPF 2 kHz).",
+      "loops": 5,
+      "oneShots": 5,
+      "entryQuality": {
+        "good": 10
+      },
+      "demoReel": "demo_reels/private-jet.mp3"
+    },
+    {
+      "profileId": "race-car",
+      "manifest": "race-car/manifest.json",
+      "quality": "good",
+      "qualityNote": "Physical firing-order synthesis.",
+      "loops": 22,
+      "oneShots": 23,
+      "entryQuality": {
+        "good": 45
+      },
+      "demoReel": "demo_reels/race-car.mp3"
+    },
+    {
+      "profileId": "racing-v10",
+      "manifest": "racing-v10/manifest.json",
+      "quality": "good",
+      "qualityNote": "Physical firing-order synthesis.",
+      "loops": 22,
+      "oneShots": 23,
+      "entryQuality": {
+        "good": 45
+      },
+      "demoReel": "demo_reels/racing-v10.mp3"
+    },
+    {
+      "profileId": "rain-drive",
+      "manifest": "rain-drive/manifest.json",
+      "quality": "good",
+      "qualityNote": "",
+      "loops": 7,
+      "oneShots": 7,
+      "entryQuality": {
+        "good": 14
+      },
+      "demoReel": "demo_reels/rain-drive.mp3"
+    },
+    {
+      "profileId": "rally-car",
+      "manifest": "rally-car/manifest.json",
+      "quality": "approximate",
+      "qualityNote": "Physical firing-order synthesis.",
+      "loops": 22,
+      "oneShots": 26,
+      "entryQuality": {
+        "approximate": 48
+      },
+      "demoReel": "demo_reels/rally-car.mp3"
+    },
+    {
+      "profileId": "retro-arcade",
+      "manifest": "retro-arcade/manifest.json",
+      "quality": "good",
+      "qualityNote": "Chiptune is inherently synthetic.",
+      "loops": 8,
+      "oneShots": 7,
+      "entryQuality": {
+        "good": 15
+      },
+      "demoReel": "demo_reels/retro-arcade.mp3"
+    },
+    {
+      "profileId": "romanian-85-carriage",
+      "manifest": "romanian-85-carriage/manifest.json",
+      "quality": "approximate",
+      "qualityNote": "Single horse, iron rims on cobbles. v2 (13 Oct): asphalt shod-hoof model, humanized gaits, modal bells. v2 (13 Oct): asphalt shod-hoof model, humanized gaits, modal bells. v2 (13 Oct): asphalt shod-hoof model, humanized gaits, modal bells.",
+      "loops": 13,
+      "oneShots": 24,
+      "entryQuality": {
+        "approximate": 25,
+        "good": 12
+      },
+      "demoReel": "demo_reels/romanian-85-carriage.mp3"
+    },
+    {
+      "profileId": "santa-sleigh",
+      "manifest": "santa-sleigh/manifest.json",
+      "quality": "approximate",
+      "qualityNote": "Ho-ho-ho is formant-synthesized (needs-recording for natural voice). v2 (13 Oct): asphalt shod-hoof model, humanized gaits, modal bells. v2 (13 Oct): asphalt shod-hoof model, humanized gaits, modal bells. v2 (13 Oct): asphalt shod-hoof model, humanized gaits, modal bells.",
+      "loops": 6,
+      "oneShots": 15,
+      "entryQuality": {
+        "approximate": 13,
+        "good": 8
+      },
+      "demoReel": "demo_reels/santa-sleigh.mp3"
+    },
+    {
+      "profileId": "signature",
+      "manifest": "signature/manifest.json",
+      "quality": "approximate",
+      "qualityNote": "",
+      "loops": 4,
+      "oneShots": 2,
+      "entryQuality": {
+        "approximate": 6
+      },
+      "demoReel": "demo_reels/signature.mp3"
+    },
+    {
+      "profileId": "snowmobile",
+      "manifest": "snowmobile/manifest.json",
+      "quality": "approximate",
+      "qualityNote": "2-stroke twin + CVT hold.",
+      "loops": 7,
+      "oneShots": 6,
+      "entryQuality": {
+        "approximate": 13
+      },
+      "demoReel": "demo_reels/snowmobile.mp3"
+    },
+    {
+      "profileId": "space-ship",
+      "manifest": "space-ship/manifest.json",
+      "quality": "approximate",
+      "qualityNote": "",
+      "loops": 7,
+      "oneShots": 8,
+      "entryQuality": {
+        "approximate": 15
+      },
+      "demoReel": "demo_reels/space-ship.mp3"
+    },
+    {
+      "profileId": "speed-boat",
+      "manifest": "speed-boat/manifest.json",
+      "quality": "approximate",
+      "qualityNote": "",
+      "loops": 8,
+      "oneShots": 7,
+      "entryQuality": {
+        "approximate": 15
+      },
+      "demoReel": "demo_reels/speed-boat.mp3"
+    },
+    {
+      "profileId": "steam-train",
+      "manifest": "steam-train/manifest.json",
+      "quality": "approximate",
+      "qualityNote": "",
+      "loops": 7,
+      "oneShots": 7,
+      "entryQuality": {
+        "approximate": 14
+      },
+      "demoReel": "demo_reels/steam-train.mp3"
+    },
+    {
+      "profileId": "storm-glider",
+      "manifest": "storm-glider/manifest.json",
+      "quality": "good",
+      "qualityNote": "",
+      "loops": 7,
+      "oneShots": 5,
+      "entryQuality": {
+        "good": 12
+      },
+      "demoReel": "demo_reels/storm-glider.mp3"
+    },
+    {
+      "profileId": "submarine",
+      "manifest": "submarine/manifest.json",
+      "quality": "approximate",
+      "qualityNote": "",
+      "loops": 7,
+      "oneShots": 8,
+      "entryQuality": {
+        "approximate": 15
+      },
+      "demoReel": "demo_reels/submarine.mp3"
+    },
+    {
+      "profileId": "symphony-cinematic-rock",
+      "manifest": "symphony-cinematic-rock/manifest.json",
+      "quality": "approximate",
+      "qualityNote": "Stylized rock bed (distorted saw power chords, drums); no real guitar.",
+      "loops": 7,
+      "oneShots": 4,
+      "entryQuality": {
+        "approximate": 11
+      },
+      "demoReel": "demo_reels/symphony-cinematic-rock.mp3"
+    },
+    {
+      "profileId": "symphony-motion-orchestra",
+      "manifest": "symphony-motion-orchestra/manifest.json",
+      "quality": "approximate",
+      "qualityNote": "Synth-string orchestral approximation; needs-recording for true orchestra.",
+      "loops": 7,
+      "oneShots": 5,
+      "entryQuality": {
+        "approximate": 12
+      },
+      "demoReel": "demo_reels/symphony-motion-orchestra.mp3"
+    },
+    {
+      "profileId": "symphony-neon-run",
+      "manifest": "symphony-neon-run/manifest.json",
+      "quality": "approximate",
+      "qualityNote": "Stylized synthesized music bed; real app stems are richer.",
+      "loops": 7,
+      "oneShots": 2,
+      "entryQuality": {
+        "approximate": 9
+      },
+      "demoReel": "demo_reels/symphony-neon-run.mp3"
+    },
+    {
+      "profileId": "synthwave-drive",
+      "manifest": "synthwave-drive/manifest.json",
+      "quality": "approximate",
+      "qualityNote": "Stylized synthesized music bed; real app stems are richer.",
+      "loops": 7,
+      "oneShots": 4,
+      "entryQuality": {
+        "approximate": 11
+      },
+      "demoReel": "demo_reels/synthwave-drive.mp3"
+    },
+    {
+      "profileId": "tank",
+      "manifest": "tank/manifest.json",
+      "quality": "approximate",
+      "qualityNote": "Diesel V12 + track clank.",
+      "loops": 8,
+      "oneShots": 7,
+      "entryQuality": {
+        "approximate": 15
+      },
+      "demoReel": "demo_reels/tank.mp3"
+    },
+    {
+      "profileId": "thunder-beast",
+      "manifest": "thunder-beast/manifest.json",
+      "quality": "approximate",
+      "qualityNote": "",
+      "loops": 7,
+      "oneShots": 7,
+      "entryQuality": {
+        "approximate": 14
+      },
+      "demoReel": "demo_reels/thunder-beast.mp3"
+    },
+    {
+      "profileId": "turbine-jet",
+      "manifest": "turbine-jet/manifest.json",
+      "quality": "good",
+      "qualityNote": "",
+      "loops": 5,
+      "oneShots": 4,
+      "entryQuality": {
+        "good": 9
+      },
+      "demoReel": "demo_reels/turbine-jet.mp3"
+    },
+    {
+      "profileId": "turbo-inline-6",
+      "manifest": "turbo-inline-6/manifest.json",
+      "quality": "good",
+      "qualityNote": "Physical firing-order synthesis.",
+      "loops": 22,
+      "oneShots": 26,
+      "entryQuality": {
+        "good": 48
+      },
+      "demoReel": "demo_reels/turbo-inline-6.mp3"
+    },
+    {
+      "profileId": "ufo",
+      "manifest": "ufo/manifest.json",
+      "quality": "good",
+      "qualityNote": "Theremin-style sine; inherently synthetic.",
+      "loops": 7,
+      "oneShots": 6,
+      "entryQuality": {
+        "good": 13
+      },
+      "demoReel": "demo_reels/ufo.mp3"
+    },
+    {
+      "profileId": "ui",
+      "manifest": "ui/manifest.json",
+      "quality": "good",
+      "qualityNote": "",
+      "loops": 0,
+      "oneShots": 7,
+      "entryQuality": {
+        "good": 7
+      },
+      "demoReel": "demo_reels/ui.mp3"
+    },
+    {
+      "profileId": "wiesn-tractor",
+      "manifest": "wiesn-tractor/manifest.json",
+      "quality": "approximate",
+      "qualityNote": "Lanz-Bulldog style single cylinder, one bang per rev.",
+      "loops": 13,
+      "oneShots": 7,
+      "entryQuality": {
+        "approximate": 20
+      },
+      "demoReel": "demo_reels/wiesn-tractor.mp3"
+    },
+    {
+      "profileId": "wild-west-carriage",
+      "manifest": "wild-west-carriage/manifest.json",
+      "quality": "approximate",
+      "qualityNote": "Two-horse team + wooden wheel creak. v2 (13 Oct): asphalt shod-hoof model, humanized gaits, modal bells. v2 (13 Oct): asphalt shod-hoof model, humanized gaits, modal bells. v2 (13 Oct): asphalt shod-hoof model, humanized gaits, modal bells.",
+      "loops": 13,
+      "oneShots": 31,
+      "entryQuality": {
+        "approximate": 32,
+        "good": 12
+      },
+      "demoReel": "demo_reels/wild-west-carriage.mp3"
+    },
+    {
+      "profileId": "world-cyber-city",
+      "manifest": "world-cyber-city/manifest.json",
+      "quality": "approximate",
+      "qualityNote": "Stylized synthesized music bed; real app stems are richer.",
+      "loops": 7,
+      "oneShots": 2,
+      "entryQuality": {
+        "approximate": 9
+      },
+      "demoReel": "demo_reels/world-cyber-city.mp3"
+    },
+    {
+      "profileId": "world-space-drive",
+      "manifest": "world-space-drive/manifest.json",
+      "quality": "approximate",
+      "qualityNote": "Stylized synthesized music bed; real app stems are richer.",
+      "loops": 7,
+      "oneShots": 2,
+      "entryQuality": {
+        "approximate": 9
+      },
+      "demoReel": "demo_reels/world-space-drive.mp3"
+    },
+    {
+      "profileId": "world-storm-run",
+      "manifest": "world-storm-run/manifest.json",
+      "quality": "approximate",
+      "qualityNote": "Stylized synthesized music bed; real app stems are richer.",
+      "loops": 7,
+      "oneShots": 5,
+      "entryQuality": {
+        "approximate": 12
+      },
+      "demoReel": "demo_reels/world-storm-run.mp3"
+    },
+    {
+      "profileId": "zen-drive",
+      "manifest": "zen-drive/manifest.json",
+      "quality": "good",
+      "qualityNote": "",
+      "loops": 5,
+      "oneShots": 8,
+      "entryQuality": {
+        "good": 13
+      },
+      "demoReel": "demo_reels/zen-drive.mp3"
+    }
+  ],
+  "totals": {
+    "profiles": 60,
+    "files": 1150,
+    "deliveryBytes": 74670552,
+    "sourceWavBytes": 0
+  },
+  "deliveryFormat": "aac-lc m4a 128 kbps mono 48 kHz"
+}
