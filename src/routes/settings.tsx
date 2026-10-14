@@ -183,6 +183,13 @@ function Settings() {
           Open a group to change sound, driving, sensors, privacy or about.
         </p>
 
+        <Link
+          to="/recorder"
+          className="mt-5 block rounded-xl border border-border px-4 py-3 text-base font-medium hover:bg-secondary"
+        >
+          ● Drive sensor recorder (road test) →
+        </Link>
+
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}

@@ -24,6 +24,7 @@ import { Route as LegalRouteRouteImport } from './routes/legal/route'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as PairRouteImport } from './routes/pair'
 import { Route as PricingRouteImport } from './routes/pricing'
+import { Route as RecorderRouteImport } from './routes/recorder'
 import { Route as ReplayRouteImport } from './routes/replay'
 import { Route as RewardsRouteImport } from './routes/rewards'
 import { Route as ScienceRouteImport } from './routes/science'
@@ -35,6 +36,7 @@ import { Route as StoryRouteImport } from './routes/story'
 import { Route as StudioRouteImport } from './routes/studio'
 import { Route as SymphonyRouteImport } from './routes/symphony'
 import { Route as WorldsRouteImport } from './routes/worlds'
+import { Route as ApiDriveLogsRouteImport } from './routes/api/drive-logs'
 import { Route as ApiOgRouteImport } from './routes/api/og'
 import { Route as ConnectSessionIdRouteImport } from './routes/connect.$sessionId'
 import { Route as DebugAudioLabRouteImport } from './routes/debug.audio-lab'
@@ -141,6 +143,11 @@ const PricingRoute = PricingRouteImport.update({
   path: '/pricing',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RecorderRoute = RecorderRouteImport.update({
+  id: '/recorder',
+  path: '/recorder',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ReplayRoute = ReplayRouteImport.update({
   id: '/replay',
   path: '/replay',
@@ -194,6 +201,11 @@ const SymphonyRoute = SymphonyRouteImport.update({
 const WorldsRoute = WorldsRouteImport.update({
   id: '/worlds',
   path: '/worlds',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiDriveLogsRoute = ApiDriveLogsRouteImport.update({
+  id: '/api/drive-logs',
+  path: '/api/drive-logs',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiOgRoute = ApiOgRouteImport.update({
@@ -364,6 +376,7 @@ export interface FileRoutesByFullPath {
   '/onboarding': typeof OnboardingRoute
   '/pair': typeof PairRoute
   '/pricing': typeof PricingRoute
+  '/recorder': typeof RecorderRoute
   '/replay': typeof ReplayRoute
   '/rewards': typeof RewardsRoute
   '/science': typeof ScienceRoute
@@ -375,6 +388,7 @@ export interface FileRoutesByFullPath {
   '/studio': typeof StudioRoute
   '/symphony': typeof SymphonyRoute
   '/worlds': typeof WorldsRoute
+  '/api/drive-logs': typeof ApiDriveLogsRoute
   '/api/og': typeof ApiOgRouteWithChildren
   '/connect/$sessionId': typeof ConnectSessionIdRoute
   '/debug/audio-lab': typeof DebugAudioLabRoute
@@ -421,6 +435,7 @@ export interface FileRoutesByTo {
   '/onboarding': typeof OnboardingRoute
   '/pair': typeof PairRoute
   '/pricing': typeof PricingRoute
+  '/recorder': typeof RecorderRoute
   '/replay': typeof ReplayRoute
   '/rewards': typeof RewardsRoute
   '/science': typeof ScienceRoute
@@ -432,6 +447,7 @@ export interface FileRoutesByTo {
   '/studio': typeof StudioRoute
   '/symphony': typeof SymphonyRoute
   '/worlds': typeof WorldsRoute
+  '/api/drive-logs': typeof ApiDriveLogsRoute
   '/api/og': typeof ApiOgRouteWithChildren
   '/connect/$sessionId': typeof ConnectSessionIdRoute
   '/debug/audio-lab': typeof DebugAudioLabRoute
@@ -480,6 +496,7 @@ export interface FileRoutesById {
   '/onboarding': typeof OnboardingRoute
   '/pair': typeof PairRoute
   '/pricing': typeof PricingRoute
+  '/recorder': typeof RecorderRoute
   '/replay': typeof ReplayRoute
   '/rewards': typeof RewardsRoute
   '/science': typeof ScienceRoute
@@ -491,6 +508,7 @@ export interface FileRoutesById {
   '/studio': typeof StudioRoute
   '/symphony': typeof SymphonyRoute
   '/worlds': typeof WorldsRoute
+  '/api/drive-logs': typeof ApiDriveLogsRoute
   '/api/og': typeof ApiOgRouteWithChildren
   '/connect/$sessionId': typeof ConnectSessionIdRoute
   '/debug/audio-lab': typeof DebugAudioLabRoute
@@ -540,6 +558,7 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/pair'
     | '/pricing'
+    | '/recorder'
     | '/replay'
     | '/rewards'
     | '/science'
@@ -551,6 +570,7 @@ export interface FileRouteTypes {
     | '/studio'
     | '/symphony'
     | '/worlds'
+    | '/api/drive-logs'
     | '/api/og'
     | '/connect/$sessionId'
     | '/debug/audio-lab'
@@ -597,6 +617,7 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/pair'
     | '/pricing'
+    | '/recorder'
     | '/replay'
     | '/rewards'
     | '/science'
@@ -608,6 +629,7 @@ export interface FileRouteTypes {
     | '/studio'
     | '/symphony'
     | '/worlds'
+    | '/api/drive-logs'
     | '/api/og'
     | '/connect/$sessionId'
     | '/debug/audio-lab'
@@ -655,6 +677,7 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/pair'
     | '/pricing'
+    | '/recorder'
     | '/replay'
     | '/rewards'
     | '/science'
@@ -666,6 +689,7 @@ export interface FileRouteTypes {
     | '/studio'
     | '/symphony'
     | '/worlds'
+    | '/api/drive-logs'
     | '/api/og'
     | '/connect/$sessionId'
     | '/debug/audio-lab'
@@ -714,6 +738,7 @@ export interface RootRouteChildren {
   OnboardingRoute: typeof OnboardingRoute
   PairRoute: typeof PairRoute
   PricingRoute: typeof PricingRoute
+  RecorderRoute: typeof RecorderRoute
   ReplayRoute: typeof ReplayRoute
   RewardsRoute: typeof RewardsRoute
   ScienceRoute: typeof ScienceRoute
@@ -725,6 +750,7 @@ export interface RootRouteChildren {
   StudioRoute: typeof StudioRoute
   SymphonyRoute: typeof SymphonyRoute
   WorldsRoute: typeof WorldsRoute
+  ApiDriveLogsRoute: typeof ApiDriveLogsRoute
   ApiOgRoute: typeof ApiOgRouteWithChildren
   ConnectSessionIdRoute: typeof ConnectSessionIdRoute
   PairTokenRoute: typeof PairTokenRoute
@@ -847,6 +873,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PricingRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/recorder': {
+      id: '/recorder'
+      path: '/recorder'
+      fullPath: '/recorder'
+      preLoaderRoute: typeof RecorderRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/replay': {
       id: '/replay'
       path: '/replay'
@@ -922,6 +955,13 @@ declare module '@tanstack/react-router' {
       path: '/worlds'
       fullPath: '/worlds'
       preLoaderRoute: typeof WorldsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/drive-logs': {
+      id: '/api/drive-logs'
+      path: '/api/drive-logs'
+      fullPath: '/api/drive-logs'
+      preLoaderRoute: typeof ApiDriveLogsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/og': {
@@ -1231,6 +1271,7 @@ const rootRouteChildren: RootRouteChildren = {
   OnboardingRoute: OnboardingRoute,
   PairRoute: PairRoute,
   PricingRoute: PricingRoute,
+  RecorderRoute: RecorderRoute,
   ReplayRoute: ReplayRoute,
   RewardsRoute: RewardsRoute,
   ScienceRoute: ScienceRoute,
@@ -1242,6 +1283,7 @@ const rootRouteChildren: RootRouteChildren = {
   StudioRoute: StudioRoute,
   SymphonyRoute: SymphonyRoute,
   WorldsRoute: WorldsRoute,
+  ApiDriveLogsRoute: ApiDriveLogsRoute,
   ApiOgRoute: ApiOgRouteWithChildren,
   ConnectSessionIdRoute: ConnectSessionIdRoute,
   PairTokenRoute: PairTokenRoute,
