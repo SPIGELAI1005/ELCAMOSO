@@ -36,6 +36,10 @@ import {
   type ProfileAccessFields,
 } from "@/lib/sound/profile-access";
 import { getProfile } from "@/lib/sound/profiles";
+import {
+  TESTING_UNLOCKED_SOUND_ENTITLEMENTS,
+  UNLOCK_ALL_SOUNDS_FOR_TESTING,
+} from "@/lib/sound/sound-unlock-flag";
 
 export type AccessSource =
   | "permanent_free"
@@ -298,6 +302,11 @@ export function resolveEffectiveEntitlements(input: AccessResolverInput): Readon
 
   if (leaseValid(input, now)) {
     for (const e of input.leaseEntitlements ?? []) granted.add(e);
+  }
+
+  // TODO(revert after Tesla test): temporary unlock — see sound-unlock-flag.ts.
+  if (UNLOCK_ALL_SOUNDS_FOR_TESTING) {
+    for (const e of TESTING_UNLOCKED_SOUND_ENTITLEMENTS) granted.add(e);
   }
 
   return granted;

@@ -4,6 +4,7 @@ import {
   FREE_SOUND_PROFILE_SET,
   LOCKED_PROFILE_PREVIEW_SECONDS,
 } from "@/lib/sound/profile-access-config";
+import { UNLOCK_ALL_SOUNDS_FOR_TESTING } from "@/lib/sound/sound-unlock-flag";
 
 export type SoundProfileAccess = "free" | "drive_plus";
 
@@ -20,6 +21,8 @@ export function resolveProfileAccess(
   profile: ProfileAccessFields,
   resolveBase?: (baseId: string) => ProfileAccessFields | undefined,
 ): SoundProfileAccess {
+  // TODO(revert after Tesla test): temporary unlock — see sound-unlock-flag.ts.
+  if (UNLOCK_ALL_SOUNDS_FOR_TESTING) return "free";
   // Canonical free trio always wins — profile.access cannot invent extra free IDs.
   if (FREE_SET.has(profile.id)) return "free";
   if (profile.custom && profile.baseId) {

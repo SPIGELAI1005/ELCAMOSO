@@ -11,5 +11,7 @@ export default defineConfig({
   test: {
     environment: "node",
     include: ["src/**/*.test.ts"],
+    // Gating tests assert real Drive+ behaviour; keep the testing unlock off.
+    env: { VITE_UNLOCK_ALL_SOUNDS: "false" },
   },
 });
