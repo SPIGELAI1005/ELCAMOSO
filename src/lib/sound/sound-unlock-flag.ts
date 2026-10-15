@@ -8,14 +8,15 @@ import type { Entitlement } from "@/lib/entitlements/types";
  * billing / checkout / Stripe flows are unchanged. Only the access resolvers
  * honour this flag.
  *
- * TODO(revert after Tesla test): set Vercel env `VITE_UNLOCK_ALL_SOUNDS=false`
- * and redeploy, or change the default below to `false` (then delete this file
- * and its two call sites in profile-access.ts / access-resolver.ts).
+ * Default OFF so production serves the permanent free trio only. Set Vercel
+ * env `VITE_UNLOCK_ALL_SOUNDS=true` (or `1`) to re-enable for road testing.
+ * Delete this file and its call sites in profile-access.ts / access-resolver.ts
+ * when the switch is no longer needed.
  */
 const raw: string | undefined = import.meta.env["VITE_UNLOCK_ALL_SOUNDS"];
 
 export const UNLOCK_ALL_SOUNDS_FOR_TESTING: boolean =
-  raw == null || raw === "" ? true : raw !== "false" && raw !== "0";
+  raw == null || raw === "" ? false : raw !== "false" && raw !== "0";
 
 /** Sound-content entitlements granted to everyone while the switch is on. */
 export const TESTING_UNLOCKED_SOUND_ENTITLEMENTS: readonly Entitlement[] = [

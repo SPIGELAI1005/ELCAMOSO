@@ -33,8 +33,8 @@ describe("Prompt 11 free trio", () => {
     expect(FREE_SOUND_PROFILE_IDS).toHaveLength(3);
     expect(FREE_SOUND_PROFILE_IDS).toEqual([
       "american-muscle-v8",
-      "flat-six-sport",
-      "cyber-pulse",
+      "gt-v8",
+      "racing-v10",
     ]);
   });
 });
@@ -61,11 +61,11 @@ describe("resolveProfileDriveAccess", () => {
   });
 
   it("preserves grandfathered ownership when free set differs", () => {
-    seedGrandfatheredProfileGrant("acct-1", "gt-v8");
-    const decision = resolveProfileDriveAccess("gt-v8", {
-      user: user({ accountId: "acct-1", grantedProfileIds: ["gt-v8"] }),
-      grantedProfileIds: ["gt-v8"],
-      grantKindsByProfileId: new Map([["gt-v8", "grandfathered_grant"]]),
+    seedGrandfatheredProfileGrant("acct-1", "dragon");
+    const decision = resolveProfileDriveAccess("dragon", {
+      user: user({ accountId: "acct-1", grantedProfileIds: ["dragon"] }),
+      grantedProfileIds: ["dragon"],
+      grantKindsByProfileId: new Map([["dragon", "grandfathered_grant"]]),
       now: NOW,
     });
     expect(decision.allowed).toBe(true);
@@ -77,23 +77,23 @@ describe("resolveProfileDriveAccess", () => {
     upsertEntitlementGrant({
       accountId: "acct-2",
       kind: "reward_profile",
-      profileId: "racing-v10",
+      profileId: "dragon",
       entitlement: null,
       expiresAt: expires,
       source: "test_reward",
     });
     expect(
-      resolveProfileDriveAccess("racing-v10", {
-        user: user({ accountId: "acct-2", grantedProfileIds: ["racing-v10"] }),
-        grantedProfileIds: ["racing-v10"],
-        grantKindsByProfileId: new Map([["racing-v10", "reward_grant"]]),
+      resolveProfileDriveAccess("dragon", {
+        user: user({ accountId: "acct-2", grantedProfileIds: ["dragon"] }),
+        grantedProfileIds: ["dragon"],
+        grantKindsByProfileId: new Map([["dragon", "reward_grant"]]),
         now: NOW,
       }).allowed,
     ).toBe(true);
 
     // Expired grant list omitted by caller → denied
     expect(
-      resolveProfileDriveAccess("racing-v10", {
+      resolveProfileDriveAccess("dragon", {
         user: user({ accountId: "acct-2", grantedProfileIds: [] }),
         grantedProfileIds: [],
         now: expires + 1,

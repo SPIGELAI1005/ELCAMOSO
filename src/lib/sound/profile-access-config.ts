@@ -1,12 +1,12 @@
 /**
  * Permanent free Sound Profile set (Prompt 11).
- * Three EXISTING high-quality catalog IDs — muscle, sport/mechanical, futuristic.
+ * Three EXISTING high-quality catalog IDs — American Muscle V8, GT V8, Racing V10.
  * Adjust here only; do not scatter free-tier lists across UI components.
  */
 
 export interface FreeSoundProfileSlot {
   id: string;
-  role: "muscle" | "sport" | "futuristic";
+  role: "muscle" | "gt" | "racing";
   rationale: string;
 }
 
@@ -23,16 +23,16 @@ export const FREE_SOUND_PROFILE_SET: readonly FreeSoundProfileSlot[] = [
       "Body-led American V8 character with strong low-end presence; showcases free-tier gear realism and cabin weight without requiring Drive+.",
   },
   {
-    id: "flat-six-sport",
-    role: "sport",
+    id: "gt-v8",
+    role: "gt",
     rationale:
-      "Contrasting high-rev naturally aspirated flat-six with crisp mechanical shifting — sport/mechanical foil to the muscle body.",
+      "Refined grand-tourer V8 with smooth mid-range pull — complementary free-tier foil to the muscle body.",
   },
   {
-    id: "cyber-pulse",
-    role: "futuristic",
+    id: "racing-v10",
+    role: "racing",
     rationale:
-      "Futuristic continuous EV character; proves free tier includes non-combustion motion sound with cockpit/volume parity.",
+      "High-rev racing V10 character; proves free tier includes a motorsport profile alongside muscle and GT.",
   },
 ] as const;
 
