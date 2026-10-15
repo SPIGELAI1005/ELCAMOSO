@@ -58,6 +58,13 @@ interface HeroSoundBackdropProps {
  * Soft fade-out / fade-in only - no zoom, blur, or bloom.
  * Uses contain on phone/tablet so vehicles are not cropped at the sides.
  */
+
+function heroAltFromSrc(src: string): string {
+  const id = src.split("/").pop()?.replace(/\.png$/i, "") ?? "sound";
+  const label = id.replace(/-/g, " ");
+  return `ELCAMOSO ${label} sound experience`;
+}
+
 export function HeroSoundBackdrop({ phase, reducedMotion, className }: HeroSoundBackdropProps) {
   const [index, setIndex] = useState(0);
   const [prevIndex, setPrevIndex] = useState<number | null>(null);
@@ -120,7 +127,7 @@ export function HeroSoundBackdrop({ phase, reducedMotion, className }: HeroSound
           <img
             key={src}
             src={src}
-            alt=""
+            alt={heroAltFromSrc(src)}
             decoding="async"
             fetchPriority={i === 0 ? "high" : "low"}
             className={cn(

@@ -43,6 +43,14 @@ describe("SEO platform", () => {
     expect(pair.meta.some((m) => m.name === "robots" && m.content === "noindex, nofollow")).toBe(
       true,
     );
+    const admin = createSeoHeadFromPath("/admin");
+    expect(admin.meta.some((m) => m.name === "robots" && m.content === "noindex, nofollow")).toBe(
+      true,
+    );
+    const recorder = createSeoHeadFromPath("/recorder");
+    expect(
+      recorder.meta.some((m) => m.name === "robots" && m.content === "noindex, nofollow"),
+    ).toBe(true);
   });
 
   it("sitemap contains indexable and excludes private routes", () => {
@@ -50,12 +58,17 @@ describe("SEO platform", () => {
     expect(paths).toContain("/");
     expect(paths).toContain("/explore");
     expect(paths).toContain("/sounds");
+    expect(paths).toContain("/pricing");
+    expect(paths).toContain("/credits");
     expect(paths).not.toContain("/drive");
     expect(paths).not.toContain("/pair");
     expect(paths).not.toContain("/studio");
     expect(paths).not.toContain("/garage");
     expect(paths).not.toContain("/settings");
     expect(paths).not.toContain("/debug");
+    expect(paths).not.toContain("/admin");
+    expect(paths).not.toContain("/recorder");
+    expect(paths).not.toContain("/auth");
     const xml = buildSitemapXml(paths);
     expect(xml).toContain("https://www.elcamoso.com/explore");
     expect(xml).not.toContain("/drive");

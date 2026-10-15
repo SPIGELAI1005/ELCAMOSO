@@ -39,7 +39,7 @@ export const INDEXABLE_ROUTE_POLICIES: SeoRoutePolicy[] = [
     indexable: true,
     title: "EV Sound Profiles - ELCAMOSO",
     description:
-      "Explore motion-responsive sound profiles for electric vehicles, from virtual performance engines to futuristic and cinematic sound experiences.",
+      "Engine sound experiences for Tesla and EV drivers. Free early access includes American Muscle V8, GT V8 and Racing V10; more profiles with Drive+ from 9.11.2026.",
     image: "/og/engine.png",
     imageAlt: "ELCAMOSO Engine sound experiences",
     breadcrumbs: [
@@ -93,14 +93,27 @@ export const INDEXABLE_ROUTE_POLICIES: SeoRoutePolicy[] = [
   {
     path: "/pricing",
     indexable: true,
-    title: "Pricing - ELCAMOSO",
+    title: "Pricing - Early Access Free | ELCAMOSO",
     description:
-      "ELCAMOSO Free and Drive+ plans. Motion-responsive sound experiences for electric vehicles - start free, upgrade when you want more.",
+      "Early access is free until 9.11.2026. American Muscle V8, GT V8 and Racing V10 included. Drive+ and individual sound purchases open on 9.11.2026.",
     image: IMG,
     imageAlt: ALT,
     breadcrumbs: [
       { name: "Home", path: "/" },
       { name: "Pricing", path: "/pricing" },
+    ],
+  },
+  {
+    path: "/credits",
+    indexable: true,
+    title: "Sound Credits & Licences - ELCAMOSO",
+    description:
+      "Free recording credits and licences used in ELCAMOSO engine sound experiences for Tesla and EV drivers.",
+    image: IMG,
+    imageAlt: ALT,
+    breadcrumbs: [
+      { name: "Home", path: "/" },
+      { name: "Credits", path: "/credits" },
     ],
   },
   {
@@ -309,6 +322,20 @@ export const NOINDEX_ROUTE_POLICIES: SeoRoutePolicy[] = [
     nofollow: true,
     title: "Debug - ELCAMOSO",
     description: "Developer diagnostics.",
+  },
+  {
+    path: "/admin",
+    indexable: false,
+    nofollow: true,
+    title: "Admin - ELCAMOSO",
+    description: "ELCAMOSO admin.",
+  },
+  {
+    path: "/recorder",
+    indexable: false,
+    nofollow: true,
+    title: "Drive sensor recorder - ELCAMOSO",
+    description: "Internal drive sensor recorder.",
   },
 ];
 

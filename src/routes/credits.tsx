@@ -1,12 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 
+import { createSeoHeadFromPath } from "@/lib/seo";
 import { RECORDED_LOOP_CREDITS } from "@/lib/sound/realism/v2/recorded-loops";
 
 export const Route = createFileRoute("/credits")({
   component: CreditsPage,
-  head: () => ({
-    meta: [{ title: "Sound credits & licences · ELCAMOSO" }],
-  }),
+  head: () => createSeoHeadFromPath("/credits"),
 });
 
 function CreditsPage() {

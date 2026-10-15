@@ -1,4 +1,8 @@
 User-agent: *
 Allow: /
+Disallow: /admin
+Disallow: /recorder
+Disallow: /api
+Disallow: /auth
 
 Sitemap: https://www.elcamoso.com/sitemap.xml

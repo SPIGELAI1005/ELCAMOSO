@@ -33,12 +33,32 @@ export function softwareApplicationJsonLd(description: string): Record<string, u
     operatingSystem: "Web",
     url: origin,
     description,
-    offers: {
-      "@type": "Offer",
-      price: "0",
-      priceCurrency: "EUR",
-      description: "Free plan available; Drive+ optional",
-      url: absoluteSeoUrl("/pricing"),
+    offers: [
+      {
+        "@type": "Offer",
+        name: "Early access",
+        price: "0",
+        priceCurrency: "EUR",
+        description:
+          "Free early access with American Muscle V8, GT V8 and Racing V10. Full Drive+ and individual sound purchases open 2026-11-09.",
+        availability: "https://schema.org/InStock",
+        url: absoluteSeoUrl("/pricing"),
+        validThrough: "2026-11-09",
+      },
+      {
+        "@type": "Offer",
+        name: "Drive+",
+        priceCurrency: "EUR",
+        description: "Drive+ and individual sound purchases open on 2026-11-09.",
+        availability: "https://schema.org/PreOrder",
+        availabilityStarts: "2026-11-09",
+        url: absoluteSeoUrl("/pricing"),
+      },
+    ],
+    applicationSubCategory: "Automotive entertainment",
+    audience: {
+      "@type": "Audience",
+      audienceType: "Tesla and EV drivers",
     },
   };
 }
