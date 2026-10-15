@@ -23,10 +23,7 @@ import type { AudioLayerRole } from "@/lib/sound/profile-experience-config";
 import { DynamicDriveSynth } from "@/lib/sound/dynamic-drive/synth";
 import { supportsDynamicDrive } from "@/lib/powertrain/adapters/profile-map";
 import { reportAudioError } from "@/lib/telemetry/crashes";
-import {
-  PROFILE_SWITCH_VOLUME_SCALE,
-  STARTUP_VOLUME_SCALE,
-} from "@/lib/sound/perceptual-volume";
+import { PROFILE_SWITCH_VOLUME_SCALE, STARTUP_VOLUME_SCALE } from "@/lib/sound/perceptual-volume";
 import {
   BODY_CHARACTER_SHELF_DB,
   CHARACTER_NEUTRAL,
@@ -58,6 +55,7 @@ import { FusionSynth, isFusionProfileId } from "@/lib/fusion";
 import { isWorldProfileId, WorldSynth } from "@/lib/worlds";
 import { fetchSoundAssetManifest } from "@/lib/sound-assets/client-loader";
 import { getSharedSampleLoader } from "@/lib/sound/realism/samples";
+import { loadRecordedLoopBuffers } from "@/lib/sound/realism/v2/recorded-loops-loader";
 import { DEFAULT_TIMELINE_GAP_FLUSH_MS } from "@/lib/sound/realism/shift-events";
 import { resolvePersonalityId } from "@/lib/drive/drivetrain-resolve";
 
@@ -1488,6 +1486,21 @@ export class SoundEngine {
     profile: SoundProfile,
     controller: AbortController,
   ) {
+    const recorded = synth.getRecordedLoopBank();
+    if (recorded) {
+      const ready = loadRecordedLoopBuffers(ctx, recorded, controller.signal)
+        .then((buffers) => {
+          if (controller.signal.aborted || this.hybrid !== synth) return;
+          synth.setRecordedLoopBuffers(buffers);
+        })
+        .catch((error) => {
+          if (controller.signal.aborted || this.hybrid !== synth) return;
+          reportAudioError(error);
+        });
+      this.samplesReady = ready;
+      await ready;
+      return;
+    }
     const loader = getSharedSampleLoader();
     const generation = loader.invalidate();
     try {
@@ -1508,6 +1521,13 @@ export class SoundEngine {
       synth.setDecodedSamples(new Map());
       reportAudioError(error);
     }
+  }
+
+  private samplesReady: Promise<void> = Promise.resolve();
+
+  /** Resolves once the active profile's recorded loops are decoded (or failed). */
+  whenSamplesReady(): Promise<void> {
+    return this.samplesReady;
   }
 
   /* ------------------------------------------------------------- per-frame */

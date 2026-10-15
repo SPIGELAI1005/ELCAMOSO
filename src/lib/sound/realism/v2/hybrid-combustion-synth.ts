@@ -68,6 +68,13 @@ import {
   shiftEngagementForProfile,
   type ShiftEngagementStyle,
 } from "@/lib/sound/realism/shift-events";
+import {
+  getRecordedLoopBank,
+  recordedCruiseBlend,
+  recordedPlaybackRate,
+  recordedSampleWeight,
+  type RecordedLoopBank,
+} from "@/lib/sound/realism/v2/recorded-loops";
 
 /** -1.5 dBFS sample ceiling for the engine output peak protect (keeps true peak <= -1 dBTP). */
 const OUTPUT_PEAK_CEILING_LINEAR = Math.pow(10, -1.5 / 20);
@@ -197,6 +204,11 @@ interface OrderBand extends FormantBand {
   weight: number;
 }
 
+/** Recorded-loop level relative to the procedural body bus (tuned on the real-chain render). */
+const RECORDED_SAMPLE_LEVEL = 0.33;
+/** How far the procedural body ducks while recordings carry idle/cruise. */
+const RECORDED_SYNTH_DUCK = 0.96; // equal-power: synth keeps 20% amplitude at full hand-over
+
 interface SampleVoice {
   src: AudioBufferSourceNode;
   gain: GainNode;
@@ -318,6 +330,11 @@ export class HybridCombustionSynth {
   private sampleBus: GainNode | null = null;
   private sampleBank: CombustionSampleBank | null = null;
   private decodedSamples = new Map<string, AudioBuffer>();
+  private recordedBank: RecordedLoopBank | null = null;
+  private recordedBuffers = new Map<string, AudioBuffer>();
+  private recordedVoices = new Map<string, SampleVoice>();
+  private recordedWeight = 0;
+  private supportTarget = 0;
   private scheduler: TransientSchedulerState = createTransientSchedulerState();
   private prevPowertrain: DriveState["powertrain"] | null = null;
   private prevSpeedKmh = 0;
@@ -409,6 +426,7 @@ export class HybridCombustionSynth {
     this.scheduler = createTransientSchedulerState(0.42);
 
     const personalityId = resolvePersonalityId(profile);
+    this.recordedBank = getRecordedLoopBank(personalityId);
     this.sampleBank = EMPTY_COMBUSTION_SAMPLE_BANKS[personalityId] ?? {
       personalityId,
       entries: [],
@@ -934,6 +952,25 @@ export class HybridCombustionSynth {
     this.shiftConsumer.markTimelineGap(gapMs);
   }
 
+  /** Recorded loop bank for this personality (null = procedural only). */
+  getRecordedLoopBank(): RecordedLoopBank | null {
+    return this.recordedBank;
+  }
+
+  /** Decoded recorded idle/cruise loops keyed by loop id. */
+  setRecordedLoopBuffers(map: Map<string, AudioBuffer>) {
+    this.recordedBuffers = map;
+    if (map.size > 0) {
+      this.diagnostics.sampleAssisted = true;
+      this.diagnostics.sampleState = "ready";
+      this.diagnostics.sampleFallbackReason = "none";
+    }
+  }
+
+  getRecordedSampleWeight(): number {
+    return this.recordedWeight;
+  }
+
   setDecodedSamples(map: Map<string, AudioBuffer>) {
     this.decodedSamples = map;
     const expected = this.sampleBank?.entries.length ?? 0;
@@ -1169,16 +1206,13 @@ export class HybridCombustionSynth {
       // Raised floor (0.45) to keep cruise audible; target 8-10 dB pull-cruise gap.
       const supportFloor = 0.45;
       const supportLoad = load * 0.06 + demand * 0.05;
-      targetParam(
-        this.supportBus.gain,
+      this.supportTarget =
         (supportFloor + supportLoad) *
-          (raw?.supportGainScale ?? 1) *
-          gate("combustion") *
-          supportTrim *
-          throttleGapMul,
-        audioTime,
-        0.08,
-      );
+        (raw?.supportGainScale ?? 1) *
+        gate("combustion") *
+        supportTrim *
+        throttleGapMul;
+      targetParam(this.supportBus.gain, this.supportTarget, audioTime, 0.08);
     }
     if (this.pipeSend) {
       // Pipe energy grows with exhaust pulse strength; overrun lets the pipe ring more.
@@ -1713,7 +1747,78 @@ export class HybridCombustionSynth {
     }
   }
 
+  private updateRecordedLoops(rpm: number, demand: number, audioTime: number) {
+    const bank = this.recordedBank!;
+    const ctx = this.ctx!;
+    const w = this.mutedRoles.has("combustion") ? 0 : recordedSampleWeight(rpm, demand);
+    this.recordedWeight = w;
+    const cruise = recordedCruiseBlend(rpm);
+    const idleTotal = bank.loops
+      .filter((l) => l.band === "idle")
+      .reduce((sum, l) => sum + l.weight, 0);
+    const active: string[] = [];
+    for (const loop of bank.loops) {
+      let voice = this.recordedVoices.get(loop.id);
+      if (!voice) {
+        const buf = this.recordedBuffers.get(loop.id);
+        if (!buf) continue;
+        const src = ctx.createBufferSource();
+        src.buffer = buf;
+        src.loop = true;
+        src.loopStart = loop.loopStart;
+        src.loopEnd = Math.min(loop.loopEnd, buf.duration);
+        src.playbackRate.value = recordedPlaybackRate(loop, rpm);
+        const gain = ctx.createGain();
+        gain.gain.value = 0.0001;
+        src.connect(gain);
+        gain.connect(this.sampleBus!);
+        // Stagger start phase so correlated loops do not comb-filter.
+        src.start(
+          audioTime,
+          loop.loopStart + (loop.loopEnd - loop.loopStart) * 0.37 * this.recordedVoices.size,
+        );
+        voice = { src, gain, entryId: loop.id };
+        this.recordedVoices.set(loop.id, voice);
+        this.nodeEstimate += 2;
+      }
+      const bandW =
+        loop.band === "idle"
+          ? (1 - cruise) * (loop.weight / Math.max(0.001, idleTotal))
+          : cruise * loop.weight;
+      voice.src.playbackRate.setTargetAtTime(recordedPlaybackRate(loop, rpm), audioTime, 0.08);
+      targetParam(voice.gain.gain, Math.max(0.0001, bandW), audioTime, 0.12);
+      if (bandW > 0.01 && w > 0.01) active.push(loop.id);
+    }
+    const body = this.diagnostics.combustionGain || 0.35;
+    // Recordings follow the same trims, shift dips and load as the synth body bus.
+    targetParam(
+      this.sampleBus!.gain,
+      Math.max(0.0001, RECORDED_SAMPLE_LEVEL * bank.level * body * Math.sqrt(w)),
+      audioTime,
+      0.12,
+    );
+    if (this.combustionBus) {
+      targetParam(
+        this.combustionBus.gain,
+        body * Math.sqrt(1 - RECORDED_SYNTH_DUCK * w),
+        audioTime,
+        0.12,
+      );
+    }
+    if (this.supportBus) {
+      // Support/noise bed is the main hiss source: thin it while recordings carry the sound.
+      targetParam(this.supportBus.gain, this.supportTarget * (1 - 0.6 * w), audioTime, 0.12);
+    }
+    this.diagnostics.sampleAssisted = w > 0.01;
+    this.diagnostics.sampleFallbackReason = "none";
+    this.diagnostics.activeSampleIds = active;
+  }
+
   private updateSamples(rpm: number, demand: number, overrun: boolean, audioTime: number) {
+    if (this.recordedBank && this.recordedBuffers.size && this.sampleBus && this.ctx) {
+      this.updateRecordedLoops(rpm, demand, audioTime);
+      return;
+    }
     this.diagnostics.uncoveredOperatingRegions = reportAmericanV8SampleCoverage(
       this.sampleBank,
     ).uncovered;
@@ -2006,6 +2111,16 @@ export class HybridCombustionSynth {
       voice.gain.disconnect();
     }
     this.voices = {};
+    for (const voice of this.recordedVoices.values()) {
+      try {
+        voice.src.stop();
+      } catch {
+        /* already stopped */
+      }
+      voice.src.disconnect();
+      voice.gain.disconnect();
+    }
+    this.recordedVoices.clear();
     for (const voice of this.sampleVoices.values()) {
       stopNoise(voice.src);
       voice.gain.disconnect();

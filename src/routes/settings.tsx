@@ -189,6 +189,12 @@ function Settings() {
         >
           ● Drive sensor recorder (road test) →
         </Link>
+        <Link
+          to="/credits"
+          className="mt-3 block rounded-xl border border-border px-4 py-3 text-sm hover:bg-secondary"
+        >
+          Sound credits & licences →
+        </Link>
 
         <input
           value={query}

@@ -1,4 +1,4 @@
-const CACHE = "elcamoso-shell-v7";
+const CACHE = "elcamoso-shell-v8";
 const SHELL = [
   "/manifest.webmanifest",
   "/icon.svg",
@@ -77,6 +77,7 @@ self.addEventListener("fetch", (event) => {
     SHELL.includes(url.pathname) ||
     url.pathname.startsWith("/assets/") ||
     url.pathname === "/favicon.png" ||
+    url.pathname.startsWith("/sample-packs/recorded/") ||
     url.pathname === "/sw.js";
 
   if (!isShellAsset) return;
