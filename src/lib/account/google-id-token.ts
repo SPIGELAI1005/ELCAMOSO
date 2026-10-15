@@ -36,6 +36,16 @@ function decodeJwtPayload(idToken: string): Record<string, unknown> {
   return JSON.parse(json) as Record<string, unknown>;
 }
 
+/** Google tokeninfo often returns numeric claims as strings. */
+function readEpochSeconds(value: unknown): number {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string" && value.trim() !== "") {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  return NaN;
+}
+
 export function assertGoogleIdTokenClaims(
   payload: Record<string, unknown>,
   opts: { audience: string; nonce: string; nowSeconds?: number },
@@ -56,8 +66,9 @@ export function assertGoogleIdTokenClaims(
     throw new Error("Invalid Google ID token audience.");
   }
 
-  const exp = typeof payload["exp"] === "number" ? payload["exp"] : NaN;
-  if (!Number.isFinite(exp) || exp <= nowSeconds) {
+  // Allow a small clock skew so laptop clocks slightly ahead of Google do not fail sign-in.
+  const exp = readEpochSeconds(payload["exp"]);
+  if (!Number.isFinite(exp) || exp + 30 <= nowSeconds) {
     throw new Error("Google ID token expired.");
   }
 
@@ -88,7 +99,8 @@ export function assertGoogleIdTokenClaims(
     exp,
     nonce,
   };
-  if (typeof payload["iat"] === "number") claims.iat = payload["iat"];
+  const iat = readEpochSeconds(payload["iat"]);
+  if (Number.isFinite(iat)) claims.iat = iat;
   if (typeof payload["name"] === "string") claims.name = payload["name"];
   if (typeof payload["picture"] === "string") claims.picture = payload["picture"];
   return claims;

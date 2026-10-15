@@ -186,26 +186,23 @@ function AccountProfileDialog({
           <Link
             to="/settings"
             onClick={onNavigate}
-            className="flex h-11 items-center justify-between rounded-full border border-border px-5 text-[11px] tracking-[0.2em] text-muted-foreground uppercase transition-colors hover:border-foreground/30 hover:text-foreground"
+            className="flex h-11 items-center justify-center rounded-full border border-border px-5 text-[11px] tracking-[0.2em] text-muted-foreground uppercase transition-colors hover:border-foreground/30 hover:text-foreground"
           >
             {t(language, "nav.settings")}
-            <span aria-hidden>→</span>
           </Link>
           <Link
             to="/pricing"
             onClick={onNavigate}
-            className="flex h-11 items-center justify-between rounded-full border border-border px-5 text-[11px] tracking-[0.2em] text-muted-foreground uppercase transition-colors hover:border-foreground/30 hover:text-foreground"
+            className="flex h-11 items-center justify-center rounded-full border border-border px-5 text-[11px] tracking-[0.2em] text-muted-foreground uppercase transition-colors hover:border-foreground/30 hover:text-foreground"
           >
             {t(language, "nav.pricing")}
-            <span aria-hidden>→</span>
           </Link>
           <Link
             to="/drive"
             onClick={onNavigate}
-            className="flex h-11 items-center justify-between rounded-full border border-border px-5 text-[11px] tracking-[0.2em] text-muted-foreground uppercase transition-colors hover:border-foreground/30 hover:text-foreground"
+            className="flex h-11 items-center justify-center rounded-full border border-border px-5 text-[11px] tracking-[0.2em] text-muted-foreground uppercase transition-colors hover:border-foreground/30 hover:text-foreground"
           >
             {t(language, "nav.drive")}
-            <span aria-hidden>→</span>
           </Link>
           <button
             type="button"

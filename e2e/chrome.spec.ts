@@ -36,10 +36,9 @@ test.describe("Navigation", () => {
       .getByRole("link", { name: /^drive$/i })
       .click();
     await expect(page).toHaveURL(/\/drive/);
-    await page
-      .getByRole("navigation", { name: /primary/i })
-      .getByRole("link", { name: /^sounds$/i })
-      .click();
+    const header = page.locator("header").first();
+    await header.getByText(/^sounds$/i).first().click();
+    await header.getByRole("menuitem", { name: /browse all/i }).click();
     await expect(page).toHaveURL(/\/sounds/);
   });
 

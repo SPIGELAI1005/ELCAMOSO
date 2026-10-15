@@ -68,6 +68,7 @@ import { Route as AuthTeslaCallbackRouteImport } from './routes/auth/tesla/callb
 import { Route as ShareDriveShareIdRouteImport } from './routes/share.drive.$shareId'
 import { Route as ApiOgDriveSongShareIdRouteImport } from './routes/api/og/drive-song.$shareId'
 import { Route as AuthAccountGoogleCallbackRouteImport } from './routes/auth/account/google/callback'
+import { Route as AuthAccountGoogleStartRouteImport } from './routes/auth/account/google/start'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -365,6 +366,11 @@ const AuthAccountGoogleCallbackRoute =
     path: '/auth/account/google/callback',
     getParentRoute: () => rootRouteImport,
   } as any)
+const AuthAccountGoogleStartRoute = AuthAccountGoogleStartRouteImport.update({
+  id: '/auth/account/google/start',
+  path: '/auth/account/google/start',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -426,6 +432,7 @@ export interface FileRoutesByFullPath {
   '/share/drive/$shareId': typeof ShareDriveShareIdRoute
   '/api/og/drive-song/$shareId': typeof ApiOgDriveSongShareIdRoute
   '/auth/account/google/callback': typeof AuthAccountGoogleCallbackRoute
+  '/auth/account/google/start': typeof AuthAccountGoogleStartRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -486,6 +493,7 @@ export interface FileRoutesByTo {
   '/share/drive/$shareId': typeof ShareDriveShareIdRoute
   '/api/og/drive-song/$shareId': typeof ApiOgDriveSongShareIdRoute
   '/auth/account/google/callback': typeof AuthAccountGoogleCallbackRoute
+  '/auth/account/google/start': typeof AuthAccountGoogleStartRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -548,6 +556,7 @@ export interface FileRoutesById {
   '/share/drive/$shareId': typeof ShareDriveShareIdRoute
   '/api/og/drive-song/$shareId': typeof ApiOgDriveSongShareIdRoute
   '/auth/account/google/callback': typeof AuthAccountGoogleCallbackRoute
+  '/auth/account/google/start': typeof AuthAccountGoogleStartRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -611,6 +620,7 @@ export interface FileRouteTypes {
     | '/share/drive/$shareId'
     | '/api/og/drive-song/$shareId'
     | '/auth/account/google/callback'
+    | '/auth/account/google/start'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -671,6 +681,7 @@ export interface FileRouteTypes {
     | '/share/drive/$shareId'
     | '/api/og/drive-song/$shareId'
     | '/auth/account/google/callback'
+    | '/auth/account/google/start'
   id:
     | '__root__'
     | '/'
@@ -732,6 +743,7 @@ export interface FileRouteTypes {
     | '/share/drive/$shareId'
     | '/api/og/drive-song/$shareId'
     | '/auth/account/google/callback'
+    | '/auth/account/google/start'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -777,6 +789,7 @@ export interface RootRouteChildren {
   AuthAccountCallbackRoute: typeof AuthAccountCallbackRoute
   AuthTeslaCallbackRoute: typeof AuthTeslaCallbackRoute
   AuthAccountGoogleCallbackRoute: typeof AuthAccountGoogleCallbackRoute
+  AuthAccountGoogleStartRoute: typeof AuthAccountGoogleStartRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -1194,6 +1207,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthAccountGoogleCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/auth/account/google/start': {
+      id: '/auth/account/google/start'
+      path: '/auth/account/google/start'
+      fullPath: '/auth/account/google/start'
+      preLoaderRoute: typeof AuthAccountGoogleStartRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -1318,6 +1338,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthAccountCallbackRoute: AuthAccountCallbackRoute,
   AuthTeslaCallbackRoute: AuthTeslaCallbackRoute,
   AuthAccountGoogleCallbackRoute: AuthAccountGoogleCallbackRoute,
+  AuthAccountGoogleStartRoute: AuthAccountGoogleStartRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

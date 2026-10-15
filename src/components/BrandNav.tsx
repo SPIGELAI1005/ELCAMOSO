@@ -2,10 +2,11 @@
 
 import { Link, useRouterState } from "@tanstack/react-router";
 import { ChevronDown } from "lucide-react";
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 
 import { AccountMenu } from "@/components/AccountMenu";
 import { ElcamosoLogo, ElcamosoMark } from "@/components/ElcamosoLogo";
+import { HeaderSoundsMenu } from "@/components/HeaderSoundsMenu";
 import { WaveMenuIcon } from "@/components/WaveMenuIcon";
 import {
   Collapsible,
@@ -47,6 +48,7 @@ type NavEntry = NavLinkItem | NavGroup;
 const NAV_ENTRIES: NavEntry[] = [
   { kind: "link", to: "/", key: "nav.home" },
   { kind: "link", to: "/drive", key: "nav.drive", accent: true },
+  // Sounds profile picker is rendered separately (HeaderSoundsMenu) in red.
   {
     kind: "group",
     id: "explore",
@@ -54,16 +56,6 @@ const NAV_ENTRIES: NavEntry[] = [
     items: [
       { to: "/explore", key: "nav.explore" },
       { to: "/demo", key: "nav.demo" },
-    ],
-  },
-  {
-    kind: "group",
-    id: "sounds",
-    key: "nav.sounds",
-    items: [
-      { to: "/sounds", key: "nav.sounds" },
-      { to: "/studio", key: "nav.studio" },
-      { to: "/garage", key: "nav.garage" },
     ],
   },
   { kind: "link", to: "/pricing", key: "nav.pricing" },
@@ -246,23 +238,30 @@ export function BrandNav() {
 
   return (
     <header className="fixed inset-x-0 top-0 z-50 overflow-visible border-b border-border/60 bg-background/95 pt-[env(safe-area-inset-top,0px)] backdrop-blur-md supports-[backdrop-filter]:bg-background/80">
-      <div className="flex h-[3.85rem] items-center justify-between gap-3 overflow-visible px-4 sm:h-[4.4rem] sm:px-6 lg:gap-4 lg:px-8">
-        <Link
-          to="/"
-          aria-label="ELCAMOSO home"
-          className="hidden min-w-0 shrink-0 md:inline-flex lg:hidden"
-        >
-          <ElcamosoMark className="h-9 w-auto" />
-        </Link>
+      <div className="relative flex h-[3.85rem] items-center justify-between gap-3 overflow-visible px-4 sm:h-[4.4rem] sm:px-6 lg:gap-4 lg:px-8">
+        <div className="z-10 flex min-w-0 shrink-0 items-center">
+          <Link
+            to="/"
+            aria-label="ELCAMOSO home"
+            className="hidden min-w-0 shrink-0 md:inline-flex lg:hidden"
+          >
+            <ElcamosoMark className="h-9 w-auto" />
+          </Link>
 
-        <Link to="/" aria-label="ELCAMOSO home" className="hidden min-w-0 shrink-0 lg:inline-flex">
-          <ElcamosoLogo variant="full" className="scale-110" />
-        </Link>
+          <Link to="/" aria-label="ELCAMOSO home" className="hidden min-w-0 shrink-0 lg:inline-flex">
+            <ElcamosoLogo variant="full" className="scale-110" />
+          </Link>
+        </div>
 
-        <div className="flex-1 lg:hidden" aria-hidden="true" />
+        {/* Centered Sounds shortcut (mobile + desktop). */}
+        <div className="pointer-events-none absolute inset-y-0 left-1/2 z-20 flex -translate-x-1/2 items-center">
+          <div className="pointer-events-auto">
+            <HeaderSoundsMenu language={settings.language} variant="nav" />
+          </div>
+        </div>
 
         <nav
-          className="hidden min-w-0 items-center gap-3 overflow-visible text-xs tracking-[0.14em] uppercase lg:flex xl:gap-4 xl:text-[13px]"
+          className="z-10 hidden min-w-0 items-center gap-3 overflow-visible text-xs tracking-[0.14em] uppercase lg:flex xl:gap-4 xl:text-[13px]"
           aria-label="Primary"
         >
           {DESKTOP_ENTRIES.map((entry) => {
@@ -294,7 +293,7 @@ export function BrandNav() {
           <AccountMenu className="ml-1" />
         </nav>
 
-        <div className="flex items-center gap-1 lg:hidden">
+        <div className="z-10 flex items-center gap-1 lg:hidden">
           <AccountMenu />
           <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
             <SheetTrigger asChild>
@@ -342,9 +341,8 @@ export function BrandNav() {
                     );
                   }
                   const active = isNavLinkActive(pathname, entry.to);
-                  return (
+                  const link = (
                     <Link
-                      key={entry.to}
                       to={entry.to}
                       aria-current={active ? "page" : undefined}
                       onClick={closeSheet}
@@ -356,6 +354,50 @@ export function BrandNav() {
                       {t(settings.language, entry.key)}
                     </Link>
                   );
+                  if (entry.to === "/drive") {
+                    const soundsActive = isNavLinkActive(pathname, "/sounds");
+                    const studioActive = isNavLinkActive(pathname, "/studio");
+                    const garageActive = isNavLinkActive(pathname, "/garage");
+                    return (
+                      <Fragment key="drive-sounds-mobile">
+                        {link}
+                        <Link
+                          to="/sounds"
+                          aria-current={soundsActive ? "page" : undefined}
+                          onClick={closeSheet}
+                          className={cn(
+                            "px-4 py-4 text-sm tracking-[0.2em] uppercase",
+                            navLinkClassName(soundsActive, true),
+                          )}
+                        >
+                          {t(settings.language, "nav.sounds")}
+                        </Link>
+                        <Link
+                          to="/studio"
+                          aria-current={studioActive ? "page" : undefined}
+                          onClick={closeSheet}
+                          className={cn(
+                            "px-4 py-4 text-sm tracking-[0.2em] uppercase",
+                            navLinkClassName(studioActive),
+                          )}
+                        >
+                          {t(settings.language, "nav.studio")}
+                        </Link>
+                        <Link
+                          to="/garage"
+                          aria-current={garageActive ? "page" : undefined}
+                          onClick={closeSheet}
+                          className={cn(
+                            "px-4 py-4 text-sm tracking-[0.2em] uppercase",
+                            navLinkClassName(garageActive),
+                          )}
+                        >
+                          {t(settings.language, "nav.garage")}
+                        </Link>
+                      </Fragment>
+                    );
+                  }
+                  return <Fragment key={entry.to}>{link}</Fragment>;
                 })}
                 <AccountMenu variant="row" onNavigate={closeSheet} />
               </nav>

@@ -4,7 +4,6 @@ import { useEffect, useId, useRef, useState } from "react";
 
 import { ElcamosoMark } from "@/components/ElcamosoLogo";
 import {
-  beginGoogleSignInFn,
   getEmailOtpStatusFn,
   getGoogleSignInStatusFn,
   requestAccountSignInFn,
@@ -203,13 +202,17 @@ export function AccountSignInDialog({
     setError(null);
     setMessage(null);
     try {
-      const result = await beginGoogleSignInFn({ data: { returnTo } });
-      if (!result.available || !result.authorizeUrl) {
-        setError(result.message ?? "Google sign-in is not available.");
+      // Confirm Google is configured, then use the server start route so the
+      // pending PKCE cookie is set on the same redirect that goes to Google.
+      const status = await getGoogleSignInStatusFn();
+      if (!status.available) {
+        setError("Google sign-in is not available.");
         setGoogleBusy(false);
         return;
       }
-      window.location.assign(result.authorizeUrl);
+      const start = new URL("/auth/account/google/start", window.location.origin);
+      start.searchParams.set("returnTo", sanitizeReturnTo(returnTo));
+      window.location.assign(start.toString());
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not start Google sign-in.");
       setGoogleBusy(false);

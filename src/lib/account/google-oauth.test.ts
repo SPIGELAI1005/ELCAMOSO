@@ -117,6 +117,26 @@ describe("Google account OAuth", () => {
     expect(restored?.userId).toBe(session.userId);
   });
 
+  it("accepts Google tokeninfo claims when exp/email_verified are strings", async () => {
+    const started = beginGoogleSignIn("/drive");
+    const state = new URL(started.authorizeUrl!).searchParams.get("state")!;
+    const nonce = new URL(started.authorizeUrl!).searchParams.get("nonce")!;
+    const nowSeconds = Math.floor(Date.now() / 1000);
+    stubGoogleTokenExchange({
+      iss: "https://accounts.google.com",
+      aud: "google-client",
+      sub: "google-sub-string-exp",
+      email: "string-exp@gmail.com",
+      email_verified: "true",
+      exp: String(nowSeconds + 3600),
+      iat: String(nowSeconds),
+      nonce,
+    });
+
+    const session = await completeGoogleSignIn("auth-code", state, Date.now(), started.pendingCookie);
+    expect(session.email).toBe("string-exp@gmail.com");
+  });
+
   it("completes sign-in using the pending OAuth cookie when memory state is gone", async () => {
     const started = beginGoogleSignIn("/drive");
     const state = new URL(started.authorizeUrl!).searchParams.get("state")!;

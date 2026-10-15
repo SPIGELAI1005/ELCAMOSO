@@ -70,8 +70,17 @@ export const Route = createFileRoute("/auth/account/google/callback")({
           const returnTo = result.returnTo.startsWith("/") ? result.returnTo : "/drive";
           const nextPath = returnTo.startsWith("/drive") ? "/drive?activateTrial=1" : returnTo;
           return redirectWithCookies(origin, nextPath, [sessionCookie, clearPending]);
-        } catch {
-          return redirectWithCookies(origin, "/drive?googleAuth=failed", [clearPending]);
+        } catch (error) {
+          const message = error instanceof Error ? error.message : "Google sign-in failed";
+          console.error("[google-oauth] callback failed:", message);
+          const reason = /sign-in expired|oauth state|Try again/i.test(message)
+            ? "expired"
+            : /client secret/i.test(message)
+              ? "secret"
+              : /ID token expired|token|id_token|audience|nonce|issuer/i.test(message)
+                ? "token"
+                : "failed";
+          return redirectWithCookies(origin, `/drive?googleAuth=${reason}`, [clearPending]);
         }
       },
     },

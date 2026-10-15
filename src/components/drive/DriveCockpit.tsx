@@ -9,6 +9,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import type { DriveState } from "@/lib/drive/model";
 import type { DriveProductStatus } from "@/lib/drive/session";
 import {
@@ -29,7 +36,13 @@ import { useSettings } from "@/lib/drive/useSettings";
 import { useReducedMotion } from "@/lib/drive/useReducedMotion";
 import { resolveDrivetrain } from "@/lib/drive/drivetrain-resolve";
 import { useFeatureAccess } from "@/lib/entitlements/selectors";
-import { getProfile, SOUND_PROFILES, type SoundProfile } from "@/lib/sound/profiles";
+import { DriveProfileBackdrop } from "@/components/drive/DriveProfileBackdrop";
+import {
+  getProfile,
+  PROFILE_CATEGORIES,
+  SOUND_PROFILES,
+  type SoundProfile,
+} from "@/lib/sound/profiles";
 import { SHIFT_MAP_PRESET_IDS, type ShiftMapPresetId } from "@/lib/powertrain/shift-presets";
 import { cn } from "@/lib/utils";
 
@@ -42,9 +55,35 @@ const COCKPIT_SELECT_CONTENT =
 const COCKPIT_SELECT_ITEM =
   "cursor-pointer rounded-full py-2.5 pl-3.5 pr-9 text-sm font-light focus:bg-foreground focus:text-background data-[state=checked]:bg-foreground/12 data-[state=checked]:text-foreground data-[disabled]:opacity-40";
 
+const COCKPIT_FOOTER_BTN =
+  "flex h-14 min-h-14 items-center justify-center rounded-full border border-border text-[11px] tracking-[0.2em] text-muted-foreground uppercase transition-colors hover:border-foreground/60 hover:text-foreground";
+
 const ARC_START = 135;
 const ARC_SWEEP = 270;
+/** Last portion of the tach treated as the redline zone. */
+const REDLINE_ZONE_START = 0.82;
+const REDLINE_COLOR = "#e53935";
+const TACH_COLOR = "oklch(0.97 0.002 250)";
 const CATALOG_IDS = new Set(SOUND_PROFILES.map((p) => p.id));
+
+function shiftPresetLabel(id: ShiftMapPresetId) {
+  if (id === "legacy") return "Classic";
+  if (id === "city") return "City";
+  if (id === "touring") return "Touring";
+  return "Sport";
+}
+
+/** Blend tach stroke from white into brand red through the redline zone. */
+function tachStrokeForProgress(progress: number): string {
+  if (progress < REDLINE_ZONE_START) return TACH_COLOR;
+  const t = Math.min(1, (progress - REDLINE_ZONE_START) / (1 - REDLINE_ZONE_START));
+  // Ease in so the tip goes fully red near the needle tip.
+  const eased = t * t;
+  const r = Math.round(247 + (229 - 247) * eased);
+  const g = Math.round(247 + (57 - 247) * eased);
+  const b = Math.round(250 + (53 - 250) * eased);
+  return `rgb(${r} ${g} ${b})`;
+}
 
 export interface DriveCockpitProps {
   profile: SoundProfile;
@@ -76,10 +115,13 @@ function CockpitTachArc({
   progress,
   size = 220,
   reducedMotion,
+  showRedlineZone = false,
 }: {
   progress: number;
   size?: number;
   reducedMotion: boolean;
+  /** Draw a red zone on the track and tint the fill near redline. */
+  showRedlineZone?: boolean;
 }) {
   const stroke = 2.5;
   const r = (size - stroke) / 2;
@@ -109,7 +151,19 @@ function CockpitTachArc({
   const clamped = Math.min(1, Math.max(0, visual));
   const end = ARC_START + ARC_SWEEP * clamped;
   const track = arcPath(cx, cy, r, ARC_START, ARC_START + ARC_SWEEP);
-  const fill = arcPath(cx, cy, r, ARC_START, end);
+  const zoneStartDeg = ARC_START + ARC_SWEEP * REDLINE_ZONE_START;
+  const zoneTrack = arcPath(cx, cy, r, zoneStartDeg, ARC_START + ARC_SWEEP);
+  const whiteEnd = Math.min(end, zoneStartDeg);
+  const whiteFill =
+    whiteEnd > ARC_START + 0.2 ? arcPath(cx, cy, r, ARC_START, whiteEnd) : null;
+  const redFill =
+    showRedlineZone && clamped > REDLINE_ZONE_START
+      ? arcPath(cx, cy, r, zoneStartDeg, end)
+      : null;
+  const solidFill =
+    !showRedlineZone || clamped <= REDLINE_ZONE_START
+      ? arcPath(cx, cy, r, ARC_START, end)
+      : null;
 
   return (
     <svg
@@ -125,14 +179,87 @@ function CockpitTachArc({
         strokeWidth={stroke}
         strokeLinecap="round"
       />
-      <path
-        d={fill}
-        fill="none"
-        stroke="oklch(0.97 0.002 250)"
-        strokeWidth={stroke}
-        strokeLinecap="round"
-      />
+      {showRedlineZone ? (
+        <path
+          d={zoneTrack}
+          fill="none"
+          stroke="oklch(0.62 0.2 25 / 28%)"
+          strokeWidth={stroke}
+          strokeLinecap="round"
+        />
+      ) : null}
+      {solidFill ? (
+        <path
+          d={solidFill}
+          fill="none"
+          stroke={showRedlineZone ? tachStrokeForProgress(clamped) : TACH_COLOR}
+          strokeWidth={stroke}
+          strokeLinecap="round"
+        />
+      ) : null}
+      {whiteFill && redFill ? (
+        <path
+          d={whiteFill}
+          fill="none"
+          stroke={TACH_COLOR}
+          strokeWidth={stroke}
+          strokeLinecap="round"
+        />
+      ) : null}
+      {redFill ? (
+        <path
+          d={redFill}
+          fill="none"
+          stroke={tachStrokeForProgress(clamped)}
+          strokeWidth={stroke + 0.5}
+          strokeLinecap="round"
+        />
+      ) : null}
     </svg>
+  );
+}
+
+function CockpitGearLadder({
+  gearCount,
+  activeGear,
+  shifting,
+  reducedMotion,
+}: {
+  gearCount: number;
+  activeGear: number;
+  shifting: boolean;
+  reducedMotion: boolean;
+}) {
+  if (gearCount < 2) return null;
+  const active = Math.min(gearCount, Math.max(1, Math.round(activeGear)));
+
+  return (
+    <div
+      className="mt-2 flex items-center justify-center gap-1.5"
+      role="status"
+      aria-label={shifting ? `Shifting to gear ${active}` : `Gear ${active}`}
+    >
+      {Array.from({ length: gearCount }, (_, i) => i + 1).map((gear) => {
+        const isActive = gear === active;
+        return (
+          <span
+            key={gear}
+            className={cn(
+              "flex h-7 min-w-7 items-center justify-center rounded-full px-1.5 text-[11px] tabular-nums tracking-wide transition-[transform,background-color,color,box-shadow] duration-200",
+              isActive
+                ? "bg-foreground text-background"
+                : "text-muted-foreground/55",
+                isActive && shifting && !reducedMotion
+                ? "scale-110 shadow-[0_0_0_2px_var(--cockpit-redline)]"
+                : null,
+              isActive && !reducedMotion ? "scale-105" : null,
+            )}
+          >
+            {gear}
+          </span>
+        );
+      })}
+    </div>
   );
 }
 
@@ -170,6 +297,8 @@ export function DriveCockpit({
   const volumeBeforeMute = useRef(settings.volume > 0 ? settings.volume : 0.35);
   const fullscreenOk = useFullscreenAvailable();
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [soundsOpen, setSoundsOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
 
   const freshness = driveState.powertrain?.speedFreshness ?? null;
   const availability = cockpitSpeedAvailability({
@@ -183,20 +312,29 @@ export function DriveCockpit({
   const redline = drivetrain.personality.engine.redlineRpm;
   const idle = drivetrain.personality.engine.idleRpm;
   const rpm = driveState.powertrain?.rpm ?? driveState.rpm;
+  const showTachRedline = secondary.showRpm && secondary.kind === "gear";
   const arcProgress =
-    secondary.showRpm && redline > idle
+    showTachRedline && redline > idle
       ? Math.min(1, Math.max(0, (rpm - idle) / (redline - idle)))
       : secondary.arcProgress;
+  const gearCount = drivetrain.personality.transmission.gearRatios.length;
+  const activeGear = driveState.powertrain?.gear ?? driveState.gear;
+  const isShifting = Boolean(driveState.powertrain?.shifting ?? driveState.isShifting);
+  const inRedline = showTachRedline && arcProgress >= REDLINE_ZONE_START;
 
   const favourites = useMemo(
     () => cockpitFavouriteSlots(settings.favourites, CATALOG_IDS, 3),
     [settings.favourites],
   );
 
-  const pickerIds = useMemo(() => {
-    const ids = new Set<string>([profile.id, ...favourites, ...settings.favourites.slice(0, 12)]);
-    return [...ids].filter((id) => CATALOG_IDS.has(id));
-  }, [profile.id, favourites, settings.favourites]);
+  const soundGroups = useMemo(
+    () =>
+      PROFILE_CATEGORIES.map((category) => ({
+        category,
+        profiles: SOUND_PROFILES.filter((p) => p.category === category),
+      })).filter((group) => group.profiles.length > 0),
+    [],
+  );
 
   const telemetry = cockpitTelemetryLabel(productStatus);
   const showShiftPreset = profile.drivetrainMode === "virtual-transmission";
@@ -241,6 +379,11 @@ export function DriveCockpit({
     setSwitchStatus(null);
   }
 
+  async function pickSound(profileId: string) {
+    setSoundsOpen(false);
+    await selectProfile(profileId);
+  }
+
   function nudgeVolume(dir: 1 | -1) {
     if (muted) {
       setMuted(false);
@@ -279,13 +422,16 @@ export function DriveCockpit({
   return (
     <div
       className={cn(
-        "drive-cockpit flex flex-1 flex-col text-foreground",
+        "drive-cockpit relative z-[1] flex flex-1 flex-col text-foreground",
         "px-4 pt-[max(0.5rem,env(safe-area-inset-top))] pb-[max(0.5rem,env(safe-area-inset-bottom))] sm:px-8",
         className,
       )}
+      style={{ ["--cockpit-redline" as string]: REDLINE_COLOR }}
       data-testid="drive-cockpit"
     >
-      <header className="drive-cockpit__header grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 sm:gap-3">
+      <DriveProfileBackdrop profileId={profile.id} className="z-0" />
+
+      <header className="drive-cockpit__header relative z-[1] grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 sm:gap-3">
         <ElcamosoLogo
           variant="full"
           intensity={Math.min(1, Math.max(driveState.load, driveState.throttle))}
@@ -312,14 +458,22 @@ export function DriveCockpit({
       </header>
 
       <section
-        className="drive-cockpit__centre relative mx-auto flex min-h-0 w-full max-w-lg flex-1 flex-col items-center justify-center py-2 sm:py-4"
+        className="drive-cockpit__centre relative z-[1] mx-auto flex min-h-0 w-full max-w-lg flex-1 flex-col items-center justify-center py-2 sm:py-4"
         aria-label="Speed and drivetrain"
       >
         <div className="relative mx-auto aspect-square w-[min(58vw,220px)] max-w-full place-items-center sm:w-[280px]">
-          <CockpitTachArc progress={arcProgress} size={300} reducedMotion={reducedMotion} />
+          <CockpitTachArc
+            progress={arcProgress}
+            size={300}
+            reducedMotion={reducedMotion}
+            showRedlineZone={showTachRedline}
+          />
           <div className="absolute inset-0 z-[1] flex flex-col items-center justify-center px-5 text-center">
             <p
-              className="drive-cockpit__speed font-extralight tabular-nums leading-none tracking-tight"
+              className={cn(
+                "drive-cockpit__speed font-extralight tabular-nums leading-none tracking-tight transition-colors duration-200",
+                inRedline ? "text-[var(--cockpit-redline)]" : null,
+              )}
               aria-live="off"
             >
               {speedView.value}
@@ -339,11 +493,23 @@ export function DriveCockpit({
 
         <div className="mt-2 flex flex-col items-center gap-0.5 sm:mt-3 sm:gap-1">
           <div className="flex items-baseline gap-3">
-            <p className="text-3xl font-extralight tabular-nums sm:text-4xl" aria-live="off">
+            <p
+              className={cn(
+                "text-3xl font-extralight tabular-nums transition-colors duration-200 sm:text-4xl",
+                isShifting ? "text-[var(--cockpit-redline)]" : null,
+              )}
+              aria-live="off"
+            >
               {secondary.value}
             </p>
             {secondary.showRpm ? (
-              <p className="text-lg font-light tabular-nums text-muted-foreground sm:text-xl" aria-live="off">
+              <p
+                className={cn(
+                  "text-lg font-light tabular-nums sm:text-xl",
+                  inRedline ? "text-[var(--cockpit-redline)]" : "text-muted-foreground",
+                )}
+                aria-live="off"
+              >
                 {secondary.rpmText}
               </p>
             ) : null}
@@ -352,25 +518,29 @@ export function DriveCockpit({
             {secondary.label}
             {secondary.showRpm ? " · Rev" : ""}
           </p>
+          {secondary.kind === "gear" ? (
+            <CockpitGearLadder
+              gearCount={gearCount}
+              activeGear={activeGear}
+              shifting={isShifting}
+              reducedMotion={reducedMotion}
+            />
+          ) : null}
           <p className="text-[10px] tracking-[0.16em] text-muted-foreground/80 uppercase">
             {secondary.simulatedCaption}
           </p>
         </div>
       </section>
 
-      <footer className="drive-cockpit__footer mx-auto flex w-full max-w-lg flex-col gap-2.5 pt-1 sm:gap-4 sm:pt-2">
-        <div
-          className="grid grid-cols-3 gap-2"
-          role="group"
-          aria-label="Favourite sounds"
-        >
+      <footer className="drive-cockpit__footer relative z-[1] mx-auto flex w-full max-w-lg flex-col gap-3 pt-1 sm:gap-4 sm:pt-2">
+        <div className="grid grid-cols-3 gap-2" role="group" aria-label="Favourite sounds">
           {([0, 1, 2] as const).map((slot) => {
             const id = favourites[slot];
             if (!id) {
               return (
                 <div
                   key={`empty-${slot}`}
-                  className="flex h-12 items-center justify-center rounded-full border border-border/50 text-[10px] tracking-[0.16em] text-muted-foreground/50 uppercase"
+                  className="flex h-14 items-center justify-center rounded-full border border-border/50 text-[10px] tracking-[0.16em] text-muted-foreground/50 uppercase"
                   aria-hidden="true"
                 >
                   —
@@ -388,7 +558,7 @@ export function DriveCockpit({
                 aria-pressed={active}
                 aria-label={`${favProfile.name}${access === "locked" ? ", locked" : ""}`}
                 className={cn(
-                  "flex h-12 min-h-12 items-center justify-center truncate rounded-full border px-2 text-[11px] tracking-[0.12em] uppercase transition-colors",
+                  "flex h-14 min-h-14 items-center justify-center truncate rounded-full border px-2 text-[11px] tracking-[0.12em] uppercase transition-colors",
                   active
                     ? "border-foreground bg-foreground text-background"
                     : "border-border text-foreground hover:border-foreground/60",
@@ -401,39 +571,25 @@ export function DriveCockpit({
           })}
         </div>
 
-        <div className="flex min-h-12 items-center gap-3">
-          <span className="shrink-0 text-[10px] tracking-[0.24em] text-muted-foreground uppercase">
-            Sound
-          </span>
-          <Select
-            value={profile.id}
-            onValueChange={(id) => void selectProfile(id)}
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={() => setSoundsOpen(true)}
+            className={COCKPIT_FOOTER_BTN}
+            aria-haspopup="dialog"
+            aria-expanded={soundsOpen}
           >
-            <SelectTrigger className={COCKPIT_SELECT_TRIGGER} aria-label="Active sound">
-              <SelectValue>{profile.name}</SelectValue>
-            </SelectTrigger>
-            <SelectContent position="item-aligned" className={COCKPIT_SELECT_CONTENT}>
-              {pickerIds.map((id) => {
-                const p = getProfile(id);
-                const locked = !canDriveWithProfile(id);
-                const isActive = id === profile.id;
-                return (
-                  <SelectItem
-                    key={id}
-                    value={id}
-                    textValue={p.name}
-                    disabled={locked && !isActive}
-                    className={cn(COCKPIT_SELECT_ITEM, locked && !isActive && "text-muted-foreground")}
-                  >
-                    <span className="flex w-full min-w-0 items-center justify-between gap-3 pr-1">
-                      <span className="truncate">{p.name}</span>
-                      {locked ? <PremiumBadge className="shrink-0" /> : null}
-                    </span>
-                  </SelectItem>
-                );
-              })}
-            </SelectContent>
-          </Select>
+            All sounds
+          </button>
+          <button
+            type="button"
+            onClick={() => setMoreOpen(true)}
+            className={COCKPIT_FOOTER_BTN}
+            aria-haspopup="dialog"
+            aria-expanded={moreOpen}
+          >
+            More
+          </button>
         </div>
 
         <div
@@ -444,7 +600,7 @@ export function DriveCockpit({
           <button
             type="button"
             onClick={() => nudgeVolume(-1)}
-            className="flex h-12 w-12 min-h-12 min-w-12 items-center justify-center rounded-full border border-border text-lg"
+            className="flex h-14 w-14 min-h-14 min-w-14 items-center justify-center rounded-full border border-border text-lg"
             aria-label="Volume down"
           >
             −
@@ -453,7 +609,7 @@ export function DriveCockpit({
             type="button"
             onClick={toggleMute}
             className={cn(
-              "flex h-12 min-h-12 flex-1 items-center justify-center rounded-full border px-4 text-[11px] tracking-[0.2em] uppercase",
+              "flex h-14 min-h-14 flex-1 items-center justify-center rounded-full border px-4 text-[11px] tracking-[0.2em] uppercase",
               muted || effectiveVolume <= 0
                 ? "border-foreground bg-foreground text-background"
                 : "border-border text-muted-foreground",
@@ -466,7 +622,7 @@ export function DriveCockpit({
           <button
             type="button"
             onClick={() => nudgeVolume(1)}
-            className="flex h-12 w-12 min-h-12 min-w-12 items-center justify-center rounded-full border border-border text-lg"
+            className="flex h-14 w-14 min-h-14 min-w-14 items-center justify-center rounded-full border border-border text-lg"
             aria-label="Volume up"
           >
             +
@@ -480,10 +636,80 @@ export function DriveCockpit({
         >
           Stop Drive
         </button>
+      </footer>
 
-        <div className="flex flex-wrap items-center justify-between gap-3">
+      <Sheet open={soundsOpen} onOpenChange={setSoundsOpen}>
+        <SheetContent
+          side="bottom"
+          className="flex max-h-[min(78vh,36rem)] flex-col gap-0 rounded-t-3xl border-border px-0 pb-[max(1rem,env(safe-area-inset-bottom))]"
+        >
+          <SheetHeader className="shrink-0 space-y-1 border-b border-border px-6 pb-4 text-left">
+            <SheetTitle className="font-light tracking-[0.18em] uppercase">Sounds</SheetTitle>
+            <SheetDescription className="text-xs text-muted-foreground">
+              Tap a sound to switch. Favourites stay one tap on the cluster.
+            </SheetDescription>
+          </SheetHeader>
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-3">
+            {soundGroups.map(({ category, profiles }) => (
+              <div key={category} className="mb-3">
+                <p className="px-3 py-1.5 text-[10px] tracking-[0.22em] text-muted-foreground uppercase">
+                  {category}
+                </p>
+                <div className="flex flex-col gap-1">
+                  {profiles.map((item) => {
+                    const locked = !canDriveWithProfile(item.id);
+                    const active = item.id === profile.id;
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        disabled={locked && !active}
+                        onClick={() => void pickSound(item.id)}
+                        className={cn(
+                          "flex w-full items-start justify-between gap-3 rounded-2xl px-3 py-3 text-left transition-colors",
+                          active
+                            ? "bg-foreground text-background"
+                            : locked
+                              ? "cursor-not-allowed text-muted-foreground/50"
+                              : "hover:bg-secondary",
+                        )}
+                      >
+                        <span className="min-w-0">
+                          <span className="block truncate text-sm font-light">{item.name}</span>
+                          <span
+                            className={cn(
+                              "mt-0.5 block line-clamp-1 text-[11px]",
+                              active ? "text-background/70" : "text-muted-foreground",
+                            )}
+                          >
+                            {item.traits.join(" · ")}
+                          </span>
+                        </span>
+                        {locked ? <PremiumBadge className="mt-0.5 shrink-0" /> : null}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      <Sheet open={moreOpen} onOpenChange={setMoreOpen}>
+        <SheetContent
+          side="bottom"
+          className="flex flex-col gap-4 rounded-t-3xl border-border px-6 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-6"
+        >
+          <SheetHeader className="space-y-1 text-left">
+            <SheetTitle className="font-light tracking-[0.18em] uppercase">More</SheetTitle>
+            <SheetDescription className="text-xs text-muted-foreground">
+              Secondary drive controls. Keep your eyes on the road.
+            </SheetDescription>
+          </SheetHeader>
+
           {showShiftPreset ? (
-            <div className="flex min-h-12 min-w-0 flex-1 items-center gap-2">
+            <div className="flex min-h-12 items-center gap-3">
               <span className="shrink-0 text-[10px] tracking-[0.2em] text-muted-foreground uppercase">
                 Shift
               </span>
@@ -492,46 +718,42 @@ export function DriveCockpit({
                 onValueChange={(id) => update({ shiftMapPreset: id as ShiftMapPresetId })}
               >
                 <SelectTrigger className={COCKPIT_SELECT_TRIGGER} aria-label="Shift preset">
-                  <SelectValue />
+                  <SelectValue>{shiftPresetLabel(settings.shiftMapPreset)}</SelectValue>
                 </SelectTrigger>
                 <SelectContent position="item-aligned" className={COCKPIT_SELECT_CONTENT}>
                   {SHIFT_MAP_PRESET_IDS.map((id) => (
                     <SelectItem key={id} value={id} className={COCKPIT_SELECT_ITEM}>
-                      {id === "legacy"
-                        ? "Classic"
-                        : id === "city"
-                          ? "City"
-                          : id === "touring"
-                            ? "Touring"
-                            : "Sport"}
+                      {shiftPresetLabel(id)}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
-          ) : (
-            <span className="flex-1" />
-          )}
-          <div className="flex items-center gap-2">
+          ) : null}
+
+          <div className="grid grid-cols-2 gap-2">
             {fullscreenOk ? (
               <button
                 type="button"
                 onClick={() => void toggleFullscreen()}
-                className="flex h-12 min-h-12 items-center justify-center rounded-full border border-border px-4 text-[10px] tracking-[0.2em] text-muted-foreground uppercase"
+                className={COCKPIT_FOOTER_BTN}
                 aria-pressed={isFullscreen}
               >
-                {isFullscreen ? "Exit" : "Full"}
+                {isFullscreen ? "Exit full" : "Fullscreen"}
               </button>
-            ) : null}
+            ) : (
+              <span />
+            )}
             <Link
               to="/settings"
-              className="flex h-12 min-h-12 items-center justify-center rounded-full border border-border px-5 text-[10px] tracking-[0.2em] text-muted-foreground uppercase hover:text-foreground"
+              onClick={() => setMoreOpen(false)}
+              className={COCKPIT_FOOTER_BTN}
             >
               Settings
             </Link>
           </div>
-        </div>
-      </footer>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }

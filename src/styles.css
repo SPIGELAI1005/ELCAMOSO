@@ -458,8 +458,105 @@
   }
 }
 
+/* Glass Start Drive CTA - ~92% transparent at rest, clearer on hover. */
+.start-drive-glass {
+  border: 1px solid oklch(1 0 0 / 0.22);
+  background-color: oklch(1 0 0 / 0.08) !important;
+  background-image: none !important;
+  color: var(--foreground);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  box-shadow: inset 0 1px 0 oklch(1 0 0 / 0.16);
+  transition:
+    background-color 220ms ease,
+    border-color 220ms ease,
+    box-shadow 220ms ease,
+    -webkit-backdrop-filter 220ms ease,
+    backdrop-filter 220ms ease;
+}
+
+.start-drive-glass:hover {
+  border-color: oklch(1 0 0 / 0.45);
+  background-color: oklch(1 0 0 / 0.28) !important;
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  box-shadow:
+    inset 0 1px 0 oklch(1 0 0 / 0.28),
+    0 8px 24px oklch(0 0 0 / 0.2);
+}
+
+.start-drive-glass:focus-visible {
+  border-color: oklch(1 0 0 / 0.55);
+  background-color: oklch(1 0 0 / 0.32) !important;
+}
+
 .start-drive-beacon {
   isolation: isolate;
+}
+
+/*
+ * Glass mode: keep the outer pulse, but clear the fill behind the button so
+ * backdrop-filter does not frost the beacon into an opaque pill.
+ */
+.start-drive-beacon--glass .start-drive-beacon__bloom {
+  background: radial-gradient(
+    75% 120% at 50% 50%,
+    transparent 0%,
+    transparent 46%,
+    oklch(1 0 0 / 0.22) 58%,
+    transparent 74%
+  );
+}
+
+.start-drive-beacon--glass .start-drive-beacon__bloom::after {
+  background: radial-gradient(
+    72% 118% at 50% 54%,
+    transparent 0%,
+    transparent 48%,
+    oklch(0.64 0.17 27 / 0.35) 60%,
+    transparent 76%
+  );
+}
+
+.start-drive-beacon--glass .start-drive-beacon__halo {
+  background: radial-gradient(
+    80% 140% at 50% 50%,
+    transparent 0%,
+    transparent 42%,
+    oklch(1 0 0 / 0.14) 55%,
+    transparent 72%
+  );
+}
+
+.start-drive-beacon--glass .start-drive-beacon__halo::after {
+  background: radial-gradient(
+    85% 145% at 50% 50%,
+    transparent 0%,
+    transparent 44%,
+    oklch(0.6 0.13 27 / 0.22) 58%,
+    transparent 74%
+  );
+}
+
+.start-drive-beacon--glass .start-drive-beacon__rim {
+  animation-name: start-drive-rim-glass;
+}
+
+@keyframes start-drive-rim-glass {
+  0%,
+  100% {
+    opacity: 0.25;
+    box-shadow:
+      0 0 0 1px oklch(1 0 0 / 0.05),
+      0 0 14px 0 oklch(1 0 0 / 0.06);
+  }
+  52% {
+    opacity: 0.7;
+    box-shadow:
+      0 0 0 1px oklch(1 0 0 / 0.12),
+      0 0 18px 2px oklch(1 0 0 / 0.1),
+      0 0 28px 8px oklch(0.62 0.14 27 / 0.08);
+  }
 }
 
 .start-drive-beacon__layer {
@@ -584,6 +681,7 @@
     opacity: 0.25;
   }
 }
+
 
 @keyframes prnd-glow {
   0%,

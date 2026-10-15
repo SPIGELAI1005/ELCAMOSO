@@ -18,11 +18,14 @@ export function StartDriveBeacon({
   className,
   variant = "pill",
   enabled = true,
+  glass = false,
 }: {
   children: ReactNode;
   className?: string;
   variant?: "pill" | "pedal";
   enabled?: boolean;
+  /** Hollow beacon fill so a glass CTA stays see-through. */
+  glass?: boolean;
 }) {
   const reducedMotion = useReducedMotion();
   const show = enabled && !reducedMotion;
@@ -33,6 +36,7 @@ export function StartDriveBeacon({
         "start-drive-beacon relative",
         variant === "pedal" ? "block size-full" : "inline-flex",
         variant === "pedal" && "start-drive-beacon--pedal",
+        glass && "start-drive-beacon--glass",
         className,
       )}
     >

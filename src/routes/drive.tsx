@@ -32,9 +32,11 @@ import { getProfile, type SoundProfile } from "@/lib/sound/profiles";
 import { PostDriveExperience } from "@/components/journey/PostDriveExperience";
 import { DriveModePicker } from "@/components/drive/DriveModePicker";
 import { DriveCockpit } from "@/components/drive/DriveCockpit";
+import { DriveProfileBackdrop } from "@/components/drive/DriveProfileBackdrop";
 import { SilentCaptureHud } from "@/components/drive/SilentCaptureHud";
 import { PostSilentCaptureExperience } from "@/components/drive/PostSilentCaptureExperience";
 import { IncompleteJourneyRecovery } from "@/components/drive/IncompleteJourneyRecovery";
+import { StartDriveBeacon } from "@/components/StartDriveBeacon";
 import { shouldCaptureTrace, shouldPlayLiveAudio } from "@/lib/journey-trace";
 
 const TeslaDrivePlusUpgrade = lazy(() =>
@@ -53,6 +55,7 @@ export const Route = createFileRoute("/drive")({
     activateTrial?: boolean;
     upgrade?: string;
     start?: boolean;
+    googleAuth?: string;
   } => {
     const raw = search["cockpit"];
     const debugRaw = search["debug"];
@@ -60,6 +63,7 @@ export const Route = createFileRoute("/drive")({
     const activateRaw = search["activateTrial"];
     const startRaw = search["start"];
     const upgrade = typeof search["upgrade"] === "string" ? search["upgrade"] : undefined;
+    const googleAuth = typeof search["googleAuth"] === "string" ? search["googleAuth"] : undefined;
     const out: {
       cockpit?: boolean;
       debug?: boolean;
@@ -67,6 +71,7 @@ export const Route = createFileRoute("/drive")({
       activateTrial?: boolean;
       upgrade?: string;
       start?: boolean;
+      googleAuth?: string;
     } = {};
     if (raw === true || raw === "1" || raw === 1) out.cockpit = true;
     if (debugRaw === true || debugRaw === "1" || debugRaw === 1) out.debug = true;
@@ -74,16 +79,39 @@ export const Route = createFileRoute("/drive")({
     if (activateRaw === true || activateRaw === "1" || activateRaw === 1) out.activateTrial = true;
     if (startRaw === true || startRaw === "1" || startRaw === 1) out.start = true;
     if (upgrade) out.upgrade = upgrade;
+    if (googleAuth) out.googleAuth = googleAuth;
     return out;
   },
   component: DriveScreen,
   head: () => createSeoHeadFromPath("/drive"),
 });
 
+function googleAuthMessage(code: string | undefined): string | null {
+  if (!code) return null;
+  if (code === "cancelled") return "Google sign-in was cancelled.";
+  if (code === "missing") return "Google sign-in returned an incomplete response. Try again.";
+  if (code === "expired") return "Google sign-in expired. Please try again.";
+  if (code === "token") return "Google could not verify this sign-in. Try again in a moment.";
+  if (code === "secret")
+    return "Google client secret is invalid. Update GOOGLE_CLIENT_SECRET in .env.local and restart the dev server.";
+  if (code === "unavailable") return "Google sign-in is not configured on this server.";
+  if (code === "failed") return "Google sign-in failed. Please try again.";
+  return "Google sign-in did not complete. Please try again.";
+}
+
 function DriveScreen() {
-  const { cockpit, debug, roadTest, activateTrial, upgrade, start: autostart } = Route.useSearch();
+  const {
+    cockpit,
+    debug,
+    roadTest,
+    activateTrial,
+    upgrade,
+    start: autostart,
+    googleAuth,
+  } = Route.useSearch();
   const navigate = useNavigate();
   const autostartHandled = useRef(false);
+  const googleAuthNotice = googleAuthMessage(googleAuth);
   const { plan } = useEntitlements();
   const [relaySessionId, setRelaySessionId] = useState<string | null>(null);
   const [showTeslaUpgrade, setShowTeslaUpgrade] = useState(false);
@@ -126,6 +154,25 @@ function DriveScreen() {
       update({ dynamicDrive: true });
     }
   }, [activateTrial, settings.dynamicDrive, update]);
+
+  useEffect(() => {
+    if (!googleAuth) return;
+    // Clear the one-shot auth status from the URL after it has been read.
+    const t = window.setTimeout(() => {
+      void navigate({
+        to: "/drive",
+        search: {
+          ...(cockpit ? { cockpit: true } : {}),
+          ...(debug ? { debug: true } : {}),
+          ...(roadTest ? { roadTest: true } : {}),
+          ...(activateTrial ? { activateTrial: true } : {}),
+          ...(upgrade ? { upgrade } : {}),
+        },
+        replace: true,
+      });
+    }, 8000);
+    return () => window.clearTimeout(t);
+  }, [activateTrial, cockpit, debug, googleAuth, navigate, roadTest, upgrade]);
 
   useEffect(() => {
     getSession().setCockpit(Boolean(cockpit));
@@ -236,7 +283,7 @@ function DriveScreen() {
   const safetyMode = sessionSnap.safetyMode || Boolean(cockpit);
 
   return (
-    <main className="flex min-h-screen flex-col px-6 pt-6 pb-10 sm:px-10">
+    <main className="relative flex min-h-screen flex-col px-6 pt-6 pb-10 sm:px-10">
       {status === "idle" && !sessionSnap.nativeCapture.active ? (
         <IncompleteJourneyRecovery />
       ) : null}
@@ -351,88 +398,102 @@ function DriveScreen() {
           />
         )
       ) : (
-        <div className="flex flex-1 flex-col items-center justify-center gap-10 text-center">
-          {storageWarning ? (
-            <p className="max-w-sm text-xs text-muted-foreground">{storageWarning}</p>
-          ) : null}
-          {needsSetup ? (
-            <Link
-              to="/onboarding"
-              className="rounded-full border border-border px-6 py-3 text-[11px] tracking-[0.24em] text-muted-foreground uppercase hover:text-foreground"
-            >
-              New here? Run the 3-step setup
-            </Link>
-          ) : null}
-          <ElcamosoMark
-            animate
-            waveResponse={profile.voice.waveResponse}
-            reducedMotion={reducedMotion}
-            className="h-14 w-auto"
-          />
-          <div>
-            <p className="text-[10px] tracking-[0.28em] text-muted-foreground uppercase">
-              Selected experience
-            </p>
-            <button
-              type="button"
-              onClick={() => setPickerOpen(true)}
-              className="mt-2 text-2xl font-light hover:opacity-80"
-            >
-              {selectedExperience.name}
-            </button>
-            <p className="mt-3 text-sm text-muted-foreground">
-              {selectedExperience.tagline || profile.traits.join(" · ")}
-            </p>
-            <button
-              type="button"
-              onClick={() => setPickerOpen(true)}
-              className="mt-4 text-[10px] tracking-[0.22em] text-muted-foreground uppercase hover:text-foreground"
-            >
-              Change experience
-            </button>
-          </div>
-          <div className="w-full max-w-md">
-            <DriveModePicker
-              value={settings.driveOutputMode}
-              onChange={(driveOutputMode) => update({ driveOutputMode })}
+        <>
+          <DriveProfileBackdrop profileId={settings.profileId} className="z-0" />
+          <div className="relative z-[1] flex flex-1 flex-col items-center justify-center gap-10 text-center">
+            {googleAuthNotice ? (
+              <p
+                className="max-w-sm rounded-full border border-border px-5 py-3 text-xs text-muted-foreground"
+                role="status"
+              >
+                {googleAuthNotice}
+              </p>
+            ) : null}
+            {storageWarning ? (
+              <p className="max-w-sm text-xs text-muted-foreground">{storageWarning}</p>
+            ) : null}
+            {needsSetup ? (
+              <Link
+                to="/onboarding"
+                className="rounded-full border border-border px-6 py-3 text-[11px] tracking-[0.24em] text-muted-foreground uppercase hover:text-foreground"
+              >
+                New here? Run the 3-step setup
+              </Link>
+            ) : null}
+            <ElcamosoMark
+              animate
+              waveResponse={profile.voice.waveResponse}
+              reducedMotion={reducedMotion}
+              className="h-14 w-auto"
             />
-          </div>
-          <button
-            onClick={handleStart}
-            className="h-16 min-h-11 rounded-full bg-primary px-12 text-sm tracking-[0.22em] text-primary-foreground uppercase transition-opacity hover:opacity-90"
-          >
-            {settings.driveOutputMode === "capture"
-              ? "Start silent capture"
-              : t(settings.language, "drive.start")}
-          </button>
-          {coach ? <p className="max-w-sm text-sm text-muted-foreground">{coach}</p> : null}
-          {!safetyMode ? (
-            <Link
-              to="/replay"
-              className="text-[11px] tracking-[0.24em] text-muted-foreground uppercase"
-            >
-              Drive recordings
-            </Link>
-          ) : null}
-          <DriveSessionPanel
-            className="max-w-lg"
-            compact
-            devMode={debugDriveActive}
-            onRelaySessionChange={setRelaySessionId}
-          />
-          {cockpit && showTeslaUpgrade ? (
-            <Suspense fallback={null}>
-              <TeslaDrivePlusUpgrade
-                open
-                relaySessionId={relaySessionId}
-                onClose={() => setShowTeslaUpgrade(false)}
-                className="mt-6 w-full max-w-lg"
+            <div>
+              <p className="text-[10px] tracking-[0.28em] text-muted-foreground uppercase">
+                Selected experience
+              </p>
+              <button
+                type="button"
+                onClick={() => setPickerOpen(true)}
+                className="mt-2 text-2xl font-light hover:opacity-80"
+              >
+                {selectedExperience.name}
+              </button>
+              <p className="mt-3 text-sm text-muted-foreground">
+                {selectedExperience.tagline || profile.traits.join(" · ")}
+              </p>
+              <button
+                type="button"
+                onClick={() => setPickerOpen(true)}
+                className="mt-4 text-[10px] tracking-[0.22em] text-muted-foreground uppercase hover:text-foreground"
+              >
+                Change experience
+              </button>
+            </div>
+            <StartDriveBeacon glass className="max-w-full">
+              <button
+                type="button"
+                onClick={handleStart}
+                className="start-drive-glass relative z-10 h-16 min-h-11 rounded-full px-12 text-sm tracking-[0.22em] uppercase"
+              >
+                {settings.driveOutputMode === "capture"
+                  ? "Start silent capture"
+                  : t(settings.language, "drive.start")}
+              </button>
+            </StartDriveBeacon>
+            <div className="w-full max-w-md">
+              <DriveModePicker
+                value={settings.driveOutputMode}
+                onChange={(driveOutputMode) => update({ driveOutputMode })}
               />
-            </Suspense>
-          ) : null}
-          <DynamicDriveTrialComplete className="mt-6 w-full max-w-lg" />
-          <ExperiencePicker open={pickerOpen} onClose={() => setPickerOpen(false)} />
-        </div>
+            </div>
+            {coach ? <p className="max-w-sm text-sm text-muted-foreground">{coach}</p> : null}
+            {!safetyMode ? (
+              <Link
+                to="/replay"
+                className="text-[11px] tracking-[0.24em] text-muted-foreground uppercase"
+              >
+                Drive recordings
+              </Link>
+            ) : null}
+            <DriveSessionPanel
+              className="max-w-lg"
+              compact
+              devMode={debugDriveActive}
+              onRelaySessionChange={setRelaySessionId}
+            />
+            {cockpit && showTeslaUpgrade ? (
+              <Suspense fallback={null}>
+                <TeslaDrivePlusUpgrade
+                  open
+                  relaySessionId={relaySessionId}
+                  onClose={() => setShowTeslaUpgrade(false)}
+                  className="mt-6 w-full max-w-lg"
+                />
+              </Suspense>
+            ) : null}
+            <DynamicDriveTrialComplete className="mt-6 w-full max-w-lg" />
+            <ExperiencePicker open={pickerOpen} onClose={() => setPickerOpen(false)} />
+          </div>
+        </>
       )}
     </main>
   );
@@ -470,7 +531,7 @@ function Driving({
   safetyMode: boolean;
 }) {
   return (
-    <div className="flex flex-1 flex-col">
+    <div className="relative z-[1] flex flex-1 flex-col">
       <DriveCockpit
         profile={profile}
         driveState={driveState}

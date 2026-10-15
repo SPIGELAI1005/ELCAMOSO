@@ -40,6 +40,18 @@ When all three are set, the account sign-in dialog shows **Continue with Google*
 
 Live production sends `redirect_uri=https://www.elcamoso.com/auth/account/google/callback` with client id `40511295281-…apps.googleusercontent.com`. That exact string must appear under **Authorized redirect URIs** on the same Web client. After registering it, Google sign-in reaches the account picker instead of Error 400.
 
+## Troubleshooting: `The provided client secret is invalid`
+
+Google accepted the authorize step, then rejected the **token exchange**. ELCAMOSO shows `/drive?googleAuth=secret` (or `failed`).
+
+| Cause | Fix |
+| ----- | --- |
+| `GOOGLE_CLIENT_SECRET` was rotated in Cloud Console | Open the **same** Web client as `GOOGLE_CLIENT_ID`, copy the current secret into `.env.local`, restart `npm run dev` |
+| Secret belongs to a different OAuth client | Client ID and secret must be a pair from one Web application credential |
+| Typo, quotes, or trailing space in `.env.local` | Use a single unquoted line: `GOOGLE_CLIENT_SECRET=GOCSPX-…` |
+
+The Client ID can still be correct while the secret is stale. Re-copying only the ID does not fix this.
+
 ## Troubleshooting: `Error 400: redirect_uri_mismatch`
 
 Google rejects the authorize request **before** consent when the `redirect_uri` query param is not an exact registered value. Typical causes:
@@ -90,9 +102,12 @@ If a suffixed value is missing, the unsuffixed `GOOGLE_*` value is used.
 
 ## Flow
 
-1. Client calls `beginGoogleSignInFn` → redirects to Google (authorize URL only; no secrets).
-2. Google returns to `GET /auth/account/google/callback?code=…&state=…`.
-3. The **server route handler** validates state, exchanges the code with PKCE + client secret, verifies the ID token, creates the session, sets the HttpOnly cookie, and redirects to `returnTo`.
-4. Browser never receives Google tokens or the ELCAMOSO session token in JSON / localStorage.
+1. Client navigates to `GET /auth/account/google/start?returnTo=…`.
+2. That **server route** mints PKCE state, sets the HttpOnly pending cookie (`elcamoso_google_oauth`) on the **same 302** that sends the browser to Google (authorize URL only; no secrets).
+3. Google returns to `GET /auth/account/google/callback?code=…&state=…`.
+4. The callback validates state (cookie and/or in-memory), exchanges the code with PKCE + client secret, verifies the ID token, creates the session, sets the HttpOnly session cookie, and redirects to `returnTo`.
+5. Browser never receives Google tokens or the ELCAMOSO session token in JSON / localStorage.
 
-`completeGoogleSignInFn` remains available for tests and internal callers; production Google redirects use the server route above.
+Do **not** rely on `beginGoogleSignInFn` + `window.location.assign` for the production path: `createServerFn` `setCookie` is not reliably applied before a client-side navigation, which breaks the callback after Vite HMR or on multi-instance deploys. `beginGoogleSignInFn` remains for tests and diagnostics.
+
+On failure the callback redirects to `/drive?googleAuth=…` (`cancelled` | `missing` | `expired` | `token` | `failed` | `unavailable`) and Drive shows a short status line.
