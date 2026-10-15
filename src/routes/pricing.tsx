@@ -10,11 +10,38 @@ import type { BillingDisplayInterval } from "@/lib/billing/plan-display";
 import { getDrivePlusMonthlyDisplay, getDrivePlusYearlyDisplay } from "@/lib/billing/plan-display";
 import { useEntitlements } from "@/lib/entitlements/useEntitlements";
 import { trackMonetizationEvent } from "@/lib/telemetry/monetization-analytics";
+import { useSettings } from "@/lib/drive/useSettings";
+import { t } from "@/lib/i18n";
 
 export const Route = createFileRoute("/pricing")({
   component: Pricing,
   head: () => createSeoHeadFromPath("/pricing"),
 });
+
+
+function EarlyAccessBanner() {
+  const { settings } = useSettings();
+  const language = settings.language;
+  return (
+    <aside
+      className="mx-auto w-full max-w-2xl px-6 pt-10 sm:px-10"
+      role="status"
+      data-testid="early-access-banner"
+    >
+      <div className="rounded-2xl border border-border bg-muted/40 px-5 py-5 sm:px-6 sm:py-6">
+        <p className="text-[11px] tracking-[0.28em] text-muted-foreground uppercase">
+          Early access
+        </p>
+        <h2 className="mt-3 text-xl font-light tracking-tight sm:text-2xl">
+          {t(language, "pricing.earlyAccessTitle")}
+        </h2>
+        <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+          {t(language, "pricing.earlyAccessBody")}
+        </p>
+      </div>
+    </aside>
+  );
+}
 
 function OpenDriveLink() {
   return (
@@ -36,7 +63,7 @@ function PricingFooterNotes({ showCancel = true }: { showCancel?: boolean }) {
           showCancel ? "mt-2 text-sm text-muted-foreground" : "text-sm text-muted-foreground"
         }
       >
-        Essential ELCAMOSO stays free.
+        Early access is free until 9.11.2026. Three engines stay free after launch.
       </p>
     </section>
   );
@@ -69,7 +96,8 @@ function Pricing() {
   if (!monetizationEnabled) {
     return (
       <main className="min-h-screen">
-        <section className="mx-auto w-full max-w-2xl px-6 pt-16 pb-10 sm:px-10 sm:pt-20">
+        <EarlyAccessBanner />
+        <section className="mx-auto w-full max-w-2xl px-6 pt-10 pb-10 sm:px-10 sm:pt-12">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <p className="text-[11px] tracking-[0.28em] text-muted-foreground uppercase">Plans</p>
             <PlansBillingIntervalToggle value={interval} onChange={setInterval} />
@@ -80,7 +108,7 @@ function Pricing() {
             Make every drive yours.
           </h1>
           <p className="mt-6 max-w-md text-sm leading-relaxed text-muted-foreground">
-            Start with essential motion sound. Drive+ adds the full feel when billing opens.
+            Start with essential motion sound — free during early access. Drive+ and individual sound purchases open on 9.11.2026.
           </p>
         </section>
         <section className="mx-auto w-full max-w-2xl px-6 sm:px-10">
@@ -99,7 +127,8 @@ function Pricing() {
 
   return (
     <main className="min-h-screen">
-      <section className="mx-auto w-full max-w-2xl px-6 pt-16 pb-10 sm:px-10 sm:pt-20">
+      <EarlyAccessBanner />
+      <section className="mx-auto w-full max-w-2xl px-6 pt-10 pb-10 sm:px-10 sm:pt-12">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <p className="text-[11px] tracking-[0.28em] text-muted-foreground uppercase">Plans</p>
           <PlansBillingIntervalToggle value={interval} onChange={setInterval} />
@@ -110,7 +139,8 @@ function Pricing() {
           Make every drive yours.
         </h1>
         <p className="mt-6 max-w-md text-sm leading-relaxed text-muted-foreground">
-          Start with essential motion sound. Add Drive+ when you want the full feel.
+          Start with essential motion sound. Drive+ and individual sound purchases open on
+          9.11.2026.
         </p>
       </section>
 
@@ -143,8 +173,9 @@ function Pricing() {
               </div>
             </>
           ) : (
-            <p className="text-sm text-[#e53935]">
-              Checkout opens when billing is enabled. Essential ELCAMOSO stays free.
+            <p className="text-sm text-muted-foreground">
+              Drive+ and individual sound purchases open on 9.11.2026. Until then, ELCAMOSO is free
+              of charge.
             </p>
           )}
         </div>

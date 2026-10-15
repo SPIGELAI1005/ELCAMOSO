@@ -178,7 +178,7 @@ export function PlansOverview({
                 billingNoticeTone === "danger" ? "text-[#e53935]" : "text-muted-foreground",
               )}
             >
-              Checkout opens when billing is enabled. Essential ELCAMOSO stays free.
+              Drive+ and individual sound purchases open on 9.11.2026. Until then, ELCAMOSO is free of charge.
             </p>
           ) : null}
         </div>

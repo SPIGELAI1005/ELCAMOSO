@@ -38,6 +38,8 @@ const STRINGS: Record<Locale, Record<string, string>> = {
     "settings.restore": "Restore recommended setup",
     "settings.language": "Language",
     "settings.units": "Units",
+    "pricing.earlyAccessTitle": "Early access — test drive ELCAMOSO for free",
+    "pricing.earlyAccessBody": "We're fine-tuning every sound profile on real roads before launch. Until then, enjoy ELCAMOSO free of charge and help shape the final experience. Drive+ and individual sound purchases open on 9.11.2026.",
     "intense.confirm": "This Sound Profile is rated intense. Continue?",
   },
   de: {
@@ -76,6 +78,8 @@ const STRINGS: Record<Locale, Record<string, string>> = {
     "settings.restore": "Empfohlene Einrichtung wiederherstellen",
     "settings.language": "Sprache",
     "settings.units": "Einheiten",
+    "pricing.earlyAccessTitle": "Early Access — ELCAMOSO kostenlos testen",
+    "pricing.earlyAccessBody": "Wir feilen noch an jedem Soundprofil auf echten Strassen vor dem Launch. Bis dahin ist ELCAMOSO kostenlos — hilf mit, das finale Erlebnis zu formen. Drive+ und einzelne Sound-Kaeufe starten am 9.11.2026.",
     "intense.confirm": "Dieses Klangprofil ist als intensiv eingestuft. Fortfahren?",
   },
   ro: {
@@ -114,6 +118,8 @@ const STRINGS: Record<Locale, Record<string, string>> = {
     "settings.restore": "Restabileste configurarea recomandata",
     "settings.language": "Limba",
     "settings.units": "Unitati",
+    "pricing.earlyAccessTitle": "Acces early — testeaza ELCAMOSO gratuit",
+    "pricing.earlyAccessBody": "Rafinam fiecare profil de sunet pe drumuri reale inainte de lansare. Pana atunci, ELCAMOSO este gratuit — ajuta-ne sa modelam experienta finala. Drive+ si achizitiile individuale de sunete se deschid pe 9.11.2026.",
     "intense.confirm": "Acest profil de sunet este intens. Continui?",
   },
 };
