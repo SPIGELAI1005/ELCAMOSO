@@ -262,18 +262,14 @@ export const MUSCLE_V8_TOPOLOGY: CombustionTopologyV1 = {
   cycleDegrees: 720,
   cylinderCount: 8,
   collectors: [{ id: 0 }, { id: 1 }],
-  cycleLope: 0.6,
-  noiseScale: 0,
+  // Broadband excitation noise floor is load-gated (less hiss at cruise in the car).
+  noiseScale: 0.25,
   soundSpeedMetresPerSecond: TOPOLOGY_SOUND_SPEED_DEFAULT,
   cylinders: v8Cylinders(
     [1, 8, 7, 2, 6, 5, 4, 3],
     (cyl) => (cyl % 2 === 1 ? 0 : 1),
-    // v8depth: true-dual exhaust - the even bank's pipe path is ~0.8 m longer, so its
-    // pulses arrive late and the 90° train turns uneven at the tailpipe (burble).
-    (i, cyl) => 0.06 + (i % 4) * 0.035 + (cyl % 2 === 0 ? 0.8 : 0),
-    // Non-repeating per-cylinder weights: cylinder-to-cylinder variation gives
-    // half-order (0.5 / 1.5) content, not only the period-4 bank lope.
-    [1.26, 0.76, 1.1, 0.66, 1.18, 0.84, 1.14, 0.7],
+    (i) => 0.06 + (i % 4) * 0.035,
+    [1.18, 0.78, 1.1, 0.72, 1.18, 0.78, 1.1, 0.72],
   ),
 };
 

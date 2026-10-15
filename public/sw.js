@@ -1,4 +1,4 @@
-const CACHE = "elcamoso-shell-v6";
+const CACHE = "elcamoso-shell-v7";
 const SHELL = [
   "/manifest.webmanifest",
   "/icon.svg",

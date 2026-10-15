@@ -6,6 +6,9 @@
 
 import { getNoiseBuffer } from "@/lib/sound/dsp/noise";
 
+/** Bump whenever public/audio/combustion-processor.js changes. */
+export const COMBUSTION_WORKLET_VERSION = "2026-10-15a";
+
 export interface CombustionExcitationParams {
   firingHz: number;
   intensity: number;
@@ -52,7 +55,10 @@ export function ensureCombustionWorklet(ctx: BaseAudioContext): Promise<boolean>
     try {
       if (!ctx.audioWorklet) return false;
       console.log("[CombustionExcitation] Loading combustion-processor worklet...");
-      await ctx.audioWorklet.addModule("/audio/combustion-processor.js");
+      // Versioned URL: a new deploy always fetches the new worklet (no stale HTTP/SW cache).
+      await ctx.audioWorklet.addModule(
+        `/audio/combustion-processor.js?v=${COMBUSTION_WORKLET_VERSION}`,
+      );
       readyContexts.add(ctx);
       console.log("[CombustionExcitation] Worklet loaded successfully");
       return true;

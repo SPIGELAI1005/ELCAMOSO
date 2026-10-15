@@ -1092,8 +1092,13 @@ export class HybridCombustionSynth {
 
     // Lift-off / downshift exhaust pops (profiles with cfg.liftPops): unburned fuel lighting
     // off in a hot pipe after a meaningful lift at speed. Deterministic RNG, with cooldown.
-    if (cfg.liftPops && this.popChain && this.advancedTransients) {
-      const lift = this.popPrevDemand - demand > 0.35 && demand < 0.5 && rpm > 1800;
+    if (cfg.liftPops && this.popChain) {
+      // GPS-estimated throttle rarely exceeds ~0.3, so a lift is a drop from a recent peak.
+      const lift =
+        this.popPrevDemand > 0.18 &&
+        this.popPrevDemand - demand > 0.15 &&
+        demand < 0.06 &&
+        rpm > 1500;
       const downshift =
         shifting && pt?.shiftDirection === "down" && !this.popPrevDownshift && rpm > 2000;
       if ((lift || downshift) && audioTime - this.popLastAt > 1.6) {
@@ -1106,15 +1111,16 @@ export class HybridCombustionSynth {
       }
       this.popPrevDownshift = shifting && pt?.shiftDirection === "down";
     }
-    // Recent-peak demand (decays over ~6 s) so a smoothed throttle lift is still detected.
-    this.popPrevDemand = Math.max(demand, this.popPrevDemand - dt * 0.15);
+    // Recent-peak demand (decays slowly: GPS throttle eases off over seconds) so a smoothed throttle lift is still detected.
+    this.popPrevDemand = Math.max(demand, this.popPrevDemand - dt * 0.05);
 
     if (this.growl && cfg.growl) {
       // Drive rises with load so the saturator turns pulse irregularity into growl on pull;
       // cruise keeps a softer burble. Overrun lets it crackle a little through the pipe.
       const drive = 0.6 + load * 1.6 + demand * 0.6 + (overrun ? 0.5 : 0);
       targetParam(this.growl.drive.gain, drive, audioTime, 0.06);
-      const level = cfg.growl.level * (0.68 + load * 0.22 + demand * 0.1) * (overrun ? 0.8 : 1);
+      const gateG = Math.min(1, Math.max(0, (load - 0.35) / 0.3));
+      const level = Math.max(0.0001, cfg.growl.level * gateG * (overrun ? 0 : 1));
       targetParam(this.growl.gain.gain, level, audioTime, 0.06);
       targetParam(
         this.growl.lp.frequency,
@@ -1282,7 +1288,11 @@ export class HybridCombustionSynth {
     this.priorLoad = this.priorLoad * 0.92 + load * 0.08;
 
     if (this.turbo) {
-      const boostWant = pt?.boost ?? 0;
+      // Powertrain boost barely builds from GPS-estimated load (~0.3 max in the car), so the
+      // acoustic spool also follows load × rpm directly - the whistle must react to real driving.
+      const rpmSpool = Math.min(1, Math.max(0, (rpm - 1400) / 2600));
+      const loadSpool = Math.min(1, Math.max(0, (Math.max(load, demand) - 0.08) / 0.3));
+      const boostWant = Math.max(pt?.boost ?? 0, rpmSpool * loadSpool * 0.9);
       // Follow deterministic powertrain boost with profile-specific acoustic lag.
       const dynamics = this.experience?.aspirationDynamics;
       const tau =
@@ -1301,11 +1311,11 @@ export class HybridCombustionSynth {
       targetParam(this.turbo.filter.frequency, 1500 + spool * 1900 + rpmNorm * 500, audioTime, 0.1);
       // Throttle-lift blow-off: demand collapses while the turbo is still spooled.
       if (this.bov) {
-        const lift = this.bovPrevDemand - demand;
-        const liftTrigger = this.bovPrevDemand > 0.45 && demand < 0.2 && lift > 0.25;
+        const liftTrigger =
+          this.bovPrevDemand > 0.18 && this.bovPrevDemand - demand > 0.14 && demand < 0.06;
         const shiftTrigger =
           shifting && shiftPhase === "torque_cut" && this.lastShiftPhase !== "torque_cut";
-        if ((liftTrigger || shiftTrigger) && spool >= 0.35 && audioTime - this.bovLastAt > 1.2) {
+        if ((liftTrigger || shiftTrigger) && spool >= 0.25 && audioTime - this.bovLastAt > 1.2) {
           this.bovLastAt = audioTime;
           this.fireBlowOff(
             spool * (shiftTrigger && !liftTrigger ? 0.55 : 1),
@@ -1313,11 +1323,13 @@ export class HybridCombustionSynth {
             gate("boost"),
           );
         }
-        this.bovPrevDemand = demand;
+        this.bovPrevDemand = Math.max(demand, this.bovPrevDemand - dt * 0.05);
+        if (liftTrigger) this.bovPrevDemand = demand;
       }
       if (this.turboWhistle) {
         // Whistle: only audible once boost builds; follows spool² and load, never a constant tone.
-        const w = spool > 0.08 ? spool * spool * (0.35 + load * 0.65) * 0.035 : 0.0001;
+        const w =
+          spool > 0.08 ? Math.pow(spool, 1.5) * (0.5 + Math.min(1, load * 2) * 0.5) * 0.05 : 0.0001;
         targetParam(
           this.turboWhistle.gain.gain,
           Math.max(0.0001, w) * gate("boost"),
