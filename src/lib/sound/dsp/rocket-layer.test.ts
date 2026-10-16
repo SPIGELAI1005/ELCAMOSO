@@ -7,11 +7,11 @@ import { findSoundsFromPrompt } from "@/lib/sound/find-sound";
 import { renderLabOffline } from "@/lib/sound/lab/render-harness";
 
 describe("rocket-car profile", () => {
-  it("is a Drive+ Future profile", () => {
+  it("is a free Future profile", () => {
     const p = getProfile("rocket-car");
     expect(p.name).toBe("Rocket Car");
     expect(p.category).toBe("Future");
-    expect((FREE_SOUND_PROFILE_IDS as readonly string[]).includes("rocket-car")).toBe(false);
+    expect((FREE_SOUND_PROFILE_IDS as readonly string[]).includes("rocket-car")).toBe(true);
   });
 
   it("load follows acceleration and intent, bounded 0..1", () => {

@@ -1,12 +1,12 @@
 /**
  * Permanent free Sound Profile set (Prompt 11).
- * Three EXISTING high-quality catalog IDs — American Muscle V8, GT V8, Racing V10.
+ * Four catalog IDs — American Muscle V8, GT V8, Racing V10, Rocket Car.
  * Adjust here only; do not scatter free-tier lists across UI components.
  */
 
 export interface FreeSoundProfileSlot {
   id: string;
-  role: "muscle" | "gt" | "racing";
+  role: "muscle" | "gt" | "racing" | "future";
   rationale: string;
 }
 
@@ -33,6 +33,12 @@ export const FREE_SOUND_PROFILE_SET: readonly FreeSoundProfileSlot[] = [
     role: "racing",
     rationale:
       "High-rev racing V10 character; proves free tier includes a motorsport profile alongside muscle and GT.",
+  },
+  {
+    id: "rocket-car",
+    role: "future",
+    rationale:
+      "Cold-gas-thruster rocket car inspired by the Oct 2026 Tesla Roadster reveal; a non-engine free-tier showcase.",
   },
 ] as const;
 

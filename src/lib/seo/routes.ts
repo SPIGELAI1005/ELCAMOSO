@@ -39,7 +39,7 @@ export const INDEXABLE_ROUTE_POLICIES: SeoRoutePolicy[] = [
     indexable: true,
     title: "EV Sound Profiles - ELCAMOSO",
     description:
-      "Engine sound experiences for Tesla and EV drivers. Free early access includes American Muscle V8, GT V8 and Racing V10; more profiles with Drive+ from 9.11.2026.",
+      "Engine sound experiences for Tesla and EV drivers. Free early access includes American Muscle V8, GT V8, Racing V10 and Rocket Car; more profiles with Drive+ from 9.11.2026.",
     image: "/og/engine.png",
     imageAlt: "ELCAMOSO Engine sound experiences",
     breadcrumbs: [
@@ -95,7 +95,7 @@ export const INDEXABLE_ROUTE_POLICIES: SeoRoutePolicy[] = [
     indexable: true,
     title: "Pricing - Early Access Free | ELCAMOSO",
     description:
-      "Early access is free until 9.11.2026. American Muscle V8, GT V8 and Racing V10 included. Drive+ and individual sound purchases open on 9.11.2026.",
+      "Early access is free until 9.11.2026. American Muscle V8, GT V8, Racing V10 and Rocket Car included. Drive+ and individual sound purchases open on 9.11.2026.",
     image: IMG,
     imageAlt: ALT,
     breadcrumbs: [

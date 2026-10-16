@@ -63,7 +63,7 @@ function PricingFooterNotes({ showCancel = true }: { showCancel?: boolean }) {
           showCancel ? "mt-2 text-sm text-muted-foreground" : "text-sm text-muted-foreground"
         }
       >
-        Early access is free until 9.11.2026. Three engines stay free after launch.
+        Early access is free until 9.11.2026. Four sounds stay free after launch.
       </p>
     </section>
   );

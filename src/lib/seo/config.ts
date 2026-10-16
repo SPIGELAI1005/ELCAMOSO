@@ -11,7 +11,7 @@ export const SEO_CONFIG = {
   productionOrigin: "https://www.elcamoso.com",
   defaultTitle: "ELCAMOSO - Engine Sound Experiences for Tesla & EVs",
   defaultDescription:
-    "Engine sound experiences for Tesla and EV drivers. Early access is free: American Muscle V8, GT V8 and Racing V10 included. Drive+ opens on 9.11.2026.",
+    "Engine sound experiences for Tesla and EV drivers. Early access is free: American Muscle V8, GT V8, Racing V10 and Rocket Car included. Drive+ opens on 9.11.2026.",
   defaultImage: "/og/elcamoso-default.png",
   defaultImageAlt: "ELCAMOSO - engine sound experiences for Tesla and EVs",
   ogImageWidth: 1200,
