@@ -69,12 +69,13 @@ import {
   type ShiftEngagementStyle,
 } from "@/lib/sound/realism/shift-events";
 import {
+  AccelerationCharacter,
   getRecordedLoopBank,
-  recordedCruiseBlend,
-  recordedPlaybackRate,
   recordedSampleWeight,
+  type LoadCharacter,
   type RecordedLoopBank,
 } from "@/lib/sound/realism/v2/recorded-loops";
+import { GranularStream } from "@/lib/sound/realism/v2/recorded-grains";
 
 /** -1.5 dBFS sample ceiling for the engine output peak protect (keeps true peak <= -1 dBTP). */
 const OUTPUT_PEAK_CEILING_LINEAR = Math.pow(10, -1.5 / 20);
@@ -207,7 +208,7 @@ interface OrderBand extends FormantBand {
 /** Recorded-loop level relative to the procedural body bus (tuned on the real-chain render). */
 const RECORDED_SAMPLE_LEVEL = 0.33;
 /** How far the procedural body ducks while recordings carry idle/cruise. */
-const RECORDED_SYNTH_DUCK = 0.96; // equal-power: synth keeps 20% amplitude at full hand-over
+const RECORDED_SYNTH_DUCK = 0.9; // equal-power: synth keeps ~32% amplitude (sub + continuity)
 
 interface SampleVoice {
   src: AudioBufferSourceNode;
@@ -332,7 +333,18 @@ export class HybridCombustionSynth {
   private decodedSamples = new Map<string, AudioBuffer>();
   private recordedBank: RecordedLoopBank | null = null;
   private recordedBuffers = new Map<string, AudioBuffer>();
-  private recordedVoices = new Map<string, SampleVoice>();
+  private recordedStreams: GranularStream[] = [];
+  private recordedEq: {
+    low: BiquadFilterNode;
+    mid: BiquadFilterNode;
+    high: BiquadFilterNode;
+    lp: BiquadFilterNode;
+  } | null = null;
+  private accelChar = new AccelerationCharacter();
+  private lastSpeedMs = 0;
+  private pipeTarget = 0;
+  private intakeTarget = 0;
+  loadCharacter: LoadCharacter = "idle";
   private recordedWeight = 0;
   private supportTarget = 0;
   private scheduler: TransientSchedulerState = createTransientSchedulerState();
@@ -697,7 +709,36 @@ export class HybridCombustionSynth {
     }
 
     this.intakeBus.connect(buses.beds);
-    this.sampleBus.connect(buses.body);
+    if (this.recordedBank) {
+      // Match-EQ (recording → synth timbre) + overrun darkening, recorded layer only.
+      const eq = this.recordedBank.eq;
+      const low = ctx.createBiquadFilter();
+      low.type = "lowshelf";
+      low.frequency.value = 120;
+      low.gain.value = eq.lowShelfDb;
+      const mid = ctx.createBiquadFilter();
+      mid.type = "peaking";
+      mid.frequency.value = eq.midHz;
+      mid.Q.value = 0.7;
+      mid.gain.value = eq.midDb;
+      const high = ctx.createBiquadFilter();
+      high.type = "highshelf";
+      high.frequency.value = eq.highShelfHz;
+      high.gain.value = eq.highShelfDb;
+      const lp = ctx.createBiquadFilter();
+      lp.type = "lowpass";
+      lp.frequency.value = eq.lowpassHz;
+      lp.Q.value = 0.5;
+      this.sampleBus.connect(low);
+      low.connect(mid);
+      mid.connect(high);
+      high.connect(lp);
+      lp.connect(buses.body);
+      this.recordedEq = { low, mid, high, lp };
+      nodes += 4;
+    } else {
+      this.sampleBus.connect(buses.body);
+    }
 
     // Mechanical / valvetrain - restrained brown through bandpass
     {
@@ -1000,6 +1041,8 @@ export class HybridCombustionSynth {
     this.lastUpdateTime = audioTime;
     const gate = (role: AudioLayerRole) => (this.mutedRoles.has(role) ? 0.0001 : 1);
     const rpm = Math.max(0, state.rpm || 0);
+    this.lastSpeedMs = Math.max(0, state.speed || 0);
+    this.accelChar.update(this.lastSpeedMs, audioTime, dt);
     const pt = state.powertrain;
     const demand = pt?.driverDemand ?? state.throttle;
     const load = pt?.engineLoad ?? state.load;
@@ -1217,12 +1260,8 @@ export class HybridCombustionSynth {
     if (this.pipeSend) {
       // Pipe energy grows with exhaust pulse strength; overrun lets the pipe ring more.
       const pipeLevel = (0.26 + load * 0.14 + (overrun ? 0.1 : 0)) * (0.7 + cfg.exhaustPulse * 0.4);
-      targetParam(
-        this.pipeSend.gain,
-        pipeLevel * gate("exhaust") * supportTrim * throttleGapMul,
-        audioTime,
-        0.1,
-      );
+      this.pipeTarget = pipeLevel * gate("exhaust") * supportTrim * throttleGapMul;
+      targetParam(this.pipeSend.gain, this.pipeTarget, audioTime, 0.1);
     }
     if (this.combustionBus) {
       // Bus level is the one place loudness follows load; the stages before it are
@@ -1261,7 +1300,8 @@ export class HybridCombustionSynth {
         intakeBias *
         (overrun ? 0.18 : 1) *
         outputTrimLinear;
-      targetParam(this.intakeBus.gain, intakeGain * gate("intake"), audioTime, 0.05);
+      this.intakeTarget = intakeGain * gate("intake");
+      targetParam(this.intakeBus.gain, this.intakeTarget, audioTime, 0.05);
       this.diagnostics.intakeGain = intakeGain;
     }
 
@@ -1750,69 +1790,95 @@ export class HybridCombustionSynth {
   private updateRecordedLoops(rpm: number, demand: number, audioTime: number) {
     const bank = this.recordedBank!;
     const ctx = this.ctx!;
-    const w = this.mutedRoles.has("combustion") ? 0 : recordedSampleWeight(rpm, demand);
+    const ac = this.accelChar;
+    this.loadCharacter = ac.label(this.lastSpeedMs);
+    const forced = (globalThis as { __ELC_REC_FORCE?: number }).__ELC_REC_FORCE;
+    let w = this.mutedRoles.has("combustion")
+      ? 0
+      : recordedSampleWeight(rpm, demand, ac.aggression);
+    if (typeof forced === "number") w = forced;
     this.recordedWeight = w;
-    const cruise = recordedCruiseBlend(rpm);
-    const idleTotal = bank.loops
-      .filter((l) => l.band === "idle")
-      .reduce((sum, l) => sum + l.weight, 0);
-    const active: string[] = [];
-    for (const loop of bank.loops) {
-      let voice = this.recordedVoices.get(loop.id);
-      if (!voice) {
-        const buf = this.recordedBuffers.get(loop.id);
+    if (!this.recordedStreams.length) {
+      let seed = 0x2545f491;
+      for (const source of bank.sources) {
+        const buf = this.recordedBuffers.get(source.id);
         if (!buf) continue;
-        const src = ctx.createBufferSource();
-        src.buffer = buf;
-        src.loop = true;
-        src.loopStart = loop.loopStart;
-        src.loopEnd = Math.min(loop.loopEnd, buf.duration);
-        src.playbackRate.value = recordedPlaybackRate(loop, rpm);
-        const gain = ctx.createGain();
-        gain.gain.value = 0.0001;
-        src.connect(gain);
-        gain.connect(this.sampleBus!);
-        // Stagger start phase so correlated loops do not comb-filter.
-        src.start(
-          audioTime,
-          loop.loopStart + (loop.loopEnd - loop.loopStart) * 0.37 * this.recordedVoices.size,
-        );
-        voice = { src, gain, entryId: loop.id };
-        this.recordedVoices.set(loop.id, voice);
-        this.nodeEstimate += 2;
+        // Two decorrelated streams per source, each with its own level node.
+        for (let k = 0; k < 2; k += 1) {
+          const g = ctx.createGain();
+          g.gain.value = source.weight / Math.SQRT2;
+          g.connect(this.sampleBus!);
+          this.recordedStreams.push(new GranularStream(ctx, buf, source, g, (seed += 0x9e3779b9)));
+        }
       }
-      const bandW =
-        loop.band === "idle"
-          ? (1 - cruise) * (loop.weight / Math.max(0.001, idleTotal))
-          : cruise * loop.weight;
-      voice.src.playbackRate.setTargetAtTime(recordedPlaybackRate(loop, rpm), audioTime, 0.08);
-      targetParam(voice.gain.gain, Math.max(0.0001, bandW), audioTime, 0.12);
-      if (bandW > 0.01 && w > 0.01) active.push(loop.id);
+      const total = bank.sources.reduce((sum, src) => sum + src.weight * src.weight, 0);
+      this.recordedNorm = 1 / Math.sqrt(Math.max(1e-6, total));
+    }
+    if (w > 0.002) {
+      for (const stream of this.recordedStreams) stream.update(rpm, audioTime);
     }
     const body = this.diagnostics.combustionGain || 0.35;
-    // Recordings follow the same trims, shift dips and load as the synth body bus.
+    // Load character: on-load/aggressive lift level and bite, lift-off relaxes and darkens.
+    const louder = 1 + 0.18 * ac.onLoad + 0.4 * ac.aggression;
+    const relax = 1 - 0.25 * ac.overrun;
     targetParam(
       this.sampleBus!.gain,
-      Math.max(0.0001, RECORDED_SAMPLE_LEVEL * bank.level * body * Math.sqrt(w)),
+      Math.max(
+        0.0001,
+        RECORDED_SAMPLE_LEVEL *
+          bank.level *
+          this.recordedNorm *
+          body *
+          Math.sqrt(w) *
+          relax *
+          (1 + 0.15 * ac.onLoad),
+      ),
       audioTime,
-      0.12,
+      0.15,
     );
+    if (this.recordedEq) {
+      targetParam(
+        this.recordedEq.high.gain,
+        bank.eq.highShelfDb + 3 * ac.onLoad - 2 * ac.overrun,
+        audioTime,
+        0.2,
+      );
+      targetParam(
+        this.recordedEq.lp.frequency,
+        bank.eq.lowpassHz * (1 + 0.35 * ac.onLoad) * (1 - 0.5 * ac.overrun),
+        audioTime,
+        0.2,
+      );
+    }
     if (this.combustionBus) {
       targetParam(
         this.combustionBus.gain,
-        body * Math.sqrt(1 - RECORDED_SYNTH_DUCK * w),
+        body * Math.sqrt(1 - RECORDED_SYNTH_DUCK * w) * louder,
         audioTime,
-        0.12,
+        0.15,
       );
+    }
+    if (this.intakeBus) {
+      targetParam(
+        this.intakeBus.gain,
+        this.intakeTarget * (1 + 0.6 * ac.aggression) * (1 - 0.4 * w),
+        audioTime,
+        0.15,
+      );
+    }
+    if (this.pipeSend) {
+      targetParam(this.pipeSend.gain, this.pipeTarget * (1 + 0.5 * ac.aggression), audioTime, 0.15);
     }
     if (this.supportBus) {
       // Support/noise bed is the main hiss source: thin it while recordings carry the sound.
-      targetParam(this.supportBus.gain, this.supportTarget * (1 - 0.6 * w), audioTime, 0.12);
+      targetParam(this.supportBus.gain, this.supportTarget * (1 - 0.6 * w), audioTime, 0.15);
     }
     this.diagnostics.sampleAssisted = w > 0.01;
     this.diagnostics.sampleFallbackReason = "none";
-    this.diagnostics.activeSampleIds = active;
+    this.diagnostics.activeSampleIds = w > 0.01 ? bank.sources.map((src) => src.id) : [];
   }
+
+  private recordedNorm = 1;
 
   private updateSamples(rpm: number, demand: number, overrun: boolean, audioTime: number) {
     if (this.recordedBank && this.recordedBuffers.size && this.sampleBus && this.ctx) {
@@ -2111,16 +2177,8 @@ export class HybridCombustionSynth {
       voice.gain.disconnect();
     }
     this.voices = {};
-    for (const voice of this.recordedVoices.values()) {
-      try {
-        voice.src.stop();
-      } catch {
-        /* already stopped */
-      }
-      voice.src.disconnect();
-      voice.gain.disconnect();
-    }
-    this.recordedVoices.clear();
+    for (const stream of this.recordedStreams) stream.dispose();
+    this.recordedStreams = [];
     for (const voice of this.sampleVoices.values()) {
       stopNoise(voice.src);
       voice.gain.disconnect();

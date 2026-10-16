@@ -24,7 +24,7 @@ export async function loadRecordedLoopBuffers(
 ): Promise<Map<string, AudioBuffer>> {
   const out = new Map<string, AudioBuffer>();
   await Promise.all(
-    bank.loops.map(async (loop) => {
+    bank.sources.map(async (loop) => {
       try {
         const bytes = await fetchBytes(loop.url);
         if (signal?.aborted) return;
