@@ -37,6 +37,7 @@ describe("speed units", () => {
       "turbine-jet",
       "helicopter",
       "private-jet",
+      "storm-glider",
     ]) {
       expect(resolveSpeedUnit("metric", id, true)).toBe("kn");
       expect(resolveSpeedUnit("imperial", id, false)).toBe("mph");

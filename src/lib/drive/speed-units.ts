@@ -19,6 +19,8 @@ export const KNOTS_PROFILE_IDS: ReadonlySet<string> = new Set([
   "turbine-jet",
   "helicopter",
   "private-jet",
+  // Nature category, but it is a glider: George wants knots.
+  "storm-glider",
 ]);
 
 /** Space travel shows a playful fraction of light speed (c). Rocket Car excluded. */
