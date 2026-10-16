@@ -122,6 +122,10 @@ export async function syncStripeSubscriptionById(subscriptionId: string) {
 }
 
 export async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) {
+  if (session.mode === "payment") {
+    const { handleLifetimeCheckoutCompleted } = await import("@/lib/billing/stripe/lifetime-sync");
+    return handleLifetimeCheckoutCompleted(session);
+  }
   if (session.mode !== "subscription") {
     return { skipped: true as const, reason: "non_subscription_checkout" };
   }

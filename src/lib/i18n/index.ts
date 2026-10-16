@@ -52,6 +52,13 @@ const STRINGS: Record<Locale, Record<string, string>> = {
     "pricing.earlyAccessTitle": "Early access — test drive ELCAMOSO for free",
     "pricing.earlyAccessBody":
       "We're fine-tuning every sound profile on real roads before launch. Until then, enjoy ELCAMOSO free of charge and help shape the final experience. Drive+ and individual sound purchases open on 9.11.2026.",
+    "pricing.lifetimeLabel": "Lifetime",
+    "pricing.lifetimeTagline": "Pay once. Drive+ forever.",
+    "pricing.lifetimeOnce": "once",
+    "pricing.lifetimeDiscount": "14% off for early adopters",
+    "pricing.lifetimeBody": "Every Drive+ feature, with no subscription and no renewals.",
+    "pricing.lifetimeCta": "Drive+ Lifetime · €38.99 once",
+    "pricing.lifetimeSubscriptionNote": "Already on monthly or yearly Drive+? After buying Lifetime, cancel your subscription in Manage plan so you are not charged again.",
     "intense.confirm": "This Sound Profile is rated intense. Continue?",
   },
   de: {
@@ -98,6 +105,13 @@ const STRINGS: Record<Locale, Record<string, string>> = {
     "pricing.earlyAccessTitle": "Early Access — ELCAMOSO kostenlos testen",
     "pricing.earlyAccessBody":
       "Wir feilen noch an jedem Soundprofil auf echten Strassen vor dem Launch. Bis dahin ist ELCAMOSO kostenlos — hilf mit, das finale Erlebnis zu formen. Drive+ und einzelne Sound-Kaeufe starten am 9.11.2026.",
+    "pricing.lifetimeLabel": "Lifetime",
+    "pricing.lifetimeTagline": "Einmal zahlen. Drive+ für immer.",
+    "pricing.lifetimeOnce": "einmalig",
+    "pricing.lifetimeDiscount": "14 % Rabatt für Early Adopter",
+    "pricing.lifetimeBody": "Alle Drive+ Funktionen, ohne Abo und ohne Verlängerung.",
+    "pricing.lifetimeCta": "Drive+ Lifetime · €38.99 einmalig",
+    "pricing.lifetimeSubscriptionNote": "Du hast schon Drive+ monatlich oder jährlich? Kündige nach dem Kauf von Lifetime dein Abo unter „Plan verwalten“, damit du nicht erneut belastet wirst.",
     "intense.confirm": "Dieses Klangprofil ist als intensiv eingestuft. Fortfahren?",
   },
   ro: {
@@ -144,6 +158,13 @@ const STRINGS: Record<Locale, Record<string, string>> = {
     "pricing.earlyAccessTitle": "Acces early — testeaza ELCAMOSO gratuit",
     "pricing.earlyAccessBody":
       "Rafinam fiecare profil de sunet pe drumuri reale inainte de lansare. Pana atunci, ELCAMOSO este gratuit — ajuta-ne sa modelam experienta finala. Drive+ si achizitiile individuale de sunete se deschid pe 9.11.2026.",
+    "pricing.lifetimeLabel": "Lifetime",
+    "pricing.lifetimeTagline": "Platesti o data. Drive+ pentru totdeauna.",
+    "pricing.lifetimeOnce": "o singura data",
+    "pricing.lifetimeDiscount": "14% reducere pentru early adopters",
+    "pricing.lifetimeBody": "Toate functiile Drive+, fara abonament si fara reinnoiri.",
+    "pricing.lifetimeCta": "Drive+ Lifetime · €38.99 o singura data",
+    "pricing.lifetimeSubscriptionNote": "Ai deja Drive+ lunar sau anual? Dupa ce cumperi Lifetime, anuleaza abonamentul din Gestioneaza planul ca sa nu mai fii taxat.",
     "intense.confirm": "Acest profil de sunet este intens. Continui?",
   },
 };

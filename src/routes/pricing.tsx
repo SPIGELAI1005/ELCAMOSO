@@ -73,6 +73,7 @@ function Pricing() {
   const yearly = getDrivePlusYearlyDisplay();
   const monthly = getDrivePlusMonthlyDisplay();
   const { plan } = useEntitlements();
+  const { settings } = useSettings();
   const [interval, setInterval] = useState<BillingDisplayInterval>("yearly");
   const billingQuery = useQuery({
     queryKey: ["billing-public-config"],
@@ -81,6 +82,7 @@ function Pricing() {
   });
   const monetizationEnabled = billingQuery.data?.monetizationEnabled ?? false;
   const billingAvailable = billingQuery.data?.available ?? false;
+  const lifetimeAvailable = billingQuery.data?.lifetimeAvailable ?? false;
   const hasDrivePlus = plan === "DRIVE_PLUS";
   const viewedRef = useRef(false);
 
@@ -170,7 +172,20 @@ function Pricing() {
                   source="pricing"
                   className="inline-flex h-11 items-center justify-center rounded-full border border-foreground/20 px-6 text-[11px] tracking-[0.18em] text-foreground uppercase transition hover:border-foreground/40"
                 />
+                {lifetimeAvailable ? (
+                <DrivePlusCheckoutButton
+                  interval="lifetime"
+                  label={t(settings.language, "pricing.lifetimeCta")}
+                  source="pricing"
+                  className="inline-flex h-11 items-center justify-center rounded-full border border-foreground/20 px-6 text-[11px] tracking-[0.18em] text-foreground uppercase transition hover:border-foreground/40"
+                />
+                ) : null}
               </div>
+              {lifetimeAvailable ? (
+                <p className="text-xs text-muted-foreground">
+                  {t(settings.language, "pricing.lifetimeSubscriptionNote")}
+                </p>
+              ) : null}
             </>
           ) : (
             <p className="text-sm text-muted-foreground">

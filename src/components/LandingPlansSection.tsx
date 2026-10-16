@@ -7,10 +7,13 @@ import {
   DRIVE_PLUS_FEATURES,
   FREE_PLAN_FEATURES,
   getDrivePlusDisplay,
+  getDrivePlusLifetimeDisplay,
   getFreePlanDisplay,
   type BillingDisplayInterval,
 } from "@/lib/billing/plan-display";
 import { cn } from "@/lib/utils";
+import { useSettings } from "@/lib/drive/useSettings";
+import { t } from "@/lib/i18n";
 
 interface PlansOverviewProps {
   /** When false, show prices and features only - no checkout or trial activation. */
@@ -121,6 +124,9 @@ export function PlansOverview({
   const free = getFreePlanDisplay();
   const drivePlus = getDrivePlusDisplay(interval);
   const drivePlusSuffix = interval === "monthly" ? "/ month" : "/ year";
+  const lifetime = getDrivePlusLifetimeDisplay();
+  const { settings } = useSettings();
+  const language = settings.language;
 
   return (
     <>
@@ -181,6 +187,22 @@ export function PlansOverview({
               Drive+ and individual sound purchases open on 9.11.2026. Until then, ELCAMOSO is free of charge.
             </p>
           ) : null}
+        </div>
+        <div className={compact ? "py-8" : "py-12"} data-testid="plan-lifetime">
+          <p className="text-xs tracking-[0.2em] text-muted-foreground uppercase">
+            {t(language, "pricing.lifetimeLabel")}
+          </p>
+          <p className="mt-3 text-2xl font-light">{t(language, "pricing.lifetimeTagline")}</p>
+          <PlanPrice
+            listAmount={lifetime.listAmount}
+            amount={lifetime.amount}
+            suffix={t(language, "pricing.lifetimeOnce")}
+            size={compact ? "compact" : "large"}
+          />
+          <p className="mt-2 text-xs tracking-[0.12em] text-muted-foreground uppercase">
+            {t(language, "pricing.lifetimeDiscount")}
+          </p>
+          <p className="mt-4 text-sm text-muted-foreground">{t(language, "pricing.lifetimeBody")}</p>
         </div>
       </div>
       {monetizationEnabled ? (

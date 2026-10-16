@@ -35,7 +35,7 @@ function restoreEnv(previous: Record<string, string | undefined>): void {
 
 describe("commercial plan mapping", () => {
   it("defines internal plan ids without Stripe price ids", () => {
-    expect(COMMERCIAL_PLAN_IDS).toEqual(["drive_plus_monthly", "drive_plus_yearly"]);
+    expect(COMMERCIAL_PLAN_IDS).toEqual(["drive_plus_monthly", "drive_plus_yearly", "drive_plus_lifetime"]);
     for (const id of COMMERCIAL_PLAN_IDS) {
       expect(id.startsWith("price_")).toBe(false);
     }

@@ -10,6 +10,8 @@ export interface UserSubscriptionRecord {
   currentPeriodEnd?: Date | null;
   /** Set when status first becomes past_due - starts grace clock. */
   pastDueSince?: Date | null;
+  /** One-time Drive+ Lifetime purchase - active forever until refunded. */
+  lifetime?: boolean;
 }
 
 const subscriptions = new Map<string, UserSubscriptionRecord>();

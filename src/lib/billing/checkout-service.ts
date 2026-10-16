@@ -16,6 +16,7 @@ import { createStripePortalSession } from "@/lib/billing/stripe/portal";
 import { userHasActiveDrivePlusSubscription } from "@/lib/billing/stripe/subscription-guard";
 import { wrapStripeBillingError } from "@/lib/billing/resilience/stripe-errors";
 import { getUserBillingRepository } from "@/lib/billing/user-billing-store";
+import { hasActiveLifetimeGrant } from "@/lib/billing/lifetime-store";
 
 export interface BeginCheckoutInput {
   userId: string;
@@ -33,6 +34,8 @@ export type BeginCheckoutResult =
       action: "checkout";
       url: string;
       sessionId: string;
+      /** Shown when buying Lifetime while a subscription is still active. */
+      note?: string;
     }
   | {
       action: "manage";
@@ -64,7 +67,13 @@ export async function beginDrivePlusCheckout(
   const repository = getUserBillingRepository();
   const existingCustomerId = await repository.getStripeCustomerId(input.userId);
 
-  if (await userHasActiveDrivePlusSubscription(input.userId, existingCustomerId)) {
+  const isLifetime = described.mode === "payment";
+  const ownsLifetime = hasActiveLifetimeGrant(input.userId);
+  const hasActiveSubscription =
+    !ownsLifetime &&
+    (await userHasActiveDrivePlusSubscription(input.userId, existingCustomerId));
+
+  if (ownsLifetime || (!isLifetime && hasActiveSubscription)) {
     const stripeCustomerId =
       existingCustomerId ??
       (await ensureStripeCustomer({ userId: input.userId, email: input.email }));
@@ -76,7 +85,9 @@ export async function beginDrivePlusCheckout(
     return {
       action: "manage",
       url: portal.url,
-      message: "You already have an active Drive+ subscription.",
+      message: ownsLifetime
+        ? "You already own Drive+ Lifetime."
+        : "You already have an active Drive+ subscription.",
     };
   }
 
@@ -98,10 +109,38 @@ export async function beginDrivePlusCheckout(
     interval: input.request.interval,
     commercialPlanId: described.commercialPlanId,
     elcamosoPlan: described.entitlementPlan,
-    billingInterval: described.billingInterval,
+    billingInterval: described.billingInterval ?? "lifetime",
   };
   if (source) metadata["source"] = source;
+  if (isLifetime && hasActiveSubscription) metadata["hadActiveSubscription"] = "true";
   if (input.request.upgradeToken) metadata["upgradeToken"] = input.request.upgradeToken;
+
+  if (isLifetime) {
+    const params = buildLifetimeCheckoutParams({
+      priceId,
+      stripeCustomerId,
+      origin,
+      returnPath,
+      userId: input.userId,
+      metadata,
+    });
+    const session = await stripe.checkout.sessions.create(params).catch((error) => {
+      throw wrapStripeBillingError(error);
+    });
+    if (!session.url) {
+      throw new Error("Checkout session missing redirect URL");
+    }
+    return {
+      action: "checkout",
+      url: session.url,
+      sessionId: session.id,
+      ...(hasActiveSubscription
+        ? {
+            note: "You still have an active Drive+ subscription. After buying Lifetime, cancel it in Manage plan so you are not charged again.",
+          }
+        : {}),
+    };
+  }
 
   const params: Stripe.Checkout.SessionCreateParams = {
     mode: "subscription",
@@ -117,7 +156,7 @@ export async function beginDrivePlusCheckout(
     ...buildCheckoutSessionTaxParams(),
   };
 
-  if (input.rewardReservationId) {
+  if (input.rewardReservationId && input.request.interval !== "lifetime") {
     const { isRewardDiscountsEnabled } = await import("@/lib/rewards/discount/flag");
     const { prepareCheckoutRewardDiscount, bindCheckoutSessionToReservation } = await import(
       "@/lib/rewards/discount/service"
@@ -172,6 +211,29 @@ export async function beginDrivePlusCheckout(
     action: "checkout",
     url: session.url,
     sessionId: session.id,
+  };
+}
+
+/** One-time Drive+ Lifetime Checkout payload (mode "payment", never a subscription). */
+export function buildLifetimeCheckoutParams(input: {
+  priceId: string;
+  stripeCustomerId: string;
+  origin: string;
+  returnPath: string;
+  userId: string;
+  metadata: Record<string, string>;
+}): Stripe.Checkout.SessionCreateParams {
+  return {
+    mode: "payment",
+    customer: input.stripeCustomerId,
+    line_items: [{ price: input.priceId, quantity: 1 }],
+    success_url: `${input.origin}${input.returnPath}?billing=success&session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${input.origin}${input.returnPath}?billing=cancel`,
+    client_reference_id: input.userId,
+    metadata: input.metadata,
+    payment_intent_data: { metadata: input.metadata },
+    invoice_creation: { enabled: true, invoice_data: { metadata: input.metadata } },
+    ...buildCheckoutSessionTaxParams(),
   };
 }
 

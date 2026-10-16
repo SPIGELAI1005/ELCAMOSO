@@ -10,12 +10,13 @@ import {
 export type CheckoutPlanSlug = "drive_plus";
 
 /** Client-facing billing interval slug. */
-export type CheckoutIntervalSlug = "monthly" | "yearly";
+export type CheckoutIntervalSlug = "monthly" | "yearly" | "lifetime";
 
 export const CHECKOUT_PLAN_SLUGS: readonly CheckoutPlanSlug[] = ["drive_plus"] as const;
 export const CHECKOUT_INTERVAL_SLUGS: readonly CheckoutIntervalSlug[] = [
   "monthly",
   "yearly",
+  "lifetime",
 ] as const;
 
 export interface CheckoutPlanRequest {
@@ -39,7 +40,10 @@ export function parseCheckoutIntervalSlug(value: string): CheckoutIntervalSlug |
     : null;
 }
 
-export function checkoutIntervalToBillingInterval(interval: CheckoutIntervalSlug): BillingInterval {
+export function checkoutIntervalToBillingInterval(
+  interval: CheckoutIntervalSlug,
+): BillingInterval | null {
+  if (interval === "lifetime") return null;
   return interval === "monthly" ? "month" : "year";
 }
 
@@ -49,6 +53,7 @@ export function resolveCommercialPlanId(
   interval: CheckoutIntervalSlug,
 ): CommercialPlanId | null {
   if (plan !== "drive_plus") return null;
+  if (interval === "lifetime") return "drive_plus_lifetime";
   return interval === "monthly" ? "drive_plus_monthly" : "drive_plus_yearly";
 }
 
@@ -88,7 +93,8 @@ export function describeCheckoutPlan(
 ): {
   commercialPlanId: CommercialPlanId;
   entitlementPlan: Plan;
-  billingInterval: BillingInterval;
+  billingInterval: BillingInterval | null;
+  mode: "subscription" | "payment";
   label: string;
 } {
   const commercialPlanId = resolveCommercialPlanId(plan, interval);
@@ -100,6 +106,7 @@ export function describeCheckoutPlan(
     commercialPlanId,
     entitlementPlan: commercial.plan,
     billingInterval: commercial.interval,
+    mode: commercial.mode,
     label: commercial.label,
   };
 }

@@ -54,6 +54,16 @@ export function softwareApplicationJsonLd(description: string): Record<string, u
         availabilityStarts: "2026-11-09",
         url: absoluteSeoUrl("/pricing"),
       },
+      {
+        "@type": "Offer",
+        name: "Drive+ Lifetime",
+        price: "38.99",
+        priceCurrency: "EUR",
+        description: "One-time Drive+ Lifetime purchase. Opens on 2026-11-09.",
+        availability: "https://schema.org/PreOrder",
+        availabilityStarts: "2026-11-09",
+        url: absoluteSeoUrl("/pricing"),
+      },
     ],
     applicationSubCategory: "Automotive entertainment",
     audience: {

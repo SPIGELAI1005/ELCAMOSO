@@ -40,6 +40,9 @@ const HANDLED_EVENT_TYPES = new Set<string>([
   "customer.subscription.trial_will_end",
   "customer.subscription.paused",
   "customer.subscription.resumed",
+  "checkout.session.async_payment_succeeded",
+  "charge.refunded",
+  "charge.dispute.created",
 ]);
 
 async function handleStripeEvent(event: Stripe.Event): Promise<boolean> {
@@ -65,6 +68,28 @@ async function handleStripeEvent(event: Stripe.Event): Promise<boolean> {
     case "customer.subscription.trial_will_end":
       await syncStripeSubscriptionRecord(event.data.object as Stripe.Subscription);
       return true;
+    case "checkout.session.async_payment_succeeded": {
+      const { handleLifetimeCheckoutCompleted } = await import(
+        "@/lib/billing/stripe/lifetime-sync"
+      );
+      await handleLifetimeCheckoutCompleted(event.data.object as Stripe.Checkout.Session);
+      return true;
+    }
+    case "charge.refunded": {
+      const { handleLifetimeChargeRefunded } = await import("@/lib/billing/stripe/lifetime-sync");
+      await handleLifetimeChargeRefunded(event.data.object as Stripe.Charge);
+      return true;
+    }
+    case "charge.dispute.created": {
+      const dispute = event.data.object as Stripe.Dispute;
+      const { handleLifetimeChargeRefunded } = await import("@/lib/billing/stripe/lifetime-sync");
+      await handleLifetimeChargeRefunded({
+        payment_intent: dispute.payment_intent,
+        customer: null,
+        metadata: dispute.metadata ?? {},
+      } as unknown as Stripe.Charge);
+      return true;
+    }
     default:
       return false;
   }

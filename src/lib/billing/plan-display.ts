@@ -19,6 +19,11 @@ export const DRIVE_PLUS_PRICING = {
     /** Charged annual price after early adopter discount. */
     amountCents: 2499,
   },
+  lifetime: {
+    commercialPlanId: "drive_plus_lifetime" satisfies CommercialPlanId,
+    /** One-time Lifetime price after early adopter discount. */
+    amountCents: 3899,
+  },
 } as const;
 
 export type BillingDisplayInterval = "monthly" | "yearly";
@@ -90,4 +95,14 @@ export function getDrivePlusYearlyDisplay(): PlanPriceDisplay {
 
 export function getDrivePlusDisplay(interval: BillingDisplayInterval): PlanPriceDisplay {
   return interval === "monthly" ? getDrivePlusMonthlyDisplay() : getDrivePlusYearlyDisplay();
+}
+
+/** One-time Drive+ Lifetime - same early adopter struck-through list price logic. */
+export function getDrivePlusLifetimeDisplay(): PlanPriceDisplay {
+  const amountCents = DRIVE_PLUS_PRICING.lifetime.amountCents;
+  return {
+    amount: formatEuroAmount(amountCents),
+    listAmount: formatEuroAmount(listPriceBeforeEarlyAdopterDiscount(amountCents)),
+    cadence: "once",
+  };
 }
