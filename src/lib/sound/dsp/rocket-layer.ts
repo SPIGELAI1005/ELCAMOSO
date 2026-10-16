@@ -9,6 +9,7 @@
  * - cold-gas "pssht": high-passed air bursts on very hard acceleration
  * Lift-off decays slowly (long release tau) so the roar tails off smoothly.
  */
+import { createBassEnhancer, getBassEnhancerConfig } from "./bass-enhancer";
 import { clamp } from "@/lib/sound/dsp/math";
 import { createLoopingNoise, getNoiseBuffer } from "@/lib/sound/dsp/noise";
 import { targetParam } from "@/lib/sound/dsp/smoother";
@@ -43,7 +44,9 @@ export function createRocketLayer(ctx: BaseAudioContext, opts: RocketLayerOpts):
   const output = ctx.createGain();
   output.gain.value = 1;
   input.connect(output);
-  output.connect(opts.destination);
+  const bassCfg = getBassEnhancerConfig("rocket-car");
+  const bass = bassCfg ? createBassEnhancer(ctx, opts.destination, bassCfg) : null;
+  output.connect(bass ? bass.input : opts.destination);
   const accentOut = ctx.createGain();
   accentOut.gain.value = 1;
   accentOut.connect(opts.accents ?? opts.destination);
@@ -85,13 +88,14 @@ export function createRocketLayer(ctx: BaseAudioContext, opts: RocketLayerOpts):
   const whineA = ctx.createOscillator();
   whineA.type = "sine";
   const whineB = ctx.createOscillator();
-  whineB.type = "triangle";
-  whineA.frequency.value = 420;
-  whineB.frequency.value = 423;
+  // Discreet turbine: pure sines an exact octave apart (no detune beating), low-passed.
+  whineB.type = "sine";
+  whineA.frequency.value = 300;
+  whineB.frequency.value = 600;
   const whineBp = ctx.createBiquadFilter();
-  whineBp.type = "bandpass";
-  whineBp.Q.value = 1.4;
-  whineBp.frequency.value = 900;
+  whineBp.type = "lowpass";
+  whineBp.Q.value = 0.5;
+  whineBp.frequency.value = 700;
   const whineG = ctx.createGain();
   whineG.gain.value = 0.0001;
   whineA.connect(whineBp);
@@ -206,15 +210,18 @@ export function createRocketLayer(ctx: BaseAudioContext, opts: RocketLayerOpts):
       targetParam(roarLp.frequency, 280 + 2400 * load + 900 * speed + 120 * wander, t, 0.25);
       targetParam(roarBody.frequency, 120 + 80 * load + 30 * wander, t, 0.5);
       roarPan.pan.setTargetAtTime(0.18 * wander * m.stereoWidth, t, 0.8);
-      targetParam(rumbleG.gain, 0.16 + 0.4 * load, t, load > prevLoad ? 0.15 : 0.7);
-      targetParam(subG.gain, 0.03 + 0.07 * load, t, 0.4);
+      // Deep thrust is the main effect: rumble + sub swell with acceleration (chest feel).
+      targetParam(rumbleG.gain, 0.2 + 0.6 * load, t, load > prevLoad ? 0.15 : 0.7);
+      targetParam(subG.gain, 0.04 + 0.12 * load, t, 0.4);
       targetParam(subOsc.frequency, 46 + 14 * load + 6 * speed + 1.5 * wander, t, 0.6);
 
-      const whineHz = 380 + 2600 * Math.pow(speed, 0.85) + 160 * load;
-      targetParam(whineA.frequency, whineHz * (1 + 0.004 * wander), t, 0.5);
-      targetParam(whineB.frequency, whineHz * 1.503 + 3, t, 0.5);
-      targetParam(whineBp.frequency, whineHz * 1.2, t, 0.5);
-      targetParam(whineG.gain, 0.01 + 0.07 * Math.pow(speed, 0.9) * (0.7 + 0.3 * load), t, 0.6);
+      // Turbine: smooth and discreet (~-15 dB vs before), capped below ~1.5 kHz, slow glides.
+      const whineHz = Math.min(700, 300 + 400 * Math.pow(speed, 0.85) + 40 * load);
+      targetParam(whineA.frequency, whineHz, t, 1.5);
+      targetParam(whineB.frequency, whineHz * 2, t, 1.5);
+      targetParam(whineBp.frequency, Math.min(1500, whineHz * 1.6), t, 1.5);
+      targetParam(whineG.gain, 0.002 + 0.012 * Math.pow(speed, 0.9) * (0.7 + 0.3 * load), t, 1.2);
+      bass?.setDrive(load, 0, t);
 
       // crackle: random ticks, density with load
       if (t >= nextCrackle) {
@@ -250,6 +257,7 @@ export function createRocketLayer(ctx: BaseAudioContext, opts: RocketLayerOpts):
     dispose() {
       disposed = true;
       sources.forEach(stopSafe);
+      bass?.dispose();
     },
     setMuted(v) {
       muted = v;

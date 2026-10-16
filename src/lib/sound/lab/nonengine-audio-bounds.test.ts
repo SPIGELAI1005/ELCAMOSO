@@ -46,6 +46,8 @@ const NON_ENGINE_PROFILES = [
 const LOUDNESS_MIN_LUFS = -24;
 const LOUDNESS_MAX_LUFS = -9;
 const LF_SHARE_MAX_PERCENT = 30;
+// Round 4: Rocket Car is deliberately bass-led (deep thrust rumble is its main effect).
+const LF_SHARE_OVERRIDE: Record<string, number> = { "rocket-car": 45 };
 // Peak-protect ceiling is -1 dBFS; allow float rounding at the ceiling.
 const PEAK_MAX_DBFS = -0.99;
 
@@ -89,7 +91,7 @@ describe("non-engine audio bounds", () => {
       expect(metrics.samplePeakDbfs).toBeLessThanOrEqual(PEAK_MAX_DBFS);
 
       const lfShare = lfEnergyShare(metrics.bandEnergy);
-      expect(lfShare).toBeLessThanOrEqual(LF_SHARE_MAX_PERCENT);
+      expect(lfShare).toBeLessThanOrEqual(LF_SHARE_OVERRIDE[profileId] ?? LF_SHARE_MAX_PERCENT);
     },
     90_000,
   );

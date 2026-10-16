@@ -77,6 +77,11 @@ import {
   type RecordedLoopBank,
 } from "@/lib/sound/realism/v2/recorded-loops";
 import { GranularStream } from "@/lib/sound/realism/v2/recorded-grains";
+import {
+  createBassEnhancer,
+  getBassEnhancerConfig,
+  type BassEnhancer,
+} from "@/lib/sound/dsp/bass-enhancer";
 
 /** -1.5 dBFS sample ceiling for the engine output peak protect (keeps true peak <= -1 dBTP). */
 const OUTPUT_PEAK_CEILING_LINEAR = Math.pow(10, -1.5 / 20);
@@ -440,6 +445,13 @@ export class HybridCombustionSynth {
 
     const personalityId = resolvePersonalityId(profile);
     this.recordedBank = getRecordedLoopBank(personalityId);
+    const bassCfg = getBassEnhancerConfig(profile.id);
+    if (bassCfg) {
+      // Engine bass enhancer: every engine path that feeds the body bus (synth, recordings,
+      // exhaust pops) is summed here first (see dsp/bass-enhancer.ts).
+      this.bass = createBassEnhancer(ctx, buses.body, bassCfg);
+      buses = { ...buses, body: this.bass.input };
+    }
     this.sampleBank = EMPTY_COMBUSTION_SAMPLE_BANKS[personalityId] ?? {
       personalityId,
       entries: [],
@@ -1880,6 +1892,8 @@ export class HybridCombustionSynth {
       this.synthMatchBands.forEach((b, i) => targetParam(b.gain, g[i] ?? 0, audioTime, 0.2));
     }
     const synthMute = (globalThis as { __ELC_SYNTH_MUTE?: boolean }).__ELC_SYNTH_MUTE ? 0 : 1;
+    // Load-dependent bass swell on acceleration; a little extra thump on lift-off (pops).
+    this.bass?.setDrive(0.5 * ac.onLoad + 0.5 * ac.aggression, ac.overrun, audioTime);
     if (this.combustionBus) {
       targetParam(
         this.combustionBus.gain,
@@ -1919,6 +1933,7 @@ export class HybridCombustionSynth {
   }
 
   private recordedNorm = 1;
+  private bass: BassEnhancer | null = null;
   private synthMatchBands: BiquadFilterNode[] = [];
 
   private updateSamples(rpm: number, demand: number, overrun: boolean, audioTime: number) {
@@ -2218,6 +2233,8 @@ export class HybridCombustionSynth {
       voice.gain.disconnect();
     }
     this.voices = {};
+    this.bass?.dispose();
+    this.bass = null;
     for (const stream of this.recordedStreams) stream.dispose();
     this.recordedStreams = [];
     for (const voice of this.sampleVoices.values()) {

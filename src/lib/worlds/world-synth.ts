@@ -1,3 +1,8 @@
+import {
+  createBassEnhancer,
+  getBassEnhancerConfig,
+  type BassEnhancer,
+} from "@/lib/sound/dsp/bass-enhancer";
 import type { DriveState } from "@/lib/drive/model";
 import type { StrategyBuses } from "@/lib/sound/realism/types";
 import type { SoundProfile } from "@/lib/sound/profiles";
@@ -16,6 +21,7 @@ export class WorldSynth {
   private lastTs = 0;
   private built = false;
   private seed = 1;
+  private bass: BassEnhancer | null = null;
 
   build(
     ctx: BaseAudioContext,
@@ -30,7 +36,9 @@ export class WorldSynth {
     this.seed = seed ?? Date.now() & 0xffff;
     this.pack = pack;
     this.energy = createDriveEnergyTracker();
-    this.layers = createWorldLayerPlayer(ctx, buses.body, pack, this.seed);
+    const bassCfg = getBassEnhancerConfig(profile.id);
+    this.bass = bassCfg ? createBassEnhancer(ctx, buses.body, bassCfg) : null;
+    this.layers = createWorldLayerPlayer(ctx, this.bass ? this.bass.input : buses.body, pack, this.seed);
     const start = "currentTime" in ctx ? ctx.currentTime : 0;
     this.layers.start(start + 0.02);
     const idle = pack.stateRules.find((r) => r.state === "idle");
@@ -49,6 +57,9 @@ export class WorldSynth {
     this.lastTs = state.timestamp || this.lastTs;
 
     const energy = this.energy.update(state, dt);
+    // Presence fades in with motion (idle stays exactly as authored).
+    const presence = state.speed > 0.5 ? Math.min(1, Math.max(0, (state.speed * 3.6 - 4) / 16, energy.driverDemand)) : 0;
+    this.bass?.setDrive(Math.max(energy.driverDemand, energy.energy * 0.8), 0, audioTime, presence);
     this.worldState = deriveWorldState(energy, this.worldState, state.speed);
 
     const rule =
@@ -77,6 +88,8 @@ export class WorldSynth {
   }
 
   dispose() {
+    this.bass?.dispose();
+    this.bass = null;
     this.layers?.dispose();
     this.layers = null;
     this.energy = null;
