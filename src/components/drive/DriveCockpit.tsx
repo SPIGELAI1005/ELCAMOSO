@@ -91,7 +91,7 @@ export interface DriveCockpitProps {
   productStatus: DriveProductStatus;
   sessionKind: string;
   /** Display speed already converted for units (km/h or mph). */
-  displaySpeed: number;
+  displaySpeed: number | string;
   speedUnit: string;
   speedMps: number;
   reducedMotion?: boolean | undefined;
@@ -154,16 +154,11 @@ function CockpitTachArc({
   const zoneStartDeg = ARC_START + ARC_SWEEP * REDLINE_ZONE_START;
   const zoneTrack = arcPath(cx, cy, r, zoneStartDeg, ARC_START + ARC_SWEEP);
   const whiteEnd = Math.min(end, zoneStartDeg);
-  const whiteFill =
-    whiteEnd > ARC_START + 0.2 ? arcPath(cx, cy, r, ARC_START, whiteEnd) : null;
+  const whiteFill = whiteEnd > ARC_START + 0.2 ? arcPath(cx, cy, r, ARC_START, whiteEnd) : null;
   const redFill =
-    showRedlineZone && clamped > REDLINE_ZONE_START
-      ? arcPath(cx, cy, r, zoneStartDeg, end)
-      : null;
+    showRedlineZone && clamped > REDLINE_ZONE_START ? arcPath(cx, cy, r, zoneStartDeg, end) : null;
   const solidFill =
-    !showRedlineZone || clamped <= REDLINE_ZONE_START
-      ? arcPath(cx, cy, r, ARC_START, end)
-      : null;
+    !showRedlineZone || clamped <= REDLINE_ZONE_START ? arcPath(cx, cy, r, ARC_START, end) : null;
 
   return (
     <svg
@@ -246,10 +241,8 @@ function CockpitGearLadder({
             key={gear}
             className={cn(
               "flex h-7 min-w-7 items-center justify-center rounded-full px-1.5 text-[11px] tabular-nums tracking-wide transition-[transform,background-color,color,box-shadow] duration-200",
-              isActive
-                ? "bg-foreground text-background"
-                : "text-muted-foreground/55",
-                isActive && shifting && !reducedMotion
+              isActive ? "bg-foreground text-background" : "text-muted-foreground/55",
+              isActive && shifting && !reducedMotion
                 ? "scale-110 shadow-[0_0_0_2px_var(--cockpit-redline)]"
                 : null,
               isActive && !reducedMotion ? "scale-105" : null,
@@ -444,7 +437,10 @@ export function DriveCockpit({
             {profile.name}
           </p>
           {switchStatus ? (
-            <p className="mt-0.5 truncate text-[11px] tracking-[0.12em] text-muted-foreground uppercase" role="status">
+            <p
+              className="mt-0.5 truncate text-[11px] tracking-[0.12em] text-muted-foreground uppercase"
+              role="status"
+            >
               {switchStatus}
             </p>
           ) : null}
@@ -473,14 +469,20 @@ export function DriveCockpit({
               className={cn(
                 "drive-cockpit__speed font-extralight tabular-nums leading-none tracking-tight transition-colors duration-200",
                 inRedline ? "text-[var(--cockpit-redline)]" : null,
+                speedUnit === "c" ? "!text-[clamp(1.6rem,7vw,3rem)]" : null,
               )}
               aria-live="off"
             >
               {speedView.value}
             </p>
             {speedView.showUnit ? (
-              <p className="mt-1.5 text-[11px] tracking-[0.34em] text-muted-foreground uppercase">
-                {speedUnit}
+              <p
+                className={cn(
+                  "mt-1.5 text-[11px] tracking-[0.34em] text-muted-foreground",
+                  speedUnit === "c" ? "normal-case" : "uppercase",
+                )}
+              >
+                {speedUnit === "c" ? "c · warp" : speedUnit}
               </p>
             ) : null}
             {speedView.caption ? (
@@ -744,11 +746,7 @@ export function DriveCockpit({
             ) : (
               <span />
             )}
-            <Link
-              to="/settings"
-              onClick={() => setMoreOpen(false)}
-              className={COCKPIT_FOOTER_BTN}
-            >
+            <Link to="/settings" onClick={() => setMoreOpen(false)} className={COCKPIT_FOOTER_BTN}>
               Settings
             </Link>
           </div>

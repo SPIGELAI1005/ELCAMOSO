@@ -321,9 +321,9 @@ function SoundWorkspace({
           aria-label="Sound Volume"
         />
         <p className="mt-3 text-sm text-muted-foreground">
-          Master level for every Experience (0 = silence). Uses a perceptual curve; new devices start
-          near 35%. Peak protection holds sample peaks near −1 dBFS. This does not change the car&apos;s
-          hardware volume.
+          Master level for every Experience (0 = silence). Uses a perceptual curve; new devices
+          start near 35%. Peak protection holds sample peaks near −1 dBFS. This does not change the
+          car&apos;s hardware volume.
         </p>
       </Block>
 
@@ -339,8 +339,8 @@ function SoundWorkspace({
           aria-label="Output boost"
         />
         <p className="mt-3 text-sm text-muted-foreground">
-          Optional +0 to +6 dB after master volume, before peak protection. Remembered on this device
-          only. Does not override Bluetooth or cabin amplifiers.
+          Optional +0 to +6 dB after master volume, before peak protection. Remembered on this
+          device only. Does not override Bluetooth or cabin amplifiers.
         </p>
       </Block>
 
@@ -868,7 +868,7 @@ function AboutWorkspace({
                 : "border-border text-muted-foreground"
             }`}
           >
-            Metric
+            {t(settings.language, "settings.unitsMetric")}
           </button>
           <button
             type="button"
@@ -880,9 +880,23 @@ function AboutWorkspace({
                 : "border-border text-muted-foreground"
             }`}
           >
-            Imperial
+            {t(settings.language, "settings.unitsImperial")}
           </button>
         </div>
+        <label className="mt-5 flex items-start gap-3 text-sm">
+          <input
+            type="checkbox"
+            className="mt-1 h-4 w-4"
+            checked={settings.knotsForNautical}
+            onChange={(e) => update({ knotsForNautical: e.target.checked })}
+          />
+          <span>
+            {t(settings.language, "settings.knots")}
+            <span className="mt-1 block text-xs text-muted-foreground">
+              {t(settings.language, "settings.knotsHint")}
+            </span>
+          </span>
+        </label>
       </Block>
 
       <Block title="ELCAMOSO">

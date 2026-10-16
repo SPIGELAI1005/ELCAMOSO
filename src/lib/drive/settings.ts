@@ -1,3 +1,4 @@
+import { browserDefaultUnits } from "@/lib/drive/speed-units";
 import { DEFAULT_PROFILE_ID, getProfile, SOUND_PROFILES } from "@/lib/sound/profiles";
 import type { SoundProfile } from "@/lib/sound/profiles";
 import { applyResolvedAccess } from "@/lib/sound/profile-access";
@@ -229,6 +230,8 @@ export interface ElcamosoSettings {
   studioPresets: StudioPreset[];
   language: Locale;
   units: Units;
+  /** Boat/aircraft/spacecraft profiles display knots (default on). */
+  knotsForNautical: boolean;
   updatedAt: number;
   cloudEnabled: boolean;
   cloudAccountId: string | null;
@@ -321,6 +324,7 @@ export const DEFAULT_SETTINGS: ElcamosoSettings = {
   studioPresets: [],
   language: "en",
   units: "metric",
+  knotsForNautical: true,
   updatedAt: 0,
   cloudEnabled: false,
   cloudAccountId: null,
@@ -837,12 +841,7 @@ export function sanitizeSettings(input: unknown): {
     volume: num(p["volume"], DEFAULT_SETTINGS.volume, 0, 1),
     outputBoostDb: num(p["outputBoostDb"], DEFAULT_SETTINGS.outputBoostDb, 0, 6),
     bodyCharacter: num(p["bodyCharacter"], DEFAULT_SETTINGS.bodyCharacter, 0, 1),
-    mechanicalCharacter: num(
-      p["mechanicalCharacter"],
-      DEFAULT_SETTINGS.mechanicalCharacter,
-      0,
-      1,
-    ),
+    mechanicalCharacter: num(p["mechanicalCharacter"], DEFAULT_SETTINGS.mechanicalCharacter, 0, 1),
     demoMotion: bool(p["demoMotion"], false),
     driveOutputMode:
       p["driveOutputMode"] === "capture" || p["driveOutputMode"] === "live-and-capture"
@@ -879,7 +878,9 @@ export function sanitizeSettings(input: unknown): {
     profileRules: sanitizeProfileRulesMap(p["profileRules"]),
     studioPresets: sanitizeStudioPresets(p["studioPresets"]),
     language: (["en", "de", "ro"].includes(String(p["language"])) ? p["language"] : "en") as Locale,
-    units: p["units"] === "imperial" ? "imperial" : "metric",
+    units:
+      p["units"] === "imperial" || p["units"] === "metric" ? p["units"] : browserDefaultUnits(),
+    knotsForNautical: bool(p["knotsForNautical"], true),
     updatedAt: num(p["updatedAt"], Date.now(), 0, Number.MAX_SAFE_INTEGER),
     cloudEnabled: bool(p["cloudEnabled"], false),
     cloudAccountId: typeof p["cloudAccountId"] === "string" ? p["cloudAccountId"] : null,
@@ -985,7 +986,7 @@ export function readSettings(): ElcamosoSettings {
       issues: [],
       message: "No saved settings yet: defaults used.",
     };
-    return DEFAULT_SETTINGS;
+    return { ...DEFAULT_SETTINGS, units: browserDefaultUnits() };
   }
 
   let parsed: unknown;
@@ -1361,6 +1362,7 @@ export function mergeBackup(
     studioPresets: incoming.studioPresets.length ? incoming.studioPresets : current.studioPresets,
     language: incoming.language,
     units: incoming.units,
+    knotsForNautical: incoming.knotsForNautical,
     tuning,
     profileGain,
     driveCount: Math.max(current.driveCount, incoming.driveCount),

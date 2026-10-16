@@ -1,3 +1,4 @@
+import { formatSpeed } from "@/lib/i18n";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { createSeoHeadFromPath } from "@/lib/seo";
 import { useCallback } from "react";
@@ -37,6 +38,11 @@ function demoSessionConfig(settings: ElcamosoSettings) {
 
 function DemoDrive() {
   const { settings, update } = useSettings();
+  const demoSpeedFor = (mps: number) =>
+    formatSpeed(mps, settings.units, settings.language, {
+      profileId: settings.profileId,
+      knotsForNautical: settings.knotsForNautical,
+    });
   const reducedMotion = useReducedMotion();
   const profile = getProfile(settings.profileId);
   const { active, state, controls, setControls, reset, start, stop } = useDemoDrive({
@@ -191,7 +197,10 @@ function DemoDrive() {
             </div>
 
             <dl className="grid grid-cols-4 gap-2 border-b border-border/70 px-3 py-4 text-center sm:px-6">
-              <Readout label="km/h" value={Math.round(state.speed * 3.6)} />
+              <Readout
+                label={demoSpeedFor(state.speed).unit}
+                value={demoSpeedFor(state.speed).text}
+              />
               <Readout
                 label={continuous ? "Load" : "RPM"}
                 value={continuous ? Math.round(state.load * 100) : Math.round(state.rpm)}

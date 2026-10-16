@@ -1,3 +1,5 @@
+import { useSettings } from "@/lib/drive/useSettings";
+import { convertSpeedKmh } from "@/lib/drive/speed-units";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -95,6 +97,12 @@ function downloadLog(log: DriveLog) {
 }
 
 function DriveRecorderPage() {
+  const { settings } = useSettings();
+  const spd = (kmh: number | null) =>
+    kmh == null
+      ? "–"
+      : `${Math.round(convertSpeedKmh(kmh, settings.units === "imperial" ? "mph" : "kmh"))}`;
+  const spdUnit = settings.units === "imperial" ? "mph" : "km/h";
   const [recording, setRecording] = useState(false);
   const [status, setStatus] = useState<Record<SensorKey, SensorLiveStatus> | null>(null);
   const [elapsed, setElapsed] = useState(0);
@@ -273,7 +281,11 @@ function DriveRecorderPage() {
       {recording && status && (
         <section className="mt-6 grid gap-3">
           <div className="text-lg">
-            Speed: <b>{speedKmh ?? "–"} km/h</b> · State: <b>{drivingState ?? "–"}</b>
+            Speed:{" "}
+            <b>
+              {spd(speedKmh)} {spdUnit}
+            </b>{" "}
+            · State: <b>{drivingState ?? "–"}</b>
           </div>
           {(Object.keys(SENSOR_LABEL) as SensorKey[]).map((k) => {
             const s = status[k];
@@ -321,8 +333,8 @@ function DriveRecorderPage() {
               </div>
               <div className="text-sm text-muted-foreground">
                 GPS {log.summary.gps.avgRateHz} Hz · motion {log.summary.motion.avgRateHz} Hz ·
-                orientation {log.summary.orientation.avgRateHz} Hz · max {log.summary.maxSpeedKmh}{" "}
-                km/h
+                orientation {log.summary.orientation.avgRateHz} Hz · max{" "}
+                {spd(log.summary.maxSpeedKmh)} {spdUnit}
               </div>
               <div className="mt-3 flex flex-wrap gap-2">
                 <button

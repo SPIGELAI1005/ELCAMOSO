@@ -278,8 +278,11 @@ function DriveScreen() {
     else void start();
   };
 
-  const speed = formatSpeed(state.speed, settings.units, settings.language);
   const liveProfile = getProfile(sessionSnap.profileId);
+  const speed = formatSpeed(state.speed, settings.units, settings.language, {
+    profileId: liveProfile.id,
+    knotsForNautical: settings.knotsForNautical,
+  });
   const safetyMode = sessionSnap.safetyMode || Boolean(cockpit);
 
   return (
@@ -381,7 +384,7 @@ function DriveScreen() {
           />
         ) : (
           <Driving
-            kmh={speed.value}
+            kmh={speed.text}
             unit={speed.unit}
             speedMps={state.speed}
             reducedMotion={reducedMotion}
@@ -515,7 +518,7 @@ function Driving({
   dynamicDriveActive,
   safetyMode,
 }: {
-  kmh: number;
+  kmh: number | string;
   unit: string;
   speedMps: number;
   reducedMotion: boolean;

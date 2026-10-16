@@ -72,7 +72,7 @@ export function formatCockpitSpeed(
   speedMps: number,
   availability: CockpitSpeedAvailability,
   unitLabel: string,
-  displayValue: number,
+  displayValue: number | string,
 ): CockpitSpeedView {
   if (availability === "unavailable") {
     return {
@@ -90,12 +90,12 @@ export function formatCockpitSpeed(
       availability,
     };
   }
-  const caption =
-    availability === "estimate"
-      ? `GPS estimate · ${unitLabel}`
-      : unitLabel;
+  const caption = availability === "estimate" ? `GPS estimate · ${unitLabel}` : unitLabel;
   return {
-    value: String(Math.max(0, Math.round(displayValue))),
+    value:
+      typeof displayValue === "string"
+        ? displayValue
+        : String(Math.max(0, Math.round(displayValue))),
     showUnit: true,
     caption: availability === "estimate" ? "GPS estimate" : "",
     availability,
@@ -122,8 +122,7 @@ export function cockpitSecondaryView(
       : Math.min(1, Math.max(0, (rpm - idle) / (maxRpm - idle)));
 
   if (kind === "combustion" && profile.drivetrainMode === "virtual-transmission") {
-    const gearValue =
-      gear < 0 ? "R" : gear === 0 ? "N" : String(Math.max(1, Math.round(gear)));
+    const gearValue = gear < 0 ? "R" : gear === 0 ? "N" : String(Math.max(1, Math.round(gear)));
     return {
       kind: "gear",
       value: gearValue,
@@ -136,8 +135,7 @@ export function cockpitSecondaryView(
   }
 
   if (kind === "electric" || profile.drivetrainMode === "continuous") {
-    const regime =
-      state.regen > 0.25 ? "Regen" : state.speed * 3.6 < 1.5 ? "Idle" : "Drive";
+    const regime = state.regen > 0.25 ? "Regen" : state.speed * 3.6 < 1.5 ? "Idle" : "Drive";
     return {
       kind: "regime",
       value: regime,
@@ -151,8 +149,7 @@ export function cockpitSecondaryView(
 
   if (kind === "cadence") {
     const kmh = state.speed * 3.6;
-    const gait =
-      kmh < 7 ? "Walk" : kmh < 16 ? "Trot" : kmh < 28 ? "Canter" : "Gallop";
+    const gait = kmh < 7 ? "Walk" : kmh < 16 ? "Trot" : kmh < 28 ? "Canter" : "Gallop";
     return {
       kind: "regime",
       value: gait,

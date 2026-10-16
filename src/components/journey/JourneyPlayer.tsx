@@ -1,3 +1,5 @@
+import { formatSpeed } from "@/lib/i18n";
+import { useSettings } from "@/lib/drive/useSettings";
 import { useState } from "react";
 import { MotionSignature } from "@/components/MotionSignature";
 import { energySamplesFromJourneyTrace } from "@/lib/journey-trace";
@@ -14,6 +16,7 @@ function formatClock(ms: number) {
 
 export function JourneyPlayer({ journeyId }: { journeyId: string }) {
   const p = useJourneyPlayer(journeyId);
+  const { settings } = useSettings();
   const options = listRemixOptions(p.family);
   const energy = p.trace ? energySamplesFromJourneyTrace(p.trace, 32) : [];
   const progress = p.durationMs > 0 ? Math.min(1, p.playheadMs / p.durationMs) : 0;
@@ -70,7 +73,15 @@ export function JourneyPlayer({ journeyId }: { journeyId: string }) {
       <div className="mt-8 grid grid-cols-3 gap-3 text-center text-sm">
         <div>
           <p className="text-[10px] tracking-[0.18em] text-muted-foreground uppercase">Speed</p>
-          <p className="mt-1 font-light tabular-nums">{Math.round(p.state.speed * 3.6)} km/h</p>
+          <p className="mt-1 font-light tabular-nums">
+            {(() => {
+              const s = formatSpeed(p.state.speed, settings.units, settings.language, {
+                profileId: p.profileId,
+                knotsForNautical: settings.knotsForNautical,
+              });
+              return `${s.text} ${s.unit}`;
+            })()}
+          </p>
         </div>
         <div>
           <p className="text-[10px] tracking-[0.18em] text-muted-foreground uppercase">Gear</p>

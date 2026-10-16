@@ -1,3 +1,4 @@
+import { formatSpeed } from "@/lib/i18n";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { createSeoHeadFromPath } from "@/lib/seo";
@@ -586,7 +587,14 @@ function Studio() {
                         {name.trim() || "Untitled sound"}
                       </p>
                       <p className="mt-1 text-[10px] tracking-[0.18em] text-muted-foreground uppercase">
-                        {Math.round(state.speed * 3.6)} km/h · {base.name}
+                        {(() => {
+                          const sp = formatSpeed(state.speed, settings.units, settings.language, {
+                            profileId: base.id,
+                            knotsForNautical: settings.knotsForNautical,
+                          });
+                          return `${sp.text} ${sp.unit}`;
+                        })()}{" "}
+                        · {base.name}
                       </p>
                     </div>
                   </div>

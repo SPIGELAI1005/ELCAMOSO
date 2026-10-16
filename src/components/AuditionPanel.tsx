@@ -1,3 +1,4 @@
+import { formatSpeed } from "@/lib/i18n";
 import { ElcamosoMark } from "@/components/ElcamosoLogo";
 import { useAudition } from "@/lib/drive/useAudition";
 import { useReducedMotion } from "@/lib/drive/useReducedMotion";
@@ -99,7 +100,15 @@ export function AuditionPanel({ profileId }: { profileId: string }) {
             <label htmlFor="audition-speed" className="text-sm">
               Simulated speed
             </label>
-            <span className="text-sm text-muted-foreground tabular-nums">{targetKmh} km/h</span>
+            <span className="text-sm text-muted-foreground tabular-nums">
+              {(() => {
+                const s = formatSpeed(targetKmh / 3.6, settings.units, settings.language, {
+                  profileId,
+                  knotsForNautical: settings.knotsForNautical,
+                });
+                return `${s.text} ${s.unit}`;
+              })()}
+            </span>
           </div>
           <input
             id="audition-speed"
@@ -126,7 +135,20 @@ export function AuditionPanel({ profileId }: { profileId: string }) {
         </div>
 
         <dl className="grid grid-cols-3 gap-4 self-start text-center">
-          <Readout label="km/h" value={Math.round(state.speed * 3.6)} />
+          <Readout
+            label={
+              formatSpeed(state.speed, settings.units, settings.language, {
+                profileId,
+                knotsForNautical: settings.knotsForNautical,
+              }).unit
+            }
+            value={
+              formatSpeed(state.speed, settings.units, settings.language, {
+                profileId,
+                knotsForNautical: settings.knotsForNautical,
+              }).text
+            }
+          />
           <Readout
             label={continuous ? "Intensity" : "RPM"}
             value={continuous ? Math.round(state.load * 100) : Math.round(state.rpm)}

@@ -1,3 +1,5 @@
+import { formatSpeed } from "@/lib/i18n";
+import { useSettings } from "@/lib/drive/useSettings";
 import { useEffect, useRef, useState } from "react";
 import type { DriveDiagnosticsFrame } from "@/lib/diagnostics/types";
 import { getSession } from "@/lib/drive/session";
@@ -52,6 +54,7 @@ export function TeslaRoadTestHud({ className = "", compact = false }: TeslaRoadT
     getSession().getDriveDiagnostics(),
   );
   const [profileName, setProfileName] = useState("-");
+  const { settings } = useSettings();
   const [shiftFlash, setShiftFlash] = useState<string | null>(null);
   const prevGear = useRef<number | null>(null);
 
@@ -109,7 +112,14 @@ export function TeslaRoadTestHud({ className = "", compact = false }: TeslaRoadT
         <Field label="RPM" value={fmt(pt.mechanicalRpm ?? pt.rpm, 0)} large />
         <Field
           label="Speed"
-          value={`${fmt(frame.fusion.speedKmh || pt.displaySpeedKmh, 0)} km/h`}
+          value={(() => {
+            const s = formatSpeed(
+              (frame.fusion.speedKmh || pt.displaySpeedKmh || 0) / 3.6,
+              settings.units,
+              settings.language,
+            );
+            return `${s.text} ${s.unit}`;
+          })()}
           large
         />
         <Field label="Demand" value={fmtPct(pt.driverDemand ?? pt.throttle)} large />

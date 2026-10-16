@@ -1,3 +1,4 @@
+import { formatSpeed } from "@/lib/i18n";
 import { useEffect, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { createSeoHeadFromPath } from "@/lib/seo";
@@ -66,7 +67,14 @@ function Replay() {
                   <p className="text-lg font-light">{new Date(trace.startedAt).toLocaleString()}</p>
                   <p className="mt-1 text-xs text-muted-foreground">
                     {Math.round(trace.durationMs / 1000)}s · peak{" "}
-                    {Math.round(trace.aggregates.maxSpeedMps * 3.6)} km/h
+                    {(() => {
+                      const s = formatSpeed(
+                        trace.aggregates.maxSpeedMps,
+                        settings.units,
+                        settings.language,
+                      );
+                      return `${s.text} ${s.unit}`;
+                    })()}
                   </p>
                 </div>
                 <button
