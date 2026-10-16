@@ -28,6 +28,7 @@ const NON_ENGINE_PROFILES = [
   "synthwave-drive",
   "retro-arcade",
   "heartbeat",
+  "rocket-car",
   "deep-bass-pulse",
   "thunder-beast",
   "laughing-machine",

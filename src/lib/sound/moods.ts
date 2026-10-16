@@ -93,6 +93,7 @@ const TRAIT_MOOD: Record<string, SoundMood[]> = {
   rain: ["calm", "cinematic"],
   ocean: ["calm", "cinematic"],
   heartbeat: ["calm", "cinematic"],
+  rocket: ["futuristic", "cinematic"],
 };
 
 const CATEGORY_SECTION: Record<string, SoundSection> = {

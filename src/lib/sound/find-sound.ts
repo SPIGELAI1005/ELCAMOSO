@@ -25,6 +25,7 @@ const ALIASES: Record<string, string[]> = {
   ],
   "horse-gallop": ["horse", "gallop", "hoof", "equine"],
   heartbeat: ["heart", "pulse soft", "organic beat"],
+  "rocket-car": ["rocket", "thruster", "roadster", "spacex", "rakete", "racheta", "rachetă", "launch"],
   "deep-bass-pulse": ["bass", "sub", "cabin boom", "low end"],
   "zen-drive": ["zen", "calm", "meditat", "peaceful", "quiet"],
   "rain-drive": ["rain", "wet", "storm road"],

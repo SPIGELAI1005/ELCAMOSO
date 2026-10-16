@@ -1,3 +1,4 @@
+import { createRocketLayer } from "@/lib/sound/dsp/rocket-layer";
 /**
  * Improved-synth strategies for the 25 expansion profiles.
  */
@@ -946,6 +947,19 @@ export const EXPANSION_STRATEGIES: ProfileStrategy[] = [
     id: "heartbeat",
     build(ctx, buses) {
       return [createHeartbeatLayer(ctx, { id: "heartbeat", destination: buses.body, level: 0.42 })];
+    },
+  },
+  {
+    id: "rocket-car",
+    build(ctx, buses) {
+      return [
+        createRocketLayer(ctx, {
+          id: "rocket-thrust",
+          destination: buses.body,
+          accents: buses.accents,
+          level: 1.05,
+        }),
+      ];
     },
   },
 ];

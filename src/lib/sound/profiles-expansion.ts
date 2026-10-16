@@ -696,4 +696,28 @@ export const EXPANSION_PROFILES: SoundProfile[] = [
       rhythm: { kind: "putt", baseRate: 1.1, rateScale: 1.4, level: 0.35, tone: 70 },
     },
   },
+  {
+    id: "rocket-car",
+    name: "Rocket Car",
+    category: "Future",
+    traits: ["Thrusting", "Explosive", "Supersonic"],
+    description:
+      "Inspired by the cold-gas-thruster Tesla Roadster: a deep thrust roar that builds as you accelerate, a turbine whine rising with speed, an ignition blast on hard launches and the pssht of thrusters venting.",
+    drivetrainMode: "continuous",
+    motionModel: "continuous",
+    sourceMode: "procedural",
+    voice: {
+      baseFrequency: 48,
+      harmonics: [1, 1.5, 2.01],
+      waveResponse: 0.8,
+      filterBase: 160,
+      filterRange: 2200,
+      noise: 0.08,
+      noiseColor: "pink",
+      detune: 12,
+      wave: "triangle",
+      coreLevel: 0.18,
+      textures: [{ kind: "rumble", level: 0.2, tone: 50, speedScale: 0.4, surge: 0.15 }],
+    },
+  },
 ];
