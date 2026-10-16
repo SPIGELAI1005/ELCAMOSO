@@ -72,6 +72,7 @@ import {
   AccelerationCharacter,
   getRecordedLoopBank,
   recordedSampleWeight,
+  synthMatchAt,
   type LoadCharacter,
   type RecordedLoopBank,
 } from "@/lib/sound/realism/v2/recorded-loops";
@@ -688,20 +689,44 @@ export class HybridCombustionSynth {
         OUTPUT_PEAK_CEILING_LINEAR,
       ) as Float32Array<ArrayBuffer>;
       limiter.oversample = "4x";
-      // Route all engine output through the limiter
+      // Route all engine output through the limiter (via the synth match-EQ when the
+      // personality has recorded material, so the synth sounds like the same engine).
+      let into: AudioNode = limiter;
+      if (this.recordedBank?.synthMatch) {
+        const spec: [BiquadFilterType, number][] = [
+          ["lowshelf", 100],
+          ["peaking", 250],
+          ["peaking", 600],
+          ["peaking", 1400],
+          ["highshelf", 3000],
+        ];
+        const bands = spec.map(([type, hz]) => {
+          const b = ctx.createBiquadFilter();
+          b.type = type;
+          b.frequency.value = hz;
+          b.Q.value = type === "peaking" ? 0.9 : 0.7;
+          b.gain.value = 0;
+          return b;
+        });
+        for (let i = 0; i < bands.length - 1; i += 1) bands[i]!.connect(bands[i + 1]!);
+        bands[bands.length - 1]!.connect(limiter);
+        this.synthMatchBands = bands;
+        into = bands[0]!;
+        nodes += bands.length;
+      }
       this.combustionBus.disconnect();
-      this.combustionBus.connect(limiter);
+      this.combustionBus.connect(into);
       if (this.harshnessShelf) {
         this.harshnessShelf.disconnect();
-        this.harshnessShelf.connect(limiter);
+        this.harshnessShelf.connect(into);
       }
       if (this.supportLp) {
         this.supportLp.disconnect();
-        this.supportLp.connect(limiter);
+        this.supportLp.connect(into);
       }
       if (this.pipe) {
         this.pipe.disconnect();
-        this.pipe.connect(limiter);
+        this.pipe.connect(into);
       }
       limiter.connect(buses.body);
       this.outputLimiter = limiter;
@@ -1795,7 +1820,7 @@ export class HybridCombustionSynth {
     const forced = (globalThis as { __ELC_REC_FORCE?: number }).__ELC_REC_FORCE;
     let w = this.mutedRoles.has("combustion")
       ? 0
-      : recordedSampleWeight(rpm, demand, ac.aggression);
+      : recordedSampleWeight(rpm, demand, ac.aggression, bank.handover);
     if (typeof forced === "number") w = forced;
     this.recordedWeight = w;
     if (!this.recordedStreams.length) {
@@ -1850,10 +1875,15 @@ export class HybridCombustionSynth {
         0.2,
       );
     }
+    if (this.synthMatchBands.length) {
+      const g = synthMatchAt(bank.synthMatch, rpm);
+      this.synthMatchBands.forEach((b, i) => targetParam(b.gain, g[i] ?? 0, audioTime, 0.2));
+    }
+    const synthMute = (globalThis as { __ELC_SYNTH_MUTE?: boolean }).__ELC_SYNTH_MUTE ? 0 : 1;
     if (this.combustionBus) {
       targetParam(
         this.combustionBus.gain,
-        body * Math.sqrt(1 - RECORDED_SYNTH_DUCK * w) * louder,
+        Math.max(0.0001, body * Math.sqrt(1 - RECORDED_SYNTH_DUCK * w) * louder * synthMute),
         audioTime,
         0.15,
       );
@@ -1861,17 +1891,27 @@ export class HybridCombustionSynth {
     if (this.intakeBus) {
       targetParam(
         this.intakeBus.gain,
-        this.intakeTarget * (1 + 0.6 * ac.aggression) * (1 - 0.4 * w),
+        Math.max(0.0001, this.intakeTarget * (1 + 0.6 * ac.aggression) * (1 - 0.4 * w) * synthMute),
         audioTime,
         0.15,
       );
     }
     if (this.pipeSend) {
-      targetParam(this.pipeSend.gain, this.pipeTarget * (1 + 0.5 * ac.aggression), audioTime, 0.15);
+      targetParam(
+        this.pipeSend.gain,
+        Math.max(0.0001, this.pipeTarget * (1 + 0.5 * ac.aggression) * synthMute),
+        audioTime,
+        0.15,
+      );
     }
     if (this.supportBus) {
       // Support/noise bed is the main hiss source: thin it while recordings carry the sound.
-      targetParam(this.supportBus.gain, this.supportTarget * (1 - 0.6 * w), audioTime, 0.15);
+      targetParam(
+        this.supportBus.gain,
+        Math.max(0.0001, this.supportTarget * (1 - 0.6 * w) * synthMute),
+        audioTime,
+        0.15,
+      );
     }
     this.diagnostics.sampleAssisted = w > 0.01;
     this.diagnostics.sampleFallbackReason = "none";
@@ -1879,6 +1919,7 @@ export class HybridCombustionSynth {
   }
 
   private recordedNorm = 1;
+  private synthMatchBands: BiquadFilterNode[] = [];
 
   private updateSamples(rpm: number, demand: number, overrun: boolean, audioTime: number) {
     if (this.recordedBank && this.recordedBuffers.size && this.sampleBus && this.ctx) {

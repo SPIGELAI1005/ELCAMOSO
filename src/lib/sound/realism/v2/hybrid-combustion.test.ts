@@ -281,7 +281,8 @@ describe("HybridCombustionSynth phase + load", () => {
     expect(d.cylinders).toBe(8);
     expect(["worklet", "fallback"]).toContain(d.excitationMode);
     expect(d.activeNodeEstimate).toBeGreaterThan(10);
-    expect(d.activeNodeEstimate).toBeLessThan(80);
+    // GT V8 adds a 5-band synth match-EQ + 4-node recorded-layer EQ (cheap biquads).
+    expect(d.activeNodeEstimate).toBeLessThan(90);
     synth.dispose();
   });
 

@@ -7,6 +7,7 @@ import {
   RECORDED_LOOP_CREDITS,
   pickRegion,
   recordedSampleWeight,
+  synthMatchAt,
 } from "./recorded-loops";
 
 function drive(profile: (t: number) => number, seconds: number) {
@@ -45,6 +46,17 @@ describe("recorded loops hybrid (round 2)", () => {
     expect(hard.aggression).toBeGreaterThan(0.6);
     const lift = drive((t) => Math.max(5, 25 - t * 1.5), 6);
     expect(lift.overrun).toBeGreaterThan(0.5);
+  });
+
+  it("GT V8 keeps recorded texture under acceleration and interpolates the synth match-EQ", () => {
+    const gt = RECORDED_LOOP_BANKS["gt-v8"]!;
+    expect(recordedSampleWeight(3500, 0.9, 1, gt.handover)).toBeGreaterThanOrEqual(0.5);
+    expect(recordedSampleWeight(5200, 0.9, 1, gt.handover)).toBe(0);
+    expect(synthMatchAt(gt.synthMatch, 1000)).toEqual([0, 0, 0, 0, 0]);
+    const mid = synthMatchAt(gt.synthMatch, 2000);
+    expect(mid.length).toBe(5);
+    expect(synthMatchAt(undefined, 3000)).toEqual([0, 0, 0, 0, 0]);
+    expect(RECORDED_LOOP_BANKS["american-v8"]!.synthMatch).toBeUndefined();
   });
 
   it("picks regions within the natural pitch range", () => {

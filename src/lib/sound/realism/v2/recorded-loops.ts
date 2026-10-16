@@ -7,7 +7,7 @@
  * Shifts, pops and gear logic stay procedural. Licences: RECORDED_LOOP_CREDITS and /credits.
  */
 
-export const RECORDED_LOOPS_VERSION = "v2";
+export const RECORDED_LOOPS_VERSION = "v3";
 const BASE = `/sample-packs/recorded/${RECORDED_LOOPS_VERSION}`;
 
 /** A steady stretch inside a source file with its measured RPM track (one value per 0.1 s). */
@@ -70,6 +70,16 @@ const MASERATI_REGIONS: RecordedRegion[] = [
       1940, 1967, 1967, 1967, 1951, 1935, 1930, 1930, 1930, 1927, 1930,
     ],
   },
+  {
+    start: 21.9,
+    end: 23.35,
+    rpm: [2168, 2192, 2215, 2250, 2250, 2333, 2376, 2404, 2440, 2461, 2465, 2478, 2491],
+  },
+  {
+    start: 23.4,
+    end: 25.0,
+    rpm: [2513, 2524, 2513, 2535, 2539, 3022, 3063, 3063, 3022, 2539, 2539, 2539, 2595, 2651],
+  },
 ];
 
 const ROVER_REGIONS: RecordedRegion[] = [
@@ -89,11 +99,28 @@ const ROVER_REGIONS: RecordedRegion[] = [
   },
 ];
 
+export interface RecordedHandover {
+  rpmStart: number;
+  rpmSpan: number;
+  accelKeep: number;
+  /** Share of recording kept above the rpm hand-over (texture continuity), faded out above ~4,400 rpm. */
+  rpmKeep?: number;
+}
+
+export const DEFAULT_HANDOVER: RecordedHandover = { rpmStart: 2400, rpmSpan: 900, accelKeep: 0.15 };
+
 export interface RecordedLoopBank {
   personalityId: string;
   sources: RecordedSource[];
   /** Overall sample-layer level at full sample weight. */
   level: number;
+  /** Where recordings hand over to the synth: fade rpmStart → rpmStart+rpmSpan; accelKeep = share kept at full aggression. */
+  handover: RecordedHandover;
+  /**
+   * RPM-interpolated match-EQ on the procedural synth toward the recording's measured
+   * spectrum (dB per band: 100 Hz low shelf, 250 / 600 / 1400 Hz peaks, 3 kHz high shelf).
+   */
+  synthMatch?: { rpm: number[]; bandsDb: number[][] };
   /** Match-EQ on the recorded layer toward the synth timbre (dB). */
   eq: {
     lowShelfDb: number;
@@ -105,10 +132,12 @@ export interface RecordedLoopBank {
   };
 }
 
-const maserati = (weight: number): RecordedSource => ({
+/** Idle/cruise regions only (the last two are free-rev regions used for GT V8 under load). */
+const MASERATI_CRUISE_REGIONS = MASERATI_REGIONS.slice(0, 6);
+const maserati = (weight: number, regions = MASERATI_REGIONS): RecordedSource => ({
   id: "maserati",
   url: `${BASE}/maserati_v8_regions.m4a`,
-  regions: MASERATI_REGIONS,
+  regions,
   weight,
 });
 const rover = (weight: number): RecordedSource => ({
@@ -121,8 +150,10 @@ const rover = (weight: number): RecordedSource => ({
 export const RECORDED_LOOP_BANKS: Record<string, RecordedLoopBank> = {
   "american-v8": {
     personalityId: "american-v8",
-    sources: [maserati(1), rover(0.55)],
+    sources: [maserati(1, MASERATI_CRUISE_REGIONS), rover(0.55)],
     level: 0.36,
+    handover: DEFAULT_HANDOVER,
+    // Synth match-EQ measured but not applied: it barely helped the American V8 (see round 3 notes).
     // Measured on real-chain renders: recording is far brighter and thinner than the V8 synth.
     eq: {
       lowShelfDb: 10,
@@ -137,6 +168,21 @@ export const RECORDED_LOOP_BANKS: Record<string, RecordedLoopBank> = {
     personalityId: "gt-v8",
     sources: [maserati(1)],
     level: 0.28,
+    // GT V8: keep the Maserati texture under acceleration (rev grains up to ~4,300 rpm).
+    handover: { rpmStart: 2800, rpmSpan: 1000, accelKeep: 0.5, rpmKeep: 0.5 },
+    // Learned on real-chain renders (recording-only vs synth-only, 0.5 s frames, gentle+hard), 100 %.
+    synthMatch: {
+      rpm: [1400, 1800, 2200, 2600, 3000, 3500, 4000],
+      bandsDb: [
+        [0, 0, 0, 0, 0],
+        [-1.1, 2.1, -2.7, -4.8, -4.3],
+        [-0.7, 0.6, -0.2, -2.8, -2.7],
+        [4.6, -0.4, 1.9, -2.0, -3.0],
+        [1.7, -0.3, 1.5, -3.5, -5.1],
+        [-3.9, -0.9, 2.6, 1.5, -4.2],
+        [-10, -1.3, 3.2, 2.0, -5.9],
+      ],
+    },
     eq: {
       lowShelfDb: 12,
       midDb: -2,
@@ -163,11 +209,20 @@ export const smoothstep = (x: number) => {
  * slowly to ~3,300 rpm; aggressive acceleration hands over to the synth's on-load
  * growl, very high demand too.
  */
-export function recordedSampleWeight(rpm: number, demand: number, aggression = 0): number {
-  const byRpm = 1 - smoothstep((rpm - 2400) / 900);
-  const byDemand = 1 - smoothstep((demand - 0.6) / 0.3);
-  const byAccel = 1 - 0.85 * smoothstep(aggression);
-  return Math.max(0, Math.min(1, byRpm * byDemand * byAccel));
+export function recordedSampleWeight(
+  rpm: number,
+  demand: number,
+  aggression = 0,
+  handover: RecordedHandover = DEFAULT_HANDOVER,
+): number {
+  const rpmKeep = handover.rpmKeep ?? 0;
+  const byRpm = 1 - (1 - rpmKeep) * smoothstep((rpm - handover.rpmStart) / handover.rpmSpan);
+  const keep = handover.accelKeep;
+  const byDemand = 1 - (1 - rpmKeep) * smoothstep((demand - 0.6) / 0.3);
+  const byAccel = 1 - (1 - keep) * smoothstep(aggression);
+  const top = rpmKeep > 0 ? 1 - smoothstep((rpm - 4400) / 700) : 1;
+  // Texture floor: banks with rpmKeep keep that share of recording under load and revs.
+  return Math.max(0, Math.min(1, Math.max(byRpm * byDemand * byAccel, rpmKeep)) * top);
 }
 
 /** Pitch range kept natural. */
@@ -224,6 +279,21 @@ export function pickRegion(
     if (x <= 0) return c.r;
   }
   return cands[cands.length - 1]!.r;
+}
+
+/** Interpolate the synth match-EQ table at an RPM (flat outside data). */
+export function synthMatchAt(
+  table: { rpm: number[]; bandsDb: number[][] } | undefined,
+  rpm: number,
+): number[] {
+  if (!table || !table.rpm.length) return [0, 0, 0, 0, 0];
+  const r = table.rpm;
+  if (rpm <= r[0]!) return [...table.bandsDb[0]!];
+  if (rpm >= r[r.length - 1]!) return [...table.bandsDb[r.length - 1]!];
+  let i = 0;
+  while (rpm > r[i + 1]!) i += 1;
+  const f = (rpm - r[i]!) / (r[i + 1]! - r[i]!);
+  return table.bandsDb[i]!.map((g, k) => g + (table.bandsDb[i + 1]![k]! - g) * f);
 }
 
 export type LoadCharacter = "idle" | "cruise" | "on-load" | "aggressive" | "overrun";
