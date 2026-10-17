@@ -49,7 +49,7 @@ export function allCoreAcousticProfileSpecs(): AcousticProfileSpec[] {
   return CORE_SOUND_PROFILE_IDS.map((id) => getAcousticProfileSpec(id));
 }
 
-/** All 57 catalog Sound Profile specs including Symphony / World / Fusion (validated). */
+/** All catalog Sound Profile specs including Symphony / World / Fusion (validated). */
 export function allCatalogAcousticProfileSpecs(): AcousticProfileSpec[] {
   return PUBLIC_PROFILE_IDS.map((id) => getAcousticProfileSpec(id));
 }

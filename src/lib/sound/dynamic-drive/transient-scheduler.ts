@@ -430,17 +430,24 @@ export function tickTransientScheduler(input: {
     }
   };
 
+  /** Neutral → 1st after a stop: always allow the gear-change transient. */
+  const isLaunchEngage =
+    (pt.shiftEvent?.fromGear === 0 && pt.shiftEvent?.toGear === 1) ||
+    (pt.lastShiftEvent?.fromGear === 0 &&
+      pt.lastShiftEvent?.toGear === 1 &&
+      pt.lastShiftReason === "engage");
+
   if (
     shiftStarted(pt, prevPt) &&
     pt.shiftDirection === "up" &&
-    pt.load >= profile.upshift.minLoad
+    (isLaunchEngage || pt.load >= profile.upshift.minLoad)
   ) {
     fire(
       "upshift",
-      profile.upshift.probability,
+      isLaunchEngage ? Math.max(profile.upshift.probability, 0.92) : profile.upshift.probability,
       profile.upshift.cooldownMs,
       pools.upshift,
-      t.upshiftStrength,
+      isLaunchEngage ? Math.max(t.upshiftStrength, 0.85) : t.upshiftStrength,
     );
   }
 

@@ -11,6 +11,68 @@ Canonical production domain: **https://www.elcamoso.com**
 
 See also: `docs/SOCIAL_CARD_SYSTEM.md`
 
+## Concept (source of truth)
+
+ELCAMOSO SEO exists to make the product discoverable for EV drivers who want emotion from motion, without turning marketing pages into a fake-engine toy catalog.
+
+### Positioning phrases (use in titles / descriptions)
+
+1. **Turn motion into sound.** (primary proposition)
+2. **Your EV. Your Sound. More Emotion.** (tagline)
+3. **Hear it now. Or hear it later.** (live vs Silent Capture)
+
+### Experience vocabulary (indexable copy)
+
+Use product language only: **Experience**, **Engine**, **Symphony**, **World**, **Fusion**, **Sound Profile**, **Drive Mode**, **Motion**.
+
+Do not use lab jargon in titles or meta (oscillator, LFO, VST, gain routing).
+
+The acronym expansion (ELectric CAr MOtion SOund) may appear in About/docs only, not in SERP titles.
+
+### Keyword posture
+
+- Lead with brand + motion-to-sound benefit.
+- EV / electric vehicle is core discovery language.
+- Tesla may appear as a secondary discovery term in meta copy (drivers search it). Never put OEM marks, logos, or car chrome in OG art or the product mark (**O )))** only).
+- Prefer unique page intent: home (brand), explore (chooser), sounds (Engine profiles), symphony / worlds / fusion (family), pricing (access), story / science (trust).
+
+### Index vs noindex
+
+| Intent | Routes | Robots |
+| ------ | ------ | ------ |
+| Marketing / legal | `/`, `/explore`, `/sounds`, `/symphony`, `/worlds`, `/fusion`, `/pricing`, `/credits`, `/story`, `/science`, `/legal/*` | `index, follow` + sitemap |
+| App / session / private | `/drive`, `/demo`, `/studio`, `/garage`, `/calibrate`, `/settings`, `/onboarding`, `/replay`, `/journeys`, `/share*`, `/pair*`, `/connect*`, `/upgrade*`, `/auth*`, `/debug*`, `/admin`, `/recorder` | `noindex` (nofollow on auth/debug/pair/connect/upgrade) |
+
+Share URLs stay **social-previewable** (OG/Twitter) while `noindex, follow`.
+
+### Image SEO
+
+| Asset | Spec | Role |
+| ----- | ---- | ---- |
+| `/og/*.png` | 1200×630 | Static OG/Twitter fallbacks (brand, engine, symphony, worlds, fusion, drive-song) |
+| `/api/og?v=*` | Dynamic Satori cards | Preferred `og:image` when available |
+| `/hero/sound-profiles/{id}.png` | 1672×941, no-branding stills | Landing + Drive backdrops; **not** used as OG by default |
+| Icons / PWA | `/icon-512.png`, manifest | Organization `logo` + install |
+
+Rules:
+
+- Every indexable route emits absolute `og:image`, width, height, and alt.
+- Hero slideshow alts name the sound experience (profile id → readable label).
+- No painted-out branding bars on hero stills (source: `Images cars_elcamoso/Cars No Branding`).
+- Drive Song cards must never include GPS, route, VIN, or identity.
+
+### On-page content checklist
+
+- One clear H1 per marketing page (brand or page intent). Home H1 stays the tagline.
+- Descriptions ~120–160 characters, unique per route, no duplicate boilerplate.
+- Canonical always `https://www.elcamoso.com{path}` (never preview hosts).
+- Preview / `VITE_SEO_FORCE_NOINDEX=1` → global `noindex, nofollow`.
+- No fake `lastmod` in sitemap. No doorway pages.
+
+### Multilingual
+
+EN / DE / RO UI dictionaries share **one URL**. Path locales (`/de`, `/ro`) are **not** live. Do not emit hreflang until main body content is translated. See `SEO_PATH_LOCALES_ENABLED` in `language.ts`.
+
 ## Architecture
 
 Central module: `src/lib/seo/`
@@ -26,24 +88,6 @@ Central module: `src/lib/seo/`
 | `language.ts`        | Locale readiness (no fake hreflang)           |
 
 Routes call `createSeoHeadFromPath("/path")` — do not hand-roll absolute URLs.
-
-## Indexable routes
-
-`/`, `/explore`, `/sounds`, `/symphony`, `/worlds`, `/fusion`, `/pricing`, `/story`, `/science`, `/legal`, `/legal/*`
-
-## Noindex routes
-
-`/drive`, `/demo`, `/studio`, `/garage`, `/calibrate`, `/settings`, `/onboarding`, `/replay`, `/journeys`, `/journeys/*`, `/share`, `/share/drive/*`, `/pair`, `/pair/*`, `/connect/*`, `/upgrade/*`, `/auth/*`, `/debug/*`
-
-Share pages remain **social-previewable** (OG/Twitter) while `noindex, follow`.
-
-## Preview deployments
-
-When `VERCEL_ENV=preview` (or `VITE_SEO_FORCE_NOINDEX=1`), all pages emit `noindex, nofollow`. Canonicals still point at production www — previews must not compete in search.
-
-## Multilingual
-
-EN / DE / RO UI dictionaries share **one URL**. Path locales (`/de`, `/ro`) are **not** live. Do not emit hreflang until main body content is translated. See `SEO_PATH_LOCALES_ENABLED` in `language.ts`.
 
 ## Structured data
 
@@ -71,20 +115,22 @@ Marketing children: BreadcrumbList where defined.
 
 | Route            | Index?        | Canonical | Structured data                    | OG                        |
 | ---------------- | ------------- | --------- | ---------------------------------- | ------------------------- |
-| `/`              | YES           | www       | Organization + SoftwareApplication | default                   |
-| `/explore`       | YES           | www       | Breadcrumb                         | default                   |
+| `/`              | YES           | www       | Organization + SoftwareApplication | brand                     |
+| `/explore`       | YES           | www       | Breadcrumb                         | brand                     |
 | `/sounds`        | YES           | www       | Breadcrumb                         | engine                    |
 | `/symphony`      | YES           | www       | Breadcrumb                         | symphony                  |
 | `/worlds`        | YES           | www       | Breadcrumb                         | worlds                    |
 | `/fusion`        | YES           | www       | Breadcrumb                         | fusion                    |
-| `/pricing`       | YES           | www       | Breadcrumb                         | default                   |
-| `/story`         | YES           | www       | Breadcrumb                         | default                   |
-| `/science`       | YES           | www       | Breadcrumb                         | default                   |
+| `/pricing`       | YES           | www       | Breadcrumb                         | pricing                   |
+| `/credits`       | YES           | www       | Breadcrumb                         | brand                     |
+| `/story`         | YES           | www       | Breadcrumb                         | brand                     |
+| `/science`       | YES           | www       | Breadcrumb                         | brand                     |
 | `/about`         | NO (redirect) | www       | → `/story`                         | -                         |
-| `/legal/*`       | YES           | www       | —                                  | default                   |
-| `/drive`         | NO            | www       | —                                  | default                   |
-| `/studio`        | NO            | www       | —                                  | default                   |
-| `/garage`        | NO            | www       | —                                  | default                   |
+| `/legal/*`       | YES           | www       | —                                  | brand                     |
+| `/drive`         | NO            | www       | —                                  | brand                     |
+| `/demo`          | NO            | www       | —                                  | brand                     |
+| `/studio`        | NO            | www       | —                                  | brand                     |
+| `/garage`        | NO            | www       | —                                  | brand                     |
 | `/share/drive/*` | NO            | www       | —                                  | drive-song (privacy-safe) |
 | `/pair/*`        | NO (nofollow) | www       | —                                  | —                         |
 | `/debug/*`       | NO (nofollow) | —         | —                                  | —                         |

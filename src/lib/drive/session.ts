@@ -685,6 +685,9 @@ class DriveSession {
       this.powertrainSim = null;
       this.powertrainSoundProfileId = null;
     }
+    if (next.shiftMapPreset !== undefined && this.powertrainSim) {
+      this.powertrainSim.setShiftMapPreset(merged.shiftMapPreset ?? "legacy");
+    }
     if (next.teslaFleetTelemetry !== undefined) {
       this.syncVehicleTelemetryProvider();
     }
@@ -722,6 +725,14 @@ class DriveSession {
     }
     this.ruleLatched.clear();
     this.bindMediaSession();
+  }
+
+  /** Paddle up/down while Dynamic Drive / virtual transmission is active. */
+  requestManualShift(direction: "up" | "down"): boolean {
+    if (!this.powertrainSim) return false;
+    const ok = this.powertrainSim.requestManualShift(direction);
+    if (ok) this.emit();
+    return ok;
   }
 
   setCockpit(on: boolean) {

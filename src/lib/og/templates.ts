@@ -12,10 +12,10 @@ export const SOCIAL_CARD_TEMPLATES: Record<OgCardVariant, OgTemplateDefinition> 
     variant: "brand",
     defaultEyebrow: "ELCAMOSO",
     defaultTitle: "TURN MOTION\nINTO SOUND.",
-    defaultSubtitle: "",
+    defaultSubtitle: "Your EV. Your Sound. More Emotion.",
     accent: OG_PALETTE.accents.brand,
     fallbackPath: "/og/elcamoso-default.png",
-    alt: () => "ELCAMOSO - Turn Motion Into Sound",
+    alt: () => "ELCAMOSO - Turn motion into sound. Your EV. Your Sound. More Emotion.",
   },
   engine: {
     variant: "engine",

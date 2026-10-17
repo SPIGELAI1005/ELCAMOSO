@@ -72,7 +72,7 @@ describe("cockpitSecondaryView", () => {
     expect(view.simulatedCaption.toLowerCase()).toMatch(/simulated/);
   });
 
-  it("shows regime instead of fictitious gears for continuous profiles", () => {
+  it("shows thematic stages (not RPM gears) for continuous personas", () => {
     const profile = getProfile("cyber-pulse");
     const state: DriveState = {
       ...IDLE_STATE,
@@ -86,9 +86,10 @@ describe("cockpitSecondaryView", () => {
       ...state,
       regen: 0,
     });
-    expect(view.kind).toBe("regime");
-    expect(view.value).not.toMatch(/^[1-6]$/);
+    expect(view.kind).toBe("gear");
+    expect(view.label).toBe("Grid");
     expect(view.showRpm).toBe(false);
+    expect(view.simulatedCaption.toLowerCase()).toMatch(/simulated/);
   });
 });
 

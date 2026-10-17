@@ -1,6 +1,7 @@
 import { createRocketLayer } from "@/lib/sound/dsp/rocket-layer";
+import { createTimeMachineLayer } from "@/lib/sound/dsp/time-machine-layer";
 /**
- * Improved-synth strategies for the 25 expansion profiles.
+ * Improved-synth strategies for expansion Sound Profiles.
  */
 
 import {
@@ -958,6 +959,19 @@ export const EXPANSION_STRATEGIES: ProfileStrategy[] = [
           destination: buses.body,
           accents: buses.accents,
           level: 1.05,
+        }),
+      ];
+    },
+  },
+  {
+    id: "time-machine",
+    build(ctx, buses) {
+      return [
+        createTimeMachineLayer(ctx, {
+          id: "chrono-flux",
+          destination: buses.body,
+          accents: buses.accents,
+          level: 1.0,
         }),
       ];
     },

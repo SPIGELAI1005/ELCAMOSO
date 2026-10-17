@@ -97,12 +97,17 @@ function lowPassToward(current: number, target: number, dt: number, tau: number)
   return current + (target - current) * a;
 }
 
+/** Hold automatic shift map after a paddle request so manual gear sticks briefly. */
+const MANUAL_SHIFT_HOLD_MS = 3200;
+
 /** Standalone powertrain tick - no audio, no GPS. */
 export class PowertrainSimulator {
   private baseProfile: PowertrainProfile;
   private profile: PowertrainProfile;
   private shiftMapPreset: ShiftMapPresetId;
   private internal: PowertrainSimulatorInternals;
+  /** Simulator clockMs deadline; 0 = no manual hold. */
+  private manualHoldUntilMs = 0;
 
   constructor(options: PowertrainSimulatorOptions = {}) {
     this.baseProfile =
@@ -134,9 +139,60 @@ export class PowertrainSimulator {
     this.internal.shiftMap = resolveShiftMapForPreset(this.profile, preset);
   }
 
+  /**
+   * Paddle up/down: queue one adjacent gear and hold the shift map briefly.
+   * From neutral, either paddle engages 1st with a shift transient.
+   * Returns false when already at the limit or still mid-shift.
+   */
+  requestManualShift(direction: ShiftDirection): boolean {
+    const gear = this.internal.gear;
+    const maxGear = this.profile.transmission.gearRatios.length;
+    if (maxGear < 2) return false;
+    if (this.internal.shiftState.active) return false;
+
+    const clock = this.internal.clockMs || Date.now();
+
+    // Neutral: Up or Down engages 1st (paddle out of N).
+    if (gear < 1) {
+      const speed = this.internal.mechanicalSpeedKmh || this.internal.lastDisplaySpeedKmh;
+      const launchRpm = Math.max(
+        this.internal.rpm,
+        this.profile.engine.idleRpm,
+        rpmFromSpeedAndGear(speed, 1, this.profile) * 0.4,
+      );
+      const launch = beginShift(this.internal.shiftState, "up", 0, 1, speed, launchRpm, this.profile);
+      if (!launch.active) return false;
+      this.internal.shiftState = launch;
+      this.internal.queuedTargetGear = 1;
+      this.internal.kickdownPlanActive = false;
+      this.internal.lastShiftReason = "engage";
+      this.internal.shiftSequenceId += 1;
+      this.internal.lastShiftEvent = {
+        sequenceId: this.internal.shiftSequenceId,
+        atMs: clock,
+        fromGear: 0,
+        toGear: 1,
+        direction: "up",
+        reason: "engage",
+      };
+      this.manualHoldUntilMs = clock + MANUAL_SHIFT_HOLD_MS;
+      return true;
+    }
+
+    const next = direction === "up" ? gear + 1 : gear - 1;
+    if (next < 1 || next > maxGear) return false;
+
+    this.internal.queuedTargetGear = next;
+    this.internal.kickdownPlanActive = false;
+    this.internal.lastShiftReason = "manual";
+    this.manualHoldUntilMs = clock + MANUAL_SHIFT_HOLD_MS;
+    return true;
+  }
+
   reset() {
     this.internal = createPowertrainInternals();
     this.internal.shiftMap = resolveShiftMapForPreset(this.profile, this.shiftMapPreset);
+    this.manualHoldUntilMs = 0;
   }
 
   /**
@@ -160,6 +216,7 @@ export class PowertrainSimulator {
     this.internal.operatingRegime = "steady";
     this.internal.recoveringUntilMs = 0;
     this.internal.lastShiftCompletedAt = -60_000;
+    this.manualHoldUntilMs = 0;
 
     if (speed < 1.2) {
       this.internal.gear = 0;
@@ -322,10 +379,82 @@ export class PowertrainSimulator {
 
     const prevGear = gear;
     const engageThrottle = pedal ?? motion.inferredThrottle;
-    gear = resolveGearEngagement(gear, shiftDecisionSpeedKmh, engageThrottle, this.profile, {
-      now,
-      lastNeutralAt: this.internal.lastNeutralAt,
-    });
+    // Use display speed for stop / 1st engage so pullaway matches what the driver sees.
+    let engaged = resolveGearEngagement(
+      gear,
+      displaySpeedKmh,
+      engageThrottle,
+      this.profile,
+      {
+        now,
+        lastNeutralAt: this.internal.lastNeutralAt,
+      },
+    );
+    // Paddle-out-of-N / manual hold: do not snap back to neutral while the hold is live.
+    const paddleHold = this.manualHoldUntilMs > 0 && now < this.manualHoldUntilMs;
+    if (
+      paddleHold &&
+      engaged === 0 &&
+      (gear >= 1 ||
+        this.internal.queuedTargetGear >= 1 ||
+        (shiftState.active && shiftState.toGear >= 1))
+    ) {
+      engaged = Math.max(1, gear, this.internal.queuedTargetGear, shiftState.toGear || 0);
+    }
+
+    // Pullaway from a real stop: N → 1st with a shift transient (gear-change sound).
+    // Cold-start already-moving: snap into gear without a fake engage flare.
+    const pullawayEngage =
+      !shiftState.active &&
+      prevGear === 0 &&
+      engaged === 1 &&
+      !holdShifts &&
+      displaySpeedKmh <= Math.max(this.profile.transmission.idle.engageSpeedKmh * 3, 8);
+
+    if (pullawayEngage) {
+      const launchRpm = Math.max(
+        rpm,
+        this.profile.engine.idleRpm,
+        rpmFromSpeedAndGear(mechanicalSpeedKmh, 1, this.profile) * 0.4,
+      );
+      const launch = beginShift(
+        shiftState,
+        "up",
+        0,
+        1,
+        mechanicalSpeedKmh,
+        launchRpm,
+        this.profile,
+      );
+      if (launch.active) {
+        shiftState = launch;
+        gear = 0;
+        this.internal.lastShiftReason = "engage";
+        this.internal.queuedTargetGear = 1;
+        this.internal.shiftSequenceId += 1;
+        shiftEventThisTick = {
+          sequenceId: this.internal.shiftSequenceId,
+          atMs: now,
+          fromGear: 0,
+          toGear: 1,
+          direction: "up",
+          reason: "engage",
+        };
+        this.internal.lastShiftEvent = shiftEventThisTick;
+      } else {
+        gear = 1;
+      }
+    } else if (shiftState.active && shiftState.fromGear === 0 && shiftState.toGear === 1) {
+      // Hold neutral until the launch shift settles into 1st.
+      gear = 0;
+    } else if (!shiftState.active) {
+      gear = engaged;
+    } else if (engaged === 0) {
+      // Full stop mid-shift: drop to neutral.
+      gear = 0;
+      shiftState = createShiftControllerState();
+      this.internal.queuedTargetGear = 0;
+    }
 
     if (gear === 0 && prevGear > 0) {
       this.internal.lastNeutralAt = now;
@@ -395,36 +524,46 @@ export class PowertrainSimulator {
     let load = throttleResult.engineLoad * loadMultiplier;
     let targetGear = gear;
     let desiredGear = this.internal.queuedTargetGear || gear;
+    const manualHold = this.manualHoldUntilMs > 0 && now < this.manualHoldUntilMs;
+    if (this.manualHoldUntilMs > 0 && now >= this.manualHoldUntilMs) {
+      this.manualHoldUntilMs = 0;
+    }
 
     if (!shiftState.active && gear > 0 && !shiftCompletedThisTick && !holdShifts) {
-      const reconciled = reconcileKickdownQueue(
-        {
-          currentGear: gear,
-          queuedTargetGear: this.internal.queuedTargetGear || gear,
-          driverDemand: throttleResult.driverDemand,
-          braking,
-          rpm,
-          shiftDecisionSpeedKmh,
-          speedKmh: displaySpeedKmh,
-          lastShiftCompletedAt: this.internal.lastShiftCompletedAt,
-          now,
-          lastShiftWasUp: this.internal.lastShiftWasUp,
-          blockDownshiftUntil: this.internal.blockDownshiftUntil,
-          lastKickdownAt: this.internal.lastKickdownAt,
-          previousDemand: this.internal.previousThrottle,
-          kickdownPlanActive: this.internal.kickdownPlanActive,
-        },
-        this.profile,
-        map,
-      );
+      if (manualHold) {
+        desiredGear = this.internal.queuedTargetGear || gear;
+        this.internal.lastShiftReason =
+          desiredGear !== gear ? "manual" : this.internal.lastShiftReason;
+      } else {
+        const reconciled = reconcileKickdownQueue(
+          {
+            currentGear: gear,
+            queuedTargetGear: this.internal.queuedTargetGear || gear,
+            driverDemand: throttleResult.driverDemand,
+            braking,
+            rpm,
+            shiftDecisionSpeedKmh,
+            speedKmh: displaySpeedKmh,
+            lastShiftCompletedAt: this.internal.lastShiftCompletedAt,
+            now,
+            lastShiftWasUp: this.internal.lastShiftWasUp,
+            blockDownshiftUntil: this.internal.blockDownshiftUntil,
+            lastKickdownAt: this.internal.lastKickdownAt,
+            previousDemand: this.internal.previousThrottle,
+            kickdownPlanActive: this.internal.kickdownPlanActive,
+          },
+          this.profile,
+          map,
+        );
 
-      desiredGear = reconciled.queuedTargetGear;
-      this.internal.queuedTargetGear = desiredGear;
-      this.internal.kickdownPlanActive = reconciled.kickdownPlanActive;
-      this.internal.lastShiftReason = reconciled.reason;
-      if (reconciled.reason === "kickdown") {
-        this.internal.lastKickdownAt = now;
-        this.internal.kickdownPlanActive = true;
+        desiredGear = reconciled.queuedTargetGear;
+        this.internal.queuedTargetGear = desiredGear;
+        this.internal.kickdownPlanActive = reconciled.kickdownPlanActive;
+        this.internal.lastShiftReason = reconciled.reason;
+        if (reconciled.reason === "kickdown") {
+          this.internal.lastKickdownAt = now;
+          this.internal.kickdownPlanActive = true;
+        }
       }
 
       targetGear = desiredGear;
@@ -464,32 +603,38 @@ export class PowertrainSimulator {
         }
       }
     } else if (shiftState.active) {
-      // Reconcile queue mid-shift so release / brake / unsafe speed can cancel remaining steps.
-      const mid = reconcileKickdownQueue(
-        {
-          currentGear: gear,
-          queuedTargetGear: this.internal.queuedTargetGear || shiftState.toGear,
-          driverDemand: throttleResult.driverDemand,
-          braking,
-          rpm,
-          shiftDecisionSpeedKmh,
-          speedKmh: displaySpeedKmh,
-          lastShiftCompletedAt: this.internal.lastShiftCompletedAt,
-          now,
-          lastShiftWasUp: this.internal.lastShiftWasUp,
-          blockDownshiftUntil: this.internal.blockDownshiftUntil,
-          lastKickdownAt: this.internal.lastKickdownAt,
-          previousDemand: this.internal.previousThrottle,
-          kickdownPlanActive: this.internal.kickdownPlanActive,
-        },
-        this.profile,
-        map,
-      );
-      this.internal.queuedTargetGear = mid.queuedTargetGear;
-      this.internal.kickdownPlanActive = mid.kickdownPlanActive;
-      if (mid.reason !== "none") this.internal.lastShiftReason = mid.reason;
-      targetGear = shiftState.toGear;
-      desiredGear = this.internal.queuedTargetGear || targetGear;
+      if (manualHold) {
+        // Keep paddle target; do not let schedule cancel mid-shift.
+        targetGear = shiftState.toGear;
+        desiredGear = this.internal.queuedTargetGear || targetGear;
+      } else {
+        // Reconcile queue mid-shift so release / brake / unsafe speed can cancel remaining steps.
+        const mid = reconcileKickdownQueue(
+          {
+            currentGear: gear,
+            queuedTargetGear: this.internal.queuedTargetGear || shiftState.toGear,
+            driverDemand: throttleResult.driverDemand,
+            braking,
+            rpm,
+            shiftDecisionSpeedKmh,
+            speedKmh: displaySpeedKmh,
+            lastShiftCompletedAt: this.internal.lastShiftCompletedAt,
+            now,
+            lastShiftWasUp: this.internal.lastShiftWasUp,
+            blockDownshiftUntil: this.internal.blockDownshiftUntil,
+            lastKickdownAt: this.internal.lastKickdownAt,
+            previousDemand: this.internal.previousThrottle,
+            kickdownPlanActive: this.internal.kickdownPlanActive,
+          },
+          this.profile,
+          map,
+        );
+        this.internal.queuedTargetGear = mid.queuedTargetGear;
+        this.internal.kickdownPlanActive = mid.kickdownPlanActive;
+        if (mid.reason !== "none") this.internal.lastShiftReason = mid.reason;
+        targetGear = shiftState.toGear;
+        desiredGear = this.internal.queuedTargetGear || targetGear;
+      }
     }
 
     if (!shiftState.active && gear > 0 && this.internal.queuedTargetGear !== gear) {

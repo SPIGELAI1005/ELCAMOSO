@@ -656,6 +656,235 @@
   border-radius: 12px;
 }
 
+/*
+ * Hero Engine Start: translucent dark face (50%), fully opaque Engine Start text.
+ * On press: physical press-down + brighter label - no red flood fill.
+ */
+.engine-start-button {
+  position: relative;
+  isolation: isolate;
+  container-type: size;
+  transform-origin: center center;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  transition: transform 180ms cubic-bezier(0.33, 1, 0.68, 1);
+}
+
+.engine-start-button::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: inherit;
+  opacity: 0.5;
+  background:
+    radial-gradient(circle at 50% 42%, oklch(0.22 0.01 25) 0%, oklch(0.12 0.005 25) 72%),
+    #0a0a0a;
+  border: 1px solid oklch(1 0 0 / 0.1);
+  box-shadow:
+    inset 0 1px 0 oklch(1 0 0 / 0.06),
+    inset 0 0 0 1px oklch(0.55 0.18 25 / 0.35),
+    0 0 0 1px oklch(0 0 0 / 0.35);
+  transition:
+    opacity 180ms ease,
+    background 180ms ease,
+    box-shadow 220ms ease,
+    border-color 180ms ease,
+    filter 180ms ease;
+}
+
+/* Outer flare bloom - dormant until press. */
+.engine-start-button::after {
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  inset: -28%;
+  z-index: -1;
+  border-radius: 9999px;
+  opacity: 0;
+  background:
+    radial-gradient(circle at 50% 48%, oklch(0.78 0.22 25 / 0.55) 0%, oklch(0.62 0.2 25 / 0.22) 28%, transparent 58%),
+    radial-gradient(circle at 32% 30%, oklch(0.92 0.08 70 / 0.35) 0%, transparent 22%),
+    radial-gradient(circle at 68% 62%, oklch(0.7 0.24 15 / 0.28) 0%, transparent 26%);
+  filter: blur(10px);
+  transition:
+    opacity 220ms ease,
+    transform 220ms ease,
+    filter 220ms ease;
+}
+
+.engine-start-button__label {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.08em;
+  max-width: 86%;
+  font-size: 16cqmin;
+  font-weight: 500;
+  line-height: 1.05;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #e53935;
+  opacity: 1;
+  text-shadow: none;
+  transition:
+    color 180ms ease,
+    text-shadow 220ms ease,
+    filter 180ms ease;
+}
+
+/* Idle: Start Drive text breathes between deep and bright red (tight glow). */
+.engine-start-button__label--pulse {
+  animation: start-drive-label-red-pulse 2.4s ease-in-out infinite;
+}
+
+@keyframes start-drive-label-red-pulse {
+  0%,
+  100% {
+    color: #b71c1c;
+    text-shadow: 0 0 3px oklch(0.55 0.2 25 / 0.2);
+  }
+  50% {
+    color: #ff5252;
+    text-shadow:
+      0 0 4px oklch(0.72 0.2 25 / 0.4),
+      0 0 8px oklch(0.62 0.18 25 / 0.22);
+  }
+}
+
+.group:hover .engine-start-button::before {
+  border-color: oklch(1 0 0 / 0.16);
+  box-shadow:
+    inset 0 1px 0 oklch(1 0 0 / 0.08),
+    inset 0 0 0 1px oklch(0.58 0.2 25 / 0.5),
+    0 0 0 1px oklch(0 0 0 / 0.35),
+    0 0 18px oklch(0.55 0.18 25 / 0.22);
+}
+
+.group:hover .engine-start-button__label {
+  color: #ff5252;
+}
+
+/*
+ * Ignition: one press-down + brighter Start Drive text.
+ * Dark face stays; no red flood or outer flare bloom.
+ */
+.group:active .engine-start-button,
+.engine-start-button--igniting {
+  animation: engine-start-ignite-press 1.4s ease-in-out 1 both;
+}
+
+.group:active .engine-start-button::before,
+.engine-start-button--igniting::before {
+  transition: none;
+  animation: engine-start-ignite-rim 1.4s ease-in-out 1 both;
+}
+
+.group:active .engine-start-button::after,
+.engine-start-button--igniting::after {
+  transition: none;
+  opacity: 0;
+  animation: none;
+}
+
+.group:active .engine-start-button__label,
+.engine-start-button--igniting .engine-start-button__label {
+  transition: none;
+  animation: engine-start-ignite-label 1.4s ease-in-out 1 both;
+}
+
+.engine-start-button--pulse::before {
+  animation: engine-start-button-pulse 4.2s cubic-bezier(0.45, 0.05, 0.25, 1) infinite;
+}
+
+@keyframes engine-start-button-pulse {
+  0%,
+  100% {
+    opacity: 0.5;
+    box-shadow:
+      inset 0 1px 0 oklch(1 0 0 / 0.06),
+      inset 0 0 0 1px oklch(0.55 0.18 25 / 0.28),
+      0 0 0 1px oklch(0 0 0 / 0.35),
+      0 0 12px oklch(0.55 0.18 25 / 0.08);
+  }
+  50% {
+    opacity: 0.58;
+    box-shadow:
+      inset 0 1px 0 oklch(1 0 0 / 0.08),
+      inset 0 0 0 1px oklch(0.58 0.2 25 / 0.48),
+      0 0 0 1px oklch(0 0 0 / 0.35),
+      0 0 20px oklch(0.55 0.18 25 / 0.2);
+  }
+}
+
+@keyframes engine-start-ignite-press {
+  0%,
+  100% {
+    transform: translateY(4px) scale(0.93);
+  }
+  50% {
+    transform: translateY(3px) scale(0.95);
+  }
+}
+
+/* Recessed dark face while pressed - no color fill change. */
+@keyframes engine-start-ignite-rim {
+  0%,
+  100% {
+    opacity: 0.55;
+    filter: brightness(0.92);
+    box-shadow:
+      inset 0 3px 10px oklch(0 0 0 / 0.55),
+      inset 0 1px 0 oklch(1 0 0 / 0.04),
+      inset 0 0 0 1px oklch(0.55 0.18 25 / 0.4),
+      0 0 0 1px oklch(0 0 0 / 0.4);
+  }
+  50% {
+    opacity: 0.6;
+    filter: brightness(0.96);
+    box-shadow:
+      inset 0 3px 12px oklch(0 0 0 / 0.5),
+      inset 0 1px 0 oklch(1 0 0 / 0.06),
+      inset 0 0 0 1px oklch(0.58 0.2 25 / 0.55),
+      0 0 0 1px oklch(0 0 0 / 0.4),
+      0 0 6px oklch(0.55 0.18 25 / 0.12);
+  }
+}
+
+@keyframes engine-start-ignite-label {
+  0%,
+  100% {
+    color: #ff6b63;
+    text-shadow: 0 0 4px oklch(0.7 0.2 25 / 0.3);
+    filter: none;
+  }
+  50% {
+    color: #ffe0dc;
+    text-shadow:
+      0 0 5px oklch(1 0 0 / 0.45),
+      0 0 10px oklch(0.78 0.16 25 / 0.28);
+    filter: none;
+  }
+}
+
+/* Drive tach: horseshoe track + ))) waves share the bottom cut; build on enter. */
+.drive-cockpit__tach-draw {
+  stroke-dasharray: var(--tach-len, 800);
+  stroke-dashoffset: var(--tach-len, 800);
+  opacity: 0.35;
+  transition:
+    stroke-dashoffset 1.75s cubic-bezier(0.33, 1, 0.68, 1),
+    opacity 0.85s ease;
+}
+
+.drive-cockpit__tach-draw--built {
+  stroke-dashoffset: 0;
+  opacity: 1;
+}
+
 @utility animate-rise {
   animation: rise 900ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
 }

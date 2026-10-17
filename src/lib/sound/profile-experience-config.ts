@@ -17,7 +17,7 @@ export const PUBLIC_PROFILE_IDS = [
   "maglev-train", "high-speed-train", "submarine", "jet-ski", "motorcycle-superbike", "big-twin",
   "snowmobile", "tank", "construction-monster", "horse-gallop", "dragon", "thunder-beast",
   "retro-arcade", "synthwave-drive", "deep-bass-pulse", "zen-drive", "rain-drive", "ocean-drive",
-  "heartbeat", "rocket-car", "symphony-cinematic-rock", "symphony-motion-orchestra", "symphony-neon-run",
+  "heartbeat", "rocket-car", "time-machine", "symphony-cinematic-rock", "symphony-motion-orchestra", "symphony-neon-run",
   "world-space-drive", "world-cyber-city", "world-storm-run", "fusion-road-anthem",
   "fusion-mechanical-symphony", "fusion-midnight-boost", "fusion-future-pulse",
 ] as const;
@@ -182,6 +182,7 @@ export const PROFILE_EXPERIENCE_CONFIG = {
   "ocean-drive": motion({ physics: "intentional-design", pitchDriver: "energy", aspiration: "not-applicable", availableRoles: ["environment"], transitionTauSeconds: 0.6, phases: { accelerationTexture: 1.04, cruiseIntrusiveScale: 0.8, releaseCharacter: 0.88 } }),
   "heartbeat": musical(["core", "music", "event"], { transitionTauSeconds: 0.24, phases: { cruiseIntrusiveScale: 0.7, accelerationTexture: 1.08 }, variation: { depth: 0.006, minEventCooldownSeconds: 8, maxEventVoices: 1 } }),
   "rocket-car": designed({ pitchDriver: "energy", aspiration: "not-applicable", availableRoles: ["core", "mechanical", "environment", "event"], transitionTauSeconds: 0.2, phases: { accelerationTexture: 1.22, cruiseIntrusiveScale: 0.7, releaseCharacter: 0.66, stopTail: 0.85 }, variation: { depth: 0.02, minEventCooldownSeconds: 3, maxEventVoices: 2 } }),
+  "time-machine": designed({ pitchDriver: "energy", aspiration: "not-applicable", availableRoles: ["core", "mechanical", "environment", "event"], transitionTauSeconds: 0.22, phases: { accelerationTexture: 1.18, cruiseIntrusiveScale: 0.66, releaseCharacter: 0.72, stopTail: 0.9 }, variation: { depth: 0.025, minEventCooldownSeconds: 4, maxEventVoices: 2 } }),
   "symphony-cinematic-rock": musical(["music", "event"], { transitionTauSeconds: 0.18, physics: "intentional-design", phases: { cruiseIntrusiveScale: 0.56, accelerationTexture: 1.14 } }),
   "symphony-motion-orchestra": musical(["music", "event"], { transitionTauSeconds: 0.22, physics: "intentional-design", phases: { cruiseIntrusiveScale: 0.58, accelerationTexture: 1.12 } }),
   "symphony-neon-run": musical(["music", "event"], { transitionTauSeconds: 0.14, physics: "intentional-design", phases: { cruiseIntrusiveScale: 0.54, accelerationTexture: 1.12 } }),

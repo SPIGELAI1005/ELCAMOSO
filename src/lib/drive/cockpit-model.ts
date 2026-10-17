@@ -2,6 +2,11 @@ import type { DriveProductStatus } from "@/lib/drive/session";
 import type { DriveState } from "@/lib/drive/model";
 import type { SoundProfile } from "@/lib/sound/profiles";
 import { driveDisplayKind } from "@/lib/drive/drive-display";
+import {
+  motionStageIndex,
+  resolveDriveShiftPersona,
+  stageDisplayValue,
+} from "@/lib/drive/drive-shift-persona";
 import type { SpeedFreshness } from "@/lib/powertrain/types";
 
 /** How trustworthy the numeric speed readout is for the cockpit. */
@@ -106,6 +111,7 @@ export function formatCockpitSpeed(
 export function cockpitSecondaryView(
   profile: SoundProfile,
   state: DriveState,
+  options?: { stageOverride?: number | null; gearRatioCount?: number },
 ): CockpitSecondaryView {
   const kind = driveDisplayKind(profile);
   const pt = state.powertrain;
@@ -131,6 +137,22 @@ export function cockpitSecondaryView(
       arcProgress,
       rpmText: String(Math.round(rpm)),
       showRpm: true,
+    };
+  }
+
+  const persona = resolveDriveShiftPersona(profile, options?.gearRatioCount);
+  if (persona.ladderCount && persona.ladderCount >= 2) {
+    const fromMotion = motionStageIndex(state, persona.ladderCount);
+    const stage =
+      typeof options?.stageOverride === "number" ? options.stageOverride : fromMotion;
+    return {
+      kind: "gear",
+      value: stageDisplayValue(persona, stage),
+      label: persona.ladderNoun,
+      simulatedCaption: persona.simulatedCaption,
+      arcProgress: Math.min(1, Math.max(state.load, state.throttle, state.speed * 3.6 / 120)),
+      rpmText: "",
+      showRpm: false,
     };
   }
 

@@ -1,8 +1,28 @@
+# ELCAMOSO — https://www.elcamoso.com
+# Marketing pages are Allow; app/session routes are Disallow to save crawl budget.
+# Meta robots still noindex private pages if discovered via links.
+
 User-agent: *
 Allow: /
+
 Disallow: /admin
 Disallow: /recorder
 Disallow: /api
 Disallow: /auth
+Disallow: /drive
+Disallow: /demo
+Disallow: /studio
+Disallow: /garage
+Disallow: /calibrate
+Disallow: /settings
+Disallow: /onboarding
+Disallow: /replay
+Disallow: /journeys
+Disallow: /pair
+Disallow: /connect
+Disallow: /upgrade
+Disallow: /share
+Disallow: /rewards
+Disallow: /debug
 
 Sitemap: https://www.elcamoso.com/sitemap.xml

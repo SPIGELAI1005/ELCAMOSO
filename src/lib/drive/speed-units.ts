@@ -23,11 +23,12 @@ export const KNOTS_PROFILE_IDS: ReadonlySet<string> = new Set([
   "storm-glider",
 ]);
 
-/** Space travel shows a playful fraction of light speed (c). Rocket Car excluded. */
+/** Space / temporal travel shows a playful fraction of light speed (c). Rocket Car excluded. */
 export const LIGHT_SPEED_PROFILE_IDS: ReadonlySet<string> = new Set([
   "space-ship",
   "ufo",
   "world-space-drive",
+  "time-machine",
 ]);
 
 export const SPEED_OF_LIGHT_MPS = 299_792_458;

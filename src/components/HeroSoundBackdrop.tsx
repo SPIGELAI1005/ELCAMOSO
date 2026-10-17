@@ -9,38 +9,19 @@ import {
   MARK_WAVE_IN_DURATION_MS,
   type HeroWavePhase,
 } from "@/components/ElcamosoLogo";
+import {
+  HERO_SOUND_SLIDESHOW_IDS,
+  profileHeroImageAlt,
+  profileHeroImageSrc,
+} from "@/lib/sound/profile-hero-image";
 import { cn } from "@/lib/utils";
 
-/** Curated hero stills: engines, worlds, and character experiences. */
-export const HERO_SOUND_IMAGES = [
-  "/hero/sound-profiles/muscle-v8.png",
-  "/hero/sound-profiles/dragon.png",
-  "/hero/sound-profiles/gt-v8.png",
-  "/hero/sound-profiles/stallion.png",
-  "/hero/sound-profiles/flat-six.png",
-  "/hero/sound-profiles/carriage.png",
-  "/hero/sound-profiles/cyber-pulse.png",
-  "/hero/sound-profiles/stagecoach.png",
-  "/hero/sound-profiles/racing-v10.png",
-  "/hero/sound-profiles/tank.png",
-  "/hero/sound-profiles/cyber-city.png",
-  "/hero/sound-profiles/submarine.png",
-  "/hero/sound-profiles/thunder-beast.png",
-  "/hero/sound-profiles/flying-saucer.png",
-  "/hero/sound-profiles/zen-drive.png",
-  "/hero/sound-profiles/turbine-jet.png",
-  "/hero/sound-profiles/space-ship.png",
-  "/hero/sound-profiles/steam-train.png",
-  "/hero/sound-profiles/superbike.png",
-  "/hero/sound-profiles/maglev.png",
-  "/hero/sound-profiles/heartbeat.png",
-  "/hero/sound-profiles/open-wind.png",
-  "/hero/sound-profiles/santa-sleigh.png",
-  "/hero/sound-profiles/interstellar.png",
-  "/hero/sound-profiles/kazoo-kart.png",
-  "/hero/sound-profiles/micro-hatch.png",
-  "/hero/sound-profiles/big-twin.png",
-] as const;
+/** Curated hero stills linked to sound profile ids (no-branding assets). */
+export const HERO_SOUND_IMAGES = HERO_SOUND_SLIDESHOW_IDS.map((id) => ({
+  id,
+  src: profileHeroImageSrc(id)!,
+  alt: profileHeroImageAlt(id),
+}));
 
 /** Calm overlapping opacity crossfade. */
 const CROSSFADE_MS = 2400;
@@ -55,16 +36,9 @@ interface HeroSoundBackdropProps {
 
 /**
  * Full-bleed sound-profile stills behind the landing hero.
- * Soft fade-out / fade-in only - no zoom, blur, or bloom.
- * Uses contain on phone/tablet so vehicles are not cropped at the sides.
+ * Soft fade-out / fade-in only. On small phones the subject is biased upward
+ * so it reads behind the logo/tagline and clears the Start Drive button.
  */
-
-function heroAltFromSrc(src: string): string {
-  const id = src.split("/").pop()?.replace(/\.png$/i, "") ?? "sound";
-  const label = id.replace(/-/g, " ");
-  return `ELCAMOSO ${label} sound experience`;
-}
-
 export function HeroSoundBackdrop({ phase, reducedMotion, className }: HeroSoundBackdropProps) {
   const [index, setIndex] = useState(0);
   const [prevIndex, setPrevIndex] = useState<number | null>(null);
@@ -107,7 +81,7 @@ export function HeroSoundBackdrop({ phase, reducedMotion, className }: HeroSound
     const next = HERO_SOUND_IMAGES[(index + 1) % HERO_SOUND_IMAGES.length];
     if (!next) return;
     const img = new Image();
-    img.src = next;
+    img.src = next.src;
   }, [index]);
 
   return (
@@ -118,23 +92,24 @@ export function HeroSoundBackdrop({ phase, reducedMotion, className }: HeroSound
       )}
       aria-hidden="true"
     >
-      {HERO_SOUND_IMAGES.map((src, i) => {
+      {HERO_SOUND_IMAGES.map((slide, i) => {
         const isActive = i === index;
         const isOutgoing = i === prevIndex;
         const show = visible && (isActive || isOutgoing);
 
         return (
           <img
-            key={src}
-            src={src}
-            alt={heroAltFromSrc(src)}
+            key={slide.id}
+            src={slide.src}
+            alt={slide.alt}
             decoding="async"
             fetchPriority={i === 0 ? "high" : "low"}
             className={cn(
-              // Contain on phone/tablet so cars stay fully framed; soft cover only on wide desktops.
-              "hero-sound-frame absolute inset-0 h-full w-full object-center",
-              "object-contain px-2 sm:px-4 md:px-8 lg:px-10",
-              "xl:object-cover xl:px-0",
+              "hero-sound-frame absolute inset-0 h-full w-full",
+              // Phone: keep subject above the CTA band. Tablet+: centered contain. Wide: cover.
+              "object-contain object-[center_32%] px-2",
+              "sm:object-center sm:px-4 md:px-8 lg:px-10",
+              "xl:object-cover xl:object-center xl:px-0",
               "transition-opacity ease-in-out",
               show && isActive ? "opacity-100" : "opacity-0",
             )}
@@ -147,8 +122,10 @@ export function HeroSoundBackdrop({ phase, reducedMotion, className }: HeroSound
       })}
 
       {/* Dim + vignette so logo, tagline, and CTAs stay readable. */}
-      <div className="absolute inset-0 z-[4] bg-background/45 md:bg-background/40" />
-      <div className="absolute inset-0 z-[4] bg-gradient-to-b from-background/70 via-background/20 to-background/90" />
+      <div className="absolute inset-0 z-[4] bg-background/40 sm:bg-background/45 md:bg-background/40" />
+      <div className="absolute inset-0 z-[4] bg-gradient-to-b from-background/75 via-background/20 to-background/90 sm:from-background/70" />
+      {/* Phone: stronger fade over the Start Drive band so vehicle detail does not collide with the CTA. */}
+      <div className="absolute inset-x-0 bottom-0 z-[4] h-[38%] bg-gradient-to-t from-background via-background/85 to-transparent sm:hidden" />
       <div className="absolute inset-0 z-[4] bg-[radial-gradient(ellipse_at_center,transparent_8%,oklch(0_0_0_/_40%)_68%,oklch(0_0_0_/_78%)_100%)]" />
     </div>
   );

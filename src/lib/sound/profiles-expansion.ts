@@ -38,7 +38,7 @@ const TWIN_BOX = {
   shiftSmoothing: 0.22,
 };
 
-/** 25 additional built-in Sound Profiles. */
+/** Expansion built-in Sound Profiles (engines, worlds characters, Future, Musical). */
 export const EXPANSION_PROFILES: SoundProfile[] = [
   {
     id: "flat-six-sport",
@@ -718,6 +718,33 @@ export const EXPANSION_PROFILES: SoundProfile[] = [
       wave: "triangle",
       coreLevel: 0.18,
       textures: [{ kind: "rumble", level: 0.2, tone: 50, speedScale: 0.4, surge: 0.15 }],
+    },
+  },
+  {
+    id: "time-machine",
+    name: "Time Machine",
+    category: "Future",
+    traits: ["Temporal", "Crystalline", "Warp"],
+    description:
+      "A chronometric hum that bends with motion: deep flux under a rising crystal shimmer, clockwork ticks that tighten with load, and a jump-arc whoosh on hard launches.",
+    drivetrainMode: "continuous",
+    motionModel: "continuous",
+    sourceMode: "procedural",
+    voice: {
+      baseFrequency: 55,
+      harmonics: [1, 1.5, 2.02, 3.01],
+      waveResponse: 0.85,
+      filterBase: 200,
+      filterRange: 2800,
+      noise: 0.1,
+      noiseColor: "pink",
+      detune: 14,
+      wave: "triangle",
+      coreLevel: 0.2,
+      textures: [
+        { kind: "rumble", level: 0.18, tone: 55, speedScale: 0.35, surge: 0.2 },
+        { kind: "sizzle", level: 0.12, tone: 3200, speedScale: 0.7, surge: 0.12 },
+      ],
     },
   },
 ];

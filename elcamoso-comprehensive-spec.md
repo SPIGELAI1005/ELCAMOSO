@@ -12,6 +12,8 @@
 
 **Brand Positioning:** A premium digital automotive product that turns electric-car motion into sound, either live in the cabin or later from a privately captured journey. It is not a fake-engine website, a racing soundboard, a generic EV utility, or a product that requires constant cabin noise. The emotional core is the perceived synchronization between movement and sound. Position around the phrases **"Turn motion into sound"** and **"Hear it now. Or hear it later."**
 
+**SEO:** Canonical host is `https://www.elcamoso.com`. Index marketing pages only (`/`, `/explore`, `/sounds`, `/symphony`, `/worlds`, `/fusion`, `/pricing`, `/story`, `/science`, `/legal/*`). App/session routes are `noindex`. Titles and meta lead with the proposition and Experience vocabulary (Engine, Symphony, World, Fusion). OG cards are 1200×630 under `/og/` with dynamic `/api/og`. Full policy: `docs/SEO.md` and `src/lib/seo/`.
+
 **Visual Identity:**
 
 - Approved mark: **O )))** — the "O" represents the source/vehicle; three curved lines represent sound propagating outward. The shape communicates motion and sound.

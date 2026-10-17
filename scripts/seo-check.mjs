@@ -52,6 +52,17 @@ for (const policy of INDEXABLE_ROUTE_POLICIES) {
   if (!policy.title?.trim()) fail(`missing title: ${policy.path}`);
   if (!policy.description?.trim()) fail(`missing description: ${policy.path}`);
   if (policy.description.length < 40) fail(`description too short: ${policy.path}`);
+  if (policy.description.length > 165) {
+    fail(`description too long (${policy.description.length}): ${policy.path}`);
+  }
+  if (!/ELCAMOSO|motion|sound|EV|electric|Drive|Engine|Symphony|World|Fusion/i.test(policy.description)) {
+    fail(`description missing brand/intent terms: ${policy.path}`);
+  }
+}
+if (!SEO_CONFIG.defaultTitle.includes("Turn Motion Into Sound")) {
+  fail("defaultTitle should lead with Turn Motion Into Sound");
+} else {
+  ok("default title proposition");
 }
 if (!process.exitCode) ok("indexable titles/descriptions");
 

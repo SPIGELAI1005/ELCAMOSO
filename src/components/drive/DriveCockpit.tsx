@@ -17,7 +17,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import type { DriveState } from "@/lib/drive/model";
-import type { DriveProductStatus } from "@/lib/drive/session";
+import { getSession, type DriveProductStatus } from "@/lib/drive/session";
 import {
   cockpitFavouriteSlots,
   cockpitSecondaryView,
@@ -44,6 +44,13 @@ import {
   type SoundProfile,
 } from "@/lib/sound/profiles";
 import { SHIFT_MAP_PRESET_IDS, type ShiftMapPresetId } from "@/lib/powertrain/shift-presets";
+import {
+  moodLabel,
+  motionStageIndex,
+  nextMoodId,
+  resolveActiveMoodId,
+  resolveDriveShiftPersona,
+} from "@/lib/drive/drive-shift-persona";
 import { cn } from "@/lib/utils";
 
 const COCKPIT_SELECT_TRIGGER =
@@ -71,6 +78,12 @@ function shiftPresetLabel(id: ShiftMapPresetId) {
   if (id === "city") return "City";
   if (id === "touring") return "Touring";
   return "Sport";
+}
+
+function nextShiftPreset(id: ShiftMapPresetId): ShiftMapPresetId {
+  const index = SHIFT_MAP_PRESET_IDS.indexOf(id);
+  const next = SHIFT_MAP_PRESET_IDS[(index + 1) % SHIFT_MAP_PRESET_IDS.length];
+  return next ?? "legacy";
 }
 
 /** Blend tach stroke from white into brand red through the redline zone. */
@@ -124,21 +137,38 @@ function CockpitTachArc({
   showRedlineZone?: boolean;
 }) {
   const stroke = 2.5;
+  const pad = 28;
+  const vb = size + pad * 2;
   const r = (size - stroke) / 2;
-  const cx = size / 2;
-  const cy = size / 2;
+  const cx = vb / 2;
+  const cy = vb / 2;
   const [visual, setVisual] = useState(progress);
+  const [built, setBuilt] = useState(reducedMotion);
   const raf = useRef(0);
+  const trackLen = (ARC_SWEEP / 360) * 2 * Math.PI * r;
+
+  useEffect(() => {
+    if (reducedMotion) {
+      setBuilt(true);
+      return;
+    }
+    const id = window.setTimeout(() => setBuilt(true), 80);
+    return () => window.clearTimeout(id);
+  }, [reducedMotion]);
 
   useEffect(() => {
     if (reducedMotion) {
       setVisual(progress);
       return;
     }
+    if (!built) {
+      setVisual(0);
+      return;
+    }
     const target = Math.min(1, Math.max(0, progress));
     const tick = () => {
       setVisual((prev) => {
-        const next = prev + (target - prev) * 0.18;
+        const next = prev + (target - prev) * 0.09;
         if (Math.abs(next - target) < 0.002) return target;
         raf.current = requestAnimationFrame(tick);
         return next;
@@ -146,7 +176,7 @@ function CockpitTachArc({
     };
     raf.current = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf.current);
-  }, [progress, reducedMotion]);
+  }, [progress, reducedMotion, built]);
 
   const clamped = Math.min(1, Math.max(0, visual));
   const end = ARC_START + ARC_SWEEP * clamped;
@@ -162,10 +192,11 @@ function CockpitTachArc({
 
   return (
     <svg
-      viewBox={`0 0 ${size} ${size}`}
-      className="drive-cockpit__arc pointer-events-none absolute inset-0 h-full w-full"
+      viewBox={`0 0 ${vb} ${vb}`}
+      className="drive-cockpit__arc pointer-events-none absolute inset-[-12%] h-[124%] w-[124%] overflow-visible"
       aria-hidden="true"
       preserveAspectRatio="xMidYMid meet"
+      overflow="visible"
     >
       <path
         d={track}
@@ -173,6 +204,8 @@ function CockpitTachArc({
         stroke="oklch(1 0 0 / 12%)"
         strokeWidth={stroke}
         strokeLinecap="round"
+        className={cn("drive-cockpit__tach-draw", built && "drive-cockpit__tach-draw--built")}
+        style={{ ["--tach-len" as string]: String(trackLen) }}
       />
       {showRedlineZone ? (
         <path
@@ -181,9 +214,14 @@ function CockpitTachArc({
           stroke="oklch(0.62 0.2 25 / 28%)"
           strokeWidth={stroke}
           strokeLinecap="round"
+          className={cn("drive-cockpit__tach-draw", built && "drive-cockpit__tach-draw--built")}
+          style={{
+            ["--tach-len" as string]: String(trackLen * (1 - REDLINE_ZONE_START)),
+            transitionDelay: built ? "200ms" : undefined,
+          }}
         />
       ) : null}
-      {solidFill ? (
+      {built && solidFill ? (
         <path
           d={solidFill}
           fill="none"
@@ -192,7 +230,7 @@ function CockpitTachArc({
           strokeLinecap="round"
         />
       ) : null}
-      {whiteFill && redFill ? (
+      {built && whiteFill && redFill ? (
         <path
           d={whiteFill}
           fill="none"
@@ -201,7 +239,7 @@ function CockpitTachArc({
           strokeLinecap="round"
         />
       ) : null}
-      {redFill ? (
+      {built && redFill ? (
         <path
           d={redFill}
           fill="none"
@@ -214,44 +252,124 @@ function CockpitTachArc({
   );
 }
 
+/** Round paddle / stop controls: 36px → 54px (+50%). */
+const GEAR_ROW_BTN =
+  "flex h-[3.375rem] w-[3.375rem] min-h-[3.375rem] min-w-[3.375rem] shrink-0 items-center justify-center rounded-full border border-border text-[0.8125rem] leading-none tracking-[0.08em] text-muted-foreground uppercase transition-colors hover:border-foreground/60 hover:text-foreground disabled:pointer-events-none disabled:opacity-35";
+
 function CockpitGearLadder({
   gearCount,
   activeGear,
   shifting,
   reducedMotion,
+  modeLabel,
+  stageNames,
+  onStop,
+  onGearDown,
+  onGearUp,
+  onCycleMode,
 }: {
   gearCount: number;
   activeGear: number;
   shifting: boolean;
   reducedMotion: boolean;
+  modeLabel: string | null;
+  stageNames: readonly string[] | null;
+  onStop: () => void;
+  onGearDown: () => void;
+  onGearUp: () => void;
+  onCycleMode: (() => void) | null;
 }) {
   if (gearCount < 2) return null;
-  const active = Math.min(gearCount, Math.max(1, Math.round(activeGear)));
+  const inNeutral = activeGear < 1;
+  const active = inNeutral ? 0 : Math.min(gearCount, Math.max(1, Math.round(activeGear)));
+  // From N, either paddle engages 1st; otherwise adjacent gears only.
+  const canDown = !shifting && (inNeutral || active > 1);
+  const canUp = !shifting && (inNeutral || active < gearCount);
 
   return (
     <div
-      className="mt-2 flex items-center justify-center gap-1.5"
-      role="status"
-      aria-label={shifting ? `Shifting to gear ${active}` : `Gear ${active}`}
+      className="mt-2 grid w-full grid-cols-3 items-center gap-x-2"
+      role="group"
+      aria-label={
+        shifting
+          ? `Shifting to gear ${active || 1}`
+          : inNeutral
+            ? "Neutral"
+            : `Gear ${active}`
+      }
     >
-      {Array.from({ length: gearCount }, (_, i) => i + 1).map((gear) => {
-        const isActive = gear === active;
-        return (
-          <span
-            key={gear}
-            className={cn(
-              "flex h-7 min-w-7 items-center justify-center rounded-full px-1.5 text-[11px] tabular-nums tracking-wide transition-[transform,background-color,color,box-shadow] duration-200",
-              isActive ? "bg-foreground text-background" : "text-muted-foreground/55",
-              isActive && shifting && !reducedMotion
-                ? "scale-110 shadow-[0_0_0_2px_var(--cockpit-redline)]"
-                : null,
-              isActive && !reducedMotion ? "scale-105" : null,
-            )}
+      {/* Equal thirds: gears in the middle column stay on the tach center. */}
+      <div className="flex min-h-[3.375rem] min-w-0 items-center justify-end gap-2">
+        <button type="button" onClick={onStop} className={GEAR_ROW_BTN} aria-label="Stop Drive">
+          Stop
+        </button>
+        <button
+          type="button"
+          onClick={onGearDown}
+          disabled={!canDown}
+          className={GEAR_ROW_BTN}
+          aria-label="Gear down"
+        >
+          Down
+        </button>
+      </div>
+      <div
+        className="flex min-h-[3.375rem] items-center justify-center gap-1.5 px-0.5"
+        role="status"
+      >
+        {Array.from({ length: gearCount }, (_, i) => i + 1).map((gear) => {
+          const isActive = !inNeutral && gear === active;
+          const tick = stageNames?.[gear - 1];
+          return (
+            <span
+              key={gear}
+              title={tick ?? String(gear)}
+              className={cn(
+                "flex h-7 min-w-7 max-w-[2.75rem] items-center justify-center rounded-full px-1 text-[10px] tracking-wide transition-[transform,background-color,color,box-shadow] duration-200",
+                tick ? "truncate" : "tabular-nums text-[11px]",
+                isActive ? "bg-foreground text-background" : "text-muted-foreground/55",
+                isActive && shifting && !reducedMotion
+                  ? "scale-110 shadow-[0_0_0_2px_var(--cockpit-redline)]"
+                  : null,
+                isActive && !reducedMotion ? "scale-105" : null,
+              )}
+            >
+              {tick ? tick.slice(0, 4) : gear}
+            </span>
+          );
+        })}
+      </div>
+      <div className="flex min-h-[3.375rem] min-w-0 items-center justify-end gap-1.5">
+        <button
+          type="button"
+          onClick={onGearUp}
+          disabled={!canUp}
+          className={GEAR_ROW_BTN}
+          aria-label="Gear up"
+        >
+          Up
+        </button>
+        {onCycleMode ? (
+          <button
+            type="button"
+            onClick={onCycleMode}
+            className={GEAR_ROW_BTN}
+            aria-label={`Shift mode ${modeLabel}. Tap to cycle.`}
           >
-            {gear}
+            Shift
+          </button>
+        ) : null}
+        {modeLabel ? (
+          <span
+            className="shrink-0 whitespace-nowrap rounded-full bg-foreground px-2.5 py-1.5 text-[9px] leading-none tracking-[0.08em] text-background uppercase"
+            role="status"
+            aria-live="polite"
+            aria-label={`Shift mode ${modeLabel}`}
+          >
+            {modeLabel}
           </span>
-        );
-      })}
+        ) : null}
+      </div>
     </div>
   );
 }
@@ -292,6 +410,9 @@ export function DriveCockpit({
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [soundsOpen, setSoundsOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
+  /** Thematic stage paddle hold (continuous personas). */
+  const [stageOverride, setStageOverride] = useState<number | null>(null);
+  const stageHoldTimer = useRef(0);
 
   const freshness = driveState.powertrain?.speedFreshness ?? null;
   const availability = cockpitSpeedAvailability({
@@ -300,8 +421,16 @@ export function DriveCockpit({
     sessionKind,
   });
   const speedView = formatCockpitSpeed(speedMps, availability, speedUnit, displaySpeed);
-  const secondary = cockpitSecondaryView(profile, driveState);
   const drivetrain = useMemo(() => resolveDrivetrain(profile), [profile]);
+  const gearRatioCount = drivetrain.personality.transmission.gearRatios.length;
+  const shiftPersona = useMemo(
+    () => resolveDriveShiftPersona(profile, gearRatioCount),
+    [profile, gearRatioCount],
+  );
+  const secondary = cockpitSecondaryView(profile, driveState, {
+    stageOverride,
+    gearRatioCount,
+  });
   const redline = drivetrain.personality.engine.redlineRpm;
   const idle = drivetrain.personality.engine.idleRpm;
   const rpm = driveState.powertrain?.rpm ?? driveState.rpm;
@@ -310,8 +439,6 @@ export function DriveCockpit({
     showTachRedline && redline > idle
       ? Math.min(1, Math.max(0, (rpm - idle) / (redline - idle)))
       : secondary.arcProgress;
-  const gearCount = drivetrain.personality.transmission.gearRatios.length;
-  const activeGear = driveState.powertrain?.gear ?? driveState.gear;
   const isShifting = Boolean(driveState.powertrain?.shifting ?? driveState.isShifting);
   const inRedline = showTachRedline && arcProgress >= REDLINE_ZONE_START;
 
@@ -330,7 +457,30 @@ export function DriveCockpit({
   );
 
   const telemetry = cockpitTelemetryLabel(productStatus);
-  const showShiftPreset = profile.drivetrainMode === "virtual-transmission";
+  const showShiftPreset = shiftPersona.modeBinding === "shift-map";
+  const activeMoodId = resolveActiveMoodId(
+    shiftPersona,
+    settings.driveMoodByProfile[profile.id],
+    settings.shiftMapPreset,
+  );
+  const activeMoodLabel = moodLabel(shiftPersona, activeMoodId);
+  const usesPowertrainGears = shiftPersona.modeBinding === "shift-map";
+  const ladderCount = shiftPersona.ladderCount ?? 0;
+  const motionStage = motionStageIndex(driveState, Math.max(2, ladderCount || 2));
+  const activeLadderGear = usesPowertrainGears
+    ? (driveState.powertrain?.gear ?? driveState.gear)
+    : (stageOverride ?? motionStage);
+
+  useEffect(() => {
+    setStageOverride(null);
+    if (stageHoldTimer.current) window.clearTimeout(stageHoldTimer.current);
+  }, [profile.id]);
+
+  useEffect(() => {
+    return () => {
+      if (stageHoldTimer.current) window.clearTimeout(stageHoldTimer.current);
+    };
+  }, []);
 
   useEffect(() => {
     if (!muted && settings.volume > 0) volumeBeforeMute.current = settings.volume;
@@ -493,7 +643,7 @@ export function DriveCockpit({
           </div>
         </div>
 
-        <div className="mt-2 flex flex-col items-center gap-0.5 sm:mt-3 sm:gap-1">
+        <div className="mt-2 flex w-full flex-col items-center gap-0.5 sm:mt-3 sm:gap-1">
           <div className="flex items-baseline gap-3">
             <p
               className={cn(
@@ -520,12 +670,50 @@ export function DriveCockpit({
             {secondary.label}
             {secondary.showRpm ? " · Rev" : ""}
           </p>
-          {secondary.kind === "gear" ? (
+          {secondary.kind === "gear" && ladderCount >= 2 ? (
             <CockpitGearLadder
-              gearCount={gearCount}
-              activeGear={activeGear}
-              shifting={isShifting}
+              gearCount={ladderCount}
+              activeGear={activeLadderGear}
+              shifting={usesPowertrainGears && isShifting}
               reducedMotion={reducedMotion}
+              modeLabel={activeMoodLabel}
+              stageNames={usesPowertrainGears ? null : shiftPersona.stageNames}
+              onStop={onStop}
+              onGearDown={() => {
+                if (usesPowertrainGears) {
+                  getSession().requestManualShift("down");
+                  return;
+                }
+                const current = stageOverride ?? motionStage;
+                const next = current < 1 ? 1 : Math.max(1, current - 1);
+                setStageOverride(next);
+                if (stageHoldTimer.current) window.clearTimeout(stageHoldTimer.current);
+                stageHoldTimer.current = window.setTimeout(() => setStageOverride(null), 2200);
+              }}
+              onGearUp={() => {
+                if (usesPowertrainGears) {
+                  getSession().requestManualShift("up");
+                  return;
+                }
+                const current = stageOverride ?? motionStage;
+                const next = current < 1 ? 1 : Math.min(ladderCount, current + 1);
+                setStageOverride(next);
+                if (stageHoldTimer.current) window.clearTimeout(stageHoldTimer.current);
+                stageHoldTimer.current = window.setTimeout(() => setStageOverride(null), 2200);
+              }}
+              onCycleMode={() => {
+                if (shiftPersona.modeBinding === "shift-map") {
+                  update({ shiftMapPreset: nextShiftPreset(settings.shiftMapPreset) });
+                  return;
+                }
+                const next = nextMoodId(shiftPersona, activeMoodId);
+                update({
+                  driveMoodByProfile: {
+                    ...settings.driveMoodByProfile,
+                    [profile.id]: next,
+                  },
+                });
+              }}
             />
           ) : null}
           <p className="text-[10px] tracking-[0.16em] text-muted-foreground/80 uppercase">
@@ -631,13 +819,6 @@ export function DriveCockpit({
           </button>
         </div>
 
-        <button
-          type="button"
-          onClick={onStop}
-          className="flex h-14 min-h-14 w-full items-center justify-center rounded-full border border-border text-xs tracking-[0.24em] text-muted-foreground uppercase transition-colors hover:border-foreground hover:text-foreground"
-        >
-          Stop Drive
-        </button>
       </footer>
 
       <Sheet open={soundsOpen} onOpenChange={setSoundsOpen}>

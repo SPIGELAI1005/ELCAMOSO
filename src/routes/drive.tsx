@@ -1,8 +1,8 @@
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { createSeoHeadFromPath } from "@/lib/seo";
-import { ElcamosoMark } from "@/components/ElcamosoLogo";
 import { BrandLoader } from "@/components/BrandLoader";
+import { StartDriveMarkControl } from "@/components/StartDriveMarkControl";
 import { useSettings } from "@/lib/drive/useSettings";
 import { useReducedMotion } from "@/lib/drive/useReducedMotion";
 import { getProfileGain } from "@/lib/drive/settings";
@@ -36,7 +36,6 @@ import { DriveProfileBackdrop } from "@/components/drive/DriveProfileBackdrop";
 import { SilentCaptureHud } from "@/components/drive/SilentCaptureHud";
 import { PostSilentCaptureExperience } from "@/components/drive/PostSilentCaptureExperience";
 import { IncompleteJourneyRecovery } from "@/components/drive/IncompleteJourneyRecovery";
-import { StartDriveBeacon } from "@/components/StartDriveBeacon";
 import { shouldCaptureTrace, shouldPlayLiveAudio } from "@/lib/journey-trace";
 
 const TeslaDrivePlusUpgrade = lazy(() =>
@@ -423,12 +422,6 @@ function DriveScreen() {
                 New here? Run the 3-step setup
               </Link>
             ) : null}
-            <ElcamosoMark
-              animate
-              waveResponse={profile.voice.waveResponse}
-              reducedMotion={reducedMotion}
-              className="h-14 w-auto"
-            />
             <div>
               <p className="text-[10px] tracking-[0.28em] text-muted-foreground uppercase">
                 Selected experience
@@ -451,17 +444,17 @@ function DriveScreen() {
                 Change experience
               </button>
             </div>
-            <StartDriveBeacon glass className="max-w-full">
-              <button
-                type="button"
-                onClick={handleStart}
-                className="start-drive-glass relative z-10 h-16 min-h-11 rounded-full px-12 text-sm tracking-[0.22em] uppercase"
-              >
-                {settings.driveOutputMode === "capture"
-                  ? "Start silent capture"
-                  : t(settings.language, "drive.start")}
-              </button>
-            </StartDriveBeacon>
+            <StartDriveMarkControl
+              reducedMotion={reducedMotion}
+              waveResponse={profile.voice.waveResponse}
+              revealFace
+              lines={
+                settings.driveOutputMode === "capture"
+                  ? ["Silent", "Capture"]
+                  : ["Start", "Drive"]
+              }
+              onStart={() => void handleStart()}
+            />
             <div className="w-full max-w-md">
               <DriveModePicker
                 value={settings.driveOutputMode}

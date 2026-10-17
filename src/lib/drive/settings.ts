@@ -218,6 +218,11 @@ export interface ElcamosoSettings {
    * otherwise legacy Road Feel maps. Selectable in Settings regardless.
    */
   shiftMapPreset: ShiftMapPresetId;
+  /**
+   * Playful Drive Shift Persona moods per profile id (Rocket Accel, 1985, Nice List…).
+   * Virtual-transmission cars keep using shiftMapPreset instead.
+   */
+  driveMoodByProfile: Record<string, string>;
   autoRules: AutoRule[];
   /** @deprecated migrated into autoRulesMode */
   autoRulesEnabled: boolean;
@@ -316,6 +321,7 @@ export const DEFAULT_SETTINGS: ElcamosoSettings = {
   cabinEq: DEFAULT_CABIN_EQ,
   shiftFeel: DEFAULT_SHIFT_FEEL,
   shiftMapPreset: defaultShiftMapPreset(),
+  driveMoodByProfile: {},
   autoRules: [],
   autoRulesEnabled: false,
   autoRulesMode: "off",
@@ -488,6 +494,18 @@ function sanitizeCabinEq(v: unknown): CabinEq {
     mid: num(r["mid"], 0, -12, 12),
     high: num(r["high"], 0, -12, 12),
   };
+}
+
+function sanitizeDriveMoodByProfile(v: unknown): Record<string, string> {
+  if (!isRecord(v)) return {};
+  const out: Record<string, string> = {};
+  for (const [id, value] of Object.entries(v)) {
+    if (typeof value !== "string") continue;
+    const mood = value.trim().slice(0, 48);
+    if (!mood) continue;
+    out[id.slice(0, 64)] = mood;
+  }
+  return out;
 }
 
 function sanitizeShiftFeel(v: unknown): ShiftFeel {
@@ -871,6 +889,7 @@ export function sanitizeSettings(input: unknown): {
     shiftMapPreset: isShiftMapPresetId(p["shiftMapPreset"])
       ? p["shiftMapPreset"]
       : defaultShiftMapPreset(),
+    driveMoodByProfile: sanitizeDriveMoodByProfile(p["driveMoodByProfile"]),
     autoRules: sanitizeAutoRules(p["autoRules"], knownIds),
     autoRulesEnabled: bool(p["autoRulesEnabled"], false),
     autoRulesMode: sanitizeAutoRulesMode(p["autoRulesMode"], bool(p["autoRulesEnabled"], false)),
@@ -1354,6 +1373,8 @@ export function mergeBackup(
     layerMix: incoming.layerMix,
     cabinEq: incoming.cabinEq,
     shiftFeel: incoming.shiftFeel,
+    shiftMapPreset: incoming.shiftMapPreset,
+    driveMoodByProfile: { ...current.driveMoodByProfile, ...incoming.driveMoodByProfile },
     autoRules: incoming.autoRules.length ? incoming.autoRules : current.autoRules,
     autoRulesEnabled: incoming.autoRulesMode !== "off",
     autoRulesMode: incoming.autoRulesMode,

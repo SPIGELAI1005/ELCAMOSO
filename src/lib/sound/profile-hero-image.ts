@@ -1,7 +1,7 @@
 /**
  * Drive / hero stills keyed by sound profile id.
  * Assets live at `/hero/sound-profiles/{profileId}.png`, synced from
- * `Images cars_elcamoso` via `scripts/sync-profile-hero-images.py`.
+ * `Images cars_elcamoso/Cars No Branding` via `scripts/sync-profile-hero-images.py`.
  */
 const PROFILE_IDS_WITH_HERO = [
   "gt-v8",
@@ -14,7 +14,6 @@ const PROFILE_IDS_WITH_HERO = [
   "speed-boat",
   "cruise-ship",
   "santa-sleigh",
-  "wild-west-carriage",
   "romanian-85-carriage",
   "laughing-machine",
   "farting-car",
@@ -46,9 +45,12 @@ const PROFILE_IDS_WITH_HERO = [
   "retro-arcade",
   "deep-bass-pulse",
   "zen-drive",
+  "heartbeat",
+  "rocket-car",
+  "time-machine",
   "rain-drive",
   "ocean-drive",
-  "heartbeat",
+  "wild-west-carriage",
   "jet-ski",
   "synthwave-drive",
   "world-cyber-city",
@@ -60,7 +62,6 @@ const PROFILE_IDS_WITH_HERO = [
   "fusion-road-anthem",
   "fusion-mechanical-symphony",
   "fusion-midnight-boost",
-  "fusion-future-pulse",
 ] as const;
 
 const PROFILE_HERO_SET = new Set<string>(PROFILE_IDS_WITH_HERO);
@@ -72,3 +73,44 @@ export function profileHeroImageSrc(profileId: string | null | undefined): strin
   if (!profileId || !PROFILE_HERO_SET.has(profileId)) return null;
   return `${HERO_BASE}/${profileId}.png`;
 }
+
+/** Accessible / SEO-friendly alt for a curated hero still. */
+export function profileHeroImageAlt(profileId: string): string {
+  const label = profileId
+    .replace(/^(world|symphony|fusion)-/, "")
+    .replace(/-/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+  return `ELCAMOSO ${label} sound experience - turn motion into sound`;
+}
+
+/** Curated stills for the landing hero slideshow (subset, profile-id paths). */
+export const HERO_SOUND_SLIDESHOW_IDS = [
+  "rocket-car",
+  "american-muscle-v8",
+  "dragon",
+  "time-machine",
+  "gt-v8",
+  "flat-six-sport",
+  "romanian-85-carriage",
+  "cyber-pulse",
+  "horse-gallop",
+  "racing-v10",
+  "tank",
+  "world-cyber-city",
+  "submarine",
+  "thunder-beast",
+  "ufo",
+  "zen-drive",
+  "turbine-jet",
+  "space-ship",
+  "steam-train",
+  "motorcycle-superbike",
+  "maglev-train",
+  "heartbeat",
+  "open-wind",
+  "santa-sleigh",
+  "world-space-drive",
+  "kazoo-kart",
+  "farting-car",
+  "big-twin",
+] as const;

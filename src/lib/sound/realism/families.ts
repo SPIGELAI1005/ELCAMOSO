@@ -65,6 +65,7 @@ const FAMILY_BY_ID: Record<string, ProfileFamily> = {
   "deep-bass-pulse": "musical",
   heartbeat: "musical",
   "rocket-car": "designed",
+  "time-machine": "designed",
   "symphony-cinematic-rock": "musical",
   "symphony-motion-orchestra": "musical",
   "symphony-neon-run": "musical",

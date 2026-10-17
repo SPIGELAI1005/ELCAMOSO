@@ -9,11 +9,12 @@ export const SEO_CONFIG = {
   siteName: "ELCAMOSO",
   /** Hard production canonical host (www). */
   productionOrigin: "https://www.elcamoso.com",
-  defaultTitle: "ELCAMOSO - Engine Sound Experiences for Tesla & EVs",
+  /** Lead with proposition; EV discovery second. See docs/SEO.md. */
+  defaultTitle: "ELCAMOSO - Turn Motion Into Sound | EV Sound Experiences",
   defaultDescription:
-    "Engine sound experiences for Tesla and EV drivers. Early access is free: American Muscle V8, GT V8, Racing V10 and Rocket Car included. Drive+ opens on 9.11.2026.",
+    "Your EV. Your Sound. More Emotion. ELCAMOSO turns motion into sound: Engine, Symphony, World, and Fusion experiences for electric drivers. Early access is free.",
   defaultImage: "/og/elcamoso-default.png",
-  defaultImageAlt: "ELCAMOSO - engine sound experiences for Tesla and EVs",
+  defaultImageAlt: "ELCAMOSO - Turn motion into sound for electric vehicles",
   ogImageWidth: 1200,
   ogImageHeight: 630,
   defaultLocale: "en" as SeoLocale,

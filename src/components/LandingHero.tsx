@@ -1,46 +1,72 @@
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import {
-  ElcamosoLogoLockup,
   ElcamosoWordmark,
   useHeroWavePhase,
   WordmarkExpansion,
+  type HeroWavePhase,
 } from "@/components/ElcamosoLogo";
 import { HeroSoundBackdrop } from "@/components/HeroSoundBackdrop";
-import { getSession } from "@/lib/drive/session";
-import { StartDriveBeacon } from "@/components/StartDriveBeacon";
+import { StartDriveMarkControl } from "@/components/StartDriveMarkControl";
 import { cn } from "@/lib/utils";
 
-export function LandingStartDriveButton({ className }: { className?: string }) {
-  const primeAudio = () => {
-    getSession().primeAudioFromUserGesture();
-  };
+/**
+ * Hero Start Drive: brand + expansion above, O ))) in the middle, tagline next,
+ * Start Drive face last after the logo intro settles.
+ */
+export function LandingStartDriveMark({
+  heroPhase,
+  reducedMotion,
+  className,
+}: {
+  heroPhase: HeroWavePhase;
+  reducedMotion: boolean;
+  className?: string;
+}) {
+  const navigate = useNavigate();
+  const showTagline = reducedMotion || heroPhase === "hold" || heroPhase === "radiate";
+  const showStartFace = reducedMotion || heroPhase === "radiate";
 
   return (
-    <StartDriveBeacon glass className="max-w-full">
-      <Link
-        to="/drive"
-        search={{ start: true }}
-        onClick={primeAudio}
+    <div
+      className={cn(
+        "inline-flex w-fit max-w-full flex-col items-center text-center",
+        className,
+      )}
+    >
+      <div className="inline-flex w-fit max-w-full flex-col items-center">
+        <ElcamosoWordmark
+          ariaHidden
+          heroPhase={heroPhase}
+          reducedMotion={reducedMotion}
+          className={WORDMARK_CLASS}
+        />
+        <WordmarkExpansion
+          ariaHidden
+          className="mt-[0.55rem] w-full text-[10px] text-muted-foreground/70 sm:text-[11px] lg:text-xs"
+        />
+      </div>
+
+      <StartDriveMarkControl
+        heroPhase={heroPhase}
+        reducedMotion={reducedMotion}
+        revealFace={showStartFace}
+        className="mt-8 sm:mt-10 lg:mt-12"
+        onStart={() => {
+          void navigate({ to: "/drive", search: { start: true } });
+        }}
+      />
+
+      <h1
         className={cn(
-          "start-drive-glass relative z-10 inline-flex h-14 w-full min-w-[14rem] items-center justify-center rounded-full px-10 text-sm tracking-[0.22em] uppercase sm:w-auto",
-          className,
+          "mt-8 text-[1.35rem] leading-[1.12] font-light tracking-tight transition-[opacity,transform] duration-700 ease-out sm:mt-10 sm:text-4xl lg:mt-12 lg:text-5xl xl:text-[3.25rem] xl:leading-[1.06]",
+          showTagline ? "translate-y-0 opacity-100" : "translate-y-2 opacity-0",
         )}
       >
-        Start Drive
-      </Link>
-    </StartDriveBeacon>
-  );
-}
-
-function HeroReadAboutLink({ className }: { className?: string }) {
-  return (
-    <Link
-      to="/story"
-      className={cn("group shrink-0 leading-[1.2] text-muted-foreground", className)}
-    >
-      Read{" "}
-      <span className="text-[#e53935] transition-colors group-hover:text-[#ff5252]">Story</span>
-    </Link>
+        <span className="whitespace-nowrap">Your EV. Your Sound.</span>
+        <br />
+        More Emotion.
+      </h1>
+    </div>
   );
 }
 
@@ -53,7 +79,15 @@ function HeroSecondaryLinks({ className }: { className?: string }) {
       )}
     >
       <div className="flex items-center gap-3">
-        <HeroReadAboutLink />
+        <Link
+          to="/story"
+          className="group shrink-0 leading-[1.2] text-muted-foreground"
+        >
+          Read{" "}
+          <span className="text-[#e53935] transition-colors group-hover:text-[#ff5252]">
+            Story
+          </span>
+        </Link>
         <span className="text-muted-foreground/50" aria-hidden="true">
           //
         </span>
@@ -73,7 +107,6 @@ function HeroSecondaryLinks({ className }: { className?: string }) {
 }
 
 const WORDMARK_CLASS = "text-[2.76rem] sm:text-[3.24rem] lg:text-[3.45rem]";
-const MARK_CLASS = "h-[7.65rem] w-auto sm:h-[9rem] lg:h-[11.475rem] xl:h-[12.825rem]";
 
 export function LandingHero() {
   const { phase, reducedMotion } = useHeroWavePhase();
@@ -82,53 +115,11 @@ export function LandingHero() {
     <section className="relative flex min-h-0 flex-col overflow-x-clip px-6 pt-[calc(0.75rem+5svh)] pb-10 sm:px-12 sm:pt-[calc(1.5rem+5svh)] sm:pb-12 lg:min-h-[calc(100svh-4.5rem)] lg:px-10 lg:pt-16 lg:pb-16 xl:px-16">
       <HeroSoundBackdrop phase={phase} reducedMotion={reducedMotion} />
 
-      <div className="relative z-10 mx-auto grid w-full max-w-6xl flex-1 justify-items-center gap-5 sm:gap-7 lg:grid-cols-2 lg:grid-rows-[auto_auto_auto] lg:items-center lg:justify-items-stretch lg:gap-x-12 lg:gap-y-8 lg:gap-10 xl:gap-x-20 xl:gap-y-10">
-        <div className="flex w-full flex-col items-center lg:contents">
-          {/* Rows 1–2: mark + ELCAMOSO, self-end so the wordmark lines up with Start Drive. */}
-          <div className="lg:col-start-1 lg:row-start-1 lg:row-span-2 lg:flex lg:justify-center lg:justify-self-center lg:self-end">
-            <ElcamosoLogoLockup
-              heroPhase={phase}
-              intensity={1}
-              reducedMotion={reducedMotion}
-              wordmarkAriaHidden
-              markClassName={MARK_CLASS}
-              wordmarkClassName={cn(WORDMARK_CLASS, "mt-4 sm:mt-5 lg:mt-6 xl:mt-8")}
-            />
-          </div>
-
-          {/* Row 3: expansion; width locked via invisible wordmark sizer. */}
-          <div className="mt-[0.55rem] flex w-full justify-center lg:col-start-1 lg:row-start-3 lg:mt-0 lg:self-start">
-            <div className="inline-flex w-fit max-w-full flex-col items-center">
-              <ElcamosoWordmark
-                ariaHidden
-                className={cn(WORDMARK_CLASS, "pointer-events-none invisible h-0 overflow-hidden")}
-              />
-              <WordmarkExpansion
-                ariaHidden
-                className="w-full text-[10px] text-muted-foreground/70 sm:text-[11px] lg:text-xs"
-              />
-            </div>
-          </div>
-        </div>
-
-        <div className="flex w-full max-w-xs flex-col items-center text-center lg:col-start-2 lg:row-start-1 lg:max-w-none lg:items-start lg:self-end lg:text-left">
-          <h1 className="text-[1.35rem] leading-[1.12] font-light tracking-tight sm:text-5xl xl:text-[3.25rem] xl:leading-[1.06]">
-            <span className="whitespace-nowrap">Your EV. Your Sound.</span>
-            <br />
-            More Emotion.
-          </h1>
-          <p className="mt-3 max-w-md text-[0.9375rem] text-muted-foreground sm:mt-6 sm:text-base">
-            Feel the e-motion in your electrical motion.
-          </p>
-        </div>
-
-        <div className="flex w-full max-w-xs flex-col items-center lg:col-start-2 lg:row-start-2 lg:row-span-2 lg:max-w-none lg:items-start lg:justify-self-start lg:self-center">
-          <LandingStartDriveButton />
-        </div>
+      <div className="relative z-10 mx-auto flex w-full max-w-6xl flex-1 flex-col items-center justify-center">
+        <LandingStartDriveMark heroPhase={phase} reducedMotion={reducedMotion} />
       </div>
 
-      {/* Secondary links sit under the hero stills, clear of the logo/CTA stack. */}
-      <HeroSecondaryLinks className="relative z-10 mx-auto mt-10 w-full max-w-6xl items-center sm:mt-12 lg:mt-14 lg:items-center" />
+      <HeroSecondaryLinks className="relative z-10 mx-auto mt-10 w-full max-w-6xl items-center sm:mt-12 lg:mt-14" />
     </section>
   );
 }

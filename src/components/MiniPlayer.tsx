@@ -74,13 +74,16 @@ export function MiniPlayer() {
               profileGain={gain}
             />
           </div>
-          <button
-            type="button"
-            onClick={() => getSession().stop()}
-            className="h-11 min-w-11 shrink-0 rounded-full border border-border px-5 text-[11px] tracking-[0.2em] uppercase"
-          >
-            {t(settings.language, "player.stop")}
-          </button>
+          {/* Drive cockpit owns Stop; keep MiniPlayer stop on other live routes only. */}
+          {onDrive ? null : (
+            <button
+              type="button"
+              onClick={() => getSession().stop()}
+              className="h-11 min-w-11 shrink-0 rounded-full border border-border px-5 text-[11px] tracking-[0.2em] uppercase"
+            >
+              {t(settings.language, "player.stop")}
+            </button>
+          )}
         </div>
       </div>
     </>

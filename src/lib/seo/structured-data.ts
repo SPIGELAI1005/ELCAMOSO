@@ -40,7 +40,7 @@ export function softwareApplicationJsonLd(description: string): Record<string, u
         price: "0",
         priceCurrency: "EUR",
         description:
-          "Free early access with American Muscle V8, GT V8, Racing V10 and Rocket Car. Full Drive+ and individual sound purchases open 2026-11-09.",
+          "Free early access with American Muscle V8, GT V8, Racing V10, and Rocket Car. Drive+ and individual sound purchases open 2026-11-09.",
         availability: "https://schema.org/InStock",
         url: absoluteSeoUrl("/pricing"),
         validThrough: "2026-11-09",
@@ -68,7 +68,7 @@ export function softwareApplicationJsonLd(description: string): Record<string, u
     applicationSubCategory: "Automotive entertainment",
     audience: {
       "@type": "Audience",
-      audienceType: "Tesla and EV drivers",
+      audienceType: "Electric vehicle drivers",
     },
   };
 }

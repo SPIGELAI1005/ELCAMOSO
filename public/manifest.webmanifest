@@ -1,7 +1,7 @@
 {
   "name": "ELCAMOSO",
   "short_name": "ELCAMOSO",
-  "description": "Motion-responsive sound experiences for electric cars.",
+  "description": "Turn motion into sound. EV sound experiences: Engine, Symphony, World, and Fusion.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#000000",

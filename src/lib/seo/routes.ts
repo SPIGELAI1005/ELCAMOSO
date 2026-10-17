@@ -24,9 +24,9 @@ export const INDEXABLE_ROUTE_POLICIES: SeoRoutePolicy[] = [
   {
     path: "/explore",
     indexable: true,
-    title: "Explore Motion Experiences - ELCAMOSO",
+    title: "Explore Experiences - Engine, Symphony, World, Fusion | ELCAMOSO",
     description:
-      "Choose what motion becomes - Engine, Symphony, Worlds, or Fusion. Discover motion-responsive experiences for your EV.",
+      "Choose what motion becomes. Explore Engine, Symphony, World, and Fusion experiences that turn EV motion into sound.",
     image: IMG,
     imageAlt: ALT,
     breadcrumbs: [
@@ -37,9 +37,9 @@ export const INDEXABLE_ROUTE_POLICIES: SeoRoutePolicy[] = [
   {
     path: "/sounds",
     indexable: true,
-    title: "EV Sound Profiles - ELCAMOSO",
+    title: "Engine Sound Profiles for EVs | ELCAMOSO",
     description:
-      "Engine sound experiences for Tesla and EV drivers. Free early access includes American Muscle V8, GT V8, Racing V10 and Rocket Car; more profiles with Drive+ from 9.11.2026.",
+      "Browse Engine Sound Profiles that lock sound to motion. Early access includes American Muscle V8, GT V8, Racing V10, and Rocket Car.",
     image: "/og/engine.png",
     imageAlt: "ELCAMOSO Engine sound experiences",
     breadcrumbs: [
@@ -53,7 +53,7 @@ export const INDEXABLE_ROUTE_POLICIES: SeoRoutePolicy[] = [
     indexable: true,
     title: "Drive Symphony - Music Shaped by Your Drive | ELCAMOSO",
     description:
-      "Drive Symphony turns acceleration, cruising, braking and motion into a reactive musical arrangement that evolves with every drive.",
+      "Drive Symphony turns acceleration, cruising, and braking into a reactive musical arrangement that evolves with every drive.",
     image: "/og/symphony.png",
     imageAlt: "ELCAMOSO Drive Symphony",
     breadcrumbs: [
@@ -65,11 +65,11 @@ export const INDEXABLE_ROUTE_POLICIES: SeoRoutePolicy[] = [
   {
     path: "/worlds",
     indexable: true,
-    title: "ELCAMOSO Worlds - Reactive Sound Experiences",
+    title: "World Experiences - Drive Somewhere Impossible | ELCAMOSO",
     description:
-      "Explore immersive ELCAMOSO Worlds that transform vehicle motion into cinematic, futuristic and atmospheric sound experiences.",
+      "World experiences transform vehicle motion into cinematic, futuristic, and atmospheric soundscapes for your EV.",
     image: "/og/worlds.png",
-    imageAlt: "ELCAMOSO Worlds",
+    imageAlt: "ELCAMOSO World experiences",
     breadcrumbs: [
       { name: "Home", path: "/" },
       { name: "Explore", path: "/explore" },
@@ -81,7 +81,7 @@ export const INDEXABLE_ROUTE_POLICIES: SeoRoutePolicy[] = [
     indexable: true,
     title: "Fusion - Engine Meets Music | ELCAMOSO",
     description:
-      "Blend reactive engine sound and Drive Symphony into one motion-responsive audio experience.",
+      "Fusion blends reactive Engine sound with Drive Symphony into one motion-responsive experience for your EV.",
     image: "/og/fusion.png",
     imageAlt: "ELCAMOSO Fusion",
     breadcrumbs: [
@@ -95,7 +95,7 @@ export const INDEXABLE_ROUTE_POLICIES: SeoRoutePolicy[] = [
     indexable: true,
     title: "Pricing - Early Access Free | ELCAMOSO",
     description:
-      "Early access is free until 9.11.2026. American Muscle V8, GT V8, Racing V10 and Rocket Car included. Drive+ and individual sound purchases open on 9.11.2026.",
+      "Early access is free until 9.11.2026 with American Muscle V8, GT V8, Racing V10, and Rocket Car. Drive+ opens on 9.11.2026.",
     image: IMG,
     imageAlt: ALT,
     breadcrumbs: [
@@ -106,9 +106,9 @@ export const INDEXABLE_ROUTE_POLICIES: SeoRoutePolicy[] = [
   {
     path: "/credits",
     indexable: true,
-    title: "Sound Credits & Licences - ELCAMOSO",
+    title: "Sound Credits & Licences | ELCAMOSO",
     description:
-      "Free recording credits and licences used in ELCAMOSO engine sound experiences for Tesla and EV drivers.",
+      "Recording credits and licences used in ELCAMOSO motion-to-sound experiences for electric vehicles.",
     image: IMG,
     imageAlt: ALT,
     breadcrumbs: [
@@ -119,9 +119,9 @@ export const INDEXABLE_ROUTE_POLICIES: SeoRoutePolicy[] = [
   {
     path: "/story",
     indexable: true,
-    title: "Story - ELCAMOSO",
+    title: "Story - Turn Motion Into Sound | ELCAMOSO",
     description:
-      "ELCAMOSO turns motion into sound live or after you arrive. Discover responsive EV experiences and private, silence-first journey capture.",
+      "Why ELCAMOSO exists: turn EV motion into sound live in the cabin, or hear it later from a private Silent Capture journey.",
     image: IMG,
     imageAlt: ALT,
     breadcrumbs: [
@@ -134,7 +134,7 @@ export const INDEXABLE_ROUTE_POLICIES: SeoRoutePolicy[] = [
     indexable: false,
     title: "About ELCAMOSO",
     description:
-      "ELCAMOSO turns motion into sound live or after you arrive. Discover responsive EV experiences and private, silence-first journey capture.",
+      "Why ELCAMOSO exists: turn EV motion into sound live in the cabin, or hear it later from a private Silent Capture journey.",
     image: IMG,
     imageAlt: ALT,
     breadcrumbs: [
@@ -145,9 +145,9 @@ export const INDEXABLE_ROUTE_POLICIES: SeoRoutePolicy[] = [
   {
     path: "/science",
     indexable: true,
-    title: "Science of ELCAMOSO",
+    title: "Science - How Motion Becomes Music | ELCAMOSO",
     description:
-      "How ELCAMOSO turns motion into music: speed, acceleration and continuity become Movement, Richness and Release for Symphony Experiences.",
+      "How ELCAMOSO turns speed, acceleration, and continuity into Movement, Richness, and Release for Symphony Experiences.",
     image: IMG,
     imageAlt: ALT,
     breadcrumbs: [
@@ -158,24 +158,24 @@ export const INDEXABLE_ROUTE_POLICIES: SeoRoutePolicy[] = [
   {
     path: "/legal",
     indexable: true,
-    title: "Legal - ELCAMOSO",
+    title: "Legal | ELCAMOSO",
     description:
-      "Legal information for ELCAMOSO - Impressum, privacy, cookies, terms and accessibility.",
+      "Legal information for ELCAMOSO: Impressum, privacy, cookies, terms, and accessibility.",
     image: IMG,
     imageAlt: ALT,
   },
   {
     path: "/legal/impressum",
     indexable: true,
-    title: "Impressum - ELCAMOSO",
-    description: "Impressum and legal disclosure for ELCAMOSO.",
+    title: "Impressum | ELCAMOSO",
+    description: "Impressum and legal disclosure for ELCAMOSO (operator identity and contact).",
     image: IMG,
     imageAlt: ALT,
   },
   {
     path: "/legal/privacy",
     indexable: true,
-    title: "Privacy Policy - ELCAMOSO",
+    title: "Privacy Policy | ELCAMOSO",
     description:
       "How ELCAMOSO handles personal data. Motion data stays on-device unless you explicitly ask for cloud.",
     image: IMG,
@@ -184,7 +184,7 @@ export const INDEXABLE_ROUTE_POLICIES: SeoRoutePolicy[] = [
   {
     path: "/legal/cookies",
     indexable: true,
-    title: "Cookie Notice - ELCAMOSO",
+    title: "Cookie Notice | ELCAMOSO",
     description:
       "How ELCAMOSO uses cookies and similar storage, and how you can reset consent preferences.",
     image: IMG,
@@ -193,18 +193,18 @@ export const INDEXABLE_ROUTE_POLICIES: SeoRoutePolicy[] = [
   {
     path: "/legal/terms",
     indexable: true,
-    title: "Terms of Use - ELCAMOSO",
+    title: "Terms of Use | ELCAMOSO",
     description:
-      "Terms of use for the ELCAMOSO web application and motion-responsive sound experiences.",
+      "Terms of use for the ELCAMOSO web app and motion-responsive sound experiences for EVs.",
     image: IMG,
     imageAlt: ALT,
   },
   {
     path: "/legal/accessibility",
     indexable: true,
-    title: "Accessibility - ELCAMOSO",
+    title: "Accessibility | ELCAMOSO",
     description:
-      "Accessibility statement for ELCAMOSO - how we approach usable motion-to-sound experiences on the web.",
+      "Accessibility statement for ELCAMOSO: usable motion-to-sound experiences on the web, including reduced motion.",
     image: IMG,
     imageAlt: ALT,
   },
@@ -215,26 +215,26 @@ export const NOINDEX_ROUTE_POLICIES: SeoRoutePolicy[] = [
   {
     path: "/drive",
     indexable: false,
-    title: "Drive - ELCAMOSO",
-    description: "Active ELCAMOSO drive session.",
+    title: "Drive | ELCAMOSO",
+    description: "Active ELCAMOSO drive session. Turn motion into sound in the cabin.",
   },
   {
     path: "/demo",
     indexable: false,
-    title: "Demo Drive - ELCAMOSO",
-    description: "Try ELCAMOSO with pedals - no sensors required.",
+    title: "Demo Drive | ELCAMOSO",
+    description: "Try ELCAMOSO with on-screen pedals. No vehicle sensors required.",
   },
   {
     path: "/studio",
     indexable: false,
-    title: "Studio - ELCAMOSO",
+    title: "Studio | ELCAMOSO",
     description: "Create Sound, Symphony, and Fusion experience presets.",
   },
   {
     path: "/garage",
     indexable: false,
-    title: "Garage - ELCAMOSO",
-    description: "Your saved sounds and experience presets.",
+    title: "Garage | ELCAMOSO",
+    description: "Your saved Sound Profiles and experience presets.",
   },
   {
     path: "/rewards",

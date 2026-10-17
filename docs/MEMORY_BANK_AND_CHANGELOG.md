@@ -40,7 +40,9 @@ Canonical product rules still live in `elcamoso-comprehensive-spec.md`. Update *
 ### SEO / Social cards
 
 - Central SEO: `src/lib/seo/*` — canonical always `https://www.elcamoso.com`
+- Concept: lead with **Turn motion into sound** / tagline; Experience vocabulary; index marketing only. Docs: `docs/SEO.md`
 - Social cards: `src/lib/og/*` via Satori + resvg-wasm. Docs: `docs/SOCIAL_CARD_SYSTEM.md`, `docs/SEO.md`
+- Hero stills: `/hero/sound-profiles/{id}.png` from Cars No Branding; alts via `profileHeroImageAlt`
 - **Motion Signature:** `src/lib/motion-signature/` + `MotionSignature` component — deterministic energy-derived visual fingerprint for Drive Song / Journey / future Garage & Reel
 - **Silent Capture:** `driveOutputMode` + `src/lib/journey-trace/` — record motion without audio; replay/reinterpret later. Docs: `docs/SILENT_CAPTURE.md`, `docs/JOURNEY_TRACE.md`
 - **Native Companion:** Capacitor 8.5.2 iOS/Android shells + `src/lib/motion-capture/` provider boundary. Native capture persists coordinate-free chunks across lock/background and imports/deduplicates into JourneyTrace. Docs: `docs/NATIVE_COMPANION.md`.
@@ -81,6 +83,7 @@ Canonical product rules still live in `elcamoso-comprehensive-spec.md`. Update *
 - **Catalog tuning (Prompt 07):** `src/lib/sound/realism/catalog-tuning` — 57 distinct overlays; wired into `acousticEngineForProfile` + `profileExperienceConfig`. Acceptance: `docs/audio/RAW_MECHANICAL_AUDIO_ACCEPTANCE.md`. Matrix: `docs/audio/profile-upgrade-matrix-prompt-07.md`. Listening/device **unverified**; samples still awaiting.
 - **Gain staging (Prompt 08):** `src/lib/sound/gain-staging` — coherent path, −1 dBFS sample peak protect, default UI volume 35%, optional +6 dB boost, advanced Body/Mechanical Character. Docs: `docs/audio/GAIN_STAGING.md`. Cabin checklist unverified.
 - **Drive Cockpit (Prompt 09):** `src/components/drive/DriveCockpit.tsx` — branded active-Drive UI; `cockpit-model` / `cockpit-profile-switch`; powertrain `warmStartAtSpeed` on profile change; sequential engine crossfade; favourites + volume share Settings state. Sound / Shift pickers use Radix `Select` (rounded monochrome list, Drive+ badge for locked) — never native OS `<select>` highlights.
+- **Drive Shift Persona (2026-10-17):** Thematic tach ladder + Shift moods for continuous / playful profiles (`src/lib/drive/drive-shift-persona.ts`, `docs/DRIVE_SHIFT_PERSONA.md`). VT cars keep gears + Classic/City/Touring/Sport; Rocket / Time Machine / Santa / boats / jets get stage names + funny mood cycles (`driveMoodByProfile`).
 - **Sounds Listen selection:** Row / Preview / Use Sound call `select()` which updates `settings.profileId` and, when already live, `listenProfile` so the sticky Listen bar and engine match the tapped profile.
 - Profile experience config + upgrade matrix (worktree; often untracked until committed): `src/lib/sound/profile-experience-config.ts`, `docs/audio/profile-upgrade-matrix.md`
 - Evidence tracking / listening honesty: `docs/audio/ARTIFACTS_AND_TRACKING.md`, `docs/audio/LISTENING_AND_ASSET_STATUS.md` — **0** listening-verified; Muscle pilot **0/9** approved slots

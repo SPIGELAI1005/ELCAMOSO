@@ -1,5 +1,4 @@
-import { getProfile } from "@/lib/sound/profiles";
-import { profileHeroImageSrc } from "@/lib/sound/profile-hero-image";
+import { profileHeroImageAlt, profileHeroImageSrc } from "@/lib/sound/profile-hero-image";
 import { cn } from "@/lib/utils";
 
 interface DriveProfileBackdropProps {
@@ -12,10 +11,9 @@ interface DriveProfileBackdropProps {
  */
 export function DriveProfileBackdrop({ profileId, className }: DriveProfileBackdropProps) {
   const src = profileHeroImageSrc(profileId);
-  if (!src) return null;
+  if (!src || !profileId) return null;
 
-  const profileName = profileId ? (getProfile(profileId)?.name ?? profileId) : "sound";
-  const alt = `ELCAMOSO ${profileName} sound experience`;
+  const alt = profileHeroImageAlt(profileId);
 
   return (
     <div

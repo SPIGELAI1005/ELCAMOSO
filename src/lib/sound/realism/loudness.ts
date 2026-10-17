@@ -56,6 +56,7 @@ export const PROFILE_LOUDNESS: Record<string, number> = {
   "ocean-drive": 1.38,
   heartbeat: 1.02,
   "rocket-car": 1.0,
+  "time-machine": 1.05,
   "synthetic-ev": 1.02,
 };
 

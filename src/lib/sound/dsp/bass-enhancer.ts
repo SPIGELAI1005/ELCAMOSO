@@ -53,6 +53,17 @@ export const BASS_ENHANCER_PROFILES: Record<string, BassEnhancerConfig> = {
   "american-muscle-v8": { ...base },
   "gt-v8": { ...base, subGain: 0.5, harmonicGain: 0.1, mudCutDb: 2 },
   "rocket-car": { ...base, subGain: 0.8, subLowHz: 32, subHighHz: 110, harmonicGain: 0.14, swell: 0.9, liftOffBoost: 0, mudCutDb: 3, trimDb: -4.5 },
+  "time-machine": {
+    ...base,
+    subGain: 0.65,
+    subLowHz: 34,
+    subHighHz: 105,
+    harmonicGain: 0.12,
+    swell: 0.85,
+    liftOffBoost: 0.1,
+    mudCutDb: 2.5,
+    trimDb: -3.8,
+  },
   "world-space-drive": { ...base, neutralAtRest: true, subGain: 0.7, subLowHz: 32, subHighHz: 110, harmonicGain: 0.12, swell: 1.2, liftOffBoost: 0, mudCutDb: 2, trimDb: -3.5 },
 };
 

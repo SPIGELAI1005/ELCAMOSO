@@ -11,7 +11,18 @@ import {
 export { upshiftRpmForLoad, downshiftRpmForGear } from "@/lib/powertrain/gear-selector-math";
 
 export type ShiftReason =
-  "hold" | "upshift-schedule" | "downshift-schedule" | "kickdown" | "redline" | "none";
+  | "hold"
+  | "upshift-schedule"
+  | "downshift-schedule"
+  | "kickdown"
+  | "redline"
+  | "manual"
+  /** Neutral → 1st after a stop (pullaway engage). */
+  | "engage"
+  | "none";
+
+/** Road speed (km/h) treated as a full stop for neutral / 1st re-engage. */
+export const STOP_SPEED_KMH = 1;
 
 export interface GearSelectorContext {
   currentGear: number;
@@ -189,6 +200,12 @@ export function resolveGearEngagement(
 ): number {
   const idle = profile.transmission.idle;
   const reengageHold = idle.reengageHoldMs ?? 450;
+  const disengageSpeed = Math.max(idle.disengageSpeedKmh, STOP_SPEED_KMH);
+
+  // Below ~1 km/h: always neutral so the next pullaway can engage 1st with a shift.
+  if (speedKmh < STOP_SPEED_KMH) {
+    return 0;
+  }
 
   if (gear === 0) {
     if (
@@ -202,7 +219,7 @@ export function resolveGearEngagement(
     return 0;
   }
 
-  if (speedKmh <= idle.disengageSpeedKmh && throttle <= idle.disengageThrottle) {
+  if (speedKmh <= disengageSpeed && throttle <= idle.disengageThrottle) {
     return 0;
   }
 
