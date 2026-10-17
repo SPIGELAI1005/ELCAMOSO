@@ -31,6 +31,23 @@ export function resetLifetimeStoreForTests(): void {
   underlyingByUser.clear();
 }
 
+/** Drops all cached lifetime state for one user (before re-hydrating from Postgres). */
+export function clearLifetimeStateForUser(userId: string): void {
+  const grant = grantsByUser.get(userId);
+  if (grant) userByPaymentIntent.delete(grant.paymentIntentId);
+  for (const [pi, owner] of userByPaymentIntent) if (owner === userId) userByPaymentIntent.delete(pi);
+  grantsByUser.delete(userId);
+  underlyingByUser.delete(userId);
+}
+
+/** Restore a grant loaded from durable storage (active or revoked). */
+export function restoreLifetimeGrant(grant: LifetimeGrant): void {
+  const existing = grantsByUser.get(grant.userId);
+  // An active grant wins over a revoked one when a user has several lifetime rows.
+  if (!existing || (existing.revokedAt && !grant.revokedAt)) grantsByUser.set(grant.userId, grant);
+  userByPaymentIntent.set(grant.paymentIntentId, grant.userId);
+}
+
 export function getLifetimeGrant(userId: string): LifetimeGrant | null {
   return grantsByUser.get(userId) ?? null;
 }

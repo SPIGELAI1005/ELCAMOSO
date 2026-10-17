@@ -21,6 +21,10 @@ export const getSoundSpinStatusFn = createServerFn({ method: "POST" })
     const token = tryResolveRequestSessionToken(data.sessionToken);
     const session = token ? getAccountSession(token) : null;
     const accountId = session?.userId ?? null;
+    if (accountId) {
+      const { hydrateUserBillingState } = await import("@/lib/billing/durable-state.server");
+      await hydrateUserBillingState(accountId);
+    }
     const audience = accountId ? resolveRewardAudience(accountId) : null;
     const status = getSoundSpinStatus({ accountId, audience });
     const extras = accountId ? getAccountRewardExtras(accountId) : null;
@@ -40,12 +44,19 @@ export const claimSoundSpinFn = createServerFn({ method: "POST" })
     const accountId = resolveAuthenticatedUserId(
       tryResolveRequestSessionToken(data.sessionToken),
     );
+    const { hydrateUserBillingState, persistEntitlementGrantsForAccount } = await import(
+      "@/lib/billing/durable-state.server"
+    );
+    await hydrateUserBillingState(accountId, { force: true });
     const audience = resolveRewardAudience(accountId);
-    return claimSoundSpin({
+    const result = claimSoundSpin({
       accountId,
       audience,
       idempotencyKey: data.idempotencyKey,
     });
+    // Durable write-through of reward unlocks (no-op without DATABASE_URL).
+    await persistEntitlementGrantsForAccount(accountId);
+    return result;
   });
 
 /** Scoped read — returns null when claim is missing or belongs to another account. */

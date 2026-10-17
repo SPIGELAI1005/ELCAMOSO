@@ -31,6 +31,8 @@ export const getSubscriptionSummaryFn = createServerFn({ method: "POST" })
       };
     }
 
+    const { hydrateUserBillingState } = await import("@/lib/billing/durable-state.server");
+    await hydrateUserBillingState(session.userId);
     const subscription = getSubscriptionForUser(session.userId);
     const stripeCustomerId = await getUserBillingRepository().getStripeCustomerId(session.userId);
     const canManage = isBillingManagementAvailable() && Boolean(stripeCustomerId);

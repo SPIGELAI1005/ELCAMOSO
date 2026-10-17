@@ -29,7 +29,7 @@ export const verifyAccountMagicLinkFn = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const { verifyAccountMagicLink } = await import("@/lib/account/auth-service");
     const { setAccountSessionCookie } = await import("@/lib/account/session-cookies.server");
-    const verified = verifyAccountMagicLink(data.token);
+    const verified = await verifyAccountMagicLink(data.token);
     setAccountSessionCookie(verified.sessionToken, verified.expiresAt);
     return {
       userId: verified.userId,

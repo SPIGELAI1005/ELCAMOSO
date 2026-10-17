@@ -101,6 +101,8 @@ export async function buildBillingAdminDiagnostics(
   email: string | null = null,
   now = Date.now(),
 ): Promise<BillingAdminDiagnostics> {
+  const { hydrateUserBillingState } = await import("@/lib/billing/durable-state.server");
+  await hydrateUserBillingState(userId, { force: true, now });
   const local = resolveLocalSubscriptionAccess(userId, now);
   const runtime = getSubscriptionForUser(userId);
   const persisted = await findLatestSubscriptionForUser(userId);

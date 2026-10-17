@@ -17,6 +17,7 @@ import { userHasActiveDrivePlusSubscription } from "@/lib/billing/stripe/subscri
 import { wrapStripeBillingError } from "@/lib/billing/resilience/stripe-errors";
 import { getUserBillingRepository } from "@/lib/billing/user-billing-store";
 import { hasActiveLifetimeGrant } from "@/lib/billing/lifetime-store";
+import { hydrateUserBillingState } from "@/lib/billing/durable-state.server";
 
 export interface BeginCheckoutInput {
   userId: string;
@@ -63,6 +64,8 @@ export async function beginDrivePlusCheckout(
     throw new Error("Billing is not available");
   }
 
+  // Fresh durable state: never sell Lifetime twice or open a duplicate subscription.
+  await hydrateUserBillingState(input.userId, { force: true });
   const described = describeCheckoutPlan(input.request.plan, input.request.interval);
   const repository = getUserBillingRepository();
   const existingCustomerId = await repository.getStripeCustomerId(input.userId);

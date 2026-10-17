@@ -23,12 +23,12 @@ describe("account auth service", () => {
     expect(result.verifyUrl).toContain("/auth/account/callback?token=");
   });
 
-  it("creates a session after magic-link verification", () => {
+  it("creates a session after magic-link verification", async () => {
     const issued = requestAccountSignIn("driver@example.com", "/drive", "http://localhost:5173");
     const issuedToken = new URL(issued.verifyUrl!).searchParams.get("token");
     expect(issuedToken).toBeTruthy();
 
-    const verified = verifyAccountMagicLink(issuedToken!);
+    const verified = await verifyAccountMagicLink(issuedToken!);
     expect(verified.email).toBe("driver@example.com");
     expect(getAccountSession(verified.sessionToken)?.userId).toBe(verified.userId);
   });
@@ -37,11 +37,11 @@ describe("account auth service", () => {
     expect(() => requireAccountSession("missing-token")).toThrow(/Authentication required/i);
   });
 
-  it("rejects reused magic links", () => {
+  it("rejects reused magic links", async () => {
     const issued = requestAccountSignIn("driver@example.com", "/drive", "http://localhost:5173");
     const token = new URL(issued.verifyUrl!).searchParams.get("token")!;
-    verifyAccountMagicLink(token);
-    expect(() => verifyAccountMagicLink(token)).toThrow(/expired or invalid/i);
+    await verifyAccountMagicLink(token);
+    await expect(verifyAccountMagicLink(token)).rejects.toThrow(/expired or invalid/i);
   });
 
   it("accepts persisted session tokens until expiry", () => {

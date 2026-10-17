@@ -4,6 +4,12 @@ import type { UpsertSubscriptionInput } from "@/lib/billing/subscription-reposit
 import { getSubscriptionRepository } from "@/lib/billing/subscription-repository-memory";
 import { provisionEntitlementsFromSubscription } from "@/lib/billing/provision-entitlements";
 import type { Subscription } from "@/lib/billing/types";
+import {
+  ensureUserRow,
+  hydrateUserBillingState,
+  invalidateDurableBillingCache,
+  isDurableBillingEnabled,
+} from "@/lib/billing/durable-state.server";
 
 export function subscriptionFromUpsertInput(
   input: UpsertSubscriptionInput,
@@ -40,13 +46,23 @@ export async function persistAndProvisionSubscription(
   input: UpsertSubscriptionInput,
   existing?: Subscription | null,
 ): Promise<PersistSubscriptionResult> {
+  const durable = isDurableBillingEnabled();
   try {
+    if (durable) {
+      // Load this user's durable state first so lifetime / other rows are taken into account.
+      await hydrateUserBillingState(input.userId, { force: true });
+      await ensureUserRow(input.userId);
+    }
     const saved = await getSubscriptionRepository().upsert(input);
     provisionEntitlementsFromSubscription(saved);
+    if (durable) invalidateDurableBillingCache(input.userId);
     return { subscription: saved, persisted: true };
-  } catch {
+  } catch (error) {
     const fallback = subscriptionFromUpsertInput(input, existing);
     provisionEntitlementsFromSubscription(fallback);
+    // With Postgres configured, a failed write must fail the webhook so Stripe retries it -
+    // otherwise other instances / cold starts would never see this change.
+    if (durable) throw error;
     return { subscription: fallback, persisted: false };
   }
 }

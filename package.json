@@ -25,6 +25,7 @@
     "format": "prettier --write .",
     "db:generate": "drizzle-kit generate",
     "db:migrate:dev": "node scripts/migrate-dev.mjs",
+    "db:migrate:prod": "node scripts/migrate-prod.mjs",
     "db:studio": "drizzle-kit studio",
     "billing:diagnostics": "npx tsx scripts/billing-diagnostics.ts",
     "relay:dev": "npx tsx services/drive-relay/server.ts",

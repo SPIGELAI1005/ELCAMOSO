@@ -4,6 +4,7 @@ import {
   consumeMagicLink,
   createMagicLinkToken,
   createUserForEmail,
+  registerUserEmail,
   deleteAccountSession,
   hashToken,
   readAccountSession,
@@ -109,6 +110,20 @@ async function revokeSessionDurably(rawToken: string): Promise<void> {
       error instanceof Error ? error.message : error,
     );
   }
+}
+
+/**
+ * With DATABASE_URL, the same verified email always maps to the same account id on every
+ * instance (users table), so purchases stay attached across sign-ins and cold starts.
+ */
+async function syncDurableUserIdForEmail(email: string): Promise<void> {
+  if (!process.env["DATABASE_URL"]) return;
+  const normalized = normalizeAccountEmail(email);
+  const { resolveDurableUserIdForEmail } = await import("@/lib/billing/durable-state.server");
+  const durableId = await resolveDurableUserIdForEmail(normalized, () =>
+    createUserForEmail(normalized),
+  );
+  if (durableId) registerUserEmail(normalized, durableId);
 }
 
 function createSessionToken(): string {
@@ -243,6 +258,7 @@ export async function verifyEmailOtp(input: {
   try {
     const verified = await getEmailOtpProvider().verifyOtp(normalized, code);
     // Identity comes from the provider after verification — never from an unverified client claim alone.
+    await syncDurableUserIdForEmail(verified.email);
     const session = createSessionFromVerifiedEmail(verified.email, now);
     clearEmailOtpVerifyFailures(normalized);
     const pending = readPendingEmailOtp(normalized, now);
@@ -297,9 +313,13 @@ export function requestAccountSignIn(
   };
 }
 
-export function verifyAccountMagicLink(token: string, now = Date.now()): VerifyMagicLinkResult {
+export async function verifyAccountMagicLink(
+  token: string,
+  now = Date.now(),
+): Promise<VerifyMagicLinkResult> {
   const pending = consumeMagicLink(token, now);
   if (!pending) throw new Error("Sign-in link expired or invalid");
+  await syncDurableUserIdForEmail(pending.email);
   return createSessionForEmail(pending.email, now);
 }
 
@@ -344,6 +364,7 @@ export async function completeGoogleSignIn(
   const idToken = tokens.id_token;
   if (!idToken) throw new Error("Google token response missing id_token.");
   const claims = await verifyExchangedGoogleIdToken(idToken, pending.nonce);
+  await syncDurableUserIdForEmail(claims.email);
   const session = createSessionForEmail(claims.email, now);
   return {
     ...session,

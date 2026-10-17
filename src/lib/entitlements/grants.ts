@@ -133,6 +133,19 @@ export function activeGrantedEntitlements(accountId: string, now = Date.now()): 
     .map((g) => g.entitlement!);
 }
 
+/** All grants for an account, including expired ones (durable write-through). */
+export function listAllGrantsForAccount(accountId: string): EntitlementGrant[] {
+  const ids = grantsByAccount.get(accountId);
+  if (!ids) return [];
+  return [...ids].map((id) => grantsById.get(id)).filter((g): g is EntitlementGrant => Boolean(g));
+}
+
+/** Replace the cached grants for an account with a durable snapshot (Postgres hydrate). */
+export function replaceGrantsForAccount(accountId: string, grants: EntitlementGrant[]): void {
+  for (const grant of listAllGrantsForAccount(accountId)) unindexGrant(grant);
+  for (const grant of grants) indexGrant({ ...grant, accountId });
+}
+
 export function revokeEntitlementGrant(grantId: string): boolean {
   const grant = grantsById.get(grantId);
   if (!grant) return false;

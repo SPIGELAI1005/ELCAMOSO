@@ -68,6 +68,8 @@ export async function resolveEntitlementUser(input: {
     const session = getAccountSession(input.sessionToken, now);
     if (session) {
       accountId = session.userId;
+      const { hydrateUserBillingState } = await import("@/lib/billing/durable-state.server");
+      await hydrateUserBillingState(session.userId, { now });
 
       const subscription = getSubscriptionForUser(session.userId);
       if (subscription && hasDrivePlusSubscriptionAccess(subscription, now)) {
