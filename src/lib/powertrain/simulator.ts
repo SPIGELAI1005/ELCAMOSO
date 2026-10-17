@@ -379,17 +379,10 @@ export class PowertrainSimulator {
 
     const prevGear = gear;
     const engageThrottle = pedal ?? motion.inferredThrottle;
-    // Use display speed for stop / 1st engage so pullaway matches what the driver sees.
-    let engaged = resolveGearEngagement(
-      gear,
-      displaySpeedKmh,
-      engageThrottle,
-      this.profile,
-      {
-        now,
-        lastNeutralAt: this.internal.lastNeutralAt,
-      },
-    );
+    let engaged = resolveGearEngagement(gear, shiftDecisionSpeedKmh, engageThrottle, this.profile, {
+      now,
+      lastNeutralAt: this.internal.lastNeutralAt,
+    });
     // Paddle-out-of-N / manual hold: do not snap back to neutral while the hold is live.
     const paddleHold = this.manualHoldUntilMs > 0 && now < this.manualHoldUntilMs;
     if (
@@ -402,58 +395,11 @@ export class PowertrainSimulator {
       engaged = Math.max(1, gear, this.internal.queuedTargetGear, shiftState.toGear || 0);
     }
 
-    // Pullaway from a real stop: N → 1st with a shift transient (gear-change sound).
-    // Cold-start already-moving: snap into gear without a fake engage flare.
-    const pullawayEngage =
-      !shiftState.active &&
-      prevGear === 0 &&
-      engaged === 1 &&
-      !holdShifts &&
-      displaySpeedKmh <= Math.max(this.profile.transmission.idle.engageSpeedKmh * 3, 8);
-
-    if (pullawayEngage) {
-      const launchRpm = Math.max(
-        rpm,
-        this.profile.engine.idleRpm,
-        rpmFromSpeedAndGear(mechanicalSpeedKmh, 1, this.profile) * 0.4,
-      );
-      const launch = beginShift(
-        shiftState,
-        "up",
-        0,
-        1,
-        mechanicalSpeedKmh,
-        launchRpm,
-        this.profile,
-      );
-      if (launch.active) {
-        shiftState = launch;
-        gear = 0;
-        this.internal.lastShiftReason = "engage";
-        this.internal.queuedTargetGear = 1;
-        this.internal.shiftSequenceId += 1;
-        shiftEventThisTick = {
-          sequenceId: this.internal.shiftSequenceId,
-          atMs: now,
-          fromGear: 0,
-          toGear: 1,
-          direction: "up",
-          reason: "engage",
-        };
-        this.internal.lastShiftEvent = shiftEventThisTick;
-      } else {
-        gear = 1;
-      }
-    } else if (shiftState.active && shiftState.fromGear === 0 && shiftState.toGear === 1) {
-      // Hold neutral until the launch shift settles into 1st.
+    if (shiftState.active && shiftState.fromGear === 0 && shiftState.toGear === 1) {
+      // Paddle launch out of neutral: hold N until the launch shift settles into 1st.
       gear = 0;
-    } else if (!shiftState.active) {
+    } else {
       gear = engaged;
-    } else if (engaged === 0) {
-      // Full stop mid-shift: drop to neutral.
-      gear = 0;
-      shiftState = createShiftControllerState();
-      this.internal.queuedTargetGear = 0;
     }
 
     if (gear === 0 && prevGear > 0) {

@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { createSeoHeadFromPath } from "@/lib/seo";
+import { ElcamosoMark } from "@/components/ElcamosoLogo";
 import { BrandLoader } from "@/components/BrandLoader";
 import { StartDriveMarkControl } from "@/components/StartDriveMarkControl";
 import { useSettings } from "@/lib/drive/useSettings";
