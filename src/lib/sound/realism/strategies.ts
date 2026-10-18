@@ -1,3 +1,4 @@
+import { createDebrisLayer } from "@/lib/sound/dsp/debris-layer";
 import { createGovernedLayer } from "@/lib/sound/dsp/governed-layer";
 import { createThrustBassLayer } from "@/lib/sound/dsp/rocket-layer";
 import {
@@ -335,6 +336,7 @@ const baseStrategies: ProfileStrategy[] = [
           roar: 0.3,
           cruise: 0.24,
         }),
+        createDebrisLayer(ctx, { id: "ufo-debris", destination: buses.accents, level: 0.3, glass: 0.7, pitch: 1.1 }),
       ];
     },
   },

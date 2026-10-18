@@ -1,3 +1,4 @@
+import { createDebrisLayer } from "@/lib/sound/dsp/debris-layer";
 import { createRocketLayer, createThrustBassLayer } from "@/lib/sound/dsp/rocket-layer";
 import { createTimeMachineLayer } from "@/lib/sound/dsp/time-machine-layer";
 /**
@@ -960,6 +961,8 @@ export const EXPANSION_STRATEGIES: ProfileStrategy[] = [
           accents: buses.accents,
           level: 1.05,
         }),
+        // Grit/stones pinging the shell on a hard launch only.
+        createDebrisLayer(ctx, { id: "rocket-debris", destination: buses.accents, level: 0.45, glass: 0.2, pitch: 0.85 }),
       ];
     },
   },
@@ -982,6 +985,7 @@ export const EXPANSION_STRATEGIES: ProfileStrategy[] = [
           roar: 0.3,
           cruise: 0.15,
         }),
+        createDebrisLayer(ctx, { id: "chrono-debris", destination: buses.accents, level: 0.45, glass: 0.8, pitch: 1.05 }),
       ];
     },
   },

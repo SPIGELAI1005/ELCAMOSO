@@ -1,3 +1,4 @@
+import { createDebrisBurst, type DebrisBurst } from "@/lib/sound/dsp/debris-layer";
 import {
   createBassEnhancer,
   getBassEnhancerConfig,
@@ -44,6 +45,7 @@ export class WorldSynth {
   private thunder: LiftOffThunder | null = null;
   private thrust: ThrustBass | null = null;
   private thrustLoad = 0;
+  private debris: DebrisBurst | null = null;
   private whistle: WhistleGovernor | null = null;
   private whistleIds: WorldLayerId[] = [];
 
@@ -71,6 +73,7 @@ export class WorldSynth {
       ? createThrustBass(ctx, this.bass ? this.bass.input : buses.body, pack.thrust)
       : null;
     this.thrustLoad = 0;
+    this.debris = pack.debris ? createDebrisBurst(ctx, buses.accents, pack.debris) : null;
     this.whistle = pack.whistle ? createWhistleGovernor(pack.whistle) : null;
     this.whistleIds = pack.whistle
       ? [
@@ -112,6 +115,8 @@ export class WorldSynth {
       (thrustTarget - this.thrustLoad) * (1 - Math.exp(-dt / (thrustTarget > this.thrustLoad ? 0.18 : 0.9)));
     const thrustPresence = Math.max(presence, Math.min(1, this.thrustLoad * 2));
     this.thrust?.update(this.thrustLoad, Math.min(1, state.speed * 3.6 / 160), thrustPresence, audioTime);
+    // Debris pings only on a hard launch (estimated accel well above gentle driving).
+    this.debris?.update(driveState.acceleration, state.speed * 3.6, audioTime);
 
     let scale: Partial<Record<WorldLayerId, number>> | undefined;
     if (this.whistle) {
@@ -155,6 +160,8 @@ export class WorldSynth {
     this.thunder = null;
     this.thrust?.dispose();
     this.thrust = null;
+    this.debris?.dispose();
+    this.debris = null;
     this.whistle = null;
     this.layers?.dispose();
     this.layers = null;

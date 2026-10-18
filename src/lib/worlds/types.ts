@@ -1,4 +1,5 @@
 import type { LiftOffThunderOpts } from "@/lib/sound/dsp/liftoff-thunder";
+import type { DebrisOpts } from "@/lib/sound/dsp/debris-layer";
 import type { ThrustBassOpts } from "@/lib/sound/dsp/rocket-layer";
 import type { WhistleGovernorOpts } from "@/lib/sound/dsp/whistle-governor";
 /** Worlds - reactive sonic fiction around motion. */
@@ -68,6 +69,8 @@ export interface WorldPack {
   liftOffThunder?: LiftOffThunderOpts;
   /** Optional Rocket Car thrust bass overlay driven by acceleration (silent at rest). */
   thrust?: ThrustBassOpts;
+  /** Debris pings on a hard launch (acceleration estimate), off at rest. */
+  debris?: DebrisOpts;
   /**
    * Keep whistle/shimmer brief: shimmer layers (plus `layers`) only swell on build/launch,
    * then sit at `floor` and duck under the thrust.
