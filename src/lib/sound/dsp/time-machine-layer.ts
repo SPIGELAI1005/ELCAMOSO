@@ -9,6 +9,7 @@
  * - jump arc: upward chirp + whoosh on hard launches from low speed
  */
 import { createBassEnhancer, getBassEnhancerConfig } from "./bass-enhancer";
+import { createWhistleGovernor } from "./whistle-governor";
 import { createLiftOffThunder, TIME_MACHINE_LIFTOFF_THUNDER } from "./liftoff-thunder";
 import { clamp } from "@/lib/sound/dsp/math";
 import { createLoopingNoise, getNoiseBuffer } from "@/lib/sound/dsp/noise";
@@ -196,6 +197,8 @@ export function createTimeMachineLayer(
 
   let disposed = false;
   let load = 0;
+  const crystalGov = createWhistleGovernor({ floor: 0.3, duck: 0.5, holdS: 0.6, decayS: 0.5 });
+  let crystalArmed = true;
   let prevLoad = 0;
   let drift = audioRandom() * 10;
   let nextTick = 0;
@@ -232,11 +235,17 @@ export function createTimeMachineLayer(
       const crystalHz = 1100 + 1600 * Math.pow(speed, 0.9) + 400 * load;
       targetParam(crystalA.frequency, crystalHz, t, 0.9);
       targetParam(crystalB.frequency, crystalHz * 1.5 + 40 * wander, t, 0.9);
+      // Crystal shimmer only blooms briefly on a surge, then stays low (no sustained whistle).
+      if (crystalArmed && target >= 0.4) {
+        crystalGov.trigger(t, 1);
+        crystalArmed = false;
+      } else if (target < 0.25) crystalArmed = true;
+      const crystalF = crystalGov.factor(t, load, clamp((m.speedKmh - 3) / 10));
       targetParam(
         crystalG.gain,
-        0.004 + 0.055 * Math.pow(speed, 0.85) * (0.55 + 0.45 * load),
+        (0.004 + 0.055 * Math.pow(speed, 0.85) * (0.55 + 0.45 * load)) * crystalF,
         t,
-        0.8,
+        0.5,
       );
       crystalPan.pan.setTargetAtTime(-0.25 * wander * m.stereoWidth, t, 0.9);
       bass?.setDrive(load, thunder.update(target, m.speedMps, t), t);

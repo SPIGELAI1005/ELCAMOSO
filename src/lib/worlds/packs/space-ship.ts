@@ -8,6 +8,9 @@ export const SPACE_SHIP_PACK: WorldPack = {
   character: "Cabin · Void · Thrust",
   packGain: 0.28,
   eventCooldownSec: 4,
+  // Rocket Car thrust bass; whistle/shimmer only swell briefly, then stay low under the thrust.
+  thrust: { level: 0.8, subHz: 44, roar: 0.45, cruise: 0.22 },
+  whistle: { floor: 0.12, duck: 0.6, layers: ["windEnergy"] },
   layers: [
     { id: "reactor", label: "Reactor", kind: "drone", level: 0.52, tone: 82, subHz: 50, subLevel: 0.85 },
     { id: "energyField", label: "Energy field", kind: "shimmer", level: 0.15, tone: 420 },

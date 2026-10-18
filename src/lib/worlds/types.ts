@@ -1,4 +1,6 @@
 import type { LiftOffThunderOpts } from "@/lib/sound/dsp/liftoff-thunder";
+import type { ThrustBassOpts } from "@/lib/sound/dsp/rocket-layer";
+import type { WhistleGovernorOpts } from "@/lib/sound/dsp/whistle-governor";
 /** Worlds - reactive sonic fiction around motion. */
 
 export type WorldMotionState =
@@ -64,6 +66,13 @@ export interface WorldPack {
   eventCooldownSec: number;
   /** Optional decel "power-down" thump + lift-off bass bloom (see dsp/liftoff-thunder.ts). */
   liftOffThunder?: LiftOffThunderOpts;
+  /** Optional Rocket Car thrust bass overlay driven by acceleration (silent at rest). */
+  thrust?: ThrustBassOpts;
+  /**
+   * Keep whistle/shimmer brief: shimmer layers (plus `layers`) only swell on build/launch,
+   * then sit at `floor` and duck under the thrust.
+   */
+  whistle?: WhistleGovernorOpts & { layers?: WorldLayerId[] };
   licensing: {
     source: "procedural_placeholder";
     notes: string;

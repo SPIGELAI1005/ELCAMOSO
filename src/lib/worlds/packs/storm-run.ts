@@ -7,6 +7,8 @@ export const STORM_RUN_PACK: WorldPack = {
   character: "Wind · Pressure · Rain",
   packGain: 0.26,
   eventCooldownSec: 8,
+  // Low pressure rumble on acceleration (no whistle layers here).
+  thrust: { level: 0.45, subHz: 42, roar: 0.25, cruise: 0.15, rumbleHz: 120 },
   layers: [
     { id: "wind", label: "Wind", kind: "noise", level: 0.52, tone: 800 },
     { id: "thunder", label: "Distant thunder", kind: "impact", level: 0.28, tone: 85 },

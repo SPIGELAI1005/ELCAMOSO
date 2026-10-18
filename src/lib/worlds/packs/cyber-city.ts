@@ -7,6 +7,9 @@ export const CYBER_CITY_PACK: WorldPack = {
   character: "Pulse · Grid · Night",
   packGain: 0.28,
   eventCooldownSec: 2.5,
+  // Thrust bass on acceleration; accel shimmer only swells briefly.
+  thrust: { level: 0.85, subHz: 48, roar: 0.3, cruise: 0.2 },
+  whistle: { floor: 0.25, duck: 0.6 },
   layers: [
     { id: "digitalPulse", label: "Digital pulse", kind: "pulse", level: 0.45, tone: 95 },
     { id: "synthBody", label: "Synth body", kind: "drone", level: 0.48, tone: 85 },

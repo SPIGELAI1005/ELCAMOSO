@@ -1,4 +1,4 @@
-import { createRocketLayer } from "@/lib/sound/dsp/rocket-layer";
+import { createRocketLayer, createThrustBassLayer } from "@/lib/sound/dsp/rocket-layer";
 import { createTimeMachineLayer } from "@/lib/sound/dsp/time-machine-layer";
 /**
  * Improved-synth strategies for expansion Sound Profiles.
@@ -972,6 +972,15 @@ export const EXPANSION_STRATEGIES: ProfileStrategy[] = [
           destination: buses.body,
           accents: buses.accents,
           level: 1.0,
+        }),
+        // Deep propulsion bed (Rocket Car thrust), silent at rest.
+        createThrustBassLayer(ctx, {
+          id: "chrono-thrust",
+          destination: buses.body,
+          level: 0.45,
+          subHz: 42,
+          roar: 0.3,
+          cruise: 0.15,
         }),
       ];
     },

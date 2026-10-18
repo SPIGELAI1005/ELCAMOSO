@@ -47,7 +47,8 @@ const LOUDNESS_MIN_LUFS = -24;
 const LOUDNESS_MAX_LUFS = -9;
 const LF_SHARE_MAX_PERCENT = 30;
 // Round 4: Rocket Car is deliberately bass-led (deep thrust rumble is its main effect).
-const LF_SHARE_OVERRIDE: Record<string, number> = { "rocket-car": 45 };
+// Rocket Car and Space Ship carry an intentional deep thrust/propulsion bass bed (still HP-filtered >=32 Hz).
+const LF_SHARE_OVERRIDE: Record<string, number> = { "rocket-car": 45, "space-ship": 40 };
 // Peak-protect ceiling is -1 dBFS; allow float rounding at the ceiling.
 const PEAK_MAX_DBFS = -0.99;
 

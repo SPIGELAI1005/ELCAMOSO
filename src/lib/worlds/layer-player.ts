@@ -93,9 +93,14 @@ export function createWorldLayerPlayer(
         }
       }
     },
-    setGains(next: Partial<Record<WorldLayerId, number>>, audioTime: number) {
+    setGains(
+      next: Partial<Record<WorldLayerId, number>>,
+      audioTime: number,
+      /** Optional per-layer multiplier (e.g. the whistle governor). */
+      scale?: Partial<Record<WorldLayerId, number>>,
+    ) {
       for (const v of voices) {
-        const g = Math.max(0.0001, next[v.id] ?? 0);
+        const g = Math.max(0.0001, (next[v.id] ?? 0) * (scale?.[v.id] ?? 1));
         targets[v.id] = g;
         try {
           v.gain.gain.setTargetAtTime(g, audioTime, v.rampTau ?? 0.12);

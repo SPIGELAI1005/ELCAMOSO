@@ -1,3 +1,5 @@
+import { createGovernedLayer } from "@/lib/sound/dsp/governed-layer";
+import { createThrustBassLayer } from "@/lib/sound/dsp/rocket-layer";
 import {
   createCombustionPulseLayer,
   createCreakLayer,
@@ -316,12 +318,22 @@ const baseStrategies: ProfileStrategy[] = [
     id: "ufo",
     build(ctx, buses) {
       return [
-        // Theremin is the whole character - keep beds/accents from masking it.
-        createUfoLayer(ctx, {
-          id: "theremin",
+        // Theremin is the character, but it may only swell briefly while driving (launch /
+        // surge) and otherwise sits low under the thrust bass; full hover at standstill.
+        createGovernedLayer(
+          ctx,
+          buses.body,
+          (dest) => createUfoLayer(ctx, { id: "theremin", destination: dest, baseHz: 760, level: 0.88 }),
+          { floor: 0.08, duck: 0.6, holdS: 0.4, decayS: 0.35 },
+        ),
+        // Deep hover/propulsion bass (Rocket Car thrust bed), silent at rest.
+        createThrustBassLayer(ctx, {
+          id: "ufo-thrust",
           destination: buses.body,
-          baseHz: 760,
-          level: 0.88,
+          level: 1.6,
+          subHz: 40,
+          roar: 0.3,
+          cruise: 0.24,
         }),
       ];
     },
