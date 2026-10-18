@@ -47,12 +47,31 @@ export function computeSyntheticLoad(
   return Math.max(cruiseFloor, intent);
 }
 
+/**
+ * Gearless voices that follow the GPS-derived acceleration estimate when nothing measured is
+ * available (in the car the measured value is always 0). Gear-based profiles are not listed and
+ * keep their current behaviour.
+ */
+export const ESTIMATED_ACCEL_PROFILE_IDS: ReadonlySet<string> = new Set([
+  "rocket-car",
+  "time-machine",
+  "ufo",
+]);
+
+function withEstimatedAccel(state: DriveState, profileId: string): DriveState {
+  const est = state.accelerationEstimated;
+  if (est === undefined || !ESTIMATED_ACCEL_PROFILE_IDS.has(profileId)) return state;
+  if (Math.abs(state.acceleration) > 0.05) return state;
+  return { ...state, acceleration: est, accelerationNormalized: clamp(Math.abs(est) / 4.5) };
+}
+
 export function motionFromDrive(
-  state: DriveState,
+  rawState: DriveState,
   profile: SoundProfile,
   tracker: MotionTracker,
   audioTime: number,
 ): MotionFrame {
+  const state = withEstimatedAccel(rawState, profile.id);
   const dt = tracker.lastTime > 0 ? clamp(audioTime - tracker.lastTime, 0.004, 0.08) : 1 / 60;
   tracker.lastTime = audioTime;
   const family = familyForProfile(profile);

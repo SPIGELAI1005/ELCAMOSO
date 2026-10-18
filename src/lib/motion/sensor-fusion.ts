@@ -1,5 +1,10 @@
 import { lowPassToward } from "@/lib/motion/filters";
 import {
+  createGpsAccelEstimator,
+  stepGpsAccelEstimator,
+  type GpsAccelEstimator,
+} from "./gps-accel-estimator";
+import {
   extrapolateSpeedMs,
   alignReceivedAt,
   SPEED_CHANNEL_PRIORITY,
@@ -90,6 +95,8 @@ export interface SensorFusionState {
   accelAnchorMs2: number;
   accelTransientMs2: number;
   accelFilteredMs2: number;
+  /** Speed-derived acceleration estimate (GPS-only drives); see gps-accel-estimator.ts. */
+  gpsAccel: GpsAccelEstimator;
   inferredThrottle: number;
   primarySource: SensorSource;
   motionConfidence: number;
@@ -111,6 +118,7 @@ export function createSensorFusion(options: SensorFusionOptions = {}): SensorFus
     accelAnchorMs2: 0,
     accelTransientMs2: 0,
     accelFilteredMs2: 0,
+    gpsAccel: createGpsAccelEstimator(),
     inferredThrottle: 0,
     primarySource: "simulator",
     motionConfidence: 0,
@@ -689,6 +697,8 @@ export function tickSensorFusion(
   }
 
   const decelerationMs2 = Math.max(0, -state.accelFilteredMs2);
+  const gpsAccelMs2 = stepGpsAccelEstimator(state.gpsAccel, state.speedFilteredMs, dtSafe);
+  const measuredAccel = imuFresh || telemetryAccel !== null;
 
   const motion: VehicleMotionState = {
     timestamp: now,
@@ -704,6 +714,7 @@ export function tickSensorFusion(
             ? "estimated-speed"
             : "unavailable",
     decelerationMs2,
+    accelerationEstimatedMs2: measuredAccel ? state.accelTransientMs2 : gpsAccelMs2,
     inferredThrottle: state.inferredThrottle,
     motionConfidence: state.motionConfidence,
     primarySource: state.primarySource,

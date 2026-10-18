@@ -47,6 +47,13 @@ export interface VehicleMotionState {
 
   decelerationMs2: number;
 
+  /**
+   * Longitudinal acceleration for audio worlds / gearless voices: the measured value when an IMU
+   * or telemetry provides one, otherwise a smoothed, deadbanded estimate from GPS speed.
+   * `accelerationMs2` (which feeds the powertrain) is not affected.
+   */
+  accelerationEstimatedMs2?: number;
+
   /** 0..1 inferred driver demand */
   inferredThrottle: number;
 

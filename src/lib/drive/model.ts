@@ -39,6 +39,11 @@ export interface DriveState {
   speedNormalized: number;
   /** 0..1 |acceleration| vs ~4.5 m/s² */
   accelerationNormalized: number;
+  /**
+   * Acceleration for audio worlds / gearless voices (m/s²): measured when available, else the
+   * GPS-speed estimate. Absent outside real drives; consumers fall back to `acceleration`.
+   */
+  accelerationEstimated?: number;
 }
 
 export const IDLE_STATE: DriveState = {

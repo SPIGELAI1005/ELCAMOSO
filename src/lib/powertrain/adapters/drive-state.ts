@@ -41,6 +41,7 @@ export function driveStateFromPowertrain(
     isShifting: powertrain.shifting,
     speedNormalized: clamp(motion.speedKmh / 160),
     accelerationNormalized: clamp(Math.abs(acceleration) / 4.5),
+    accelerationEstimated: motion.accelerationEstimatedMs2 ?? acceleration,
     powertrain,
     powertrainBackend: "dynamic",
   };

@@ -14,6 +14,22 @@ import { createWorldLayerPlayer } from "./layer-player";
 import type { WorldDiagnostics, WorldMotionState, WorldPack } from "./types";
 import { deriveWorldState } from "./world-state";
 
+/**
+ * Worlds react to the GPS-derived acceleration estimate when nothing measured is available
+ * (in the car the measured value is always 0), so build / high-energy / coast / regen states
+ * are reachable. Decel also feeds regen the same way the powertrain adapter does.
+ */
+export function worldDriveState(state: DriveState): DriveState {
+  const est = state.accelerationEstimated;
+  if (est === undefined || Math.abs(state.acceleration) > 0.05) return state;
+  return {
+    ...state,
+    acceleration: est,
+    accelerationNormalized: Math.min(1, Math.abs(est) / 4.5),
+    regen: Math.max(state.regen, Math.min(1, Math.max(0, -est) / 4.2)),
+  };
+}
+
 export class WorldSynth {
   private pack: WorldPack | null = null;
   private energy: DriveEnergyTracker | null = null;
@@ -62,7 +78,7 @@ export class WorldSynth {
         : 1 / 60;
     this.lastTs = state.timestamp || this.lastTs;
 
-    const energy = this.energy.update(state, dt);
+    const energy = this.energy.update(worldDriveState(state), dt);
     // Presence fades in with motion (idle stays exactly as authored).
     const presence = state.speed > 0.5 ? Math.min(1, Math.max(0, (state.speed * 3.6 - 4) / 16, energy.driverDemand)) : 0;
     const liftOff = this.thunder ? this.thunder.update(energy.driverDemand, state.speed, audioTime) : 0;
