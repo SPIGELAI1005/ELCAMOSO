@@ -10,6 +10,7 @@
  * Lift-off decays slowly (long release tau) so the roar tails off smoothly.
  */
 import { createBassEnhancer, getBassEnhancerConfig } from "./bass-enhancer";
+import { createLiftOffThunder, ROCKET_LIFTOFF_THUNDER } from "./liftoff-thunder";
 import { clamp } from "@/lib/sound/dsp/math";
 import { createLoopingNoise, getNoiseBuffer } from "@/lib/sound/dsp/noise";
 import { targetParam } from "@/lib/sound/dsp/smoother";
@@ -47,6 +48,8 @@ export function createRocketLayer(ctx: BaseAudioContext, opts: RocketLayerOpts):
   const bassCfg = getBassEnhancerConfig("rocket-car");
   const bass = bassCfg ? createBassEnhancer(ctx, opts.destination, bassCfg) : null;
   output.connect(bass ? bass.input : opts.destination);
+  // Decel thunder: cut-off thump + lift-off bass bloom (routed through the bass enhancer).
+  const thunder = createLiftOffThunder(ctx, input, ROCKET_LIFTOFF_THUNDER);
   const accentOut = ctx.createGain();
   accentOut.gain.value = 1;
   accentOut.connect(opts.accents ?? opts.destination);
@@ -221,7 +224,7 @@ export function createRocketLayer(ctx: BaseAudioContext, opts: RocketLayerOpts):
       targetParam(whineB.frequency, whineHz * 2, t, 1.5);
       targetParam(whineBp.frequency, Math.min(1500, whineHz * 1.6), t, 1.5);
       targetParam(whineG.gain, 0.002 + 0.012 * Math.pow(speed, 0.9) * (0.7 + 0.3 * load), t, 1.2);
-      bass?.setDrive(load, 0, t);
+      bass?.setDrive(load, thunder.update(target, m.speedMps, t), t);
 
       // crackle: random ticks, density with load
       if (t >= nextCrackle) {

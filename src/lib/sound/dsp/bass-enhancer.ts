@@ -35,6 +35,13 @@ export interface BassEnhancerConfig {
    * no mud cut) and fades in with presence — used to keep a loved idle exactly as is.
    */
   neutralAtRest?: boolean;
+  /**
+   * Decel "thunder" only: the engine adds this enhancer just while lifting off / slowing
+   * down (presence follows the lift-off amount), so the downshift blips get the felt
+   * low end the American V8 has, and idle, cruise and acceleration stay exactly as tuned.
+   * Requires neutralAtRest.
+   */
+  decelOnly?: boolean;
 }
 
 const base: BassEnhancerConfig = {
@@ -49,10 +56,22 @@ const base: BassEnhancerConfig = {
   highPassHz: 30,
 };
 
+/** Decel-only preset: neutral while idling, cruising and accelerating; present on lift-off. */
+const thunder: BassEnhancerConfig = {
+  ...base,
+  neutralAtRest: true,
+  decelOnly: true,
+  swell: 0,
+  liftOffBoost: 0.25,
+  // No trim and only a light mud cut: the thunder adds low end without dulling the crackle.
+  trimDb: 0,
+  mudCutDb: 1,
+};
+
 export const BASS_ENHANCER_PROFILES: Record<string, BassEnhancerConfig> = {
   "american-muscle-v8": { ...base },
-  "gt-v8": { ...base, subGain: 0.5, harmonicGain: 0.1, mudCutDb: 2 },
-  "rocket-car": { ...base, subGain: 0.8, subLowHz: 32, subHighHz: 110, harmonicGain: 0.14, swell: 0.9, liftOffBoost: 0, mudCutDb: 3, trimDb: -4.5 },
+  "gt-v8": { ...base, subGain: 0.5, harmonicGain: 0.1 },
+  "rocket-car": { ...base, subGain: 0.8, subLowHz: 32, subHighHz: 110, harmonicGain: 0.14, swell: 0.9, liftOffBoost: 0.6, mudCutDb: 3, trimDb: -4.5 },
   "time-machine": {
     ...base,
     subGain: 0.65,
@@ -60,10 +79,17 @@ export const BASS_ENHANCER_PROFILES: Record<string, BassEnhancerConfig> = {
     subHighHz: 105,
     harmonicGain: 0.12,
     swell: 0.85,
-    liftOffBoost: 0.1,
+    liftOffBoost: 0.6,
     mudCutDb: 2.5,
     trimDb: -3.8,
   },
+  // Decel thunder (downshift blips + lift-off bass) for the other combustion cars, per engine character.
+  // Sub band sits on each engine's firing orders at coasting revs; 30 Hz high-pass and trim stay on.
+  "racing-v10": { ...thunder, subGain: 0.22, subLowHz: 45, subHighHz: 135, harmonicGain: 0.04 },
+  "race-car": { ...thunder, subGain: 0.2, subLowHz: 42, subHighHz: 130, harmonicGain: 0.04 },
+  "flat-six-sport": { ...thunder, subGain: 0.24, subLowHz: 38, subHighHz: 120, harmonicGain: 0.05 },
+  "turbo-inline-6": { ...thunder, subGain: 0.24, subLowHz: 38, subHighHz: 115, harmonicGain: 0.05 },
+  "rally-car": { ...thunder, subGain: 0.26, subLowHz: 34, subHighHz: 105, harmonicGain: 0.05 },
   "world-space-drive": { ...base, neutralAtRest: true, subGain: 0.7, subLowHz: 32, subHighHz: 110, harmonicGain: 0.12, swell: 1.2, liftOffBoost: 0, mudCutDb: 2, trimDb: -3.5 },
 };
 

@@ -9,6 +9,7 @@
  * - jump arc: upward chirp + whoosh on hard launches from low speed
  */
 import { createBassEnhancer, getBassEnhancerConfig } from "./bass-enhancer";
+import { createLiftOffThunder, TIME_MACHINE_LIFTOFF_THUNDER } from "./liftoff-thunder";
 import { clamp } from "@/lib/sound/dsp/math";
 import { createLoopingNoise, getNoiseBuffer } from "@/lib/sound/dsp/noise";
 import { targetParam } from "@/lib/sound/dsp/smoother";
@@ -51,6 +52,8 @@ export function createTimeMachineLayer(
   const bassCfg = getBassEnhancerConfig("time-machine");
   const bass = bassCfg ? createBassEnhancer(ctx, opts.destination, bassCfg) : null;
   output.connect(bass ? bass.input : opts.destination);
+  // Decel thunder: cut-off thump + lift-off bass bloom (routed through the bass enhancer).
+  const thunder = createLiftOffThunder(ctx, input, TIME_MACHINE_LIFTOFF_THUNDER);
   const accentOut = ctx.createGain();
   accentOut.gain.value = 1;
   accentOut.connect(opts.accents ?? opts.destination);
@@ -236,7 +239,7 @@ export function createTimeMachineLayer(
         0.8,
       );
       crystalPan.pan.setTargetAtTime(-0.25 * wander * m.stereoWidth, t, 0.9);
-      bass?.setDrive(load, 0, t);
+      bass?.setDrive(load, thunder.update(target, m.speedMps, t), t);
 
       if (t >= nextTick) {
         const density = 1.4 + 18 * load * load;

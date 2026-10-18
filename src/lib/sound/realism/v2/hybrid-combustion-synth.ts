@@ -451,6 +451,7 @@ export class HybridCombustionSynth {
       // Engine bass enhancer: every engine path that feeds the body bus (synth, recordings,
       // exhaust pops) is summed here first (see dsp/bass-enhancer.ts).
       this.bass = createBassEnhancer(ctx, buses.body, bassCfg);
+      this.bassDecelOnly = Boolean(bassCfg.decelOnly);
       buses = { ...buses, body: this.bass.input };
     }
     this.sampleBank = EMPTY_COMBUSTION_SAMPLE_BANKS[personalityId] ?? {
@@ -1081,6 +1082,12 @@ export class HybridCombustionSynth {
     const rpm = Math.max(0, state.rpm || 0);
     this.lastSpeedMs = Math.max(0, state.speed || 0);
     this.accelChar.update(this.lastSpeedMs, audioTime, dt);
+    if (this.bass && this.bassDecelOnly && !this.recordedBank) {
+      // Decel thunder for synth-only cars: bass bloom only while lifting / on overrun
+      // (recorded banks drive their own bass in updateRecordedLoops).
+      const ac = this.accelChar;
+      this.bass.setDrive(0, ac.overrun, audioTime, ac.overrun);
+    }
     const pt = state.powertrain;
     const demand = pt?.driverDemand ?? state.throttle;
     const load = pt?.engineLoad ?? state.load;
@@ -1938,6 +1945,7 @@ export class HybridCombustionSynth {
 
   private recordedNorm = 1;
   private bass: BassEnhancer | null = null;
+  private bassDecelOnly = false;
   private synthMatchBands: BiquadFilterNode[] = [];
 
   private updateSamples(rpm: number, demand: number, overrun: boolean, audioTime: number) {
