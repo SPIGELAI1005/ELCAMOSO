@@ -90,7 +90,7 @@ export const BASS_ENHANCER_PROFILES: Record<string, BassEnhancerConfig> = {
   "flat-six-sport": { ...thunder, subGain: 0.24, subLowHz: 38, subHighHz: 120, harmonicGain: 0.05 },
   "turbo-inline-6": { ...thunder, subGain: 0.24, subLowHz: 38, subHighHz: 115, harmonicGain: 0.05 },
   "rally-car": { ...thunder, subGain: 0.26, subLowHz: 34, subHighHz: 105, harmonicGain: 0.05 },
-  "world-space-drive": { ...base, neutralAtRest: true, subGain: 0.7, subLowHz: 32, subHighHz: 110, harmonicGain: 0.12, swell: 1.2, liftOffBoost: 0, mudCutDb: 2, trimDb: -3.5 },
+  "world-space-drive": { ...base, neutralAtRest: true, subGain: 0.7, subLowHz: 32, subHighHz: 110, harmonicGain: 0.12, swell: 4, liftOffBoost: 0.5, mudCutDb: 2, trimDb: -3.5 },
 };
 
 export function getBassEnhancerConfig(profileId: string): BassEnhancerConfig | null {

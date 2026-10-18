@@ -27,6 +27,8 @@ function makeNoiseBuffer(ctx: BaseAudioContext, seconds: number, seed: number): 
 interface LayerVoice {
   id: WorldLayerId;
   gain: GainNode;
+  /** State-change smoothing (s). */
+  rampTau?: number | undefined;
   osc?: OscillatorNode | undefined;
   noise?: AudioBufferSourceNode | undefined;
   lfo?: OscillatorNode | undefined;
@@ -64,7 +66,7 @@ export function createWorldLayerPlayer(
   let pendingEvents = 0;
 
   for (const layer of pack.layers) {
-    voices.push(buildLayer(ctx, bus, layer, seed + layer.tone));
+    voices.push({ ...buildLayer(ctx, bus, layer, seed + layer.tone), rampTau: layer.rampTau });
     targets[layer.id] = 0;
   }
 
@@ -96,7 +98,7 @@ export function createWorldLayerPlayer(
         const g = Math.max(0.0001, next[v.id] ?? 0);
         targets[v.id] = g;
         try {
-          v.gain.gain.setTargetAtTime(g, audioTime, 0.12);
+          v.gain.gain.setTargetAtTime(g, audioTime, v.rampTau ?? 0.12);
         } catch {
           /* teardown */
         }
@@ -269,7 +271,7 @@ function buildLayer(
 
   // noise / impact
   const noise = ctx.createBufferSource();
-  noise.buffer = makeNoiseBuffer(ctx, layer.kind === "impact" ? 2.5 : 3.5, seed);
+  noise.buffer = makeNoiseBuffer(ctx, layer.loopSec ?? (layer.kind === "impact" ? 2.5 : 3.5), seed);
   noise.loop = true;
   const filter = ctx.createBiquadFilter();
   filter.type = layer.kind === "impact" ? "lowpass" : "bandpass";

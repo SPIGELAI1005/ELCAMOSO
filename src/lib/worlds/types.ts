@@ -1,3 +1,4 @@
+import type { LiftOffThunderOpts } from "@/lib/sound/dsp/liftoff-thunder";
 /** Worlds - reactive sonic fiction around motion. */
 
 export type WorldMotionState =
@@ -40,6 +41,10 @@ export interface WorldLayerSpec {
   subHz?: number;
   /** Sub partial level relative to the drone (0..1, default 0.35). */
   subLevel?: number;
+  /** Gain smoothing (s) when the world state changes (default 0.12). */
+  rampTau?: number;
+  /** Noise loop length (s) for noise layers (default 3.5; longer avoids an audible repeat). */
+  loopSec?: number;
 }
 
 export interface WorldStateGains {
@@ -57,6 +62,8 @@ export interface WorldPack {
   stateRules: WorldStateGains[];
   /** Thunder / impact cooldown seconds */
   eventCooldownSec: number;
+  /** Optional decel "power-down" thump + lift-off bass bloom (see dsp/liftoff-thunder.ts). */
+  liftOffThunder?: LiftOffThunderOpts;
   licensing: {
     source: "procedural_placeholder";
     notes: string;

@@ -54,6 +54,18 @@ export const TIME_MACHINE_LIFTOFF_THUNDER: LiftOffThunderOpts = {
   cooldownS: 4,
 };
 
+/** Space Drive: modest, deep power-down (only after real thrust). */
+export const SPACE_DRIVE_LIFTOFF_THUNDER: LiftOffThunderOpts = {
+  startHz: 72,
+  endHz: 36,
+  decayS: 0.6,
+  level: 0.2,
+  whoompHz: 170,
+  whoompMix: 0.35,
+  armLoad: 0.3,
+  cooldownS: 5,
+};
+
 export interface LiftOffThunder {
   /**
    * Call every frame with the instantaneous load (0..1) and the speed (m/s). Acceleration

@@ -1,4 +1,5 @@
 import { SPACE_DRIVE_PACK } from "./packs/space-drive";
+import { SPACE_SHIP_PACK } from "./packs/space-ship";
 import { CYBER_CITY_PACK } from "./packs/cyber-city";
 import { STORM_RUN_PACK } from "./packs/storm-run";
 import type { WorldPack } from "./types";
@@ -8,7 +9,8 @@ const PACKS: Record<string, WorldPack> = {
   [CYBER_CITY_PACK.id]: CYBER_CITY_PACK,
   [STORM_RUN_PACK.id]: STORM_RUN_PACK,
   // Legacy SoundProfile aliases → World engine
-  "space-ship": SPACE_DRIVE_PACK,
+  // Space Ship keeps the original world; Space Drive got its own Round 5 tuning.
+  "space-ship": SPACE_SHIP_PACK,
   "cyber-pulse": CYBER_CITY_PACK,
   "storm-glider": STORM_RUN_PACK,
 };
