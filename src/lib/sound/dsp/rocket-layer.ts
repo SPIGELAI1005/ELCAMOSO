@@ -69,8 +69,9 @@ export function createRocketLayer(ctx: BaseAudioContext, opts: RocketLayerOpts):
   roarG.gain.value = 0.0001;
   const roarPan = ctx.createStereoPanner();
   roarSrc.connect(roarLp).connect(roarBody).connect(roarG).connect(roarPan).connect(input);
-  // second, brown-noise rumble bed decorrelates the roar (no audible loop)
-  const rumbleSrc = createLoopingNoise(ctx, "brown", 1.03);
+  // second, brown-noise rumble bed decorrelates the roar. It is the main idle hum, so it gets
+  // its own 11 s buffer (the shared 3 s one was audibly repeating every ~2.9 s).
+  const rumbleSrc = createLoopingNoise(ctx, "brown", 1.03, 11);
   const rumbleLp = ctx.createBiquadFilter();
   rumbleLp.type = "lowpass";
   rumbleLp.frequency.value = 140;

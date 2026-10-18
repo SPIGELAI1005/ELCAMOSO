@@ -60,9 +60,41 @@ export function getNoiseBuffer(ctx: BaseAudioContext, color: NoiseColor = "pink"
   return map[color]!;
 }
 
-export function createLoopingNoise(ctx: BaseAudioContext, color: NoiseColor = "pink", rate = 1) {
+const longCache = new WeakMap<BaseAudioContext, Map<string, AudioBuffer>>();
+
+/**
+ * A longer noise buffer for beds that sit in front of the mix (the default 2-3 s buffers can
+ * be heard repeating there). Cached per context, color and length.
+ */
+export function getLongNoiseBuffer(ctx: BaseAudioContext, color: NoiseColor, seconds: number) {
+  let map = longCache.get(ctx);
+  if (!map) {
+    map = new Map();
+    longCache.set(ctx, map);
+  }
+  const key = `${color}:${seconds}`;
+  let buf = map.get(key);
+  if (!buf) {
+    buf =
+      color === "white"
+        ? whiteNoise(ctx, seconds)
+        : color === "brown"
+          ? brownNoise(ctx, seconds)
+          : pinkNoise(ctx, seconds);
+    map.set(key, buf);
+  }
+  return buf;
+}
+
+export function createLoopingNoise(
+  ctx: BaseAudioContext,
+  color: NoiseColor = "pink",
+  rate = 1,
+  /** Use a dedicated buffer this many seconds long instead of the shared short one. */
+  seconds?: number,
+) {
   const src = ctx.createBufferSource();
-  src.buffer = getNoiseBuffer(ctx, color);
+  src.buffer = seconds ? getLongNoiseBuffer(ctx, color, seconds) : getNoiseBuffer(ctx, color);
   src.loop = true;
   src.playbackRate.value = rate;
   return src;
