@@ -129,7 +129,20 @@ export interface RecordedLoopBank {
     highShelfDb: number;
     highShelfHz: number;
     lowpassHz: number;
+    /**
+     * Optional: above this RPM the 120 Hz low shelf follows the firing frequency
+     * (120 Hz × rpm / lowShelfTrackFromRpm), so pitched-up grains keep their weight
+     * instead of thinning out toward the top of each gear. Unset = fixed 120 Hz.
+     */
+    lowShelfTrackFromRpm?: number;
   };
+}
+
+/** Low-shelf corner for the recorded match-EQ at an RPM (fixed 120 Hz unless tracking is enabled). */
+export function recordedLowShelfHz(eq: RecordedLoopBank["eq"], rpm: number): number {
+  const from = eq.lowShelfTrackFromRpm;
+  if (!from || rpm <= from) return 120;
+  return Math.min(240, (120 * rpm) / from);
 }
 
 /** Idle/cruise regions only (the last two are free-rev regions used for GT V8 under load). */
@@ -190,6 +203,8 @@ export const RECORDED_LOOP_BANKS: Record<string, RecordedLoopBank> = {
       highShelfDb: 6,
       highShelfHz: 2200,
       lowpassHz: 7000,
+      // Keep the bass weight as revs climb in each gear (idle and early cruise up to 2,200 rpm unchanged).
+      lowShelfTrackFromRpm: 2200,
     },
   },
 };

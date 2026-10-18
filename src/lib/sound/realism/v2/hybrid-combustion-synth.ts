@@ -71,6 +71,7 @@ import {
 import {
   AccelerationCharacter,
   getRecordedLoopBank,
+  recordedLowShelfHz,
   recordedSampleWeight,
   synthMatchAt,
   type LoadCharacter,
@@ -1874,6 +1875,9 @@ export class HybridCombustionSynth {
       0.15,
     );
     if (this.recordedEq) {
+      if (bank.eq.lowShelfTrackFromRpm) {
+        targetParam(this.recordedEq.low.frequency, recordedLowShelfHz(bank.eq, rpm), audioTime, 0.2);
+      }
       targetParam(
         this.recordedEq.high.gain,
         bank.eq.highShelfDb + 3 * ac.onLoad - 2 * ac.overrun,

@@ -6,6 +6,7 @@ import {
   RECORDED_LOOP_BANKS,
   RECORDED_LOOP_CREDITS,
   pickRegion,
+  recordedLowShelfHz,
   recordedSampleWeight,
   synthMatchAt,
 } from "./recorded-loops";
@@ -81,5 +82,18 @@ describe("recorded loops hybrid (round 2)", () => {
       }
     }
     expect(RECORDED_LOOP_CREDITS.some((c) => c.licence === "CC BY 4.0")).toBe(true);
+  });
+});
+
+describe("recordedLowShelfHz", () => {
+  it("keeps the fixed 120 Hz shelf unless a bank opts into rpm tracking", () => {
+    expect(recordedLowShelfHz(RECORDED_LOOP_BANKS["american-v8"]!.eq, 3000)).toBe(120);
+  });
+  it("GT V8: unchanged up to 2,200 rpm, follows firing frequency above, capped", () => {
+    const eq = RECORDED_LOOP_BANKS["gt-v8"]!.eq;
+    expect(recordedLowShelfHz(eq, 800)).toBe(120);
+    expect(recordedLowShelfHz(eq, 2200)).toBe(120);
+    expect(recordedLowShelfHz(eq, 3300)).toBeCloseTo(180, 5);
+    expect(recordedLowShelfHz(eq, 9000)).toBe(240);
   });
 });
