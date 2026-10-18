@@ -8,7 +8,8 @@ import {
   activeGrantedProfileIds,
 } from "@/lib/entitlements/grants";
 import { getOfflineAccessLease } from "@/lib/entitlements/offline-lease";
-import { TRIAL_DRIVE_PLUS_ENTITLEMENTS } from "@/lib/entitlements/plans";
+import { ALL_ENTITLEMENTS, TRIAL_DRIVE_PLUS_ENTITLEMENTS } from "@/lib/entitlements/plans";
+import { isAllowlistedAdminEmail } from "@/lib/admin/admin-access";
 import { buildEntitlementSnapshot } from "@/lib/entitlements/resolve";
 import type {
   Entitlement,
@@ -94,6 +95,14 @@ export async function resolveEntitlementUser(input: {
       grantedProfileIds = activeGrantedProfileIds(session.userId, now);
       grantedEntitlements = activeGrantedEntitlements(session.userId, now);
       if (grantedProfileIds.length || grantedEntitlements.length) revision += 4;
+
+      // Admin test unlock: allowlisted admins (bootstrap + ELCAMOSO_ADMIN_EMAILS) get every
+      // entitlement, resolved server-side from the signed session email (no DB needed).
+      // Plan/subscription stay untouched so billing UI is unaffected.
+      if (isAllowlistedAdminEmail(session.email)) {
+        grantedEntitlements = [...new Set([...grantedEntitlements, ...ALL_ENTITLEMENTS])];
+        revision += 8;
+      }
     }
   }
 
