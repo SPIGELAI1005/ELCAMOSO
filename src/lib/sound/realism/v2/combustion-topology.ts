@@ -336,6 +336,9 @@ export const MUSCLE_V8_TOPOLOGY: CombustionTopologyV1 = {
   ),
 };
 
+/** Small fixed cylinder-to-cylinder burn spread (race-car, flat-six, turbo I6). */
+const PETROL_CYLINDER_SPREAD = [1.03, 0.97, 1.01, 0.96, 1.04, 0.98, 1.02, 0.99];
+
 /**
  * Flat-plane track V8: even 90° spacing, alternating collectors each fire,
  * matched primaries (balanced banks).
@@ -348,11 +351,14 @@ export const FLAT_PLANE_V8_TOPOLOGY: CombustionTopologyV1 = {
   noiseScale: 0.3,
   collectors: [{ id: 0 }, { id: 1 }],
   soundSpeedMetresPerSecond: TOPOLOGY_SOUND_SPEED_DEFAULT,
+  // Alive idle: crank never dead-steady, small per-cycle lope (no valvetrain ticks: crackle).
+  cycleLope: 0.35,
+  organic: { crankJitter: 0.004, crankWander: 0.004, wanderHz: 1.2 },
   cylinders: [1, 5, 3, 7, 4, 8, 2, 6].map((cylId, i) => ({
     id: cylId,
     firingAngleDegrees: i * 90,
     collectorId: i % 2,
-    pulseWeight: 1,
+    pulseWeight: PETROL_CYLINDER_SPREAD[i]!,
     primaryLengthMetres: 0.12,
   })),
 };
@@ -387,11 +393,14 @@ export const FLAT_SIX_TOPOLOGY: CombustionTopologyV1 = {
   noiseScale: 0.3,
   collectors: [{ id: 0 }, { id: 1 }],
   soundSpeedMetresPerSecond: TOPOLOGY_SOUND_SPEED_DEFAULT,
+  // Alive idle: crank never dead-steady, small per-cycle lope (no valvetrain ticks: crackle).
+  cycleLope: 0.3,
+  organic: { crankJitter: 0.004, crankWander: 0.004, wanderHz: 1.2 },
   cylinders: [1, 6, 2, 4, 3, 5].map((cylId, i) => ({
     id: cylId,
     firingAngleDegrees: i * 120,
     collectorId: cylId % 2 === 1 ? 0 : 1,
-    pulseWeight: 1,
+    pulseWeight: PETROL_CYLINDER_SPREAD[i]!,
     primaryLengthMetres: 0.08,
   })),
 };
@@ -407,11 +416,14 @@ export const TURBO_I6_TOPOLOGY: CombustionTopologyV1 = {
   noiseScale: 0.35,
   collectors: [{ id: 0 }],
   soundSpeedMetresPerSecond: TOPOLOGY_SOUND_SPEED_DEFAULT,
+  // Alive idle: crank never dead-steady, small per-cycle lope (no valvetrain ticks: crackle).
+  cycleLope: 0.25,
+  organic: { crankJitter: 0.004, crankWander: 0.004, wanderHz: 1.2 },
   cylinders: [1, 5, 3, 6, 2, 4].map((cylId, i) => ({
     id: cylId,
     firingAngleDegrees: i * 120,
     collectorId: 0,
-    pulseWeight: 1,
+    pulseWeight: PETROL_CYLINDER_SPREAD[i]!,
     primaryLengthMetres: 0.06 + (cylId - 1) * 0.015,
   })),
 };
@@ -504,6 +516,9 @@ export const RALLY_I3_TOPOLOGY: CombustionTopologyV1 = {
   noiseScale: 0.4,
   collectors: [{ id: 0 }],
   soundSpeedMetresPerSecond: TOPOLOGY_SOUND_SPEED_DEFAULT,
+  // Alive idle: crank never dead-steady, small per-cycle lope (no valvetrain ticks: crackle).
+  cycleLope: 0.35,
+  organic: { crankJitter: 0.004, crankWander: 0.004, wanderHz: 1.2 },
   cylinders: [1, 2, 3].map((cylId, i) => ({
     id: cylId,
     firingAngleDegrees: i * 240,

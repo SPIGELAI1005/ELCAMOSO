@@ -75,5 +75,6 @@ export async function renderRealChain(profileId: string, extras: boolean, plan =
   for (let i = 0; i < L.length; i++) { pcm[2 * i] = L[i]!; pcm[2 * i + 1] = R[i]!; }
   const bytes = new Uint8Array(pcm.buffer); let bin = "";
   for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
-  return { backend: engine.getActiveBackend() + ' rec=' + JSON.stringify({ n: (engine as any).hybrid?.recordedBuffers?.size, ids: (engine as any).hybrid?.getDiagnostics?.().activeSampleIds }), log, pcmB64: btoa(bin) };
+  const hy = (engine as any).hybrid; const ev = { pops: hy?.popEvents, bov: hy?.bovEvents };
+  return { ev, backend: engine.getActiveBackend() + ' rec=' + JSON.stringify({ n: (engine as any).hybrid?.recordedBuffers?.size, ids: (engine as any).hybrid?.getDiagnostics?.().activeSampleIds }), log, pcmB64: btoa(bin) };
 }

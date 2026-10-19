@@ -1134,6 +1134,10 @@ export class HybridCombustionSynth {
     const rpm = this.idleLifeRpm(Math.max(0, state.rpm || 0), state, audioTime, dt);
     this.lastSpeedMs = Math.max(0, state.speed || 0);
     this.accelChar.update(this.lastSpeedMs, audioTime, dt);
+    // GPS-robust gentle vs hard (profiles with cfg.accelCharacter only; 0 elsewhere).
+    const accCfg = cfg.accelCharacter;
+    const accHard = accCfg ? this.accelChar.aggression : 0;
+    const accGentle = accCfg ? this.accelChar.onLoad * (1 - this.accelChar.aggression) : 0;
     if (this.bass && this.bassDecelOnly && !this.recordedBank) {
       // Decel thunder for synth-only cars: bass bloom only while lifting / on overrun
       // (recorded banks drive their own bass in updateRecordedLoops).
@@ -1230,8 +1234,9 @@ export class HybridCombustionSynth {
 
     // Spectral tilt: cruise darker, high load brighter (timbre, not gain-only)
     if (this.spectralTilt) {
-      const tiltDb =
+      let tiltDb =
         -4 + load * 5.5 + demand * 2.5 * cfg.highLoadEnrichment + bark * 3 - (raceCut ? 12 : 0);
+      if (accCfg) tiltDb += accCfg.hardTiltDb * accHard + (accCfg.gentleTiltDb ?? 0) * accGentle;
       targetParam(this.spectralTilt.gain, tiltDb, audioTime, 0.07);
       this.diagnostics.spectralTiltDb = tiltDb;
     }
@@ -1305,8 +1310,10 @@ export class HybridCombustionSynth {
         rpm > 1500;
       const downshift =
         shifting && pt?.shiftDirection === "down" && !this.popPrevDownshift && rpm > 2000;
-      if ((lift || downshift) && audioTime - this.popLastAt > 1.6) {
+      // Never while parked/idling (idleLife blips would otherwise read as crackle).
+      if ((lift || downshift) && this.ilGate < 0.5 && audioTime - this.popLastAt > 1.6) {
         if (this.popRand() < liftPops.probability) {
+          this.popEvents += 1;
           this.popLastAt = audioTime;
           const strength = liftPops.level * (0.6 + rpmNorm * 0.6);
           this.firePopSequence(downshift ? "rev-match" : "overrun", strength, audioTime + 0.05);
@@ -1323,7 +1330,8 @@ export class HybridCombustionSynth {
       // cruise keeps a softer burble. Overrun lets it crackle a little through the pipe.
       const drive = 0.6 + load * 1.6 + demand * 0.6 + (overrun ? 0.5 : 0);
       targetParam(this.growl.drive.gain, drive, audioTime, 0.06);
-      const gateG = Math.min(1, Math.max(0, (load - 0.35) / 0.3));
+      // With accelCharacter, a hard pull (GPS slope) also opens the growl.
+      const gateG = Math.max(Math.min(1, Math.max(0, (load - 0.35) / 0.3)), accHard);
       const level = Math.max(0.0001, cfg.growl.level * gateG * (overrun ? 0 : 1));
       targetParam(this.growl.gain.gain, level, audioTime, 0.06);
       targetParam(
@@ -1362,7 +1370,10 @@ export class HybridCombustionSynth {
     this.diagnostics.orderHz = orderHz;
     // Root-cause §loudness: compute outputTrimLinear once, apply to all output paths
     const idleLiftDb = cfg.idleLife?.idleGainDb ? cfg.idleLife.idleGainDb * this.ilGate : 0;
-    const outputTrimLinear = Math.pow(10, ((cfg.outputTrimDb ?? 0) + idleLiftDb) / 20);
+    const accLiftDb = accCfg
+      ? accCfg.hardGainDb * accHard + accCfg.gentleGainDb * accGentle
+      : 0;
+    const outputTrimLinear = Math.pow(10, ((cfg.outputTrimDb ?? 0) + idleLiftDb + accLiftDb) / 20);
     // Load-flat paths (support, pipe) get only part of the trim: trimming them fully
     // raises the cruise floor as much as the pull and collapses the 8-10 dB gap.
     const supportTrim = Math.pow(10, ((cfg.outputTrimDb ?? 0) * 0.5) / 20);
@@ -1514,7 +1525,12 @@ export class HybridCombustionSynth {
           this.bovPrevDemand > 0.18 && this.bovPrevDemand - demand > 0.14 && demand < 0.06;
         const shiftTrigger =
           shifting && shiftPhase === "torque_cut" && this.lastShiftPhase !== "torque_cut";
-        if ((liftTrigger || shiftTrigger) && spool >= 0.25 && audioTime - this.bovLastAt > 1.2) {
+        if (
+          (liftTrigger || shiftTrigger) &&
+          spool >= 0.25 &&
+          this.ilGate < 0.5 &&
+          audioTime - this.bovLastAt > 1.2
+        ) {
           this.bovLastAt = audioTime;
           this.fireBlowOff(
             spool * (shiftTrigger && !liftTrigger ? 0.55 : 1),
@@ -1524,6 +1540,29 @@ export class HybridCombustionSynth {
         }
         this.bovPrevDemand = Math.max(demand, this.bovPrevDemand - dt * 0.05);
         if (liftTrigger) this.bovPrevDemand = demand;
+        if (cfg.turboFlutter) {
+          // GPS-robust lift (vehicle slows after a hard pull) with a short boost memory: the
+          // GPS lift arrives late, after the acoustic spool has already decayed.
+          this.flSpoolPeak = Math.max(spool, this.flSpoolPeak - dt * 0.35);
+          this.flHardPeak = Math.max(accHard, this.flHardPeak - dt * 0.3);
+          const ov = this.accelChar.overrun;
+          const gpsLift = ov > 0.35 && this.flPrevOverrun <= 0.35;
+          const anyShift =
+            shifting && pt?.shiftDirection === "up" && !this.flPrevShift;
+          if (
+            (gpsLift || anyShift) &&
+            Math.max(this.flSpoolPeak, this.flHardPeak * 0.8) >= 0.3 &&
+            speedKmh > 10 &&
+            this.ilGate < 0.5 &&
+            audioTime - this.bovLastAt > 1.2
+          ) {
+            this.bovLastAt = audioTime;
+            const st = Math.max(this.flSpoolPeak, this.flHardPeak * 0.8);
+            this.fireBlowOff(Math.min(1, st) * (anyShift && !gpsLift ? 0.6 : 1), audioTime, gate("boost"));
+          }
+          this.flPrevOverrun = ov;
+          this.flPrevShift = shifting && pt?.shiftDirection === "up";
+        }
       }
       if (this.turboWhistle) {
         // Whistle: only audible once boost builds; follows spool² and load, never a constant tone.
@@ -2344,8 +2383,49 @@ export class HybridCombustionSynth {
   }
 
   /** Blow-off / wastegate "pssh" with a short flutter, soft edges (no clicks). */
+  /** Local diagnostics (lab renders): lift-pop and blow-off events fired. */
+  popEvents = 0;
+  bovEvents = 0;
+  private flSpoolPeak = 0;
+  private flHardPeak = 0;
+  private flPrevOverrun = 0;
+  private flPrevShift = false;
+
   private fireBlowOff(spool: number, audioTime: number, gateLevel: number) {
     if (!this.bov) return;
+    this.bovEvents += 1;
+    const fl = this.cfg?.turboFlutter;
+    if (fl) {
+      // Supra-style compressor surge / wastegate flutter: a short "pssh" then a train of
+      // fast decaying chirps ("stu-tu-tu-tu"), each slightly lower, with jittered spacing.
+      const t0 = Math.max(audioTime, this.lastUpdateTime) + 0.004;
+      const peak0 = (0.04 + spool * 0.06) * gateLevel * fl.level;
+      const g0 = this.bov.gain.gain;
+      const f0 = this.bov.filter.frequency;
+      const q0 = this.bov.filter.Q;
+      f0.cancelScheduledValues(t0);
+      g0.cancelScheduledValues(t0);
+      q0.cancelScheduledValues(t0);
+      q0.setValueAtTime(fl.q, t0);
+      f0.setValueAtTime(fl.hz * 1.6, t0);
+      f0.setTargetAtTime(fl.hz, t0 + 0.03, 0.08);
+      g0.setValueAtTime(Math.max(0.0001, g0.value), t0);
+      g0.setTargetAtTime(peak0 * 0.8, t0, 0.01);
+      let tt = t0 + 0.07;
+      let p = peak0;
+      const chirps = Math.max(2, Math.round(fl.chirps * (0.6 + spool * 0.4)));
+      for (let k = 0; k < chirps; k += 1) {
+        const period = (1 / fl.rateHz) * (0.85 + this.popRand() * 0.3);
+        g0.setTargetAtTime(Math.max(0.0001, p * (1 - fl.depth)), tt, 0.006);
+        g0.setTargetAtTime(p, tt + period * 0.45, 0.005);
+        f0.setTargetAtTime(fl.hz * (1 - k * 0.025), tt, 0.02);
+        tt += period;
+        p *= 0.86;
+      }
+      g0.setTargetAtTime(0.0001, tt, 0.06);
+      q0.setTargetAtTime(0.8, tt + 0.3, 0.1);
+      return;
+    }
     const t = Math.max(audioTime, this.lastUpdateTime) + 0.004;
     const peak = (0.04 + spool * 0.06) * gateLevel;
     const g = this.bov.gain.gain;

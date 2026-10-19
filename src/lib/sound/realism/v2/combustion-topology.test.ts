@@ -140,7 +140,9 @@ describe("combustion topology worklet scheduling", () => {
 
   it("does not duplicate fires when phase wraps", () => {
     const processor = loadProcessor();
-    processor.port.onmessage?.({ data: { type: "topology", topology: FLAT_PLANE_V8_TOPOLOGY } });
+    // Exact fire counting: without the organic crank jitter (it moves fires by design).
+    const steady = { ...FLAT_PLANE_V8_TOPOLOGY, organic: undefined };
+    processor.port.onmessage?.({ data: { type: "topology", topology: steady } });
     const firingHz = 200;
     const params = {
       firingHz: new Float32Array([firingHz]),
@@ -211,10 +213,11 @@ describe("V10 bank asymmetry + rasp (Racing V10 voicing)", () => {
 });
 
 describe("V10 organic layer (alive idle, less synthetic F1)", () => {
-  it("is only on the two V10s and survives validation", () => {
+  it("is only on the V10s and petrol cars and survives validation", () => {
+    const withOrganic = ["racing-v10", "f1-v10", "race-car", "flat-six-sport", "turbo-inline-6", "rally-car"];
     for (const id of TOPOLOGY_PILOT_PROFILE_IDS) {
       const t = combustionTopologyForProfile(id);
-      if (id === "racing-v10" || id === "f1-v10") {
+      if (withOrganic.includes(id)) {
         expect(t?.organic?.crankJitter).toBeGreaterThan(0);
         // No valvetrain ticks: their sparse 3 kHz clicks read as stones/crackle at idle.
         expect(t?.organic?.valvetrain).toBeUndefined();

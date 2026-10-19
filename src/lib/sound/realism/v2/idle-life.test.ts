@@ -1,17 +1,52 @@
 import { describe, expect, it } from "vitest";
 import { ACOUSTIC_ENGINE_BY_PROFILE } from "@/lib/sound/realism/v2/acoustic-engine";
+import { combustionTopologyForProfile } from "@/lib/sound/realism/v2/combustion-topology";
+
+const ALIVE_IDLE = ["racing-v10", "f1-v10", "race-car", "flat-six-sport", "turbo-inline-6", "rally-car"];
+const PETROL = ["race-car", "flat-six-sport", "turbo-inline-6", "rally-car"];
+const UNTOUCHED = ["american-muscle-v8", "gt-v8", "big-twin", "motorcycle-superbike"];
 
 describe("idleLife (alive idle)", () => {
-  it("is set only on the Racing V10 and the F1 V10, within ±50-150 rpm wander", () => {
+  it("is set only on the V10s and the petrol cars, within ±50-150 rpm wander", () => {
     for (const [id, cfg] of Object.entries(ACOUSTIC_ENGINE_BY_PROFILE)) {
-      if (id === "racing-v10" || id === "f1-v10") {
-        expect(cfg.idleLife).toBeDefined();
+      if (ALIVE_IDLE.includes(id)) {
+        expect(cfg.idleLife, id).toBeDefined();
         expect(cfg.idleLife!.wanderRpm).toBeGreaterThanOrEqual(50);
         expect(cfg.idleLife!.wanderRpm).toBeLessThanOrEqual(150);
         expect(cfg.idleLife!.blipEveryS[0]).toBeGreaterThanOrEqual(3);
       } else {
-        expect(cfg.idleLife).toBeUndefined();
+        expect(cfg.idleLife, id).toBeUndefined();
       }
+    }
+  });
+});
+
+describe("petrol car states (gentle/hard, turbo flutter, performance exhaust)", () => {
+  it("gives every petrol car gentle-vs-hard character, pops and an organic crank without ticks", () => {
+    for (const id of PETROL) {
+      const cfg = ACOUSTIC_ENGINE_BY_PROFILE[id]!;
+      expect(cfg.accelCharacter?.hardGainDb, id).toBeGreaterThan(0);
+      expect(cfg.accelCharacter!.gentleGainDb).toBeLessThanOrEqual(0);
+      expect(cfg.liftPops, id).toBeDefined();
+      const t = combustionTopologyForProfile(id);
+      expect(t?.organic?.crankJitter, id).toBeGreaterThan(0);
+      expect(t?.organic?.valvetrain, id).toBeUndefined();
+    }
+  });
+  it("puts Supra-style flutter only on the turbo engines", () => {
+    for (const [id, cfg] of Object.entries(ACOUSTIC_ENGINE_BY_PROFILE)) {
+      if (cfg.turboFlutter) expect(cfg.forcedInduction, id).toBe(true);
+    }
+    expect(ACOUSTIC_ENGINE_BY_PROFILE["turbo-inline-6"]!.turboFlutter).toBeDefined();
+    expect(ACOUSTIC_ENGINE_BY_PROFILE["rally-car"]!.turboFlutter).toBeDefined();
+  });
+  it("leaves the American V8, GT V8, Big Twin and superbike configs alone", () => {
+    for (const id of UNTOUCHED) {
+      const cfg = ACOUSTIC_ENGINE_BY_PROFILE[id]!;
+      expect(cfg.accelCharacter, id).toBeUndefined();
+      expect(cfg.turboFlutter, id).toBeUndefined();
+      expect(cfg.idleLife, id).toBeUndefined();
+      expect(combustionTopologyForProfile(id)?.organic, id).toBeUndefined();
     }
   });
 });
