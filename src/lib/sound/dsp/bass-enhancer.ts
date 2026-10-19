@@ -42,6 +42,24 @@ export interface BassEnhancerConfig {
    * Requires neutralAtRest.
    */
   decelOnly?: boolean;
+  /**
+   * Decel-only: fade the thunder out near the stop. Presence is full above the upper rpm and
+   * km/h edges and gone below the lower ones (the lower of the two fades wins), so low-rev
+   * firing orders that sit inside the sub band do not drone while braking to a halt.
+   */
+  decelFadeOut?: { rpm: [number, number]; kmh: [number, number] };
+}
+
+const fadeStep = (v: number, [lo, hi]: [number, number]) => {
+  const x = Math.min(1, Math.max(0, (v - lo) / Math.max(1e-6, hi - lo)));
+  return x * x * (3 - 2 * x);
+};
+
+/** Thunder presence scale (0..1) from the profile's decel fade-out window; 1 when unset. */
+export function decelThunderFade(cfg: BassEnhancerConfig, rpm: number, kmh: number): number {
+  const f = cfg.decelFadeOut;
+  if (!f) return 1;
+  return Math.min(fadeStep(rpm, f.rpm), fadeStep(kmh, f.kmh));
 }
 
 const base: BassEnhancerConfig = {
@@ -85,7 +103,9 @@ export const BASS_ENHANCER_PROFILES: Record<string, BassEnhancerConfig> = {
   },
   // Decel thunder (downshift blips + lift-off bass) for the other combustion cars, per engine character.
   // Sub band sits on each engine's firing orders at coasting revs; 30 Hz high-pass and trim stay on.
-  "racing-v10": { ...thunder, subGain: 0.22, subLowHz: 45, subHighHz: 135, harmonicGain: 0.04 },
+  // V10: its 5th order sits at 83-110 Hz at 1000-1300 rpm, inside the sub band, so the
+  // thunder fades out below ~1500 rpm / 20 km/h instead of droning down to the stop.
+  "racing-v10": { ...thunder, subGain: 0.22, subLowHz: 45, subHighHz: 135, harmonicGain: 0.04, decelFadeOut: { rpm: [1200, 1500], kmh: [10, 20] } },
   "race-car": { ...thunder, subGain: 0.2, subLowHz: 42, subHighHz: 130, harmonicGain: 0.04 },
   "flat-six-sport": { ...thunder, subGain: 0.24, subLowHz: 38, subHighHz: 120, harmonicGain: 0.05 },
   "turbo-inline-6": { ...thunder, subGain: 0.24, subLowHz: 38, subHighHz: 115, harmonicGain: 0.05 },

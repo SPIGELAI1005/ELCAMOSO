@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getBassEnhancerConfig } from "./bass-enhancer";
+import { decelThunderFade, getBassEnhancerConfig } from "./bass-enhancer";
 import { createLiftOffThunder, ROCKET_LIFTOFF_THUNDER } from "./liftoff-thunder";
 
 function fakeParam() {
@@ -80,5 +80,23 @@ describe("lift-off thunder", () => {
     expect(th.fired).toBe(1);
     step(0, -2, 6);
     expect(th.fired).toBe(1);
+  });
+});
+
+describe("V10 decel thunder fade near the stop", () => {
+  const v10 = getBassEnhancerConfig("racing-v10")!;
+  it("keeps full thunder on lift-off at speed and fades it out below ~1500 rpm / 20 km/h", () => {
+    expect(decelThunderFade(v10, 2200, 80)).toBe(1);
+    expect(decelThunderFade(v10, 1500, 20)).toBe(1);
+    const mid = decelThunderFade(v10, 1350, 40);
+    expect(mid).toBeGreaterThan(0.2);
+    expect(mid).toBeLessThan(0.8);
+    expect(decelThunderFade(v10, 1000, 40)).toBe(0);
+    expect(decelThunderFade(v10, 1800, 8)).toBe(0);
+  });
+  it("is V10 only", () => {
+    for (const id of ["race-car", "flat-six-sport", "turbo-inline-6", "rally-car", "american-muscle-v8"]) {
+      expect(decelThunderFade(getBassEnhancerConfig(id)!, 1000, 5)).toBe(1);
+    }
   });
 });

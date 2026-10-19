@@ -48,6 +48,9 @@ describe("combustion topology presets", () => {
   it("maps pilot profiles and rejects others", () => {
     // All 9 combustion profiles now have topology definitions
     expect(combustionTopologyForProfile("american-muscle-v8")?.cylinderCount).toBe(8);
+    // Load-gated broadband floor (less hiss at idle / cruise / coast) on the V8 and the V10.
+    expect(combustionTopologyForProfile("american-muscle-v8")?.noiseScale).toBe(0.25);
+    expect(combustionTopologyForProfile("racing-v10")?.noiseScale).toBe(0.25);
     expect(combustionTopologyForProfile("race-car")?.cylinderCount).toBe(8);
     expect(combustionTopologyForProfile("gt-v8")?.cylinderCount).toBe(8);
     expect(combustionTopologyForProfile("flat-six-sport")?.cylinderCount).toBe(6);

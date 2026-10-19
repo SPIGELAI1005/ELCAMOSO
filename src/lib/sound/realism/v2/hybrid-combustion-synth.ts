@@ -80,8 +80,10 @@ import {
 import { GranularStream } from "@/lib/sound/realism/v2/recorded-grains";
 import {
   createBassEnhancer,
+  decelThunderFade,
   getBassEnhancerConfig,
   type BassEnhancer,
+  type BassEnhancerConfig,
 } from "@/lib/sound/dsp/bass-enhancer";
 
 /** -1.5 dBFS sample ceiling for the engine output peak protect (keeps true peak <= -1 dBTP). */
@@ -452,6 +454,7 @@ export class HybridCombustionSynth {
       // exhaust pops) is summed here first (see dsp/bass-enhancer.ts).
       this.bass = createBassEnhancer(ctx, buses.body, bassCfg);
       this.bassDecelOnly = Boolean(bassCfg.decelOnly);
+      this.bassCfg = bassCfg;
       buses = { ...buses, body: this.bass.input };
     }
     this.sampleBank = EMPTY_COMBUSTION_SAMPLE_BANKS[personalityId] ?? {
@@ -1086,7 +1089,8 @@ export class HybridCombustionSynth {
       // Decel thunder for synth-only cars: bass bloom only while lifting / on overrun
       // (recorded banks drive their own bass in updateRecordedLoops).
       const ac = this.accelChar;
-      this.bass.setDrive(0, ac.overrun, audioTime, ac.overrun);
+      const fade = this.bassCfg ? decelThunderFade(this.bassCfg, rpm, this.lastSpeedMs * 3.6) : 1;
+      this.bass.setDrive(0, ac.overrun, audioTime, ac.overrun * fade);
     }
     const pt = state.powertrain;
     const demand = pt?.driverDemand ?? state.throttle;
@@ -1946,6 +1950,7 @@ export class HybridCombustionSynth {
   private recordedNorm = 1;
   private bass: BassEnhancer | null = null;
   private bassDecelOnly = false;
+  private bassCfg: BassEnhancerConfig | null = null;
   private synthMatchBands: BiquadFilterNode[] = [];
 
   private updateSamples(rpm: number, demand: number, overrun: boolean, audioTime: number) {
@@ -2247,6 +2252,7 @@ export class HybridCombustionSynth {
     this.voices = {};
     this.bass?.dispose();
     this.bass = null;
+    this.bassCfg = null;
     for (const stream of this.recordedStreams) stream.dispose();
     this.recordedStreams = [];
     for (const voice of this.sampleVoices.values()) {

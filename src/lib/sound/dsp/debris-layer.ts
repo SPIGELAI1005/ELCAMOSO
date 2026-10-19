@@ -224,7 +224,10 @@ export function createDebrisBurst(
       hit(Math.max(b.cursor, now + 0.005), env * Math.pow(10, (-14 * rnd()) / 20));
       b.hits++;
     }
-    if (b.cursor >= b.until || b.hits >= MAX_HITS) burst = null;
+    // A long Poisson gap past `until` must not end the burst while the hard push still holds
+    // (`until` is only ~1 s ahead then); it ends once the push eases or the 12 s cap is hit.
+    const capped = b.hold <= 0 || b.until >= b.t0 + MAX_BURST_S;
+    if ((b.cursor >= b.until && capped) || b.hits >= MAX_HITS) burst = null;
   }
 
   return {

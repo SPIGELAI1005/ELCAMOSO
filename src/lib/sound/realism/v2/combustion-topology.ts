@@ -355,6 +355,9 @@ export const V10_TOPOLOGY: CombustionTopologyV1 = {
   version: 1,
   cycleDegrees: 720,
   cylinderCount: 10,
+  // Load-gated broadband floor (as on the American V8): the worklet's rush/texture noise
+  // ran at full level at idle, cruise and coast and read as hiss over the V10's orders.
+  noiseScale: 0.25,
   collectors: [{ id: 0 }, { id: 1 }],
   soundSpeedMetresPerSecond: TOPOLOGY_SOUND_SPEED_DEFAULT,
   cylinders: [1, 6, 5, 10, 2, 7, 3, 8, 4, 9].map((cylId, i) => ({
