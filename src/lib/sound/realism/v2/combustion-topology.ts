@@ -38,6 +38,35 @@ export interface CombustionTopologyV1 {
   cycleLope?: number;
   /** Optional broadband noise floor scale (0..1) in the worklet; load-gated toward 1. */
   noiseScale?: number;
+  /**
+   * Optional firing-synchronous rasp: band-limited noise riding each combustion pulse,
+   * only above `startRpm` (full at `fullRpm`) and only under load, so cruise stays clean.
+   */
+  rasp?: CombustionRaspTopology;
+}
+
+export interface CombustionRaspTopology {
+  level: number;
+  startRpm: number;
+  fullRpm: number;
+  lowHz: number;
+  highHz: number;
+}
+
+function validRasp(r: unknown): CombustionRaspTopology | null {
+  if (!r || typeof r !== "object") return null;
+  const v = r as Partial<CombustionRaspTopology>;
+  const nums = [v.level, v.startRpm, v.fullRpm, v.lowHz, v.highHz];
+  if (!nums.every((n) => Number.isFinite(n))) return null;
+  if ((v.fullRpm as number) <= (v.startRpm as number)) return null;
+  if ((v.highHz as number) <= (v.lowHz as number) || (v.lowHz as number) <= 0) return null;
+  return {
+    level: Math.min(1, Math.max(0, v.level as number)),
+    startRpm: Math.max(0, v.startRpm as number),
+    fullRpm: v.fullRpm as number,
+    lowHz: Math.min(12000, v.lowHz as number),
+    highHz: Math.min(16000, v.highHz as number),
+  };
 }
 
 export type TopologyValidationIssue = { path: string; message: string };
@@ -227,6 +256,7 @@ export function validateCombustionTopology(input: unknown): {
       ...(Number.isFinite(t.noiseScale)
         ? { noiseScale: Math.min(1, Math.max(0, t.noiseScale as number)) }
         : {}),
+      ...(validRasp(t.rasp) ? { rasp: validRasp(t.rasp)! } : {}),
     },
     issues: [],
   };
@@ -364,14 +394,20 @@ export const V10_TOPOLOGY: CombustionTopologyV1 = {
   // Load-gated broadband floor (as on the American V8): the worklet's rush/texture noise
   // ran at full level at idle, cruise and coast and read as hiss over the V10's orders.
   noiseScale: 0.25,
+  // Pulse-synchronous rasp (1-3 kHz) only at high rpm under load - the real V10 scream
+  // carries its roughness there, not as a static hiss floor.
+  rasp: { level: 0.34, startRpm: 5000, fullRpm: 8500, lowHz: 1000, highHz: 3000 },
   collectors: [{ id: 0 }, { id: 1 }],
   soundSpeedMetresPerSecond: TOPOLOGY_SOUND_SPEED_DEFAULT,
+  // Bank asymmetry: the even-bank collector has slightly weaker pulses and longer primaries.
+  // Perfectly symmetric banks cancel the 2.5 / 7.5 / 12.5 / 17.5 crank orders, which a real
+  // V10 has (reference road V10: about -11 to -16 dB vs the firing order).
   cylinders: [1, 6, 5, 10, 2, 7, 3, 8, 4, 9].map((cylId, i) => ({
     id: cylId,
     firingAngleDegrees: i * 72,
     collectorId: cylId % 2 === 1 ? 0 : 1,
-    pulseWeight: 1,
-    primaryLengthMetres: 0.11,
+    pulseWeight: cylId % 2 === 1 ? 1 : 0.9,
+    primaryLengthMetres: cylId % 2 === 1 ? 0.11 : 0.24,
   })),
 };
 

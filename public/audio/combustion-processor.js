@@ -158,10 +158,32 @@ class CombustionExcitationProcessor extends AudioWorkletProcessor {
     const noiseScale = Number.isFinite(raw.noiseScale)
       ? Math.min(1, Math.max(0, raw.noiseScale))
       : 1;
+    const r = raw.rasp;
+    const rasp =
+      r &&
+      Number.isFinite(r.level) &&
+      Number.isFinite(r.startRpm) &&
+      Number.isFinite(r.fullRpm) &&
+      Number.isFinite(r.lowHz) &&
+      Number.isFinite(r.highHz) &&
+      r.fullRpm > r.startRpm &&
+      r.highHz > r.lowHz &&
+      r.lowHz > 0
+        ? {
+            level: Math.min(1, Math.max(0, r.level)),
+            startRpm: r.startRpm,
+            fullRpm: r.fullRpm,
+            lpCoef: 1 - Math.exp((-2 * Math.PI * Math.min(16000, r.highHz)) / sampleRate),
+            hpCoef: 1 - Math.exp((-2 * Math.PI * r.lowHz) / sampleRate),
+          }
+        : null;
+    this.raspLp = 0;
+    this.raspDc = 0;
     this.topology = {
       version: 1,
       cycleLope,
       noiseScale,
+      rasp,
       cycleDegrees: cycle,
       cylinderCount: count,
       cylinders,
@@ -424,7 +446,27 @@ class CombustionExcitationProcessor extends AudioWorkletProcessor {
       const nsLoad = ns >= 1 ? 1 : ns + (1 - ns) * load * load;
       const rush = this.burst * band * 0.28 * (1 - 0.5 * load) * nsLoad;
       const texture = band * (0.06 + (1 - load) * 0.03) * (0.6 + this.env * 0.4) * nsLoad;
-      const raw = (body + edge + rush + texture) * (0.85 + intensity * 0.15) * 0.88;
+      // Optional firing-synchronous rasp (topology.rasp): its own band-limited noise rides the
+      // pulse envelopes, gated by rpm and load. Absent for every topology without `rasp`.
+      let raspOut = 0;
+      const rs = topology ? topology.rasp : null;
+      if (rs) {
+        const rpmNow = firingHz > 0 ? (firingHz * 120) / topology.cylinderCount : 0;
+        const rpmGate = Math.min(
+          1,
+          Math.max(0, (rpmNow - rs.startRpm) / (rs.fullRpm - rs.startRpm)),
+        );
+        const loadGate = Math.min(1, Math.max(0, (load - 0.3) / 0.4));
+        const wr = this.rand() * 2 - 1;
+        this.raspLp += (wr - this.raspLp) * rs.lpCoef;
+        this.raspDc += (this.raspLp - this.raspDc) * rs.hpCoef;
+        const g = rpmGate * loadGate;
+        if (g > 0) {
+          raspOut =
+            (this.raspLp - this.raspDc) * (this.burst * 0.75 + this.env * 0.25) * rs.level * g;
+        }
+      }
+      const raw = (body + edge + rush + texture + raspOut) * (0.85 + intensity * 0.15) * 0.88;
 
       const sample = raw - this.previousRaw + 0.9975 * this.dcBlocked;
       this.previousRaw = raw;

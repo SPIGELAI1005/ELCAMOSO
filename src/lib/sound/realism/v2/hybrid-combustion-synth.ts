@@ -382,6 +382,7 @@ export class HybridCombustionSynth {
   private saturation: WaveShaperNode | null = null;
   private saturationPostLp: BiquadFilterNode | null = null;
   private outputLimiter: WaveShaperNode | null = null;
+  private highRpmVoicing: { low: BiquadFilterNode; pres: BiquadFilterNode } | null = null;
   private supportLp: BiquadFilterNode | null = null;
   private shiftConsumer = new ShiftEventConsumer();
   private shiftIntensity = 0.72;
@@ -602,7 +603,7 @@ export class HybridCombustionSynth {
     }
     this.supportLp = ctx.createBiquadFilter();
     this.supportLp.type = "lowpass";
-    this.supportLp.frequency.value = 1400 + cfg.bodyBrightness * 900;
+    this.supportLp.frequency.value = cfg.supportLowpassHz ?? 1400 + cfg.bodyBrightness * 900;
     this.supportLp.Q.value = 0.75;
     this.supportBus.connect(this.supportLp);
     this.supportLp.connect(buses.body);
@@ -709,6 +710,34 @@ export class HybridCombustionSynth {
       // Route all engine output through the limiter (via the synth match-EQ when the
       // personality has recorded material, so the synth sounds like the same engine).
       let into: AudioNode = limiter;
+      if (cfg.highRpmVoicing) {
+        // Optional high-rpm voicing (V10): low shelf + presence peak, opened in update().
+        const v = cfg.highRpmVoicing;
+        const low = ctx.createBiquadFilter();
+        low.type = "lowshelf";
+        low.frequency.value = v.lowShelfHz;
+        low.gain.value = 0;
+        const pres = ctx.createBiquadFilter();
+        pres.type = "peaking";
+        pres.frequency.value = v.presenceHz;
+        pres.Q.value = v.presenceQ;
+        pres.gain.value = 0;
+        low.connect(pres);
+        let tail: AudioNode = pres;
+        if (v.airHz && v.airDb) {
+          const air = ctx.createBiquadFilter();
+          air.type = "highshelf";
+          air.frequency.value = v.airHz;
+          air.gain.value = v.airDb;
+          pres.connect(air);
+          tail = air;
+          nodes += 1;
+        }
+        tail.connect(limiter);
+        this.highRpmVoicing = { low, pres };
+        into = low;
+        nodes += 2;
+      }
       if (this.recordedBank?.synthMatch) {
         const spec: [BiquadFilterType, number][] = [
           ["lowshelf", 100],
@@ -1173,6 +1202,15 @@ export class HybridCombustionSynth {
       this.diagnostics.spectralTiltDb = tiltDb;
     }
 
+    if (this.highRpmVoicing && cfg.highRpmVoicing) {
+      const v = cfg.highRpmVoicing;
+      const rpmGate = Math.min(1, Math.max(0, (rpm - v.startRpm) / (v.fullRpm - v.startRpm)));
+      const loadGate = Math.min(1, Math.max(0, (load - 0.3) / 0.4));
+      const amount = overrun ? 0 : rpmGate * loadGate * (shifting ? 0.5 : 1);
+      targetParam(this.highRpmVoicing.low.gain, v.lowShelfDb * amount, audioTime, 0.08);
+      targetParam(this.highRpmVoicing.pres.gain, v.presenceDb * amount, audioTime, 0.08);
+    }
+
     this.exhaustFormants.forEach((band, i) => {
       const base = 0.26 / (1 + i * 0.48);
       // Root-cause §2: Near-constant loadLift with small loadContrast influence.
@@ -1263,7 +1301,7 @@ export class HybridCombustionSynth {
     const revHz = Math.max(0, rpm / 60);
     const orderHz: number[] = [];
     this.orderBands.forEach((band) => {
-      const hz = Math.max(20, Math.min(2400, revHz * band.order));
+      const hz = Math.max(20, Math.min(cfg.orderBandMaxHz ?? 2400, revHz * band.order));
       orderHz.push(hz);
       targetParam(band.filter.frequency, hz, audioTime, 0.03);
       const density = 0.6 + load * 0.3 + demand * 0.1;
@@ -1887,7 +1925,12 @@ export class HybridCombustionSynth {
     );
     if (this.recordedEq) {
       if (bank.eq.lowShelfTrackFromRpm) {
-        targetParam(this.recordedEq.low.frequency, recordedLowShelfHz(bank.eq, rpm), audioTime, 0.2);
+        targetParam(
+          this.recordedEq.low.frequency,
+          recordedLowShelfHz(bank.eq, rpm),
+          audioTime,
+          0.2,
+        );
       }
       targetParam(
         this.recordedEq.high.gain,
@@ -2178,6 +2221,9 @@ export class HybridCombustionSynth {
     this.harshnessShelf = null;
     this.outputLimiter?.disconnect();
     this.outputLimiter = null;
+    this.highRpmVoicing?.low.disconnect();
+    this.highRpmVoicing?.pres.disconnect();
+    this.highRpmVoicing = null;
     this.supportLp?.disconnect();
     this.supportLp = null;
     this.rawMechanical = null;

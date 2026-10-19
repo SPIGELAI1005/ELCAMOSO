@@ -88,6 +88,27 @@ export interface AcousticEngineConfig {
    * saturator. Off below moderate load (it reads as rushing noise at cruise).
    */
   growl?: { centersHz: number[]; q: number; drive: number; level: number; lowpassHz: number };
+  /**
+   * Optional high-rpm voicing ahead of the peak protect: a low shelf cut and a presence
+   * peak that open only above `startRpm` (full at `fullRpm`) and under load. Cruise and
+   * light throttle are untouched.
+   */
+  highRpmVoicing?: {
+    startRpm: number;
+    fullRpm: number;
+    lowShelfHz: number;
+    lowShelfDb: number;
+    presenceHz: number;
+    presenceQ: number;
+    presenceDb: number;
+    /** Optional fixed upper-mid trim (dB) above `airHz` to keep the 2-4 kHz band in check. */
+    airHz?: number;
+    airDb?: number;
+  };
+  /** Optional ceiling for engine-order resonators (Hz, default 2400). */
+  orderBandMaxHz?: number;
+  /** Optional support-bus lowpass (Hz); default 1400 + bodyBrightness * 900. */
+  supportLowpassHz?: number;
 }
 
 /** True four-stroke firing frequency: RPM × cylinders / 120. */
@@ -245,15 +266,31 @@ const V10: AcousticEngineConfig = {
   upperRpmEnergy: 0.96,
   intakeLoadResponse: 0.88,
   overrunCharacter: 0.38,
-  exhaustFormantsHz: [130, 260, 560, 1100, 1600],
-  intakeFormantsHz: [760, 1640, 3100],
+  // Formants follow the reference road-V10 spectral envelope (peaks ~670/1100/1800/2300 Hz).
+  exhaustFormantsHz: [200, 600, 1250, 1800, 2400],
+  intakeFormantsHz: [1100, 2300, 3500],
   bodyResonanceHz: [140, 320, 780],
-  supportRatios: [1, 2, 3, 4, 5, 6, 7.5, 9],
-  supportWeights: [0.52, 0.38, 0.36, 0.28, 0.2, 0.14, 0.08, 0.04],
+  // V10 orders: firing order 5 plus the bank half-orders and the 7.5-20 plateau.
+  supportRatios: [5, 7.5, 12.5, 15, 17.5, 20],
+  supportWeights: [1, 0.45, 0.7, 0.3, 0.5, 0.4],
   forcedInduction: false,
   bodyBrightness: 0.64,
-  redlineRpm: 8500,
-  outputTrimDb: 18.7,
+  redlineRpm: 9000,
+  // -1.9 dB vs before: the added half-orders and presence raised loudness ~1.9 LU.
+  outputTrimDb: 16.8,
+  highRpmVoicing: {
+    startRpm: 4000,
+    fullRpm: 8500,
+    lowShelfHz: 260,
+    lowShelfDb: -9,
+    presenceHz: 1700,
+    presenceQ: 0.8,
+    presenceDb: 9,
+    airHz: 3200,
+    airDb: -3,
+  },
+  orderBandMaxHz: 5000,
+  supportLowpassHz: 4200,
 };
 
 const FLAT_PLANE_V8_TRACK: AcousticEngineConfig = {

@@ -5,6 +5,8 @@ import { describe, expect, it } from "vitest";
 import {
   FLAT_PLANE_V8_TOPOLOGY,
   MUSCLE_V8_TOPOLOGY,
+  TOPOLOGY_PILOT_PROFILE_IDS,
+  V10_TOPOLOGY,
   combustionTopologyForProfile,
   firesPerCycle,
   validateCombustionTopology,
@@ -173,5 +175,31 @@ describe("combustion topology worklet scheduling", () => {
       processor.process([], [[new Float32Array(128), new Float32Array(128)]], params);
     }
     expect(processor.fireIndex).toBe(start);
+  });
+});
+
+describe("V10 bank asymmetry + rasp (Racing V10 voicing)", () => {
+  it("keeps rasp only on the V10 and validates it", () => {
+    const v10 = combustionTopologyForProfile("racing-v10");
+    expect(v10?.rasp).toMatchObject({ startRpm: 5000, fullRpm: 8500, lowHz: 1000, highHz: 3000 });
+    for (const id of TOPOLOGY_PILOT_PROFILE_IDS) {
+      if (id === "racing-v10") continue;
+      expect(combustionTopologyForProfile(id)?.rasp).toBeUndefined();
+    }
+    const bad = validateCombustionTopology({
+      ...V10_TOPOLOGY,
+      rasp: { level: 1, startRpm: 5, fullRpm: 1, lowHz: 1, highHz: 2 },
+    });
+    expect(bad.ok).toBe(true);
+    expect(bad.topology?.rasp).toBeUndefined();
+  });
+
+  it("gives the two V10 banks different pulse weight and primary length", () => {
+    const w = new Set(
+      V10_TOPOLOGY.cylinders.map(
+        (c) => `${c.collectorId}:${c.pulseWeight}:${c.primaryLengthMetres}`,
+      ),
+    );
+    expect(w.size).toBe(2);
   });
 });
