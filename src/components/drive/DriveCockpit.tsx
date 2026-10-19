@@ -53,7 +53,7 @@ import {
 } from "@/lib/drive/drive-shift-persona";
 import { cn } from "@/lib/utils";
 import { ModeTachometer } from "@/components/drive/ModeTachometer";
-import { resolveTachThemeId } from "@/lib/drive/tach-theme";
+import { resolveTachThemeId, type TachThemeId } from "@/lib/drive/tach-theme";
 
 const COCKPIT_SELECT_TRIGGER =
   "h-12 min-h-12 w-full min-w-0 flex-1 rounded-full border border-border bg-background px-4 text-sm font-light shadow-none focus:ring-1 focus:ring-foreground/40 data-[state=open]:border-foreground/60";
@@ -97,6 +97,8 @@ export interface DriveCockpitProps {
   reducedMotion?: boolean | undefined;
   onStop: () => void;
   className?: string | undefined;
+  /** Dev/preview only: force a tachometer design. */
+  tachThemeOverride?: TachThemeId | undefined;
 }
 
 /** Round paddle / stop controls: 36px → 54px (+50%). */
@@ -157,7 +159,7 @@ function CockpitGearLadder({
         </button>
       </div>
       <div
-        className="flex min-h-[3.375rem] items-center justify-center gap-1.5 px-0.5"
+        className="pointer-events-none flex min-h-[3.375rem] items-center justify-center gap-1.5 px-0.5"
         role="status"
       >
         {Array.from({ length: gearCount }, (_, i) => i + 1).map((gear) => {
@@ -204,7 +206,7 @@ function CockpitGearLadder({
         ) : null}
         {modeLabel ? (
           <span
-            className="shrink-0 whitespace-nowrap rounded-full bg-foreground px-2.5 py-1.5 text-[9px] leading-none tracking-[0.08em] text-background uppercase"
+            className="max-w-[4.75rem] shrink-0 truncate whitespace-nowrap rounded-full bg-foreground px-2.5 py-1.5 text-[9px] leading-none tracking-[0.08em] text-background uppercase"
             role="status"
             aria-live="polite"
             aria-label={`Shift mode ${modeLabel}`}
@@ -240,6 +242,7 @@ export function DriveCockpit({
   reducedMotion: reducedMotionProp,
   onStop,
   className,
+  tachThemeOverride,
 }: DriveCockpitProps) {
   const { settings, update } = useSettings();
   const reducedMotionHook = useReducedMotion();
@@ -307,13 +310,15 @@ export function DriveCockpit({
     settings.shiftMapPreset,
   );
   const activeMoodLabel = moodLabel(shiftPersona, activeMoodId);
-  const tachThemeId = resolveTachThemeId({
-    profileId: profile.id,
-    category: profile.category,
-    modeBinding: shiftPersona.modeBinding,
-    modeId: activeMoodId,
-    speedUnit,
-  });
+  const tachThemeId =
+    tachThemeOverride ??
+    resolveTachThemeId({
+      profileId: profile.id,
+      category: profile.category,
+      modeBinding: shiftPersona.modeBinding,
+      modeId: activeMoodId,
+      speedUnit,
+    });
   const usesPowertrainGears = shiftPersona.modeBinding === "shift-map";
   const ladderCount = shiftPersona.ladderCount ?? 0;
   const motionStage = motionStageIndex(driveState, Math.max(2, ladderCount || 2));

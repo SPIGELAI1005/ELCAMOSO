@@ -48,6 +48,7 @@ import { Route as DebugOgRouteImport } from './routes/debug.og'
 import { Route as DebugPowertrainRouteImport } from './routes/debug.powertrain'
 import { Route as DebugSymphonyRouteImport } from './routes/debug.symphony'
 import { Route as DebugSymphonyAssetsRouteImport } from './routes/debug.symphony-assets'
+import { Route as DebugCockpitRouteImport } from './routes/debug_.cockpit'
 import { Route as DebugTachoRouteImport } from './routes/debug_.tacho'
 import { Route as JourneysJourneyIdRouteImport } from './routes/journeys.$journeyId'
 import { Route as LegalIndexRouteImport } from './routes/legal/index'
@@ -266,6 +267,11 @@ const DebugSymphonyAssetsRoute = DebugSymphonyAssetsRouteImport.update({
   path: '/symphony-assets',
   getParentRoute: () => DebugRoute,
 } as any)
+const DebugCockpitRoute = DebugCockpitRouteImport.update({
+  id: '/debug_/cockpit',
+  path: '/debug/cockpit',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DebugTachoRoute = DebugTachoRouteImport.update({
   id: '/debug_/tacho',
   path: '/debug/tacho',
@@ -418,6 +424,7 @@ export interface FileRoutesByFullPath {
   '/debug/powertrain': typeof DebugPowertrainRoute
   '/debug/symphony': typeof DebugSymphonyRoute
   '/debug/symphony-assets': typeof DebugSymphonyAssetsRoute
+  '/debug/cockpit': typeof DebugCockpitRoute
   '/debug/tacho': typeof DebugTachoRoute
   '/journeys/$journeyId': typeof JourneysJourneyIdRoute
   '/legal/accessibility': typeof LegalAccessibilityRoute
@@ -480,6 +487,7 @@ export interface FileRoutesByTo {
   '/debug/powertrain': typeof DebugPowertrainRoute
   '/debug/symphony': typeof DebugSymphonyRoute
   '/debug/symphony-assets': typeof DebugSymphonyAssetsRoute
+  '/debug/cockpit': typeof DebugCockpitRoute
   '/debug/tacho': typeof DebugTachoRoute
   '/journeys/$journeyId': typeof JourneysJourneyIdRoute
   '/legal/accessibility': typeof LegalAccessibilityRoute
@@ -544,6 +552,7 @@ export interface FileRoutesById {
   '/debug/powertrain': typeof DebugPowertrainRoute
   '/debug/symphony': typeof DebugSymphonyRoute
   '/debug/symphony-assets': typeof DebugSymphonyAssetsRoute
+  '/debug_/cockpit': typeof DebugCockpitRoute
   '/debug_/tacho': typeof DebugTachoRoute
   '/journeys/$journeyId': typeof JourneysJourneyIdRoute
   '/legal/accessibility': typeof LegalAccessibilityRoute
@@ -609,6 +618,7 @@ export interface FileRouteTypes {
     | '/debug/powertrain'
     | '/debug/symphony'
     | '/debug/symphony-assets'
+    | '/debug/cockpit'
     | '/debug/tacho'
     | '/journeys/$journeyId'
     | '/legal/accessibility'
@@ -671,6 +681,7 @@ export interface FileRouteTypes {
     | '/debug/powertrain'
     | '/debug/symphony'
     | '/debug/symphony-assets'
+    | '/debug/cockpit'
     | '/debug/tacho'
     | '/journeys/$journeyId'
     | '/legal/accessibility'
@@ -734,6 +745,7 @@ export interface FileRouteTypes {
     | '/debug/powertrain'
     | '/debug/symphony'
     | '/debug/symphony-assets'
+    | '/debug_/cockpit'
     | '/debug_/tacho'
     | '/journeys/$journeyId'
     | '/legal/accessibility'
@@ -790,6 +802,7 @@ export interface RootRouteChildren {
   ApiDriveLogsRoute: typeof ApiDriveLogsRoute
   ApiOgRoute: typeof ApiOgRouteWithChildren
   ConnectSessionIdRoute: typeof ConnectSessionIdRoute
+  DebugCockpitRoute: typeof DebugCockpitRoute
   DebugTachoRoute: typeof DebugTachoRoute
   PairTokenRoute: typeof PairTokenRoute
   UpgradeTokenRoute: typeof UpgradeTokenRoute
@@ -1080,6 +1093,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DebugSymphonyAssetsRouteImport
       parentRoute: typeof DebugRoute
     }
+    '/debug_/cockpit': {
+      id: '/debug_/cockpit'
+      path: '/debug/cockpit'
+      fullPath: '/debug/cockpit'
+      preLoaderRoute: typeof DebugCockpitRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/debug_/tacho': {
       id: '/debug_/tacho'
       path: '/debug/tacho'
@@ -1347,6 +1367,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiDriveLogsRoute: ApiDriveLogsRoute,
   ApiOgRoute: ApiOgRouteWithChildren,
   ConnectSessionIdRoute: ConnectSessionIdRoute,
+  DebugCockpitRoute: DebugCockpitRoute,
   DebugTachoRoute: DebugTachoRoute,
   PairTokenRoute: PairTokenRoute,
   UpgradeTokenRoute: UpgradeTokenRoute,

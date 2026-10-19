@@ -134,14 +134,14 @@ export const ModeTachometer = memo(function ModeTachometer({
     <svg
       viewBox={`0 0 ${vb} ${vb}`}
       className={cn(
-        "mode-tach pointer-events-none absolute inset-[-12%] h-[124%] w-[124%] overflow-visible",
+        "mode-tach pointer-events-none absolute inset-[-12%] h-[124%] w-[124%] overflow-hidden",
         intro && "mode-tach--intro",
         className,
       )}
       data-tach-theme={themeId}
       data-intro={intro ? "1" : "0"}
       aria-hidden="true"
-      overflow="visible"
+      overflow="hidden"
     >
       <defs>
         <linearGradient id={gid} x1="0" y1="1" x2="1" y2="0">
@@ -205,7 +205,7 @@ export const ModeTachometer = memo(function ModeTachometer({
             );
           })}
           {labels.map((l, i) => {
-            const p = polar(cx, cy, r + 30, i * 90 - 90);
+            const p = polar(cx, cy, r + 24, i * 90 - 90);
             return (
               <text
                 key={l}
@@ -297,7 +297,7 @@ export const ModeTachometer = memo(function ModeTachometer({
           <circle
             cx={cx}
             cy={cy}
-            r={r + 18}
+            r={r + 12}
             fill="none"
             stroke={theme.accent2}
             strokeOpacity={0.35}
@@ -305,14 +305,14 @@ export const ModeTachometer = memo(function ModeTachometer({
             strokeDasharray="1 9"
           />
           <path
-            d={arcPath(cx, cy, r + 24, 200, 250)}
+            d={arcPath(cx, cy, r + 18, 200, 250)}
             fill="none"
             stroke={theme.accent2}
             strokeOpacity={0.6}
             strokeWidth={1.5}
           />
           <path
-            d={arcPath(cx, cy, r + 24, 20, 70)}
+            d={arcPath(cx, cy, r + 18, 20, 70)}
             fill="none"
             stroke={theme.accent}
             strokeOpacity={0.6}
@@ -326,7 +326,7 @@ export const ModeTachometer = memo(function ModeTachometer({
           {Array.from({ length: 7 }, (_, i) => {
             const a = start + sweep * (0.85 + i * 0.022);
             const p1 = polar(cx, cy, r + 10, a);
-            const p2 = polar(cx, cy, r + 18 + v * 10 * ((i % 3) + 1) * 0.5, a);
+            const p2 = polar(cx, cy, Math.min(r + 27, r + 16 + v * 10 * ((i % 3) + 1) * 0.5), a);
             return (
               <line
                 key={i}
@@ -447,7 +447,7 @@ export const ModeTachometer = memo(function ModeTachometer({
       {theme.decor === "hud" ? (
         <g className="mode-tach__fade">
           {labels.map((l, i) => {
-            const p = polar(cx, cy, r + 36, start + (sweep * i) / (labels.length - 1));
+            const p = polar(cx, cy, r + 25, start + (sweep * i) / (labels.length - 1));
             return (
               <text
                 key={l}
