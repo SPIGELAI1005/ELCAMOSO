@@ -114,7 +114,7 @@ describe("combustion-processor parameter contract", () => {
     const c = loadProcessor();
     const d = loadProcessor();
     const over = render(c, { firingHz: 5000 });
-    const clamped = render(d, { firingHz: 800 });
+    const clamped = render(d, { firingHz: 2000 });
     const oorDiff = over.reduce((m, v, i) => Math.max(m, Math.abs(v - clamped[i]!)), 0);
     expect(oorDiff).toBeLessThan(1e-7);
   });

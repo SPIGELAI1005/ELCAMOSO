@@ -76,6 +76,17 @@ const BY_PROFILE: Record<string, ShiftEngagementPreset> = {
   "flat-six-sport": SPORTS,
   "race-car": { ...SPORTS, shiftFilterHz: 960, shiftDecayMs: 110, notes: "Track precise engagement." },
   "racing-v10": { ...SPORTS, thumpFilterHz: 230, allowLiftOffPop: false },
+  "f1-v10": {
+    ...SPORTS,
+    thumpFilterHz: 150,
+    thumpDecayMs: 70,
+    thumpIntensity: 0.62,
+    shiftFilterHz: 1100,
+    shiftDecayMs: 45,
+    torqueCutEnvelope: 0.2,
+    allowLiftOffPop: false,
+    notes: "Seamless-shift F1 gearbox: short, firm thump; no long cut.",
+  },
   "motorcycle-superbike": {
     ...SPORTS,
     thumpFilterHz: 260,

@@ -179,11 +179,17 @@ class CombustionExcitationProcessor extends AudioWorkletProcessor {
         : null;
     this.raspLp = 0;
     this.raspDc = 0;
+    // Optional pulse time scale (F1-class firing rates): shorter pulse envelopes so ~1.6 kHz
+    // firing still reads as discrete pulses. Absent (1) for every other topology.
+    const pulseTauScale = Number.isFinite(raw.pulseTauScale)
+      ? Math.min(1, Math.max(0.05, raw.pulseTauScale))
+      : 1;
     this.topology = {
       version: 1,
       cycleLope,
       noiseScale,
       rasp,
+      pulseTauScale,
       cycleDegrees: cycle,
       cylinderCount: count,
       cylinders,
@@ -216,7 +222,7 @@ class CombustionExcitationProcessor extends AudioWorkletProcessor {
 
   static get parameterDescriptors() {
     return [
-      { name: "firingHz", defaultValue: 40, minValue: 0, maxValue: 800, automationRate: "k-rate" },
+      { name: "firingHz", defaultValue: 40, minValue: 0, maxValue: 2000, automationRate: "k-rate" },
       { name: "intensity", defaultValue: 0.4, minValue: 0, maxValue: 1, automationRate: "k-rate" },
       {
         name: "irregularity",
@@ -269,16 +275,17 @@ class CombustionExcitationProcessor extends AudioWorkletProcessor {
     // - intensity 0: softest timbre / level scale (0.6 + 0*0.4), not mute-by-substitution.
     // - load 0: lightest combustion pressure / brightness shaping, not the 0.3 default.
     // - sharpness 0: softest edge/burst, not the 0.45 default.
-    const firingHz = readParam(parameters.firingHz, 40, 0, 800);
+    const firingHz = readParam(parameters.firingHz, 40, 0, 2000);
     const intensity = readParam(parameters.intensity, 0.4, 0, 1);
     const irregularity = readParam(parameters.irregularity, 0, 0, 1);
     const load = readParam(parameters.load, 0.3, 0, 1);
     const sharpness = readParam(parameters.sharpness, 0.45, 0, 1);
     const arch = Math.round(readParam(parameters.architecture, 0, 0, ARCHITECTURE_CODE_MAX));
 
-    const bodyTauSeconds = 0.0038 + (1 - sharpness) * 0.0042 + load * 0.0012;
-    const edgeTauSeconds = 0.0012 + (1 - sharpness) * 0.0013;
-    const burstTauSeconds = 0.0022 + (1 - sharpness) * 0.0018 + load * 0.0008;
+    const tauScale = this.topology ? this.topology.pulseTauScale : 1;
+    const bodyTauSeconds = (0.0038 + (1 - sharpness) * 0.0042 + load * 0.0012) * tauScale;
+    const edgeTauSeconds = (0.0012 + (1 - sharpness) * 0.0013) * tauScale;
+    const burstTauSeconds = (0.0022 + (1 - sharpness) * 0.0018 + load * 0.0008) * tauScale;
     const decay = Math.exp(-1 / (sampleRate * bodyTauSeconds));
     const brightDecay = Math.exp(-1 / (sampleRate * edgeTauSeconds));
     const burstDecay = Math.exp(-1 / (sampleRate * burstTauSeconds));

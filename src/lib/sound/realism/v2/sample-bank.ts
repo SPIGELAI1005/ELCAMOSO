@@ -252,6 +252,7 @@ export const EMPTY_COMBUSTION_SAMPLE_BANKS: Record<string, CombustionSampleBank>
   "american-v8": buildAmericanV8PilotBank(),
   "flat-six-sport": { personalityId: "flat-six-sport", entries: [] },
   "high-rev-v10": { personalityId: "high-rev-v10", entries: [] },
+  "f1-v10": { personalityId: "f1-v10", entries: [] },
   "flat-plane-v8-track": { personalityId: "flat-plane-v8-track", entries: [] },
   "rally-turbo-3": { personalityId: "rally-turbo-3", entries: [] },
   "turbo-inline-6": { personalityId: "turbo-inline-6", entries: [] },

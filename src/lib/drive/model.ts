@@ -80,6 +80,7 @@ function estimateMaxAcceleration(
   const baseEstimates: Record<string, number> = {
     "flat-six-sport": 5.8,
     "high-rev-v10": 6.2,
+    "f1-v10": 6.8,
     "flat-plane-v8-track": 6.5,
     "rally-turbo-3": 5.4,
     "american-v8": 4.6,

@@ -179,11 +179,14 @@ describe("combustion topology worklet scheduling", () => {
 });
 
 describe("V10 bank asymmetry + rasp (Racing V10 voicing)", () => {
-  it("keeps rasp only on the V10 and validates it", () => {
+  it("keeps rasp only on the V10s and validates it", () => {
     const v10 = combustionTopologyForProfile("racing-v10");
     expect(v10?.rasp).toMatchObject({ startRpm: 5000, fullRpm: 8500, lowHz: 1000, highHz: 3000 });
+    expect(combustionTopologyForProfile("f1-v10")?.rasp?.startRpm).toBeGreaterThan(10000);
+    expect(combustionTopologyForProfile("f1-v10")?.pulseTauScale).toBeLessThan(0.5);
     for (const id of TOPOLOGY_PILOT_PROFILE_IDS) {
-      if (id === "racing-v10") continue;
+      if (id === "racing-v10" || id === "f1-v10") continue;
+      expect(combustionTopologyForProfile(id)?.pulseTauScale).toBeUndefined();
       expect(combustionTopologyForProfile(id)?.rasp).toBeUndefined();
     }
     const bad = validateCombustionTopology({

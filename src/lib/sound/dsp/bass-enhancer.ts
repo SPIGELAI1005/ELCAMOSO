@@ -106,6 +106,7 @@ export const BASS_ENHANCER_PROFILES: Record<string, BassEnhancerConfig> = {
   // V10: its 5th order sits at 83-110 Hz at 1000-1300 rpm, inside the sub band, so the
   // thunder fades out below ~1500 rpm / 20 km/h instead of droning down to the stop.
   "racing-v10": { ...thunder, subGain: 0.22, subLowHz: 45, subHighHz: 135, harmonicGain: 0.04, decelFadeOut: { rpm: [1200, 1500], kmh: [10, 20] } },
+  "f1-v10": { ...thunder, subGain: 0.12, subLowHz: 60, subHighHz: 160, harmonicGain: 0.03 },
   "race-car": { ...thunder, subGain: 0.2, subLowHz: 42, subHighHz: 130, harmonicGain: 0.04 },
   "flat-six-sport": { ...thunder, subGain: 0.24, subLowHz: 38, subHighHz: 120, harmonicGain: 0.05 },
   "turbo-inline-6": { ...thunder, subGain: 0.24, subLowHz: 38, subHighHz: 115, harmonicGain: 0.05 },

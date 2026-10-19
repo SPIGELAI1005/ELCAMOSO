@@ -50,12 +50,13 @@ const EXPECTED_NEW_IDS = [
   "heartbeat",
   "rocket-car",
   "time-machine",
+  "f1-v10",
 ];
 
 describe("built-in sound profiles", () => {
-  it("has 59 built-in profiles (49 engines/worlds + 3 Symphony + 3 World engine + 4 Fusion)", () => {
-    expect(SOUND_PROFILES).toHaveLength(59);
-    expect(EXPANSION_PROFILES).toHaveLength(27);
+  it("has 60 built-in profiles (50 engines/worlds + 3 Symphony + 3 World engine + 4 Fusion)", () => {
+    expect(SOUND_PROFILES).toHaveLength(60);
+    expect(EXPANSION_PROFILES).toHaveLength(28);
   });
 
   it("has unique ids and names", () => {

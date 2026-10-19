@@ -35,6 +35,7 @@ import { speedKmhFromRpmAndGear } from "@/lib/powertrain/rpm-model";
 
 const REALISM_V2_IDS = new Set([
   "gt-v8",
+  "f1-v10",
   "american-muscle-v8",
   "flat-six-sport",
   "turbo-inline-6",

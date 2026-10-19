@@ -293,6 +293,46 @@ const V10: AcousticEngineConfig = {
   supportLowpassHz: 4200,
 };
 
+/**
+ * F1 V10, "TV onboard" balance (reference: 2004-era onboard, 16-18.6k rpm): the 2.5 crank
+ * order (one bank, intake/airbox howl) sits above the firing order, higher orders fall
+ * off fast; little below 300 Hz, rolled off above ~3.5 kHz. Fully synthesised.
+ */
+const F1_V10: AcousticEngineConfig = {
+  ...V10,
+  idleIrregularity: 0.05,
+  exhaustPulse: 0.7,
+  intakePresence: 0.95,
+  mechanicalIntensity: 0.62,
+  combustionSharpness: 0.86,
+  highLoadEnrichment: 0.9,
+  loadContrast: 0.8,
+  upperRpmEnergy: 0.98,
+  intakeLoadResponse: 0.95,
+  overrunCharacter: 0.3,
+  exhaustFormantsHz: [450, 740, 1470, 2160, 2900],
+  intakeFormantsHz: [740, 1500, 2300],
+  bodyResonanceHz: [180, 420, 900],
+  supportRatios: [2.5, 5, 7.5, 10, 12.5],
+  supportWeights: [0.8, 0.9, 0.22, 0.1, 0.04],
+  bodyBrightness: 0.7,
+  redlineRpm: 19000,
+  outputTrimDb: 22.8,
+  highRpmVoicing: {
+    startRpm: 6000,
+    fullRpm: 16000,
+    lowShelfHz: 300,
+    lowShelfDb: -10,
+    presenceHz: 800,
+    presenceQ: 0.9,
+    presenceDb: 5,
+    airHz: 2800,
+    airDb: -10,
+  },
+  orderBandMaxHz: 4000,
+  supportLowpassHz: 3000,
+};
+
 const FLAT_PLANE_V8_TRACK: AcousticEngineConfig = {
   cylinders: 8,
   stroke: "four-stroke",
@@ -418,6 +458,7 @@ export const ACOUSTIC_ENGINE_BY_PROFILE: Record<string, AcousticEngineConfig> = 
   "flat-six-sport": FLAT_SIX,
   "turbo-inline-6": TURBO_I6,
   "racing-v10": V10,
+  "f1-v10": F1_V10,
   "race-car": FLAT_PLANE_V8_TRACK,
   "rally-car": RALLY_TURBO_3,
   "motorcycle-superbike": INLINE_4,
@@ -430,6 +471,7 @@ export const ACOUSTIC_ENGINE_BY_PERSONALITY: Record<string, AcousticEngineConfig
   "american-v8": AMERICAN_V8,
   "flat-six-sport": FLAT_SIX,
   "high-rev-v10": V10,
+  "f1-v10": F1_V10,
   "flat-plane-v8-track": FLAT_PLANE_V8_TRACK,
   "rally-turbo-3": RALLY_TURBO_3,
   "turbo-inline-6": TURBO_I6,

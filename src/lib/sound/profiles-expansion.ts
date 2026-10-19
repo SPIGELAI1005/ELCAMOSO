@@ -747,4 +747,34 @@ export const EXPANSION_PROFILES: SoundProfile[] = [
       ],
     },
   },
+  {
+    id: "f1-v10",
+    name: "F1 V10",
+    category: "Motorsport",
+    traits: ["Screaming", "High-Rev", "Onboard"],
+    description:
+      "A 2000s Formula 1 V10 heard from the cockpit: idle at 4,500 rpm, a 19,000 rpm intake howl, seven close gears and seamless 35 ms upshifts with a gearbox thump. Fully synthesised.",
+    drivetrainMode: "virtual-transmission",
+    motionModel: "virtual-transmission",
+    sourceMode: "procedural",
+    drivetrainPersonalityId: "f1-v10",
+    voice: {
+      baseFrequency: 75,
+      harmonics: [1, 2, 2.5, 5, 7.5],
+      waveResponse: 1.2,
+      filterBase: 600,
+      filterRange: 3200,
+      noise: 0.06,
+      detune: 3,
+      wave: "sawtooth",
+      textures: [{ kind: "sizzle", level: 0.1, tone: 3000, speedScale: 1 }],
+    },
+    transmission: {
+      // rpm per km/h per gear (18.5k rpm ≈ 45/70/92/112/132/150/170 km/h)
+      gearRatios: [411, 264, 201, 165, 140, 123, 109],
+      idleRpm: 4500,
+      redlineRpm: 19000,
+      shiftSmoothing: 0.04,
+    },
+  },
 ];

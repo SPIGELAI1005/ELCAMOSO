@@ -43,6 +43,11 @@ export interface CombustionTopologyV1 {
    * only above `startRpm` (full at `fullRpm`) and only under load, so cruise stays clean.
    */
   rasp?: CombustionRaspTopology;
+  /**
+   * Optional pulse-envelope time scale (0.05..1) for very high firing rates (F1 V10 at
+   * ~1.6 kHz): shorter pulses keep the firing order discrete instead of smearing to DC.
+   */
+  pulseTauScale?: number;
 }
 
 export interface CombustionRaspTopology {
@@ -121,6 +126,7 @@ export const TOPOLOGY_PILOT_PROFILE_IDS = [
   "flat-six-sport",
   "turbo-inline-6",
   "racing-v10",
+  "f1-v10",
   "rally-car",
   "motorcycle-superbike",
   "big-twin",
@@ -257,6 +263,9 @@ export function validateCombustionTopology(input: unknown): {
         ? { noiseScale: Math.min(1, Math.max(0, t.noiseScale as number)) }
         : {}),
       ...(validRasp(t.rasp) ? { rasp: validRasp(t.rasp)! } : {}),
+      ...(Number.isFinite(t.pulseTauScale) && (t.pulseTauScale as number) > 0
+        ? { pulseTauScale: Math.min(1, Math.max(0.05, t.pulseTauScale as number)) }
+        : {}),
     },
     issues: [],
   };
@@ -412,6 +421,29 @@ export const V10_TOPOLOGY: CombustionTopologyV1 = {
 };
 
 /**
+ * F1 V10 (onboard): same 72° even firing as the road V10, but strongly asymmetric banks so
+ * the 2.5-order (one bank's firing rate) dominates like the onboard reference, plus short
+ * pulses (pulseTauScale) for the ~1.6 kHz firing frequency at 19k rpm.
+ */
+export const F1_V10_TOPOLOGY: CombustionTopologyV1 = {
+  version: 1,
+  cycleDegrees: 720,
+  cylinderCount: 10,
+  noiseScale: 0.3,
+  rasp: { level: 0.22, startRpm: 11000, fullRpm: 17500, lowHz: 1800, highHz: 4200 },
+  pulseTauScale: 0.22,
+  collectors: [{ id: 0 }, { id: 1 }],
+  soundSpeedMetresPerSecond: TOPOLOGY_SOUND_SPEED_DEFAULT,
+  cylinders: [1, 6, 5, 10, 2, 7, 3, 8, 4, 9].map((cylId, i) => ({
+    id: cylId,
+    firingAngleDegrees: i * 72,
+    collectorId: cylId % 2 === 1 ? 0 : 1,
+    pulseWeight: cylId % 2 === 1 ? 1 : 0.6,
+    primaryLengthMetres: cylId % 2 === 1 ? 0.06 : 0.14,
+  })),
+};
+
+/**
  * Rally Inline-3 turbo: 1-2-3 firing order, 240° intervals, single collector.
  * Has noticeable pulse irregularity (odd cylinder count).
  */
@@ -476,6 +508,7 @@ export const TOPOLOGY_BY_PILOT_PROFILE: Record<TopologyPilotProfileId, Combustio
   "flat-six-sport": FLAT_SIX_TOPOLOGY,
   "turbo-inline-6": TURBO_I6_TOPOLOGY,
   "racing-v10": V10_TOPOLOGY,
+  "f1-v10": F1_V10_TOPOLOGY,
   "rally-car": RALLY_I3_TOPOLOGY,
   "motorcycle-superbike": SUPERBIKE_I4_TOPOLOGY,
   "big-twin": V_TWIN_TOPOLOGY,

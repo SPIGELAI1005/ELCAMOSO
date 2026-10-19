@@ -14,6 +14,7 @@ export type ProfileFamily = "physical" | "designed" | "environmental" | "musical
 const FAMILY_BY_ID: Record<string, ProfileFamily> = {
   "gt-v8": "physical",
   "racing-v10": "physical",
+  "f1-v10": "physical",
   "race-car": "physical",
   "rally-car": "physical",
   "speed-boat": "physical",

@@ -14,6 +14,7 @@ import type { PowertrainProfile } from "@/lib/powertrain/profiles";
 const LEGACY_PERSONALITY_BY_SOUND: Record<string, string> = {
   "gt-v8": "gt-v8",
   "racing-v10": "high-rev-v10",
+  "f1-v10": "f1-v10",
   "race-car": "flat-plane-v8-track",
   "rally-car": "rally-turbo-3",
   "motorcycle-superbike": "motorcycle-inline-4",

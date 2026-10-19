@@ -165,6 +165,18 @@ const baseStrategies: ProfileStrategy[] = [
     gearbox: 280,
     pulse: 120,
   }),
+  combustionFamily("f1-v10", {
+    ratios: [1, 2, 2.5, 5, 7.5],
+    weights: [0.35, 0.45, 0.8, 0.55, 0.25],
+    cylinders: 10,
+    drive: 0.3,
+    filterBase: 600,
+    intake: 0.32,
+    mechanical: 0.1,
+    body: [180, 420, 900],
+    gearbox: 320,
+    pulse: 160,
+  }),
   combustionFamily("race-car", {
     ratios: [1, 2, 3, 4, 5.02, 8],
     weights: [0.65, 0.7, 0.55, 0.4, 0.3, 0.18],

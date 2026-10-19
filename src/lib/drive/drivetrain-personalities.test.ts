@@ -9,8 +9,8 @@ import { getProfile } from "@/lib/sound/profiles";
 import { resolveVariantPools } from "@/lib/sound/dynamic-drive/transient-scheduler";
 
 describe("drivetrain personalities", () => {
-  it("defines eleven distinct built-in personalities", () => {
-    expect(DRIVETRAIN_PERSONALITY_IDS).toHaveLength(11);
+  it("defines twelve distinct built-in personalities", () => {
+    expect(DRIVETRAIN_PERSONALITY_IDS).toHaveLength(12);
     expect(DRIVETRAIN_PERSONALITY_IDS).toContain("high-rev-v10");
     expect(DRIVETRAIN_PERSONALITY_IDS).toContain("flat-plane-v8-track");
     expect(DRIVETRAIN_PERSONALITY_IDS).toContain("rally-turbo-3");

@@ -6,6 +6,8 @@
 const PROFILE_IDS_WITH_HERO = [
   "gt-v8",
   "racing-v10",
+  // Reuses the unbranded open-wheeler still (formula-electric) until a dedicated F1 V10 shot exists.
+  "f1-v10",
   "cyber-pulse",
   "race-car",
   "rally-car",

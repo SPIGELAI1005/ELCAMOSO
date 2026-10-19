@@ -290,6 +290,7 @@ export function personalityLegacyTransmission(c: DrivetrainPersonalityConfig) {
 export const DRIVETRAIN_PERSONALITY_IDS = [
   "flat-six-sport",
   "high-rev-v10",
+  "f1-v10",
   "flat-plane-v8-track",
   "rally-turbo-3",
   "american-v8",
@@ -1206,6 +1207,80 @@ const HIGH_REV_V10_PERSONALITY: DrivetrainPersonalityConfig = {
   legacy: { shiftSmoothing: 0.075 },
 };
 
+/**
+ * F1 V10 (2004-era 3.0 L V10, onboard character): idle ~4.5k, redline 19k, seven close
+ * ratios compressed for road speeds (18.5k rpm ≈ 45/70/92/112/132/150/170 km/h),
+ * very fast rev slew and seamless 35 ms upshifts.
+ */
+const F1_V10_PERSONALITY: DrivetrainPersonalityConfig = {
+  ...HIGH_REV_V10_PERSONALITY,
+  id: "f1-v10",
+  name: "F1 V10",
+  engine: {
+    idleRpm: 4500,
+    redlineRpm: 19000,
+    acoustic: {
+      cylinders: 10,
+      architecture: "v10-even",
+      idleIrregularity: 0.05,
+      exhaustPulse: 0.7,
+      intakePresence: 0.95,
+      mechanicalIntensity: 0.62,
+    },
+  },
+  transmission: {
+    ...HIGH_REV_V10_PERSONALITY.transmission,
+    // rpm/kmh = ratio × finalDrive × 1000 / (60 × 2.05 m): G1 411 … G7 109
+    gearRatios: [5.06, 3.25, 2.47, 2.03, 1.72, 1.52, 1.34],
+    finalDrive: 10,
+    upshiftRpm: { lowLoad: 16000, mediumLoad: 17500, highLoad: 18300 },
+    upshiftLoadMedium: 0.32,
+    upshiftLoadHigh: 0.62,
+    upshiftHysteresisRpm: 600,
+    downshiftBaseRpm: 8200,
+    downshiftHysteresisRpm: 700,
+    postUpshiftBlockMs: 260,
+    kickdown: {
+      enabled: true,
+      throttleThreshold: 0.72,
+      rpmFractionOfUpshift: 0.6,
+      maxSteps: 2,
+    },
+    shift: {
+      ...HIGH_REV_V10_PERSONALITY.transmission.shift,
+      upshiftDurationMs: 35,
+      downshiftDurationMs: 60,
+      minGearHoldMs: 420,
+      torqueDipUp: 0.18,
+      torqueDipDown: 0.1,
+      revMatchOvershoot: 0.08,
+      revMatchFlareFraction: 0.4,
+    },
+    idle: {
+      ...HIGH_REV_V10_PERSONALITY.transmission.idle,
+      stoppedInGearRpm: 4500,
+      revLimitFraction: 0.5,
+    },
+    redline: { softFraction: 0.975, maxDownshiftFraction: 0.96 },
+    rpm: {
+      trackTau: 0.022,
+      maxRateRpmPerSec: 36000,
+      upshiftEasePower: 1.7,
+      downshiftEasePower: 1.4,
+    },
+  },
+  wheelCircumferenceM: 2.05,
+  throttle: { attackTau: 0.035, releaseTau: 0.12, directWeight: 0.7 },
+  behavior: { engineResponse: 1.4, shiftAggression: 1.45, overrunIntensity: 0.55 },
+  motion: {
+    pitchTauBase: 0.022,
+    pitchTauShiftScale: 0.03,
+    pitchTauRevMatchExtra: 0.03,
+    speedSlowTau: 0.4,
+  },
+  legacy: { shiftSmoothing: 0.04 },
+};
+
 const FLAT_PLANE_V8_TRACK_PERSONALITY: DrivetrainPersonalityConfig = {
   ...flatSixBase,
   id: "flat-plane-v8-track",
@@ -1397,6 +1472,7 @@ const RALLY_TURBO_3_PERSONALITY: DrivetrainPersonalityConfig = {
 export const DRIVETRAIN_PERSONALITIES: DrivetrainPersonalityConfig[] = [
   ...BASE_DRIVETRAIN_PERSONALITIES,
   HIGH_REV_V10_PERSONALITY,
+  F1_V10_PERSONALITY,
   FLAT_PLANE_V8_TRACK_PERSONALITY,
   RALLY_TURBO_3_PERSONALITY,
 ];

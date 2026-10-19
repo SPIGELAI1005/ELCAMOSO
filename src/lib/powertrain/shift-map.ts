@@ -48,6 +48,7 @@ const LIGHT_DEMAND_FACTOR: Record<string, number> = {
   "american-v8": 0.48,
   "flat-six-sport": 0.34,
   "high-rev-v10": 0.34,
+  "f1-v10": 0.55,
   "flat-plane-v8-track": 0.32,
   "rally-turbo-3": 0.38,
   "turbo-inline-6": 0.36,

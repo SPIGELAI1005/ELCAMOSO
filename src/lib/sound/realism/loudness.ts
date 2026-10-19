@@ -7,6 +7,7 @@
 export const PROFILE_LOUDNESS: Record<string, number> = {
   "gt-v8": 1.08,
   "racing-v10": 0.98,
+  "f1-v10": 0.95,
   "race-car": 0.98,
   "rally-car": 0.96,
   "cyber-pulse": 1.05,
