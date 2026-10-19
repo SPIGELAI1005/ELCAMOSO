@@ -962,7 +962,7 @@ export const EXPANSION_STRATEGIES: ProfileStrategy[] = [
           level: 1.05,
         }),
         // Grit/stones pinging the shell on a hard launch only.
-        createDebrisLayer(ctx, { id: "rocket-debris", destination: buses.accents, level: 0.8, metal: 0.6, pitch: 0.9 }),
+        createDebrisLayer(ctx, { id: "rocket-debris", destination: buses.accents, level: 4.8, metal: 0.6, pitch: 0.7 }),
       ];
     },
   },
@@ -985,7 +985,7 @@ export const EXPANSION_STRATEGIES: ProfileStrategy[] = [
           roar: 0.3,
           cruise: 0.15,
         }),
-        createDebrisLayer(ctx, { id: "chrono-debris", destination: buses.accents, level: 0.8, metal: 0.4, pitch: 1.05 }),
+        createDebrisLayer(ctx, { id: "chrono-debris", destination: buses.accents, level: 4.0, metal: 0.4, pitch: 1.05 }),
       ];
     },
   },

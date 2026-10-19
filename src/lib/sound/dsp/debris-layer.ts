@@ -7,10 +7,11 @@
  * hit is a dry, band-limited noise click instead: no resonant partials.
  *
  * Bursts only fire on a hard launch (acceleration estimate above a high threshold, rising edge);
- * density follows the live acceleration intensity, then thins and fades over ~1-2.5 s, and a
- * randomized cooldown blocks the next one. Nothing plays at rest, so idles are untouched. The bus
- * is high-passed (sits under the thrust bass), dipped around 3.5 kHz and low-passed; every hit is
- * tens of milliseconds, so there is never sustained 2-6 kHz energy.
+ * density follows the live acceleration intensity and thins out gradually over ~3-5 s; a sparse
+ * trickle continues while hard acceleration persists (max 12 s); a randomized 5-8 s cooldown
+ * blocks the next burst. Nothing plays at rest, so idles are untouched. The bus is high-passed
+ * (sits under the thrust bass), dipped around 3.5 kHz and low-passed; every hit is tens of
+ * milliseconds, so there is never a sustained tone in 2-6 kHz.
  */
 import { clamp } from "@/lib/sound/dsp/math";
 import {
@@ -28,7 +29,7 @@ export interface DebrisOpts {
   thresholdMps2?: number;
   /** Acceleration giving full intensity. */
   fullMps2?: number;
-  /** Cooldown between bursts in seconds (randomized between min and min*1.6). */
+  /** Cooldown between bursts in seconds (randomized between min and min*1.6, i.e. 5-8 s). */
   cooldownS?: number;
   /** Share of pebble-on-metal grains (rest: stone/rock grains), 0..1. */
   metal?: number;
@@ -46,7 +47,8 @@ export interface DebrisBurst {
   dispose(): void;
 }
 
-const MAX_HITS = 42;
+const MAX_HITS = 260;
+const MAX_BURST_S = 12;
 const METAL_IDX = DEBRIS_GRAINS.flatMap((g, i) => (g[2] === "m" ? [i] : []));
 const STONE_IDX = DEBRIS_GRAINS.flatMap((g, i) => (g[2] === "s" ? [i] : []));
 
@@ -68,7 +70,7 @@ export function createDebrisBurst(
 ): DebrisBurst {
   const threshold = o.thresholdMps2 ?? 2.8;
   const full = Math.max(threshold + 0.5, o.fullMps2 ?? 4.2);
-  const cooldownMin = o.cooldownS ?? 9;
+  const cooldownMin = o.cooldownS ?? 5;
   const metal = clamp(o.metal ?? 0.5);
   const pitch = o.pitch ?? 1;
   const rnd = mulberry32((Math.random() * 4294967296) ^ 0x5eed);
@@ -150,7 +152,8 @@ export function createDebrisBurst(
     bp.Q.value = 0.7;
     const g = ctx.createGain();
     const len = 0.003 + rnd() * 0.007;
-    g.gain.setValueAtTime(amp, at);
+    // Noise clicks peak higher than the normalized grains for the same amp; keep them tame.
+    g.gain.setValueAtTime(amp * 0.5, at);
     g.gain.setTargetAtTime(0, at, len / 3);
     src.connect(bp).connect(g).connect(bus);
     src.start(at, rnd() * 0.2, len * 1.5);
@@ -160,11 +163,15 @@ export function createDebrisBurst(
   // Active burst: hits are generated as the burst runs, so density follows the live intensity.
   let burst: {
     t0: number;
+    /** Main burst length (3-5 s, grows with the peak intensity). */
+    dur: number;
     until: number;
     peak: number;
     cursor: number;
     hits: number;
     rateJ: number;
+    /** Live intensity while hard acceleration persists (0 once it eases off). */
+    hold: number;
   } | null = null;
 
   function trigger(t: number, intensity: number): boolean {
@@ -174,11 +181,13 @@ export function createDebrisBurst(
     const t0 = t + 0.02 + rnd() * 0.06;
     burst = {
       t0,
-      until: t0 + 1.0,
+      dur: 3,
+      until: t0 + 3,
       peak: clamp(intensity),
       cursor: t0,
       hits: 0,
       rateJ: 0.8 + 0.4 * rnd(),
+      hold: clamp(intensity),
     };
     extend(clamp(intensity));
     return true;
@@ -187,24 +196,31 @@ export function createDebrisBurst(
   function extend(I: number) {
     if (!burst) return;
     burst.peak = Math.max(burst.peak, I);
-    // ~1 s for a modest hard launch, up to ~2.5 s for a very hard one.
-    burst.until = Math.max(burst.until, burst.t0 + 1.0 + 1.5 * burst.peak);
+    // 3 s for a modest hard launch, up to ~5 s for a very hard one, thinning out gradually.
+    burst.dur = Math.max(burst.dur, 3 + 2 * burst.peak);
+    burst.until = Math.max(burst.until, burst.t0 + burst.dur);
   }
 
-  /** Generate hits up to `horizon` (Poisson, rate follows intensity and decays over the burst). */
-  function pump(now: number, horizon: number, liveI: number) {
+  /** Generate hits up to `horizon` (Poisson: rate follows intensity, thins over the burst). */
+  function pump(now: number, horizon: number) {
     if (!burst) return;
     const b = burst;
-    const dur = b.until - b.t0;
     const end = Math.min(horizon, b.until);
     while (b.cursor < end && b.hits < MAX_HITS) {
       const age = b.cursor - b.t0;
-      const I = Math.max(liveI, b.peak * 0.6);
-      const rate = Math.max(0.5, (4 + 18 * I) * b.rateJ * Math.exp(-age / (dur * 0.42)));
+      const I = Math.max(b.hold, b.peak * 0.6);
+      const main = (6 + 24 * I) * b.rateJ * Math.exp(-age / (b.dur * 0.5));
+      // While hard acceleration persists, keep a sparse trickle of stones.
+      const trickle = b.hold > 0 ? (2.5 + 4 * b.hold) * b.rateJ : 0;
+      const rate = Math.max(0.6, main, trickle);
       b.cursor += -Math.log(1 - rnd() * 0.999) / rate;
       if (b.cursor >= b.until) break;
       const tau = b.cursor - b.t0;
-      const env = Math.exp(-tau / (dur * 0.45)) * (0.45 + 0.55 * I);
+      const envMain = Math.exp(-tau / (b.dur * 0.6));
+      const envHold = b.hold > 0 ? 0.4 : 0;
+      // ~0.3 s swell-in so the first stones land as the thrust bass builds (never ahead of it).
+      const attack = 1 - Math.exp(-tau / 0.12);
+      const env = Math.max(envMain, envHold) * attack * (0.45 + 0.55 * I);
       hit(Math.max(b.cursor, now + 0.005), env * Math.pow(10, (-14 * rnd()) / 20));
       b.hits++;
     }
@@ -222,7 +238,13 @@ export function createDebrisBurst(
       } else if (burst) {
         extend(0.25 + 0.75 * I);
       }
-      pump(t, t + 0.12, accel >= threshold - 0.3 ? 0.25 + 0.75 * I : 0);
+      if (burst) {
+        const holding = accel >= threshold - 0.3;
+        burst.hold = holding ? 0.25 + 0.75 * I : 0;
+        // Keep going (sparsely) while the hard push lasts; fade ~1 s after it eases, max 12 s.
+        if (holding) burst.until = Math.min(burst.t0 + MAX_BURST_S, Math.max(burst.until, t + 1));
+      }
+      pump(t, t + 0.12);
       return fired;
     },
     trigger,

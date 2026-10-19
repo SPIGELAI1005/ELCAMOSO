@@ -28,14 +28,26 @@ describe("debris layer", () => {
     expect(r.peak).toBe(0);
   });
 
-  it("fires one short, decaying burst on a hard launch, with cooldown", async () => {
-    // hard launch at 0.5 s, held for 3 s, released, and re-hit at 4.5 s (inside cooldown)
-    const r = await render((t) => (t > 0.5 && t < 3.5 ? 4.2 : t > 4.5 && t < 5 ? 4.2 : 0), 7);
+  it("fires one 3-5 s burst that thins out on a short hard launch, with cooldown", async () => {
+    // hard launch 0.5-2 s, released, re-hit at 4.5 s (inside the >=5 s cooldown)
+    const r = await render((t) => (t > 0.5 && t < 2 ? 4.2 : t > 4.5 && t < 5 ? 4.2 : 0), 8);
     expect(r.bursts).toBe(1);
-    expect(r.rms(0.5, 1.5)).toBeGreaterThan(1e-4);
-    // gone within ~2.5 s of the onset (plus short ring tails), no sustained energy
-    expect(r.rms(3.7, 7)).toBeLessThan(1e-5);
-    expect(r.peak).toBeLessThan(0.5);
+    expect(r.rms(0.6, 1.6)).toBeGreaterThan(1e-4);
+    // still present (thinning) after 3 s, gone ~5.6 s after onset at the latest
+    expect(r.rms(3, 4)).toBeGreaterThan(1e-6);
+    expect(r.rms(3, 4)).toBeLessThan(r.rms(0.6, 1.6));
+    expect(r.rms(6.3, 8)).toBeLessThan(1e-6);
+    expect(r.peak).toBeLessThan(0.7);
+  });
+
+  it("keeps a sparse trickle while hard acceleration persists (max 12 s), then re-arms after cooldown", async () => {
+    const r = await render((t) => (t > 0.5 && t < 9 ? 3.6 : t > 17 && t < 18 ? 4.2 : 0), 20);
+    expect(r.rms(7, 8.5)).toBeGreaterThan(1e-6);
+    // fades about 1 s after the push ends
+    expect(r.rms(10.6, 16.5)).toBeLessThan(1e-6);
+    // a new hard launch after the cooldown fires again
+    expect(r.bursts).toBe(2);
+    expect(r.rms(17.2, 18.5)).toBeGreaterThan(1e-5);
   });
 
   it("is configured for the space / sci-fi worlds with a hard-launch-only threshold", () => {
@@ -71,7 +83,7 @@ describe("debris grains (real recordings)", () => {
     ).toBe(true);
   });
 
-  it("plays the decoded grains when available (short, decaying burst)", async () => {
+  it("plays the decoded grains when available (3-5 s, thinning burst)", async () => {
     const { readFileSync } = await import("node:fs");
     const { DEBRIS_GRAINS_URL, setDebrisGrainBufferForTest } =
       await import("@/lib/sound/dsp/debris-grains");
@@ -81,11 +93,11 @@ describe("debris grains (real recordings)", () => {
       await dec.decodeAudioData(wav.buffer.slice(wav.byteOffset, wav.byteOffset + wav.byteLength)),
     );
     try {
-      const r = await render((t) => (t > 0.5 && t < 3.5 ? 4.2 : 0), 6);
+      const r = await render((t) => (t > 0.5 && t < 2 ? 4.2 : 0), 8);
       expect(r.bursts).toBe(1);
-      expect(r.rms(0.5, 1.5)).toBeGreaterThan(1e-4);
-      expect(r.rms(3.7, 6)).toBeLessThan(1e-5);
-      expect(r.peak).toBeLessThan(0.5);
+      expect(r.rms(0.6, 1.6)).toBeGreaterThan(1e-4);
+      expect(r.rms(6.3, 8)).toBeLessThan(1e-6);
+      expect(r.peak).toBeLessThan(0.7);
     } finally {
       setDebrisGrainBufferForTest(null);
     }
