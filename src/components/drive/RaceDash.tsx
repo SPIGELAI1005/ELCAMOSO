@@ -42,14 +42,14 @@ export const RaceDash = memo(function RaceDash({
   const lit = Math.round(ledFrac * LEDS);
   const limiter = v >= 0.965;
   const flash = limiter && !reducedMotion && !intro;
-  const x0 = 34;
-  const x1 = 266;
+  const x0 = 24;
+  const x1 = 276;
   const barW = (x1 - x0) / BARS;
   const thousands = redlineRpm ? Math.ceil(redlineRpm / 1000) : 0;
   return (
     <svg
       viewBox="0 0 300 300"
-      className="mode-tach race-dash pointer-events-none absolute inset-0 h-full w-full overflow-hidden"
+      className="mode-tach race-dash pointer-events-none absolute inset-[-12%] h-[124%] w-[124%] overflow-hidden"
       data-tach-theme="race"
       data-intro={intro ? "1" : "0"}
       aria-hidden="true"
@@ -57,26 +57,26 @@ export const RaceDash = memo(function RaceDash({
     >
       <defs>
         <linearGradient id="rd-bezel" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#2a2a2e" />
-          <stop offset="100%" stopColor="#0d0d10" />
+          <stop offset="0%" stopColor="#ffffff" stopOpacity="0.09" />
+          <stop offset="100%" stopColor="#ffffff" stopOpacity="0.02" />
         </linearGradient>
         <filter id="rd-glow" x="-50%" y="-50%" width="200%" height="200%">
           <feGaussianBlur stdDeviation="2.2" />
         </filter>
       </defs>
       {/* Bezel + screen */}
-      <rect x="6" y="40" width="288" height="220" rx="24" fill="url(#rd-bezel)" stroke="rgba(255,255,255,0.12)" />
-      <rect x="20" y="76" width="260" height="172" rx="12" fill="#050507" stroke="rgba(255,255,255,0.06)" />
+      <rect x="2" y="20" width="296" height="260" rx="30" fill="url(#rd-bezel)" stroke="rgba(255,255,255,0.16)" />
+      <rect x="12" y="64" width="276" height="206" rx="18" fill="rgba(0,0,0,0.28)" stroke="rgba(255,255,255,0.08)" />
 
       {/* Shift-light strip */}
       {Array.from({ length: LEDS }, (_, i) => {
-        const cx = 38 + (i * (262 - 38)) / (LEDS - 1);
+        const cx = 26 + (i * (274 - 26)) / (LEDS - 1);
         const on = limiter || i < lit;
         const c = limiter ? RED : ledColor(i);
         return (
           <g key={i} className={on && flash ? "mode-tach__flash" : undefined}>
-            {on ? <circle cx={cx} cy={58} r={6} fill={c} opacity={0.55} filter="url(#rd-glow)" /> : null}
-            <circle cx={cx} cy={58} r={4.2} fill={on ? c : "#1c1c20"} stroke="rgba(0,0,0,0.6)" strokeWidth={0.8} />
+            {on ? <circle cx={cx} cy={43} r={9} fill={c} opacity={0.55} filter="url(#rd-glow)" /> : null}
+            <circle cx={cx} cy={43} r={6.2} fill={on ? c : "rgba(255,255,255,0.1)"} stroke="rgba(0,0,0,0.6)" strokeWidth={0.8} />
           </g>
         );
       })}
@@ -84,29 +84,29 @@ export const RaceDash = memo(function RaceDash({
       {/* Segmented rising rpm bar graph */}
       {Array.from({ length: BARS }, (_, i) => {
         const f = (i + 1) / BARS;
-        const h = 8 + 30 * Math.min(1, f / 0.5);
+        const h = 10 + 48 * Math.min(1, f / 0.5);
         const on = f <= v + 1e-6;
         const c = f >= zoneStart ? RED : f >= zoneStart - 0.18 ? AMBER : GREEN;
         return (
           <rect
             key={i}
             x={x0 + i * barW + 0.8}
-            y={128 - h}
+            y={142 - h}
             width={barW - 1.6}
             height={h}
             rx={0.8}
-            fill={on ? c : f >= zoneStart ? "rgba(239,68,68,0.16)" : "#16161a"}
+            fill={on ? c : f >= zoneStart ? "rgba(239,68,68,0.18)" : "rgba(255,255,255,0.08)"}
           />
         );
       })}
-      <line x1={x0 + (x1 - x0) * zoneStart} y1={86} x2={x0 + (x1 - x0) * zoneStart} y2={132} stroke={RED} strokeWidth={1} opacity={0.7} />
+      <line x1={x0 + (x1 - x0) * zoneStart} y1={76} x2={x0 + (x1 - x0) * zoneStart} y2={146} stroke={RED} strokeWidth={1} opacity={0.7} />
       {thousands > 0
         ? Array.from({ length: thousands + 1 }, (_, k) => (
             <text
               key={k}
               x={x0 + ((x1 - x0) * k * 1000) / (thousands * 1000)}
-              y={143}
-              fontSize={9}
+              y={160}
+              fontSize={12}
               textAnchor="middle"
               fill={k * 1000 >= (redlineRpm ?? 0) * zoneStart ? RED : "rgba(255,255,255,0.5)"}
               className="tabular-nums"
@@ -118,20 +118,20 @@ export const RaceDash = memo(function RaceDash({
 
       {readout ? (
         <>
-          <text x={150} y={222} fontSize={78} fontWeight={300} textAnchor="middle" fill={limiter ? RED : "#fff"} className="tabular-nums">
+          <text x={150} y={252} fontSize={104} fontWeight={300} textAnchor="middle" fill={limiter ? RED : "#fff"} className="tabular-nums">
             {readout.gear}
           </text>
-          <text x={34} y={176} fontSize={8} letterSpacing={2} fill="rgba(255,255,255,0.45)">RPM</text>
-          <text x={34} y={196} fontSize={17} fontWeight={300} fill={limiter ? RED : "rgba(255,255,255,0.85)"} className="tabular-nums">
+          <text x={24} y={188} fontSize={10} letterSpacing={2} fill="rgba(255,255,255,0.45)">RPM</text>
+          <text x={24} y={216} fontSize={24} fontWeight={300} fill={limiter ? RED : "rgba(255,255,255,0.85)"} className="tabular-nums">
             {readout.rpmText ?? "—"}
           </text>
-          <text x={266} y={176} fontSize={8} letterSpacing={2} textAnchor="end" fill="rgba(255,255,255,0.45)">
+          <text x={276} y={188} fontSize={10} letterSpacing={2} textAnchor="end" fill="rgba(255,255,255,0.45)">
             {readout.unit.toUpperCase()}
           </text>
-          <text x={266} y={196} fontSize={17} fontWeight={300} textAnchor="end" fill="rgba(255,255,255,0.85)" className="tabular-nums">
+          <text x={276} y={216} fontSize={24} fontWeight={300} textAnchor="end" fill="rgba(255,255,255,0.85)" className="tabular-nums">
             {readout.speed}
           </text>
-          <text x={150} y={240} fontSize={7} letterSpacing={3} textAnchor="middle" fill="rgba(255,255,255,0.35)">GEAR</text>
+          <text x={150} y={265} fontSize={8} letterSpacing={3} textAnchor="middle" fill="rgba(255,255,255,0.35)">GEAR</text>
         </>
       ) : null}
     </svg>
