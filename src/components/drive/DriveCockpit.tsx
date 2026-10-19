@@ -138,7 +138,7 @@ function CockpitGearLadder({
 
   return (
     <div
-      className="mt-2 grid w-full grid-cols-3 items-center gap-x-2"
+      className="mt-2 grid w-full grid-cols-2 items-center gap-x-2 gap-y-1.5 sm:grid-cols-3 sm:gap-y-0"
       role="group"
       aria-label={
         shifting ? `Shifting to gear ${active || 1}` : inNeutral ? "Neutral" : `Gear ${active}`
@@ -146,7 +146,15 @@ function CockpitGearLadder({
     >
       {/* Equal thirds: gears in the middle column stay on the tach center. */}
       <div className="flex min-h-[3.375rem] min-w-0 items-center justify-end gap-2">
-        <button type="button" onClick={onStop} className={GEAR_ROW_BTN} aria-label="Stop Drive">
+        <button
+          type="button"
+          onClick={onStop}
+          className={cn(
+            GEAR_ROW_BTN,
+            "border-[color-mix(in_oklab,var(--cockpit-redline)_70%,transparent)] font-semibold tracking-[0.14em] text-[var(--cockpit-redline)] hover:border-[var(--cockpit-redline)] hover:text-[var(--cockpit-redline)] bg-[color-mix(in_oklab,var(--cockpit-redline)_8%,transparent)]",
+          )}
+          aria-label="Stop Drive"
+        >
           Stop
         </button>
         <button
@@ -160,7 +168,7 @@ function CockpitGearLadder({
         </button>
       </div>
       <div
-        className="pointer-events-none flex min-h-[3.375rem] items-center justify-center gap-1.5 px-0.5"
+        className="pointer-events-none col-span-2 row-start-1 mx-auto flex w-full max-w-[18rem] min-w-0 items-center justify-center gap-1 overflow-hidden px-0.5 sm:col-span-1 sm:row-start-auto sm:mx-0 sm:min-h-[3.375rem] sm:w-auto sm:gap-1.5 sm:overflow-visible"
         role="status"
       >
         {Array.from({ length: gearCount }, (_, i) => i + 1).map((gear) => {
@@ -171,7 +179,7 @@ function CockpitGearLadder({
               key={gear}
               title={tick ?? String(gear)}
               className={cn(
-                "flex h-7 min-w-7 max-w-[2.75rem] items-center justify-center rounded-full px-1 text-[10px] tracking-wide transition-[transform,background-color,color,box-shadow] duration-200",
+                "flex h-6 min-w-6 max-w-[2.75rem] shrink items-center sm:h-7 sm:min-w-7 sm:shrink-0 justify-center rounded-full px-1 text-[10px] tracking-wide transition-[transform,background-color,color,box-shadow] duration-200",
                 tick ? "truncate" : "tabular-nums text-[11px]",
                 isActive ? "bg-foreground text-background" : "text-muted-foreground/55",
                 isActive && shifting && !reducedMotion
@@ -184,8 +192,16 @@ function CockpitGearLadder({
             </span>
           );
         })}
+        {modeLabel ? (
+          <span
+            className="ml-1 max-w-[4.75rem] shrink-0 truncate whitespace-nowrap rounded-full bg-foreground px-2 py-1 text-[9px] leading-none tracking-[0.08em] text-background uppercase sm:hidden"
+            aria-hidden="true"
+          >
+            {modeLabel}
+          </span>
+        ) : null}
       </div>
-      <div className="flex min-h-[3.375rem] min-w-0 items-center justify-end gap-1.5">
+      <div className="flex min-h-[3.375rem] min-w-0 items-center justify-start gap-1.5 sm:justify-end">
         <button
           type="button"
           onClick={onGearUp}
@@ -207,7 +223,7 @@ function CockpitGearLadder({
         ) : null}
         {modeLabel ? (
           <span
-            className="max-w-[4.75rem] shrink-0 truncate whitespace-nowrap rounded-full bg-foreground px-2.5 py-1.5 text-[9px] leading-none tracking-[0.08em] text-background uppercase"
+            className="max-w-[4.75rem] shrink-0 truncate max-sm:hidden whitespace-nowrap rounded-full bg-foreground px-2.5 py-1.5 text-[9px] leading-none tracking-[0.08em] text-background uppercase"
             role="status"
             aria-live="polite"
             aria-label={`Shift mode ${modeLabel}`}
@@ -430,15 +446,15 @@ export function DriveCockpit({
     >
       <DriveProfileBackdrop profileId={profile.id} className="z-0" />
 
-      <header className="drive-cockpit__header relative z-[1] grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 sm:gap-3">
+      <header className="drive-cockpit__header relative z-[1] grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 sm:gap-3">
         <ElcamosoLogo
           variant="full"
           intensity={Math.min(1, Math.max(driveState.load, driveState.throttle))}
           reducedMotion={reducedMotion}
           className="justify-self-start"
-          wordmarkClassName="hidden tracking-[0.28em] min-[420px]:inline"
+          wordmarkClassName="tracking-[0.28em] max-sm:!hidden"
         />
-        <div className="min-w-0 justify-self-stretch text-right sm:text-center">
+        <div className="min-w-0 max-w-[min(56vw,28rem)] justify-self-center text-center">
           <p className="truncate text-sm font-light tracking-[0.04em] sm:text-base">
             {profile.name}
           </p>
