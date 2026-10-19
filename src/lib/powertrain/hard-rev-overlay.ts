@@ -30,6 +30,19 @@ export interface HardRevConfig {
   gearRateFalloff: number;
   gearRatios: number[];
   blendOutMs: number;
+  /** Hard-braking downshift ladder: enter at this decel (m/s², positive) above brakeMinKmh. */
+  brakeEnterMs2: number;
+  brakeExitMs2: number;
+  brakeMinKmh: number;
+  brakeStopKmh: number;
+  /** Downshift when revs fall to this (gentle..hard braking), flaring into the lower gear. */
+  downRpm: [number, number];
+  downFlareCapRpm: number;
+  /** Flare target (rpm) for gentle..hard braking; the ratio jump can go higher up to the cap. */
+  downFlare: [number, number];
+  /** Auto-blip overshoot on top of the ratio jump (fraction). */
+  downBlip: number;
+  downShiftMs: number;
 }
 
 export const HARD_REV_BY_PROFILE: Record<string, HardRevConfig> = {
@@ -49,10 +62,19 @@ export const HARD_REV_BY_PROFILE: Record<string, HardRevConfig> = {
     gearRateFalloff: 0.7,
     gearRatios: [3.5, 2.55, 1.95, 1.62, 1.38, 1.2],
     blendOutMs: 700,
+    brakeEnterMs2: 2.5,
+    brakeExitMs2: 1.5,
+    brakeMinKmh: 55,
+    brakeStopKmh: 30,
+    downRpm: [8300, 9800],
+    downFlareCapRpm: 13800,
+    downFlare: [10500, 12800],
+    downBlip: 0.05,
+    downShiftMs: 90,
   },
 };
 
-type Phase = "off" | "climb" | "bounce" | "shift" | "blend";
+type Phase = "off" | "climb" | "bounce" | "shift" | "blend" | "decel" | "dshift";
 
 export class HardRevOverlay {
   private phase: Phase = "off";
@@ -64,8 +86,46 @@ export class HardRevOverlay {
   private shiftToRpm = 0;
   private blendFromRpm = 0;
   private lastEvent: DrivetrainShiftEvent | null = null;
+  private brake = 0;
+  private brakeLowMs = 0;
 
   constructor(private readonly cfg: HardRevConfig) {}
+
+  private pendingDown = false;
+  private blendFromBrake = false;
+
+  /** While blending out of a braking ladder, the base map's catch-up downshifts above the ladder gear are silent. */
+  private hideBaseShift(out: VirtualPowertrainState): boolean {
+    return this.blendFromBrake && out.gear >= this.gear;
+  }
+
+  private enterDecel() {
+    this.blendFromBrake = false;
+    this.phase = "decel";
+    this.phaseMs = 0;
+    this.brakeLowMs = 0;
+    this.brake = 0;
+    // An aggressive rider clicks down straight away when the brakes go on.
+    this.pendingDown = true;
+  }
+
+  private beginDown(out: VirtualPowertrainState, nextSequenceId: () => number): DrivetrainShiftEvent {
+    const c = this.cfg;
+    this.pendingDown = false;
+    const from = this.gear;
+    const to = Math.max(1, from - 1);
+    const jump = c.gearRatios[to - 1]! / c.gearRatios[from - 1]!;
+    this.shiftFromRpm = this.rpm;
+    // Engine-braking flare: the lower gear spins the engine up, the auto-blip adds a little more.
+    const floor = c.downFlare[0] + (c.downFlare[1] - c.downFlare[0]) * this.brake;
+    this.shiftToRpm = Math.min(c.downFlareCapRpm, Math.max(floor, this.rpm * jump * (1 + c.downBlip * (0.5 + this.brake))));
+    this.gear = to;
+    this.phase = "dshift";
+    this.phaseMs = 0;
+    const ev: DrivetrainShiftEvent = { sequenceId: nextSequenceId(), atMs: out.timestamp, fromGear: from, toGear: to, direction: "down", reason: "hard-rev-brake" };
+    this.lastEvent = ev;
+    return ev;
+  }
 
   get active(): boolean {
     return this.phase !== "off";
@@ -89,15 +149,37 @@ export class HardRevOverlay {
         this.rpm = Math.max(out.rpm, 3000);
         this.phaseMs = 0;
         this.lowMs = 0;
+      } else if (out.gear >= 2 && accel <= -c.brakeEnterMs2 && out.speedKmh >= c.brakeMinKmh) {
+        this.gear = out.gear;
+        this.rpm = out.rpm;
+        this.enterDecel();
       } else {
         return out;
+      }
+    }
+    // Hard braking during / right after a pull: go straight to the downshift ladder.
+    if ((this.phase === "climb" || this.phase === "bounce" || (this.phase === "blend" && !this.blendFromBrake)) &&
+        this.gear >= 2 && accel <= -c.brakeEnterMs2 && out.speedKmh >= c.brakeMinKmh) {
+      if (this.phase === "blend") { this.gear = Math.max(this.gear, out.gear); }
+      this.enterDecel();
+    }
+    const braking = this.phase === "decel" || this.phase === "dshift";
+    if (braking) {
+      const b = Math.min(1, Math.max(0, (-accel - c.brakeEnterMs2) / 4.5));
+      this.brake = Math.max(b, this.brake - dtMs / 3000);
+      this.brakeLowMs = -accel < c.brakeExitMs2 ? this.brakeLowMs + dtMs : 0;
+      if (this.phase === "decel" && (this.brakeLowMs > 300 || out.speedKmh < c.brakeStopKmh || (this.gear <= 2 && this.phaseMs > 900))) {
+        this.phase = "blend"; this.blendFromBrake = true;
+        this.phaseMs = 0;
+        this.blendFromRpm = this.rpm;
       }
     }
 
     // Leave on a lift / easing off (after a short grace so GPS noise does not drop out).
     const easing = demand < c.exitDemand || accel < c.exitAccelMs2;
     this.lowMs = easing ? this.lowMs + dtMs : 0;
-    if (this.phase !== "blend" && this.phase !== "shift" && this.lowMs > 300) {
+    if ((this.phase === "climb" || this.phase === "bounce") && this.lowMs > 300) {
+      this.blendFromBrake = false;
       this.phase = "blend";
       this.phaseMs = 0;
       this.blendFromRpm = this.rpm;
@@ -108,8 +190,32 @@ export class HardRevOverlay {
     let limiterCut = false;
     let shifting = false;
     let shiftPhase: NonNullable<VirtualPowertrainState["shiftPhase"]> = "idle";
-    let shiftEvent: DrivetrainShiftEvent | null = null;
+    let shiftEvent: DrivetrainShiftEvent | null = this.pendingDown ? this.beginDown(out, nextSequenceId) : null;
 
+    let shiftDir: "up" | "down" = "up";
+    let revMatch = false;
+    if (this.phase === "decel") {
+      // Revs bleed off with the road speed (engine braking), then the next downshift flares them.
+      const kmhPerSec = Math.max(0, -accel) * 3.6;
+      const rate = Math.max(1500, kmhPerSec * c.climbRpmPerKmh * Math.pow(c.gearRateFalloff, this.gear - 1));
+      this.rpm = Math.max(3000, this.rpm - (rate * dtMs) / 1000);
+      const downAt = c.downRpm[0] + (c.downRpm[1] - c.downRpm[0]) * this.brake;
+      if ((this.rpm <= downAt || (this.rpm < c.downRpm[0] && this.phaseMs >= 700)) && this.gear > 2 && out.speedKmh >= c.brakeStopKmh) {
+        shiftEvent = this.beginDown(out, nextSequenceId);
+      }
+    }
+    if (this.phase === "dshift") {
+      shifting = true;
+      shiftDir = "down";
+      const p = Math.min(1, this.phaseMs / c.downShiftMs);
+      shiftPhase = p < 0.35 ? "disengage" : p < 0.8 ? "ratio_transition" : "reengage";
+      revMatch = p < 0.8;
+      this.rpm = this.shiftFromRpm + (this.shiftToRpm - this.shiftFromRpm) * (1 - Math.pow(1 - p, 2.2));
+      if (p >= 1) {
+        this.phase = "decel";
+        this.phaseMs = 0;
+      }
+    }
     if (this.phase === "climb") {
       const kmhPerSec = Math.max(0, accel) * 3.6;
       const rate = Math.max(c.minClimbRpmPerSec, kmhPerSec * c.climbRpmPerKmh * Math.pow(c.gearRateFalloff, this.gear - 1));
@@ -153,29 +259,32 @@ export class HardRevOverlay {
       const p = Math.min(1, this.phaseMs / c.blendOutMs);
       const e = p * p * (3 - 2 * p);
       this.rpm = this.blendFromRpm + (out.rpm - this.blendFromRpm) * e;
-      if (p >= 1) {
+      if (p >= 1 && (!this.blendFromBrake || out.gear <= this.gear || this.phaseMs > 4000)) {
         this.phase = "off";
         return out;
       }
       // Hand the gear back to the base map when the blend starts.
-      this.gear = out.gear;
+      // After a pull hand the gear back now; after a braking ladder never show a higher gear than the ladder reached.
+      if (!this.blendFromBrake) this.gear = out.gear;
     }
 
     const res: VirtualPowertrainState = {
       ...out,
       rpm: this.rpm,
-      gear: this.phase === "blend" ? out.gear : this.gear,
+      gear: this.phase === "blend" ? (this.blendFromBrake ? Math.min(out.gear, this.gear) : out.gear) : this.gear,
       targetGear: this.phase === "blend" ? out.targetGear : this.gear,
-      shifting: shifting || (this.phase === "blend" && out.shifting),
+      shifting: shifting || (this.phase === "blend" && out.shifting && !this.hideBaseShift(out)),
       shiftPhase: (shifting ? shiftPhase : this.phase === "blend" ? out.shiftPhase : "idle") ?? "idle",
       lastShiftEvent: this.lastEvent ?? out.lastShiftEvent,
-      shiftEvent: shiftEvent ?? (this.phase === "blend" ? out.shiftEvent : null),
-      revMatchActive: this.phase === "blend" ? out.revMatchActive : false,
+      shiftEvent: shiftEvent ?? (this.phase === "blend" && !this.hideBaseShift(out) ? out.shiftEvent : null),
+      revMatchActive: this.phase === "blend" ? out.revMatchActive : revMatch,
+      ...(revMatch ? { revMatchProgress: Math.min(1, this.phaseMs / c.downShiftMs) } : {}),
+      ...(braking && this.phase !== "blend" ? { overrun: true } : {}),
       shiftLoadMultiplier: shifting ? 0.3 : 1,
     };
     if (shifting) {
-      res.shiftDirection = "up";
-      res.shiftProgress = Math.min(1, this.phaseMs / c.shiftMs);
+      res.shiftDirection = shiftDir;
+      res.shiftProgress = Math.min(1, this.phaseMs / (shiftDir === "down" ? c.downShiftMs : c.shiftMs));
     } else if (this.phase !== "blend") {
       delete res.shiftDirection;
       delete res.shiftProgress;

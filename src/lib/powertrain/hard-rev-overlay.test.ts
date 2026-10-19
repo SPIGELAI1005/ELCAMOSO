@@ -44,4 +44,40 @@ describe("hard-rev overlay (superbike only)", () => {
       expect(o.apply(s, 16.7, () => 0)).toBe(s);
     }
   });
+
+  it("flares the revs into the lower gear on each hard-braking downshift, down to 2nd", () => {
+    const o = new HardRevOverlay(HARD_REV_BY_PROFILE["motorcycle-inline-4"]!);
+    let seq = 0;
+    let speed = 150;
+    let last = 6;
+    const flares: number[] = [];
+    let peak = 0;
+    let downs = 0;
+    for (let i = 0; i < 60 * 8 && speed > 35; i += 1) {
+      speed -= (5.5 * 3.6) / 60;
+      const r = o.apply(
+        state({ gear: 6, rpm: 4500, speedKmh: speed, driverDemand: 0, overrun: true,
+          diagnostics: { ...(IDLE_POWERTRAIN.diagnostics ?? {}), accelerationFilteredMs2: -5.5 } as never }),
+        16.7,
+        () => (seq += 1),
+      );
+      if (r.gear < last) { downs += 1; peak = 0; }
+      if (r.shifting && r.shiftDirection === "down") { peak = Math.max(peak, r.rpm); expect(r.revMatchActive || r.shiftPhase === "reengage").toBe(true); }
+      if (!r.shifting && peak > 0) { flares.push(peak); peak = 0; }
+      last = r.gear;
+      expect(r.gear).toBeGreaterThanOrEqual(2);
+      expect(r.rpm).toBeLessThanOrEqual(13800);
+    }
+    expect(downs).toBeGreaterThanOrEqual(3);
+    expect(Math.max(...flares)).toBeGreaterThan(11500);
+  });
+
+  it("keeps gentle slowing on the normal map", () => {
+    const o = new HardRevOverlay(HARD_REV_BY_PROFILE["motorcycle-inline-4"]!);
+    for (let i = 0; i < 600; i += 1) {
+      const s = state({ gear: 5, rpm: 3000, speedKmh: 100, driverDemand: 0,
+        diagnostics: { ...(IDLE_POWERTRAIN.diagnostics ?? {}), accelerationFilteredMs2: -1.5 } as never });
+      expect(o.apply(s, 16.7, () => 0)).toBe(s);
+    }
+  });
 });
