@@ -488,8 +488,18 @@ export function DriveCockpit({
             reducedMotion={reducedMotion}
             redlineRpm={showTachRedline ? redline : null}
             showZone={showTachRedline || tachThemeId === "rocket" || tachThemeId === "warp"}
+            raceReadout={
+              tachThemeId === "race"
+                ? {
+                    gear: String(secondary.value),
+                    speed: String(speedView.value),
+                    unit: speedUnit,
+                    rpmText: secondary.showRpm ? secondary.rpmText : null,
+                  }
+                : null
+            }
           />
-          <div className="absolute inset-0 z-[1] flex flex-col items-center justify-center px-5 text-center">
+          <div className={cn("absolute inset-0 z-[1] flex flex-col items-center justify-center px-5 text-center", tachThemeId === "race" && "sr-only")}>
             <p
               className={cn(
                 "drive-cockpit__speed font-extralight tabular-nums leading-none tracking-tight transition-colors duration-200",

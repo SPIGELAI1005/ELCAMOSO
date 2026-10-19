@@ -50,7 +50,7 @@ function CockpitPreview() {
     speed: speedMps,
     throttle: 0.6,
     load: 0.6,
-    rpm: 6200,
+    rpm: Number(q.get("rpm") ?? 6200),
     gear: 3,
     timestamp: 1,
     speedNormalized: 0.55,

@@ -6,6 +6,7 @@ import {
   type TachThemeId,
 } from "@/lib/drive/tach-theme";
 import { cn } from "@/lib/utils";
+import { RaceDash, type RaceDashReadout } from "@/components/drive/RaceDash";
 
 function polar(cx: number, cy: number, r: number, deg: number) {
   const rad = (deg * Math.PI) / 180;
@@ -35,6 +36,8 @@ export interface ModeTachometerProps {
   showZone?: boolean;
   size?: number;
   className?: string;
+  /** Race theme only: readouts drawn inside the race dash. */
+  raceReadout?: RaceDashReadout | null;
 }
 
 /** Themed SVG tachometer with an intro sweep (needle to redline and back). */
@@ -47,6 +50,7 @@ export const ModeTachometer = memo(function ModeTachometer({
   showZone = true,
   size = 300,
   className,
+  raceReadout = null,
 }: ModeTachometerProps) {
   const theme = TACH_THEMES[themeId];
   const pad = 30;
@@ -129,6 +133,19 @@ export const ModeTachometer = memo(function ModeTachometer({
   const needleTip = polar(cx, cy, r + 8, angle);
   const needleBase = polar(cx, cy, r - (theme.decor === "airspeed" ? 60 : 26), angle);
   const fillColor = inZone ? theme.zoneColor : `url(#${gid})`;
+
+  if (themeId === "race") {
+    return (
+      <RaceDash
+        v={v}
+        zoneStart={theme.zoneStart ?? 0.78}
+        redlineRpm={redlineRpm}
+        readout={raceReadout}
+        intro={intro}
+        reducedMotion={reducedMotion}
+      />
+    );
+  }
 
   return (
     <svg
@@ -422,7 +439,6 @@ export const ModeTachometer = memo(function ModeTachometer({
       (themeId === "classic" ||
         themeId === "touring" ||
         themeId === "sport" ||
-        themeId === "race" ||
         themeId === "city") ? (
         <g className="mode-tach__fade">
           {labels.map((l, i) => {
