@@ -11,7 +11,7 @@ import {
 import { IDLE_STATE } from "@/lib/drive/model";
 
 describe("drive-shift-persona", () => {
-  it("keeps combustion cars on Classic/City/Touring/Sport with real gears", () => {
+  it("keeps combustion cars on Classic/City/Touring/Sport (+ opt-in Race) with real gears", () => {
     const profile = getProfile("american-muscle-v8");
     const persona = resolveDriveShiftPersona(profile, 6);
     expect(persona.modeBinding).toBe("shift-map");
@@ -21,6 +21,7 @@ describe("drive-shift-persona", () => {
       "City",
       "Touring",
       "Sport",
+      "Race",
     ]);
   });
 
@@ -44,10 +45,7 @@ describe("drive-shift-persona", () => {
   it("maps idle motion to N and motion energy to a stage", () => {
     expect(motionStageIndex(IDLE_STATE, 5)).toBe(0);
     expect(
-      motionStageIndex(
-        { ...IDLE_STATE, speed: 30 / 3.6, throttle: 0.4, load: 0.35 },
-        5,
-      ),
+      motionStageIndex({ ...IDLE_STATE, speed: 30 / 3.6, throttle: 0.4, load: 0.35 }, 5),
     ).toBeGreaterThan(0);
   });
 });

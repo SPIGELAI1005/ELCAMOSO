@@ -280,6 +280,14 @@ const PIPE_IR_SECONDS = 0.07;
 /**
  * Drop-in orchestrator for combustion profiles under Realism V2.2.
  */
+/** Race shift mode: lift-off pops for combustion cars without their own liftPops. */
+const RACE_LIFT_POPS = { probability: 0.6, level: 0.55 } as const;
+const RACE_SHIFT_CRACK_PROBABILITY = 0.5;
+const RACE_SHIFT_CRACK_LEVEL = 0.5;
+const RACE_LIMITER_GATE_HZ = 11;
+const RACE_LIMITER_GATE_FLOOR = 0.12;
+const RACE_SHIFT_GATE_FLOOR = 0.3;
+
 export class HybridCombustionSynth {
   private disposed = false;
   private cfg: AcousticEngineConfig | null = null;
@@ -332,6 +340,13 @@ export class HybridCombustionSynth {
   private popPrevDemand = 0;
   private popPrevDownshift = false;
   private popLastAt = -10;
+  /** Race shift mode only (cut / crack / limiter pops); idle for every other mode. */
+  private raceLastShiftSeq = -1;
+  private raceLastLimiterCut = false;
+  private raceLastLimiterPopAt = -10;
+  private raceGate: GainNode | null = null;
+  /** Audio time up to which limiter-cut gate cycles are scheduled (0 = gate open). */
+  private raceGateScheduledTo = 0;
   private turboWhistle: { oscs: OscillatorNode[]; gain: GainNode } | null = null;
   private bov: { src: AudioBufferSourceNode; filter: BiquadFilterNode; gain: GainNode } | null =
     null;
@@ -774,7 +789,12 @@ export class HybridCombustionSynth {
         this.pipe.disconnect();
         this.pipe.connect(into);
       }
-      limiter.connect(buses.body);
+      // Race shift mode ignition-cut gate (unity unless Race is active; pops bypass it).
+      const raceGate = ctx.createGain();
+      raceGate.gain.value = 1;
+      limiter.connect(raceGate);
+      raceGate.connect(buses.body);
+      this.raceGate = raceGate;
       this.outputLimiter = limiter;
       nodes += 1;
     }
@@ -1174,6 +1194,11 @@ export class HybridCombustionSynth {
 
     // Authoritative phase load from Powertrain (torque cut → reengage)
     if (shifting) intensity *= Math.max(0.18, Math.min(1, shiftLoad));
+    // Race shift mode: hard ignition cut on upshifts and on the limiter bounce.
+    const race = pt?.diagnostics?.shiftMapPreset === "race";
+    const raceCut = race && shifting && pt?.shiftDirection === "up" && shiftPhase !== "reengage";
+    if (raceCut) intensity *= 0.45;
+    if (race && pt?.limiterActive) intensity *= 0.85;
     if (revMatch) intensity = Math.min(1, intensity + 0.28 * (pt?.revMatchProgress ?? 0.5));
     if (overrun) intensity *= 0.55;
     // Reengage bark: clutch / converter takes up drive and combustion snaps back.
@@ -1197,7 +1222,8 @@ export class HybridCombustionSynth {
 
     // Spectral tilt: cruise darker, high load brighter (timbre, not gain-only)
     if (this.spectralTilt) {
-      const tiltDb = -4 + load * 5.5 + demand * 2.5 * cfg.highLoadEnrichment + bark * 3;
+      const tiltDb =
+        -4 + load * 5.5 + demand * 2.5 * cfg.highLoadEnrichment + bark * 3 - (raceCut ? 12 : 0);
       targetParam(this.spectralTilt.gain, tiltDb, audioTime, 0.07);
       this.diagnostics.spectralTiltDb = tiltDb;
     }
@@ -1259,7 +1285,10 @@ export class HybridCombustionSynth {
 
     // Lift-off / downshift exhaust pops (profiles with cfg.liftPops): unburned fuel lighting
     // off in a hot pipe after a meaningful lift at speed. Deterministic RNG, with cooldown.
-    if (cfg.liftPops && this.popChain) {
+    if (race && this.popChain) this.updateRacePops(pt, rpm, rpmNorm, audioTime);
+    this.updateRaceGate(race && Boolean(pt?.limiterActive), audioTime, raceCut);
+    const liftPops = cfg.liftPops ?? (race ? RACE_LIFT_POPS : undefined);
+    if (liftPops && this.popChain) {
       // GPS-estimated throttle rarely exceeds ~0.3, so a lift is a drop from a recent peak.
       const lift =
         this.popPrevDemand > 0.18 &&
@@ -1269,9 +1298,9 @@ export class HybridCombustionSynth {
       const downshift =
         shifting && pt?.shiftDirection === "down" && !this.popPrevDownshift && rpm > 2000;
       if ((lift || downshift) && audioTime - this.popLastAt > 1.6) {
-        if (this.popRand() < cfg.liftPops.probability) {
+        if (this.popRand() < liftPops.probability) {
           this.popLastAt = audioTime;
-          const strength = cfg.liftPops.level * (0.6 + rpmNorm * 0.6);
+          const strength = liftPops.level * (0.6 + rpmNorm * 0.6);
           this.firePopSequence(downshift ? "rev-match" : "overrun", strength, audioTime + 0.05);
         }
         if (lift) this.popPrevDemand = 0;
@@ -2116,6 +2145,77 @@ export class HybridCombustionSynth {
     }
   }
 
+  /** Race mode: optional crack at the upshift cut and dull pops on the limiter bounce. */
+  private updateRacePops(
+    pt: DriveState["powertrain"],
+    rpm: number,
+    rpmNorm: number,
+    audioTime: number,
+  ) {
+    const seq = pt?.lastShiftEvent?.sequenceId ?? -1;
+    if (seq !== this.raceLastShiftSeq) {
+      const isNew = this.raceLastShiftSeq >= 0;
+      this.raceLastShiftSeq = seq;
+      const ev = pt?.lastShiftEvent;
+      if (isNew && ev?.direction === "up" && ev.fromGear >= 1 && rpmNorm > 0.78) {
+        if (this.popRand() < RACE_SHIFT_CRACK_PROBABILITY) {
+          this.firePopSequence(
+            "rev-match",
+            RACE_SHIFT_CRACK_LEVEL * (0.7 + rpmNorm * 0.3),
+            audioTime + 0.02,
+          );
+        }
+      }
+    }
+    const cut = Boolean(pt?.limiterCut);
+    if (
+      cut &&
+      !this.raceLastLimiterCut &&
+      rpm > 2000 &&
+      audioTime - this.raceLastLimiterPopAt > 0.22
+    ) {
+      if (this.popRand() < 0.4) {
+        this.raceLastLimiterPopAt = audioTime;
+        this.firePopSequence("rev-match", 0.22, audioTime);
+      }
+    }
+    this.raceLastLimiterCut = cut;
+  }
+
+  /**
+   * Limiter bounce at audio rate: the 60 Hz control tick is too coarse for a ~11 Hz
+   * ignition cut, so square-wave cut cycles are scheduled ahead on the output gate.
+   */
+  private updateRaceGate(active: boolean, audioTime: number, shiftCut = false) {
+    const g = this.raceGate?.gain;
+    if (!g) return;
+    if (!active) {
+      if (shiftCut) {
+        // Race upshift: ignition cut through the ~150 ms shift (ref road V10: ~20 dB HF drop).
+        if (this.raceGateScheduledTo !== -1) {
+          g.cancelScheduledValues(audioTime);
+          g.setTargetAtTime(RACE_SHIFT_GATE_FLOOR, audioTime, 0.008);
+          this.raceGateScheduledTo = -1;
+        }
+        return;
+      }
+      if (this.raceGateScheduledTo !== 0) {
+        g.cancelScheduledValues(audioTime);
+        g.setTargetAtTime(1, audioTime, 0.012);
+        this.raceGateScheduledTo = 0;
+      }
+      return;
+    }
+    const period = 1 / RACE_LIMITER_GATE_HZ;
+    let t = Math.max(this.raceGateScheduledTo, audioTime + 0.005);
+    while (t < audioTime + 0.12) {
+      g.setTargetAtTime(RACE_LIMITER_GATE_FLOOR, t, 0.003);
+      g.setTargetAtTime(1, t + period * 0.42, 0.005);
+      t += period;
+    }
+    this.raceGateScheduledTo = t;
+  }
+
   private popRand(): number {
     this.popRng = (this.popRng * 1664525 + 1013904223) >>> 0;
     return this.popRng / 0x100000000;
@@ -2221,6 +2321,8 @@ export class HybridCombustionSynth {
     this.harshnessShelf = null;
     this.outputLimiter?.disconnect();
     this.outputLimiter = null;
+    this.raceGate?.disconnect();
+    this.raceGate = null;
     this.highRpmVoicing?.low.disconnect();
     this.highRpmVoicing?.pres.disconnect();
     this.highRpmVoicing = null;

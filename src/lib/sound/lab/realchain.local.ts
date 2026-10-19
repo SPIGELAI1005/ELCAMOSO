@@ -28,7 +28,8 @@ function trueSpeed(t: number) {
   return 0;
 }
 export async function renderRealChain(profileId: string, extras: boolean, plan = "std") {
-  const [pn, force] = plan.split("@");
+  const [planPart, presetOverride] = plan.split("#");
+  const [pn, force] = planPart!.split("@");
   PLAN = PLANS[pn!] ?? PLANS.std!;
   (globalThis as any).__ELC_REC_FORCE = force === undefined ? undefined : Number(force);
   const profile = getProfile(profileId);
@@ -48,7 +49,7 @@ export async function renderRealChain(profileId: string, extras: boolean, plan =
   await (engine as any).whenSamplesReady?.();
   const fusion = createSensorFusion();
   fusion.options.sensitivity = s.motionSensitivity; fusion.options.noiseFloor = s.motionNoiseFloor;
-  const sim = new PowertrainSimulator({ profile: powertrainProfileForSound(profile), shiftMapPreset: s.shiftMapPreset ?? "legacy" } as never);
+  const sim = new PowertrainSimulator({ profile: powertrainProfileForSound(profile), shiftMapPreset: presetOverride ?? s.shiftMapPreset ?? "legacy" } as never);
   let state: any = IDLE_STATE; let rng = 12345; const rnd = () => ((rng = (rng * 1103515245 + 12345) >>> 0) / 2 ** 32);
   const log: number[][] = []; let nextGps = 0.3;
   for (let t = 0; t < DURATION; t += STEP) {

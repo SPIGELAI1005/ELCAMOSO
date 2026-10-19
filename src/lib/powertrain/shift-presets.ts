@@ -13,33 +13,62 @@ import { isCityShiftPresetDefaultEnabled } from "@/lib/powertrain/shift-preset-f
  * Artistic virtual-transmission shift-map presets (Prompt 03).
  * Thresholds are design defaults — not measured vehicle or competitor data.
  */
-export type ShiftMapPresetId = "legacy" | "city" | "touring" | "sport";
+export type ShiftMapPresetId = "legacy" | "city" | "touring" | "sport" | "race";
 
 export const SHIFT_MAP_PRESET_IDS: readonly ShiftMapPresetId[] = [
   "legacy",
   "city",
   "touring",
   "sport",
+  "race",
 ] as const;
+
+/** Presets built from the City gentle-demand anchors (Race is built on top of Sport). */
+type AnchorPresetId = "city" | "touring" | "sport";
+
+/**
+ * Race shift mode (opt-in only; existing modes never read these values).
+ * - shorter effective final drive so redline is reachable at normal road speeds
+ * - rev limiter a little above the personality redline (V10: 9000 → ~9200)
+ * - late upshifts at ~97% of redline once demand ≥ 0.35
+ * - at high demand the limiter is held/bounced briefly before the upshift
+ */
+export const RACE_FINAL_DRIVE_SCALE = 1.35;
+export const RACE_LIMITER_FRACTION = 1.022;
+export const RACE_UPSHIFT_FRACTION = 0.97;
+export const RACE_LATE_DEMAND = 0.35;
+export const RACE_LIMITER_DEMAND = 0.6;
+export const RACE_LIMITER_HOLD_MS = 300;
+export const RACE_LIMITER_MAX_WAIT_MS = 1400;
+export const RACE_LIMITER_BOUNCE_HZ = 13;
+export const RACE_LIMITER_BOUNCE_RPM = 220;
+export const RACE_UPSHIFT_MS = 150;
+export const RACE_DOWNSHIFT_MS = 190;
+export const RACE_MIN_GEAR_HOLD_MS = 650;
+
+/** Personality redline before the Race limiter lift (Race profiles store the limiter). */
+export function raceBaseRedlineRpm(raceProfile: PowertrainProfile): number {
+  return raceProfile.engine.redlineRpm / RACE_LIMITER_FRACTION;
+}
 
 /** City gentle-demand upshifts (km/h) for gears 1→2 … 5→6 on a six-speed. */
 export const CITY_UPSHIFT_KMH = [15, 28, 43, 58, 75] as const;
 /** City companion downshifts (km/h) for leaving gears 2…6. */
 export const CITY_DOWNSHIFT_KMH = [10, 21, 35, 49, 65] as const;
 
-const PRESET_SCALE: Record<Exclude<ShiftMapPresetId, "legacy">, number> = {
+const PRESET_SCALE: Record<AnchorPresetId, number> = {
   city: 1,
   touring: 1.18,
   sport: 1.38,
 };
 
-const PRESET_MIN_GEAR_HOLD_MS: Record<Exclude<ShiftMapPresetId, "legacy">, number> = {
+const PRESET_MIN_GEAR_HOLD_MS: Record<AnchorPresetId, number> = {
   city: 900,
   touring: 1050,
   sport: 1200,
 };
 
-const PRESET_UPSHIFT_MS: Record<Exclude<ShiftMapPresetId, "legacy">, number> = {
+const PRESET_UPSHIFT_MS: Record<AnchorPresetId, number> = {
   city: 200,
   touring: 240,
   sport: 180,
@@ -97,29 +126,21 @@ function enforceGap(up: number, down: number, gear: number): number {
  * Build a demand×speed ShiftMap from City/Touring/Sport gentle anchors.
  * WOT column approaches soft-redline road speed so Sport can still hold under demand.
  */
-export function buildPresetShiftMap(
-  profile: PowertrainProfile,
-  preset: Exclude<ShiftMapPresetId, "legacy">,
-): ShiftMap {
+export function buildPresetShiftMap(profile: PowertrainProfile, preset: AnchorPresetId): ShiftMap {
   const gears = profile.transmission.gears;
   const nUp = Math.max(0, gears - 1);
   const scale = PRESET_SCALE[preset];
   const upGentle = adaptSpeedLadder(CITY_UPSHIFT_KMH, nUp).map((s) => s * scale);
   const downGentle = adaptSpeedLadder(CITY_DOWNSHIFT_KMH, nUp).map((s) => s * scale);
 
-  const softRedline =
-    profile.engine.redlineRpm * profile.transmission.redline.softFraction;
+  const softRedline = profile.engine.redlineRpm * profile.transmission.redline.softFraction;
 
   const upshiftSpeedKmh: number[][] = [];
   const downshiftSpeedKmh: number[][] = [];
 
   for (let fromGear = 1; fromGear < gears; fromGear += 1) {
     const gentleUp = upGentle[fromGear - 1] ?? 20;
-    const gentleDown = enforceGap(
-      gentleUp,
-      downGentle[fromGear - 1] ?? gentleUp * 0.7,
-      fromGear,
-    );
+    const gentleDown = enforceGap(gentleUp, downGentle[fromGear - 1] ?? gentleUp * 0.7, fromGear);
     const wotUp = Math.max(
       gentleUp,
       Math.min(
@@ -157,8 +178,8 @@ export function buildPresetShiftMap(
     const downRow: number[] = [];
     for (const demand of DEMAND_BREAKPOINTS) {
       const t = preset === "sport" ? Math.pow(demand, 0.75) : demand;
-      const priorUp = upshiftSpeedKmh[nUp - 1]?.[Math.round(t * (DEMAND_BREAKPOINTS.length - 1))] ??
-        priorGentle;
+      const priorUp =
+        upshiftSpeedKmh[nUp - 1]?.[Math.round(t * (DEMAND_BREAKPOINTS.length - 1))] ?? priorGentle;
       let down = gentleDown * (1 + t * 0.08);
       const minGap = 5 + fromGear * 0.75;
       if (priorUp != null) down = Math.min(down, priorUp - minGap);
@@ -184,11 +205,9 @@ export function applyShiftPresetToProfile(
   preset: ShiftMapPresetId,
 ): PowertrainProfile {
   if (preset === "legacy") return profile;
+  if (preset === "race") return applyRacePresetToProfile(profile);
   const hold = PRESET_MIN_GEAR_HOLD_MS[preset];
-  const upMs = Math.min(
-    300,
-    Math.max(150, PRESET_UPSHIFT_MS[preset]),
-  );
+  const upMs = Math.min(300, Math.max(150, PRESET_UPSHIFT_MS[preset]));
   const downMs = Math.min(400, Math.max(180, upMs + 40));
   const { shiftMap: _map, shiftMapOverrides: _overrides, ...txRest } = profile.transmission;
   return {
@@ -205,11 +224,72 @@ export function applyShiftPresetToProfile(
   };
 }
 
+/** Race: shorter final drive, limiter above redline, fast cut-type shifts. */
+function applyRacePresetToProfile(profile: PowertrainProfile): PowertrainProfile {
+  const { shiftMap: _map, shiftMapOverrides: _overrides, ...txRest } = profile.transmission;
+  return {
+    ...profile,
+    engine: {
+      ...profile.engine,
+      redlineRpm: Math.round(profile.engine.redlineRpm * RACE_LIMITER_FRACTION),
+    },
+    transmission: {
+      ...txRest,
+      finalDrive: profile.transmission.finalDrive * RACE_FINAL_DRIVE_SCALE,
+      shift: {
+        ...profile.transmission.shift,
+        minGearHoldMs: RACE_MIN_GEAR_HOLD_MS,
+        upshiftDurationMs: RACE_UPSHIFT_MS,
+        downshiftDurationMs: RACE_DOWNSHIFT_MS,
+      },
+    },
+  };
+}
+
+/**
+ * Race schedule: Sport gentle anchors, then late upshifts at ~97% of the personality
+ * redline from demand 0.35; downshifts keep the engine in the upper half of the band.
+ */
+export function buildRaceShiftMap(raceProfile: PowertrainProfile): ShiftMap {
+  const sport = buildPresetShiftMap(raceProfile, "sport");
+  const gears = raceProfile.transmission.gears;
+  const base = raceBaseRedlineRpm(raceProfile);
+  const late = (g: number) => speedKmhFromRpmAndGear(base * RACE_UPSHIFT_FRACTION, g, raceProfile);
+  const upshiftSpeedKmh = sport.upshiftSpeedKmh.map((row, gi) => {
+    const lateUp = late(gi + 1);
+    return DEMAND_BREAKPOINTS.map((demand, i) => {
+      const gentle = Math.min(row[i] ?? lateUp, lateUp * 0.95);
+      if (demand >= RACE_LATE_DEMAND) return round1(lateUp);
+      const t = demand / RACE_LATE_DEMAND;
+      return round1(gentle + (lateUp - gentle) * t * 0.6);
+    });
+  });
+  const downshiftSpeedKmh = sport.downshiftSpeedKmh.map((row, gi) => {
+    const fromGear = gi + 1;
+    const highDown = fromGear > 1 ? speedKmhFromRpmAndGear(base * 0.5, fromGear, raceProfile) : 0;
+    return DEMAND_BREAKPOINTS.map((demand, i) => {
+      let down = row[i] ?? 0;
+      if (fromGear > 1 && demand >= RACE_LATE_DEMAND) down = Math.max(down, highDown);
+      const minGap = 5 + fromGear * 0.75;
+      const sameUp = upshiftSpeedKmh[gi]?.[i];
+      if (sameUp != null) down = Math.min(down, sameUp - minGap);
+      const priorUp = upshiftSpeedKmh[gi - 1]?.[i];
+      if (priorUp != null) down = Math.min(down, priorUp - minGap);
+      return round1(Math.max(fromGear === gears ? 8 : 0, down));
+    });
+  });
+  return { ...sport, upshiftSpeedKmh, downshiftSpeedKmh, speedHysteresisKmh: 4.5 };
+}
+
 export function resolveShiftMapForPreset(
   profile: PowertrainProfile,
   preset: ShiftMapPresetId,
 ): ShiftMap {
   if (preset === "legacy") return resolveShiftMap(profile);
+  if (preset === "race") {
+    const race = buildRaceShiftMap(profile);
+    return validateShiftMap(race, profile).ok ? race : generateShiftMap(profile);
+  }
   const map = buildPresetShiftMap(profile, preset);
   const check = validateShiftMap(map, profile);
   if (check.ok) return map;

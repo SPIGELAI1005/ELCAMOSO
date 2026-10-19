@@ -454,6 +454,7 @@ function SoundWorkspace({
               <option value="city">City (earlier gears)</option>
               <option value="touring">Touring</option>
               <option value="sport">Sport (holds longer)</option>
+              <option value="race">Race (late shifts, limiter, pops)</option>
             </select>
             <p className="mt-2 text-xs text-muted-foreground">
               Artistic tuning for virtual gears — not measured vehicle data. City becomes the

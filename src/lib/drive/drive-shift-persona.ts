@@ -43,6 +43,7 @@ function shiftMapLabel(id: ShiftMapPresetId): string {
   if (id === "legacy") return "Classic";
   if (id === "city") return "City";
   if (id === "touring") return "Touring";
+  if (id === "race") return "Race";
   return "Sport";
 }
 

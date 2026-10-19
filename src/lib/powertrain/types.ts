@@ -95,6 +95,10 @@ export interface VirtualPowertrainState {
 
   /** Dev/diagnostics only - never show in consumer UI. */
   diagnostics?: PowertrainRuntimeDiagnostics;
+  /** Race shift mode only: engine is on the rev limiter at high demand. */
+  limiterActive?: boolean;
+  /** Race shift mode only: ignition-cut phase of the limiter bounce. */
+  limiterCut?: boolean;
 }
 
 export interface PowertrainRuntimeDiagnostics {

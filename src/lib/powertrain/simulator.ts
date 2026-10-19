@@ -14,6 +14,11 @@ import {
 } from "@/lib/powertrain/rpm-model";
 import type { ShiftMap } from "@/lib/powertrain/shift-map";
 import {
+  RACE_LIMITER_BOUNCE_HZ,
+  RACE_LIMITER_BOUNCE_RPM,
+  RACE_LIMITER_DEMAND,
+  RACE_LIMITER_HOLD_MS,
+  RACE_LIMITER_MAX_WAIT_MS,
   applyShiftPresetToProfile,
   defaultShiftMapPreset,
   resolveShiftMapForPreset,
@@ -108,6 +113,10 @@ export class PowertrainSimulator {
   private internal: PowertrainSimulatorInternals;
   /** Simulator clockMs deadline; 0 = no manual hold. */
   private manualHoldUntilMs = 0;
+  /** Race mode only: limiter hold / bounce bookkeeping (unused by every other preset). */
+  private raceLimiterSinceMs = 0;
+  private raceUpshiftWantedSinceMs = 0;
+  private raceBouncePhase = 0;
 
   constructor(options: PowertrainSimulatorOptions = {}) {
     this.baseProfile =
@@ -160,7 +169,15 @@ export class PowertrainSimulator {
         this.profile.engine.idleRpm,
         rpmFromSpeedAndGear(speed, 1, this.profile) * 0.4,
       );
-      const launch = beginShift(this.internal.shiftState, "up", 0, 1, speed, launchRpm, this.profile);
+      const launch = beginShift(
+        this.internal.shiftState,
+        "up",
+        0,
+        1,
+        speed,
+        launchRpm,
+        this.profile,
+      );
       if (!launch.active) return false;
       this.internal.shiftState = launch;
       this.internal.queuedTargetGear = 1;
@@ -193,6 +210,9 @@ export class PowertrainSimulator {
     this.internal = createPowertrainInternals();
     this.internal.shiftMap = resolveShiftMapForPreset(this.profile, this.shiftMapPreset);
     this.manualHoldUntilMs = 0;
+    this.raceLimiterSinceMs = 0;
+    this.raceUpshiftWantedSinceMs = 0;
+    this.raceBouncePhase = 0;
   }
 
   /**
@@ -327,7 +347,7 @@ export class PowertrainSimulator {
       0.7,
     );
     const derivedAcceleration = hadPriorClock
-      ? ((this.internal.accelerationSpeedKmh - priorAccelerationSpeedKmh) / 3.6) / dtSafe
+      ? (this.internal.accelerationSpeedKmh - priorAccelerationSpeedKmh) / 3.6 / dtSafe
       : 0;
     const accelerationTarget = holdShifts
       ? 0
@@ -513,7 +533,21 @@ export class PowertrainSimulator {
       }
 
       targetGear = desiredGear;
-      if (desiredGear !== gear) {
+      // Race mode: at high demand, run into the limiter and hold it briefly before the
+      // scheduled upshift (bounded wait so a stalled GPS speed cannot pin the gear).
+      let raceHold = false;
+      if (this.shiftMapPreset === "race" && desiredGear > gear && !manualHold) {
+        if (!this.raceUpshiftWantedSinceMs) this.raceUpshiftWantedSinceMs = now;
+        if (throttleResult.driverDemand >= RACE_LIMITER_DEMAND) {
+          const held =
+            this.raceLimiterSinceMs > 0 && now - this.raceLimiterSinceMs >= RACE_LIMITER_HOLD_MS;
+          const waitedTooLong = now - this.raceUpshiftWantedSinceMs >= RACE_LIMITER_MAX_WAIT_MS;
+          raceHold = !held && !waitedTooLong;
+        }
+      }
+      if (raceHold) {
+        targetGear = gear;
+      } else if (desiredGear !== gear) {
         const nextGear = gear + Math.sign(desiredGear - gear);
         if (nextGear !== gear && Math.abs(nextGear - gear) === 1) {
           const direction: ShiftDirection = nextGear > gear ? "up" : "down";
@@ -631,6 +665,34 @@ export class PowertrainSimulator {
       boostState: boostResult.state,
     };
 
+    // Race mode limiter: track time on the limiter and add a hard-cut bounce on output rpm.
+    let limiterActive = false;
+    let limiterCut = false;
+    let outRpm = rpm;
+    if (this.shiftMapPreset === "race") {
+      if (shiftState.active || desiredGear <= gear) this.raceUpshiftWantedSinceMs = 0;
+      const limiter = this.profile.engine.redlineRpm;
+      const onLimiter =
+        gear > 0 &&
+        !shiftState.active &&
+        rpm >= limiter - 60 &&
+        throttleResult.driverDemand >= RACE_LIMITER_DEMAND;
+      if (onLimiter) {
+        if (!this.raceLimiterSinceMs) this.raceLimiterSinceMs = now;
+        limiterActive = true;
+        this.raceBouncePhase = (this.raceBouncePhase + dtSafe * RACE_LIMITER_BOUNCE_HZ) % 1;
+        limiterCut = this.raceBouncePhase < 0.4;
+        // Cut: revs fall; re-fire: revs snap back to the limiter (saw-tooth bounce).
+        const dip = limiterCut
+          ? this.raceBouncePhase / 0.4
+          : 1 - (this.raceBouncePhase - 0.4) / 0.6;
+        outRpm = limiter - RACE_LIMITER_BOUNCE_RPM * dip;
+      } else {
+        this.raceLimiterSinceMs = 0;
+        this.raceBouncePhase = 0;
+      }
+    }
+
     const engineRunning =
       gear > 0 ||
       throttleResult.driverDemand > this.profile.transmission.idle.disengageThrottle ||
@@ -663,9 +725,9 @@ export class PowertrainSimulator {
       speedKmh: displaySpeedKmh,
       speedSource: motion.primarySource,
       speedFreshness,
-      rpm,
+      rpm: outRpm,
       mechanicalRpm,
-      normalizedRpm: normalizeRpm(rpm, this.profile),
+      normalizedRpm: normalizeRpm(outRpm, this.profile),
       gear,
       targetGear,
       queuedTargetGear: desiredGear,
@@ -702,6 +764,11 @@ export class PowertrainSimulator {
         effectiveDtMs: dtSafe * 1000,
       },
     };
+
+    if (limiterActive) {
+      out.limiterActive = true;
+      out.limiterCut = limiterCut;
+    }
 
     if (shiftState.active) {
       out.shiftDirection = shiftState.direction;
