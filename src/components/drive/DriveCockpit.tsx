@@ -216,9 +216,9 @@ function CockpitGearLadder({
             type="button"
             onClick={onCycleMode}
             className={GEAR_ROW_BTN}
-            aria-label={`Shift mode ${modeLabel}. Tap to cycle.`}
+            aria-label={`Mode ${modeLabel}. Tap to cycle.`}
           >
-            Shift
+            Mode
           </button>
         ) : null}
         {modeLabel ? (
@@ -226,7 +226,7 @@ function CockpitGearLadder({
             className="hidden whitespace-nowrap rounded-full bg-foreground px-2.5 py-1.5 text-[9px] leading-none tracking-[0.08em] text-background uppercase"
             role="status"
             aria-live="polite"
-            aria-label={`Shift mode ${modeLabel}`}
+            aria-label={`Mode ${modeLabel}`}
           >
             {modeLabel}
           </span>
