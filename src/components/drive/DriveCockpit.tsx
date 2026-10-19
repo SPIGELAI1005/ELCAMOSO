@@ -138,7 +138,7 @@ function CockpitGearLadder({
 
   return (
     <div
-      className="mt-2 grid w-full grid-cols-2 items-center gap-x-2 gap-y-1.5 sm:grid-cols-3 sm:gap-y-0"
+      className="mt-2 grid w-full grid-cols-2 items-center gap-x-2 gap-y-2.5"
       role="group"
       aria-label={
         shifting ? `Shifting to gear ${active || 1}` : inNeutral ? "Neutral" : `Gear ${active}`
@@ -168,7 +168,7 @@ function CockpitGearLadder({
         </button>
       </div>
       <div
-        className="pointer-events-none col-span-2 row-start-1 mx-auto flex w-full max-w-[18rem] min-w-0 items-center justify-center gap-1 overflow-hidden px-0.5 sm:col-span-1 sm:row-start-auto sm:mx-0 sm:min-h-[3.375rem] sm:w-auto sm:gap-1.5 sm:overflow-visible"
+        className="pointer-events-none col-span-2 row-start-1 mx-auto flex w-full max-w-[18rem] min-w-0 items-center justify-center gap-1 overflow-hidden px-0.5 sm:max-w-[22rem] sm:gap-1.5"
         role="status"
       >
         {Array.from({ length: gearCount }, (_, i) => i + 1).map((gear) => {
@@ -194,14 +194,14 @@ function CockpitGearLadder({
         })}
         {modeLabel ? (
           <span
-            className="ml-1 max-w-[4.75rem] shrink-0 truncate whitespace-nowrap rounded-full bg-foreground px-2 py-1 text-[9px] leading-none tracking-[0.08em] text-background uppercase sm:hidden"
+            className="ml-1 max-w-[4.75rem] shrink-0 truncate whitespace-nowrap rounded-full bg-foreground px-2 py-1 text-[9px] leading-none tracking-[0.08em] text-background uppercase"
             aria-hidden="true"
           >
             {modeLabel}
           </span>
         ) : null}
       </div>
-      <div className="flex min-h-[3.375rem] min-w-0 items-center justify-start gap-1.5 sm:justify-end">
+      <div className="flex min-h-[3.375rem] min-w-0 items-center justify-start gap-2">
         <button
           type="button"
           onClick={onGearUp}
@@ -223,7 +223,7 @@ function CockpitGearLadder({
         ) : null}
         {modeLabel ? (
           <span
-            className="max-w-[4.75rem] shrink-0 truncate max-sm:hidden whitespace-nowrap rounded-full bg-foreground px-2.5 py-1.5 text-[9px] leading-none tracking-[0.08em] text-background uppercase"
+            className="hidden whitespace-nowrap rounded-full bg-foreground px-2.5 py-1.5 text-[9px] leading-none tracking-[0.08em] text-background uppercase"
             role="status"
             aria-live="polite"
             aria-label={`Shift mode ${modeLabel}`}

@@ -533,9 +533,9 @@ export const ModeTachometer = memo(function ModeTachometer({
             return (
               <circle
                 key={i}
-                cx={cx - 64 + i * 16}
-                cy={pad - 6}
-                r={4.5}
+                cx={cx - 56 + i * 14}
+                cy={11}
+                r={3.8}
                 fill={on ? col : "oklch(1 0 0 / 10%)"}
                 className={flash && !reducedMotion ? "mode-tach__flash" : undefined}
               />
