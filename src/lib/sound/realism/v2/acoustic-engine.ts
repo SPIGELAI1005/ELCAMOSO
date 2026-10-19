@@ -120,6 +120,8 @@ export interface AcousticEngineConfig {
     blipRpm: [number, number];
     blipEveryS: [number, number];
     blipIntensity: number;
+    /** Optional extra output trim (dB) while parked/idling only (fades out on the move). */
+    idleGainDb?: number;
   };
 }
 
@@ -316,7 +318,7 @@ const F1_V10: AcousticEngineConfig = {
   ...V10,
   idleIrregularity: 0.32,
   // Race-engine idle: hunts ±~100 rpm and gets the odd throttle blip, like a parked F1 car.
-  idleLife: { wanderRpm: 150, wanderTauS: 0.35, blipRpm: [700, 1700], blipEveryS: [4, 9], blipIntensity: 0.2 },
+  idleLife: { wanderRpm: 150, wanderTauS: 0.35, blipRpm: [700, 1700], blipEveryS: [4, 9], blipIntensity: 0.2, idleGainDb: 8 },
   exhaustPulse: 0.7,
   intakePresence: 0.95,
   mechanicalIntensity: 0.62,

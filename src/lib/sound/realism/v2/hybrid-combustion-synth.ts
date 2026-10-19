@@ -1361,7 +1361,8 @@ export class HybridCombustionSynth {
     });
     this.diagnostics.orderHz = orderHz;
     // Root-cause §loudness: compute outputTrimLinear once, apply to all output paths
-    const outputTrimLinear = Math.pow(10, (cfg.outputTrimDb ?? 0) / 20);
+    const idleLiftDb = cfg.idleLife?.idleGainDb ? cfg.idleLife.idleGainDb * this.ilGate : 0;
+    const outputTrimLinear = Math.pow(10, ((cfg.outputTrimDb ?? 0) + idleLiftDb) / 20);
     // Load-flat paths (support, pipe) get only part of the trim: trimming them fully
     // raises the cruise floor as much as the pull and collapses the 8-10 dB gap.
     const supportTrim = Math.pow(10, ((cfg.outputTrimDb ?? 0) * 0.5) / 20);
@@ -1621,6 +1622,7 @@ export class HybridCombustionSynth {
   private ilBlipT = -1;
   private ilBlipAmp = 0;
   private ilBlipEnv = 0;
+  private ilGate = 0;
 
   private ilRand(): number {
     this.ilSeed = (this.ilSeed * 1664525 + 1013904223) >>> 0;
@@ -1673,6 +1675,7 @@ export class HybridCombustionSynth {
       }
     }
     this.ilBlipEnv *= gate > 0.5 ? 1 : 0;
+    this.ilGate = gate;
     return Math.max(0, rpm + gate * (wander + this.ilBlipAmp * this.ilBlipEnv));
   }
 

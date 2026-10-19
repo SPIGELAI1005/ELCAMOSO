@@ -64,6 +64,9 @@ export interface CombustionOrganicTopology {
   wanderHz?: number;
   /** Bank-rate amplitude modulation depth 0..1 (half-order energy, crank-locked). */
   bankAm?: number;
+  /** Optional rpm window for bankAm: off below start, full at full (default: always full). */
+  bankAmStartRpm?: number;
+  bankAmFullRpm?: number;
   valvetrain?: { level: number; hz: number; q?: number; tauS?: number; fadeStartRpm?: number; fadeEndRpm?: number };
   intakeRoar?: { level: number; hz: number; q?: number; startRpm?: number; fullRpm?: number; idle?: number };
 }
@@ -431,12 +434,12 @@ export const V10_TOPOLOGY: CombustionTopologyV1 = {
   rasp: { level: 0.34, startRpm: 5000, fullRpm: 8500, lowHz: 1000, highHz: 3000 },
   // Idle lope: one random gain per 720° (scaled by irregularity, so it lives at idle).
   cycleLope: 0.45,
-  // No dead-steady crank: slow wander + per-fire kick, valvetrain ticks at idle/low rpm.
+  // No dead-steady crank: slow wander + per-fire kick. (Valvetrain ticks removed: at idle
+  // their sparse 3 kHz clicks read as stones/crackle in the car.)
   organic: {
     crankJitter: 0.006,
     crankWander: 0.006,
     wanderHz: 1.2,
-    valvetrain: { level: 0.35, hz: 3200, q: 2.5, tauS: 0.0006, fadeStartRpm: 2500, fadeEndRpm: 5000 },
   },
   collectors: [{ id: 0 }, { id: 1 }],
   soundSpeedMetresPerSecond: TOPOLOGY_SOUND_SPEED_DEFAULT,
@@ -467,13 +470,15 @@ export const F1_V10_TOPOLOGY: CombustionTopologyV1 = {
   pulseTauScale: 0.12,
   cycleLope: 0.5,
   // Organic: crank never dead-steady (per-fire kick + slow wander = slight pitch instability),
-  // valvetrain/gear chatter at idle, airbox roar breathing with the intake pulses under load.
+  // airbox roar breathing with the intake pulses under load. No valvetrain ticks (idle crackle).
   organic: {
     crankJitter: 0.008,
     crankWander: 0.006,
     wanderHz: 2.5,
     bankAm: 0.6,
-    valvetrain: { level: 0.3, hz: 2800, q: 2.2, tauS: 0.0005, fadeStartRpm: 6000, fadeEndRpm: 10000 },
+    // High-rpm howl only: at idle the bank modulation pulsed the noise into a crackle.
+    bankAmStartRpm: 6000,
+    bankAmFullRpm: 11000,
     intakeRoar: { level: 0.35, hz: 900, q: 1.1, startRpm: 8000, fullRpm: 16000, idle: 0.12 },
   },
   collectors: [{ id: 0 }, { id: 1 }],

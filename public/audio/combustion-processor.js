@@ -53,6 +53,9 @@ function parseOrganic(o) {
     // Bank-rate amplitude modulation (0..1): one bank breathes louder, locked to crank
     // phase, which puts energy on the half orders (V10: 2.5 / 7.5 / 12.5) without new tones.
     bankAm: Math.min(1, Math.max(0, num(o.bankAm, 0))),
+    // Optional rpm window for bankAm (full above bankAmFullRpm); default always on.
+    bankAmStartRpm: Math.max(0, num(o.bankAmStartRpm, 0)),
+    bankAmFullRpm: Math.max(1, num(o.bankAmFullRpm, 1)),
     vt: null,
     roar: null,
   };
@@ -349,6 +352,8 @@ class CombustionExcitationProcessor extends AudioWorkletProcessor {
     const arch = Math.round(readParam(parameters.architecture, 0, 0, ARCHITECTURE_CODE_MAX));
 
     const tauScale = this.topology ? this.topology.pulseTauScale : 1;
+    const attackScale =
+      tauScale < 1 ? Math.min(1, Math.max(tauScale, 400 / Math.max(1, firingHz))) : 1;
     const bodyTauSeconds = (0.0038 + (1 - sharpness) * 0.0042 + load * 0.0012) * tauScale;
     const edgeTauSeconds = (0.0012 + (1 - sharpness) * 0.0013) * tauScale;
     const burstTauSeconds = (0.0022 + (1 - sharpness) * 0.0018 + load * 0.0008) * tauScale;
@@ -503,9 +508,10 @@ class CombustionExcitationProcessor extends AudioWorkletProcessor {
       // Root-cause §clicks: soft attack on all envelopes (~0.3ms for env/bright, ~0.5ms for burst)
       // Prevents clicks from sparse V-twin pulses where instant steps create waveform discontinuities.
       // Attack coefficients: higher = faster attack
-      // F1-class short pulses (pulseTauScale < 1) scale the attacks with them; 1 elsewhere.
-      const envAttack = 1 - Math.exp(-1 / (sampleRate * 0.0003 * tauScale));
-      const burstAttack = 1 - Math.exp(-1 / (sampleRate * 0.0005 * tauScale));
+      // F1-class short pulses (pulseTauScale < 1) shorten the attacks only at high firing
+      // rates (at idle, near-instant attacks clicked); exactly 1 for every other topology.
+      const envAttack = 1 - Math.exp(-1 / (sampleRate * 0.0003 * attackScale));
+      const burstAttack = 1 - Math.exp(-1 / (sampleRate * 0.0005 * attackScale));
       // Ramp toward targets
       this.env += (this.envTarget - this.env) * envAttack;
       this.bright += (this.brightTarget - this.bright) * envAttack;
@@ -596,7 +602,10 @@ class CombustionExcitationProcessor extends AudioWorkletProcessor {
       if (ogx && ogx.bankAm > 0) {
         // 720° cycle → (cylinders / 2) bank periods; cosine locked to the (jittered) crank.
         const ph = (this.crankPhaseDegrees / topology.cycleDegrees) * (topology.cylinderCount / 2) * 2 * Math.PI;
-        raw *= 1 + ogx.bankAm * Math.cos(ph);
+        const rpmA = firingHz > 0 ? (firingHz * 120) / topology.cylinderCount : 0;
+        const span = Math.max(1, ogx.bankAmFullRpm - ogx.bankAmStartRpm);
+        const amG = clamp01((rpmA - ogx.bankAmStartRpm) / span);
+        if (amG > 0) raw *= 1 + ogx.bankAm * amG * Math.cos(ph);
       }
 
       const sample = raw - this.previousRaw + 0.9975 * this.dcBlocked;

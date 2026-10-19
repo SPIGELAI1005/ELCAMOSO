@@ -216,13 +216,16 @@ describe("V10 organic layer (alive idle, less synthetic F1)", () => {
       const t = combustionTopologyForProfile(id);
       if (id === "racing-v10" || id === "f1-v10") {
         expect(t?.organic?.crankJitter).toBeGreaterThan(0);
-        expect(t?.organic?.valvetrain?.level).toBeGreaterThan(0);
+        // No valvetrain ticks: their sparse 3 kHz clicks read as stones/crackle at idle.
+        expect(t?.organic?.valvetrain).toBeUndefined();
         expect(t?.cycleLope).toBeGreaterThan(0);
       } else {
         expect(t?.organic).toBeUndefined();
       }
     }
     expect(combustionTopologyForProfile("f1-v10")?.organic?.bankAm).toBeGreaterThan(0);
+    // Bank modulation is high-rpm only (at idle it pulsed the noise into a crackle).
+    expect(combustionTopologyForProfile("f1-v10")?.organic?.bankAmStartRpm).toBeGreaterThan(4500);
     expect(combustionTopologyForProfile("f1-v10")?.organic?.intakeRoar?.level).toBeGreaterThan(0);
     expect(validateCombustionTopology(V10_TOPOLOGY).topology?.organic).toEqual(V10_TOPOLOGY.organic);
   });
