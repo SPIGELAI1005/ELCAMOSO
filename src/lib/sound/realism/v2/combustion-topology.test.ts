@@ -51,6 +51,18 @@ describe("combustion topology presets", () => {
     // Load-gated broadband floor (less hiss at idle / cruise / coast) on the V8 and the V10.
     expect(combustionTopologyForProfile("american-muscle-v8")?.noiseScale).toBe(0.25);
     expect(combustionTopologyForProfile("racing-v10")?.noiseScale).toBe(0.25);
+    for (const [id, ns] of [
+      ["race-car", 0.3],
+      ["flat-six-sport", 0.3],
+      ["turbo-inline-6", 0.35],
+      ["rally-car", 0.4],
+      ["motorcycle-superbike", 0.35],
+    ] as const) {
+      expect(combustionTopologyForProfile(id)?.noiseScale).toBe(ns);
+    }
+    // Recorded GT V8 and the Big Twin keep their full excitation noise (character / rasp).
+    expect(combustionTopologyForProfile("gt-v8")?.noiseScale).toBeUndefined();
+    expect(combustionTopologyForProfile("big-twin")?.noiseScale).toBeUndefined();
     expect(combustionTopologyForProfile("race-car")?.cylinderCount).toBe(8);
     expect(combustionTopologyForProfile("gt-v8")?.cylinderCount).toBe(8);
     expect(combustionTopologyForProfile("flat-six-sport")?.cylinderCount).toBe(6);

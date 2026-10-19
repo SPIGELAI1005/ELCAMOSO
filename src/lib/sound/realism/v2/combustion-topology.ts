@@ -281,6 +281,8 @@ export const FLAT_PLANE_V8_TOPOLOGY: CombustionTopologyV1 = {
   version: 1,
   cycleDegrees: 720,
   cylinderCount: 8,
+  // Load-gated broadband floor (less white-noise bed at idle / cruise / coast; full-throttle rasp kept).
+  noiseScale: 0.3,
   collectors: [{ id: 0 }, { id: 1 }],
   soundSpeedMetresPerSecond: TOPOLOGY_SOUND_SPEED_DEFAULT,
   cylinders: [1, 5, 3, 7, 4, 8, 2, 6].map((cylId, i) => ({
@@ -318,6 +320,8 @@ export const FLAT_SIX_TOPOLOGY: CombustionTopologyV1 = {
   version: 1,
   cycleDegrees: 720,
   cylinderCount: 6,
+  // Load-gated broadband floor (less white-noise bed at idle / cruise / coast; full-throttle rasp kept).
+  noiseScale: 0.3,
   collectors: [{ id: 0 }, { id: 1 }],
   soundSpeedMetresPerSecond: TOPOLOGY_SOUND_SPEED_DEFAULT,
   cylinders: [1, 6, 2, 4, 3, 5].map((cylId, i) => ({
@@ -336,6 +340,8 @@ export const TURBO_I6_TOPOLOGY: CombustionTopologyV1 = {
   version: 1,
   cycleDegrees: 720,
   cylinderCount: 6,
+  // Load-gated broadband floor (less white-noise bed at idle / cruise / coast; full-throttle rasp kept).
+  noiseScale: 0.35,
   collectors: [{ id: 0 }],
   soundSpeedMetresPerSecond: TOPOLOGY_SOUND_SPEED_DEFAULT,
   cylinders: [1, 5, 3, 6, 2, 4].map((cylId, i) => ({
@@ -377,6 +383,8 @@ export const RALLY_I3_TOPOLOGY: CombustionTopologyV1 = {
   version: 1,
   cycleDegrees: 720,
   cylinderCount: 3,
+  // Load-gated broadband floor (less white-noise bed at idle / cruise / coast; full-throttle rasp kept).
+  noiseScale: 0.4,
   collectors: [{ id: 0 }],
   soundSpeedMetresPerSecond: TOPOLOGY_SOUND_SPEED_DEFAULT,
   cylinders: [1, 2, 3].map((cylId, i) => ({
@@ -396,6 +404,8 @@ export const SUPERBIKE_I4_TOPOLOGY: CombustionTopologyV1 = {
   version: 1,
   cycleDegrees: 720,
   cylinderCount: 4,
+  // Load-gated broadband floor (less white-noise bed at idle / cruise / coast; full-throttle rasp kept).
+  noiseScale: 0.35,
   collectors: [{ id: 0 }],
   soundSpeedMetresPerSecond: TOPOLOGY_SOUND_SPEED_DEFAULT,
   cylinders: [1, 3, 4, 2].map((cylId, i) => ({
