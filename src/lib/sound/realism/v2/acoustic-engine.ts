@@ -109,6 +109,18 @@ export interface AcousticEngineConfig {
   orderBandMaxHz?: number;
   /** Optional support-bus lowpass (Hz); default 1400 + bodyBrightness * 900. */
   supportLowpassHz?: number;
+  /**
+   * Optional alive idle: slow random rpm wander (±wanderRpm, smoothing wanderTauS) and an
+   * occasional throttle blip (blipRpm range, every blipEveryS seconds) while parked. Only
+   * active near standstill with no demand; absent → idle unchanged.
+   */
+  idleLife?: {
+    wanderRpm: number;
+    wanderTauS: number;
+    blipRpm: [number, number];
+    blipEveryS: [number, number];
+    blipIntensity: number;
+  };
 }
 
 /** True four-stroke firing frequency: RPM × cylinders / 120. */
@@ -256,7 +268,7 @@ const V10: AcousticEngineConfig = {
   architecture: "v10-even",
   banks: "v90",
   architectureCode: 0,
-  idleIrregularity: 0.07,
+  idleIrregularity: 0.3,
   exhaustPulse: 0.64,
   intakePresence: 0.82,
   mechanicalIntensity: 0.58,
@@ -291,6 +303,8 @@ const V10: AcousticEngineConfig = {
   },
   orderBandMaxHz: 5000,
   supportLowpassHz: 4200,
+  // Alive idle: ~±70 rpm wander and an occasional small blip while parked.
+  idleLife: { wanderRpm: 60, wanderTauS: 0.5, blipRpm: [250, 650], blipEveryS: [5, 11], blipIntensity: 0.14 },
 };
 
 /**
@@ -300,7 +314,9 @@ const V10: AcousticEngineConfig = {
  */
 const F1_V10: AcousticEngineConfig = {
   ...V10,
-  idleIrregularity: 0.05,
+  idleIrregularity: 0.32,
+  // Race-engine idle: hunts ±~100 rpm and gets the odd throttle blip, like a parked F1 car.
+  idleLife: { wanderRpm: 150, wanderTauS: 0.35, blipRpm: [700, 1700], blipEveryS: [4, 9], blipIntensity: 0.2 },
   exhaustPulse: 0.7,
   intakePresence: 0.95,
   mechanicalIntensity: 0.62,
@@ -314,10 +330,10 @@ const F1_V10: AcousticEngineConfig = {
   intakeFormantsHz: [740, 1500, 2300],
   bodyResonanceHz: [180, 420, 900],
   supportRatios: [2.5, 5, 7.5, 10, 12.5],
-  supportWeights: [0.8, 0.9, 0.22, 0.1, 0.04],
+  supportWeights: [0.85, 0.45, 0.22, 0.15, 0.08],
   bodyBrightness: 0.7,
   redlineRpm: 19000,
-  outputTrimDb: 22.8,
+  outputTrimDb: 18.6,
   highRpmVoicing: {
     startRpm: 6000,
     fullRpm: 16000,

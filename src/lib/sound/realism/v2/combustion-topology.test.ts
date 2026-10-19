@@ -198,11 +198,32 @@ describe("V10 bank asymmetry + rasp (Racing V10 voicing)", () => {
   });
 
   it("gives the two V10 banks different pulse weight and primary length", () => {
-    const w = new Set(
-      V10_TOPOLOGY.cylinders.map(
-        (c) => `${c.collectorId}:${c.pulseWeight}:${c.primaryLengthMetres}`,
-      ),
-    );
-    expect(w.size).toBe(2);
+    const banks = new Set(V10_TOPOLOGY.cylinders.map((c) => `${c.collectorId}:${c.primaryLengthMetres}`));
+    expect(banks.size).toBe(2);
+    const mean = (id: number) => {
+      const ws = V10_TOPOLOGY.cylinders.filter((c) => c.collectorId === id).map((c) => c.pulseWeight);
+      return ws.reduce((a, b) => a + b, 0) / ws.length;
+    };
+    expect(mean(0)).toBeGreaterThan(mean(1));
+    // Small cylinder-to-cylinder spread (±5%) - no two cylinders burn identically.
+    expect(new Set(V10_TOPOLOGY.cylinders.map((c) => c.pulseWeight)).size).toBeGreaterThan(5);
+  });
+});
+
+describe("V10 organic layer (alive idle, less synthetic F1)", () => {
+  it("is only on the two V10s and survives validation", () => {
+    for (const id of TOPOLOGY_PILOT_PROFILE_IDS) {
+      const t = combustionTopologyForProfile(id);
+      if (id === "racing-v10" || id === "f1-v10") {
+        expect(t?.organic?.crankJitter).toBeGreaterThan(0);
+        expect(t?.organic?.valvetrain?.level).toBeGreaterThan(0);
+        expect(t?.cycleLope).toBeGreaterThan(0);
+      } else {
+        expect(t?.organic).toBeUndefined();
+      }
+    }
+    expect(combustionTopologyForProfile("f1-v10")?.organic?.bankAm).toBeGreaterThan(0);
+    expect(combustionTopologyForProfile("f1-v10")?.organic?.intakeRoar?.level).toBeGreaterThan(0);
+    expect(validateCombustionTopology(V10_TOPOLOGY).topology?.organic).toEqual(V10_TOPOLOGY.organic);
   });
 });

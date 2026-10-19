@@ -234,12 +234,14 @@ function createWorkletExcitation(ctx: BaseAudioContext): CombustionExcitationHan
     const load = node.parameters.get("load");
     const sharpness = node.parameters.get("sharpness");
     const architecture = node.parameters.get("architecture");
+    // F1-class topologies (short pulses) fire up to ~1.6 kHz; everything else keeps 800 Hz.
+    let maxFiringHz = 800;
     return {
       node,
       mode: "worklet",
       setParams(p) {
         const t = p.audioTime;
-        firingHz?.setTargetAtTime(Math.max(0, Math.min(800, p.firingHz)), t, 0.03);
+        firingHz?.setTargetAtTime(Math.max(0, Math.min(maxFiringHz, p.firingHz)), t, 0.03);
         intensity?.setTargetAtTime(Math.max(0, Math.min(1, p.intensity)), t, 0.04);
         irregularity?.setTargetAtTime(Math.max(0, Math.min(1, p.irregularity)), t, 0.08);
         load?.setTargetAtTime(Math.max(0, Math.min(1, p.load)), t, 0.05);
@@ -252,9 +254,12 @@ function createWorkletExcitation(ctx: BaseAudioContext): CombustionExcitationHan
       },
       setTopology(topology: unknown | null) {
         if (topology == null) {
+          maxFiringHz = 800;
           node.port.postMessage({ type: "clearTopology" });
           return;
         }
+        const tau = (topology as { pulseTauScale?: number }).pulseTauScale;
+        maxFiringHz = Number.isFinite(tau) && (tau as number) < 1 ? 2000 : 800;
         node.port.postMessage({ type: "topology", topology });
       },
       dispose() {

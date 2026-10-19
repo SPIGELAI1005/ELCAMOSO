@@ -33,6 +33,56 @@ function angleCrossed(prev, next, angle, cycle) {
   return angle > prev || angle <= next;
 }
 
+function clamp01(v) {
+  return Math.min(1, Math.max(0, v));
+}
+
+function svfCoef(hz) {
+  return 2 * Math.sin((Math.PI * Math.min(hz, sampleRate / 6)) / sampleRate);
+}
+
+/** Optional `organic` topology block → precomputed coefficients, or null when absent/invalid. */
+function parseOrganic(o) {
+  if (!o || typeof o !== "object") return null;
+  const num = (v, d) => (Number.isFinite(v) ? v : d);
+  const out = {
+    crankJitter: Math.min(0.05, Math.max(0, num(o.crankJitter, 0))),
+    crankWander: Math.min(0.05, Math.max(0, num(o.crankWander, 0))),
+    wanderCoef: 1 - Math.exp((-2 * Math.PI * Math.min(20, Math.max(0.05, num(o.wanderHz, 1.5)))) / sampleRate),
+    kickDecay: Math.exp(-1 / (sampleRate * 0.004)),
+    // Bank-rate amplitude modulation (0..1): one bank breathes louder, locked to crank
+    // phase, which puts energy on the half orders (V10: 2.5 / 7.5 / 12.5) without new tones.
+    bankAm: Math.min(1, Math.max(0, num(o.bankAm, 0))),
+    vt: null,
+    roar: null,
+  };
+  const v = o.valvetrain;
+  if (v && Number.isFinite(v.level) && v.level > 0 && Number.isFinite(v.hz)) {
+    const f0 = num(v.fadeStartRpm, 6000);
+    out.vt = {
+      level: Math.min(1, v.level),
+      f: svfCoef(v.hz),
+      damp: 1 / Math.max(0.5, num(v.q, 2)),
+      decay: Math.exp(-1 / (sampleRate * Math.max(0.0002, num(v.tauS, 0.0007)))),
+      fadeStartRpm: f0,
+      fadeEndRpm: Math.max(f0 + 1, num(v.fadeEndRpm, f0 + 3000)),
+    };
+  }
+  const r = o.intakeRoar;
+  if (r && Number.isFinite(r.level) && r.level > 0 && Number.isFinite(r.hz)) {
+    const s0 = num(r.startRpm, 3000);
+    out.roar = {
+      level: Math.min(1, r.level),
+      f: svfCoef(r.hz),
+      damp: 1 / Math.max(0.5, num(r.q, 1.2)),
+      startRpm: s0,
+      fullRpm: Math.max(s0 + 1, num(r.fullRpm, s0 + 6000)),
+      idle: Math.min(1, Math.max(0, num(r.idle, 0.15))),
+    };
+  }
+  return out.crankJitter || out.crankWander || out.bankAm || out.vt || out.roar ? out : null;
+}
+
 class CombustionExcitationProcessor extends AudioWorkletProcessor {
   constructor() {
     super();
@@ -184,12 +234,28 @@ class CombustionExcitationProcessor extends AudioWorkletProcessor {
     const pulseTauScale = Number.isFinite(raw.pulseTauScale)
       ? Math.min(1, Math.max(0.05, raw.pulseTauScale))
       : 1;
+    // Optional organic layer (V10 family): crank-speed jitter/wander, cam-synchronous
+    // valvetrain ticks and a pulse-modulated airbox roar. Absent (null) for every other
+    // topology, so their output stays byte-identical.
+    const organic = parseOrganic(raw.organic);
+    this.ogWander = 0;
+    this.ogTarget = 0;
+    this.ogCount = 0;
+    this.ogKick = 0;
+    this.vtCountdown = -1;
+    this.vtAmp = 0;
+    this.vtEnv = 0;
+    this.vtLow = 0;
+    this.vtBand = 0;
+    this.irLow = 0;
+    this.irBand = 0;
     this.topology = {
       version: 1,
       cycleLope,
       noiseScale,
       rasp,
       pulseTauScale,
+      organic,
       cycleDegrees: cycle,
       cylinderCount: count,
       cylinders,
@@ -311,7 +377,19 @@ class CombustionExcitationProcessor extends AudioWorkletProcessor {
         // phaseAdvanceDegrees = rpm * 6 / sampleRate
         const cylinders = topology.cylinderCount;
         const rpm = firingHz > 0 ? (firingHz * 120) / cylinders : 0;
-        const advance = (rpm * 6) / sampleRate;
+        let advance = (rpm * 6) / sampleRate;
+        const og = topology.organic;
+        if (og && advance > 0) {
+          // Crank speed is never perfectly constant: slow random wander plus a small
+          // per-fire torque kick (combustion-to-combustion variation) - no fixed-pitch tone.
+          if (--this.ogCount <= 0) {
+            this.ogCount = 600 + ((this.rand() * 1800) | 0);
+            this.ogTarget = this.rand() * 2 - 1;
+          }
+          this.ogWander += (this.ogTarget - this.ogWander) * og.wanderCoef;
+          this.ogKick *= og.kickDecay;
+          advance *= 1 + this.ogWander * og.crankWander + this.ogKick;
+        }
         const prev = this.crankPhaseDegrees;
         let next = prev + advance;
         const cycle = topology.cycleDegrees;
@@ -336,6 +414,17 @@ class CombustionExcitationProcessor extends AudioWorkletProcessor {
                 let punch = (0.7 + load * 0.3) * cyl.pulseWeight * (this.cycleGain || 1);
                 punch *= (1 + (this.rand() - 0.5) * ampSpread * (1 + timeSpread)) * rateComp;
                 punchIn = punch;
+                if (og) {
+                  if (og.crankJitter > 0) {
+                    this.ogKick += (this.rand() - 0.5) * 2 * og.crankJitter * (0.6 + irregularity);
+                  }
+                  if (og.vt && this.vtCountdown < 0) {
+                    // Cam / valve event a little after the fire; most ticks soft, a few loud.
+                    const r0 = this.rand();
+                    this.vtCountdown = ((sampleRate / Math.max(1, firingHz)) * (0.35 + this.rand() * 0.3)) | 0;
+                    this.vtAmp = og.vt.level * r0 * r0 * r0 * (0.4 + this.rand() * 0.6);
+                  }
+                }
               }
             }
             const buf = this.delayBuffers[c];
@@ -414,8 +503,9 @@ class CombustionExcitationProcessor extends AudioWorkletProcessor {
       // Root-cause §clicks: soft attack on all envelopes (~0.3ms for env/bright, ~0.5ms for burst)
       // Prevents clicks from sparse V-twin pulses where instant steps create waveform discontinuities.
       // Attack coefficients: higher = faster attack
-      const envAttack = 1 - Math.exp(-1 / (sampleRate * 0.0003));
-      const burstAttack = 1 - Math.exp(-1 / (sampleRate * 0.0005));
+      // F1-class short pulses (pulseTauScale < 1) scale the attacks with them; 1 elsewhere.
+      const envAttack = 1 - Math.exp(-1 / (sampleRate * 0.0003 * tauScale));
+      const burstAttack = 1 - Math.exp(-1 / (sampleRate * 0.0005 * tauScale));
       // Ramp toward targets
       this.env += (this.envTarget - this.env) * envAttack;
       this.bright += (this.brightTarget - this.bright) * envAttack;
@@ -473,7 +563,41 @@ class CombustionExcitationProcessor extends AudioWorkletProcessor {
             (this.raspLp - this.raspDc) * (this.burst * 0.75 + this.env * 0.25) * rs.level * g;
         }
       }
-      const raw = (body + edge + rush + texture + raspOut) * (0.85 + intensity * 0.15) * 0.88;
+      let organicOut = 0;
+      const ogx = topology ? topology.organic : null;
+      if (ogx) {
+        const rpmNow = firingHz > 0 ? (firingHz * 120) / topology.cylinderCount : 0;
+        if (ogx.vt) {
+          const vt = ogx.vt;
+          if (this.vtCountdown >= 0 && --this.vtCountdown < 0) this.vtEnv += this.vtAmp;
+          this.vtEnv *= vt.decay;
+          const fade = 1 - clamp01((rpmNow - vt.fadeStartRpm) / (vt.fadeEndRpm - vt.fadeStartRpm));
+          const n = this.rand() * 2 - 1;
+          this.vtLow += vt.f * this.vtBand;
+          const hi = n - this.vtLow - vt.damp * this.vtBand;
+          this.vtBand += vt.f * hi;
+          organicOut += this.vtBand * this.vtEnv * fade * (1 - 0.5 * load);
+        }
+        if (ogx.roar) {
+          const ro = ogx.roar;
+          const g =
+            clamp01((rpmNow - ro.startRpm) / (ro.fullRpm - ro.startRpm)) *
+            clamp01((load - 0.2) / 0.5);
+          const amt = ro.idle + (1 - ro.idle) * g;
+          const n = this.rand() * 2 - 1;
+          this.irLow += ro.f * this.irBand;
+          const hi = n - this.irLow - ro.damp * this.irBand;
+          this.irBand += ro.f * hi;
+          // Pulse-modulated: the airbox roar breathes with each intake stroke.
+          organicOut += this.irBand * ro.level * amt * (0.45 + 0.55 * Math.min(1, this.env * 0.8));
+        }
+      }
+      let raw = (body + edge + rush + texture + raspOut + organicOut) * (0.85 + intensity * 0.15) * 0.88;
+      if (ogx && ogx.bankAm > 0) {
+        // 720° cycle → (cylinders / 2) bank periods; cosine locked to the (jittered) crank.
+        const ph = (this.crankPhaseDegrees / topology.cycleDegrees) * (topology.cylinderCount / 2) * 2 * Math.PI;
+        raw *= 1 + ogx.bankAm * Math.cos(ph);
+      }
 
       const sample = raw - this.previousRaw + 0.9975 * this.dcBlocked;
       this.previousRaw = raw;

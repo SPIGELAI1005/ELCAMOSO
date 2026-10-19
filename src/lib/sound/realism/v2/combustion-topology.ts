@@ -48,6 +48,24 @@ export interface CombustionTopologyV1 {
    * ~1.6 kHz): shorter pulses keep the firing order discrete instead of smearing to DC.
    */
   pulseTauScale?: number;
+  /**
+   * Optional organic layer (worklet): crank-speed jitter / slow wander (fractions of rpm),
+   * cam-synchronous valvetrain ticks and a pulse-modulated airbox roar. Absent → unchanged.
+   */
+  organic?: CombustionOrganicTopology;
+}
+
+export interface CombustionOrganicTopology {
+  /** Per-fire crank-speed kick depth (fraction, ≤0.05). */
+  crankJitter?: number;
+  /** Slow random crank-speed wander depth (fraction, ≤0.05). */
+  crankWander?: number;
+  /** Wander smoothing corner (Hz). */
+  wanderHz?: number;
+  /** Bank-rate amplitude modulation depth 0..1 (half-order energy, crank-locked). */
+  bankAm?: number;
+  valvetrain?: { level: number; hz: number; q?: number; tauS?: number; fadeStartRpm?: number; fadeEndRpm?: number };
+  intakeRoar?: { level: number; hz: number; q?: number; startRpm?: number; fullRpm?: number; idle?: number };
 }
 
 export interface CombustionRaspTopology {
@@ -266,6 +284,9 @@ export function validateCombustionTopology(input: unknown): {
       ...(Number.isFinite(t.pulseTauScale) && (t.pulseTauScale as number) > 0
         ? { pulseTauScale: Math.min(1, Math.max(0.05, t.pulseTauScale as number)) }
         : {}),
+      ...(t.organic && typeof t.organic === "object"
+        ? { organic: t.organic as CombustionOrganicTopology }
+        : {}),
     },
     issues: [],
   };
@@ -396,6 +417,8 @@ export const TURBO_I6_TOPOLOGY: CombustionTopologyV1 = {
  * Racing V10: Even-firing 90° V10, 72° intervals, collectors split banks.
  * Order: 1-6-5-10-2-7-3-8-4-9
  */
+const V10_CYLINDER_SPREAD = [1.04, 0.97, 1.02, 0.95, 1.0, 1.05, 0.96, 1.01, 0.98, 1.03];
+
 export const V10_TOPOLOGY: CombustionTopologyV1 = {
   version: 1,
   cycleDegrees: 720,
@@ -406,6 +429,15 @@ export const V10_TOPOLOGY: CombustionTopologyV1 = {
   // Pulse-synchronous rasp (1-3 kHz) only at high rpm under load - the real V10 scream
   // carries its roughness there, not as a static hiss floor.
   rasp: { level: 0.34, startRpm: 5000, fullRpm: 8500, lowHz: 1000, highHz: 3000 },
+  // Idle lope: one random gain per 720° (scaled by irregularity, so it lives at idle).
+  cycleLope: 0.45,
+  // No dead-steady crank: slow wander + per-fire kick, valvetrain ticks at idle/low rpm.
+  organic: {
+    crankJitter: 0.006,
+    crankWander: 0.006,
+    wanderHz: 1.2,
+    valvetrain: { level: 0.35, hz: 3200, q: 2.5, tauS: 0.0006, fadeStartRpm: 2500, fadeEndRpm: 5000 },
+  },
   collectors: [{ id: 0 }, { id: 1 }],
   soundSpeedMetresPerSecond: TOPOLOGY_SOUND_SPEED_DEFAULT,
   // Bank asymmetry: the even-bank collector has slightly weaker pulses and longer primaries.
@@ -415,7 +447,8 @@ export const V10_TOPOLOGY: CombustionTopologyV1 = {
     id: cylId,
     firingAngleDegrees: i * 72,
     collectorId: cylId % 2 === 1 ? 0 : 1,
-    pulseWeight: cylId % 2 === 1 ? 1 : 0.9,
+    // Small fixed cylinder-to-cylinder spread (no two cylinders burn identically).
+    pulseWeight: (cylId % 2 === 1 ? 1 : 0.9) * V10_CYLINDER_SPREAD[i]!,
     primaryLengthMetres: cylId % 2 === 1 ? 0.11 : 0.24,
   })),
 };
@@ -431,14 +464,25 @@ export const F1_V10_TOPOLOGY: CombustionTopologyV1 = {
   cylinderCount: 10,
   noiseScale: 0.3,
   rasp: { level: 0.22, startRpm: 11000, fullRpm: 17500, lowHz: 1800, highHz: 4200 },
-  pulseTauScale: 0.22,
+  pulseTauScale: 0.12,
+  cycleLope: 0.5,
+  // Organic: crank never dead-steady (per-fire kick + slow wander = slight pitch instability),
+  // valvetrain/gear chatter at idle, airbox roar breathing with the intake pulses under load.
+  organic: {
+    crankJitter: 0.008,
+    crankWander: 0.006,
+    wanderHz: 2.5,
+    bankAm: 0.6,
+    valvetrain: { level: 0.3, hz: 2800, q: 2.2, tauS: 0.0005, fadeStartRpm: 6000, fadeEndRpm: 10000 },
+    intakeRoar: { level: 0.35, hz: 900, q: 1.1, startRpm: 8000, fullRpm: 16000, idle: 0.12 },
+  },
   collectors: [{ id: 0 }, { id: 1 }],
   soundSpeedMetresPerSecond: TOPOLOGY_SOUND_SPEED_DEFAULT,
   cylinders: [1, 6, 5, 10, 2, 7, 3, 8, 4, 9].map((cylId, i) => ({
     id: cylId,
     firingAngleDegrees: i * 72,
     collectorId: cylId % 2 === 1 ? 0 : 1,
-    pulseWeight: cylId % 2 === 1 ? 1 : 0.6,
+    pulseWeight: (cylId % 2 === 1 ? 1 : 0.15) * V10_CYLINDER_SPREAD[i]!,
     primaryLengthMetres: cylId % 2 === 1 ? 0.06 : 0.14,
   })),
 };

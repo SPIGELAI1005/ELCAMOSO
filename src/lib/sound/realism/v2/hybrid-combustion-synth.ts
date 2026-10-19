@@ -1131,7 +1131,7 @@ export class HybridCombustionSynth {
         : 1 / 60;
     this.lastUpdateTime = audioTime;
     const gate = (role: AudioLayerRole) => (this.mutedRoles.has(role) ? 0.0001 : 1);
-    const rpm = Math.max(0, state.rpm || 0);
+    const rpm = this.idleLifeRpm(Math.max(0, state.rpm || 0), state, audioTime, dt);
     this.lastSpeedMs = Math.max(0, state.speed || 0);
     this.accelChar.update(this.lastSpeedMs, audioTime, dt);
     if (this.bass && this.bassDecelOnly && !this.recordedBank) {
@@ -1142,8 +1142,12 @@ export class HybridCombustionSynth {
       this.bass.setDrive(0, ac.overrun, audioTime, ac.overrun * fade);
     }
     const pt = state.powertrain;
-    const demand = pt?.driverDemand ?? state.throttle;
-    const load = pt?.engineLoad ?? state.load;
+    // Idle blip (idleLife only): a short throttle kick opens demand / load like a real blip.
+    const blip = cfg.idleLife ? this.ilBlipEnv * cfg.idleLife.blipIntensity * 2.5 : 0;
+    const demandIn = pt?.driverDemand ?? state.throttle;
+    const loadIn = pt?.engineLoad ?? state.load;
+    const demand = blip > 0 ? Math.max(demandIn, blip) : demandIn;
+    const load = blip > 0 ? Math.max(loadIn, blip * 0.8) : loadIn;
     const overrun = Boolean(pt?.overrun || state.regen > 0.45);
     const shifting = Boolean(pt?.shifting || state.isShifting);
     const shiftPhase: ShiftPhase | "idle" = shifting
@@ -1204,6 +1208,10 @@ export class HybridCombustionSynth {
     // Reengage bark: clutch / converter takes up drive and combustion snaps back.
     const bark = this.barkLevel(audioTime);
     if (bark > 0) intensity = Math.min(1, intensity + bark);
+    // Idle blip (idleLife): the throttle kicks briefly, so combustion fills in too.
+    if (this.ilBlipEnv > 0.001 && cfg.idleLife) {
+      intensity = Math.min(1, intensity + cfg.idleLife.blipIntensity * this.ilBlipEnv);
+    }
 
     const sharpness = Math.min(
       1,
@@ -1598,6 +1606,74 @@ export class HybridCombustionSynth {
     if (kind === "overrun") return engagement.allowOverrun && this.advancedTransients;
     if (kind === "exhaust-pop") return engagement.allowLiftOffPop && this.advancedTransients;
     return true;
+  }
+
+  // ── idleLife: alive idle (only for configs with `idleLife`; others never enter) ──
+  private ilSeed = 0x2f6b9a1d;
+  private ilW1 = 0;
+  private ilW2 = 0;
+  private ilT1 = 0;
+  private ilT2 = 0;
+  private ilNext1 = 0;
+  private ilNext2 = 0;
+  private ilHeld = 0;
+  private ilNextBlip = -1;
+  private ilBlipT = -1;
+  private ilBlipAmp = 0;
+  private ilBlipEnv = 0;
+
+  private ilRand(): number {
+    this.ilSeed = (this.ilSeed * 1664525 + 1013904223) >>> 0;
+    return this.ilSeed / 2 ** 32;
+  }
+
+  /**
+   * Parked / idling: slow random rpm wander (two smoothed random walks) plus an occasional
+   * small throttle blip. Fades out as soon as the car moves or the driver asks for power, so
+   * driving, shifting and the rev limiter are untouched. Deterministic (seeded).
+   */
+  private idleLifeRpm(rpm: number, state: DriveState, audioTime: number, dt: number): number {
+    const il = this.cfg?.idleLife;
+    if (!il) return rpm;
+    const demand = state.powertrain?.driverDemand ?? state.throttle ?? 0;
+    const kmh = Math.max(0, state.speed || 0) * 3.6;
+    const gate =
+      Math.min(1, Math.max(0, 1 - (kmh - 3) / 9)) * Math.min(1, Math.max(0, 1 - demand / 0.12));
+    if (audioTime >= this.ilNext1) {
+      this.ilT1 = this.ilRand() * 2 - 1;
+      this.ilNext1 = audioTime + 0.25 + this.ilRand() * 0.5;
+    }
+    if (audioTime >= this.ilNext2) {
+      this.ilT2 = this.ilRand() * 2 - 1;
+      this.ilNext2 = audioTime + 1.2 + this.ilRand() * 2.2;
+    }
+    this.ilW1 += (this.ilT1 - this.ilW1) * Math.min(1, dt / il.wanderTauS);
+    this.ilW2 += (this.ilT2 - this.ilW2) * Math.min(1, dt / (il.wanderTauS * 4));
+    const wander = (this.ilW1 * 0.4 + this.ilW2 * 0.6) * il.wanderRpm;
+    // Blips: only after ~2 s of steady idle, at random intervals.
+    this.ilHeld = gate > 0.98 ? this.ilHeld + dt : 0;
+    if (this.ilNextBlip < 0) {
+      this.ilNextBlip = audioTime + il.blipEveryS[0] + this.ilRand() * (il.blipEveryS[1] - il.blipEveryS[0]);
+    }
+    if (this.ilHeld > 2 && audioTime >= this.ilNextBlip && this.ilBlipT < 0) {
+      this.ilBlipT = 0;
+      this.ilBlipAmp = il.blipRpm[0] + this.ilRand() * (il.blipRpm[1] - il.blipRpm[0]);
+      this.ilNextBlip = audioTime + il.blipEveryS[0] + this.ilRand() * (il.blipEveryS[1] - il.blipEveryS[0]);
+    } else if (this.ilHeld <= 2 && audioTime >= this.ilNextBlip) {
+      this.ilNextBlip = audioTime + 1;
+    }
+    if (this.ilBlipT >= 0) {
+      this.ilBlipT += dt;
+      const t = this.ilBlipT;
+      // 90 ms rise, then a ~0.35 s fall back to idle.
+      this.ilBlipEnv = t < 0.09 ? Math.sin((t / 0.09) * (Math.PI / 2)) : Math.exp(-(t - 0.09) / 0.35);
+      if (t > 2) {
+        this.ilBlipT = -1;
+        this.ilBlipEnv = 0;
+      }
+    }
+    this.ilBlipEnv *= gate > 0.5 ? 1 : 0;
+    return Math.max(0, rpm + gate * (wander + this.ilBlipAmp * this.ilBlipEnv));
   }
 
   private barkLevel(audioTime: number): number {
