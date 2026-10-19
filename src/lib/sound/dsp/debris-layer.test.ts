@@ -46,3 +46,48 @@ describe("debris layer", () => {
     }
   });
 });
+
+describe("debris grains (real recordings)", () => {
+  it("ships a versioned, credited grain pack whose offsets fit the file", async () => {
+    const { readFileSync } = await import("node:fs");
+    const { DEBRIS_GRAINS, DEBRIS_GRAINS_URL, DEBRIS_GRAIN_CREDITS } =
+      await import("@/lib/sound/dsp/debris-grains");
+    expect(DEBRIS_GRAINS_URL).toMatch(/\/debris-v\d+\//);
+    const wav = readFileSync(`public${DEBRIS_GRAINS_URL}`);
+    const ctx = new OfflineAudioContext(1, SR, SR);
+    const buf = await ctx.decodeAudioData(
+      wav.buffer.slice(wav.byteOffset, wav.byteOffset + wav.byteLength),
+    );
+    expect(DEBRIS_GRAINS.length).toBeGreaterThanOrEqual(24);
+    for (const [start, dur] of DEBRIS_GRAINS) {
+      expect(dur).toBeLessThanOrEqual(0.071);
+      expect(start + dur).toBeLessThanOrEqual(buf.duration + 1e-3);
+    }
+    expect(DEBRIS_GRAINS.some((g) => g[2] === "m")).toBe(true);
+    expect(
+      DEBRIS_GRAIN_CREDITS.every(
+        (c) => c.licence === "CC BY 4.0" && c.attribution.includes("Gravity Sound"),
+      ),
+    ).toBe(true);
+  });
+
+  it("plays the decoded grains when available (short, decaying burst)", async () => {
+    const { readFileSync } = await import("node:fs");
+    const { DEBRIS_GRAINS_URL, setDebrisGrainBufferForTest } =
+      await import("@/lib/sound/dsp/debris-grains");
+    const wav = readFileSync(`public${DEBRIS_GRAINS_URL}`);
+    const dec = new OfflineAudioContext(1, SR, SR);
+    setDebrisGrainBufferForTest(
+      await dec.decodeAudioData(wav.buffer.slice(wav.byteOffset, wav.byteOffset + wav.byteLength)),
+    );
+    try {
+      const r = await render((t) => (t > 0.5 && t < 3.5 ? 4.2 : 0), 6);
+      expect(r.bursts).toBe(1);
+      expect(r.rms(0.5, 1.5)).toBeGreaterThan(1e-4);
+      expect(r.rms(3.7, 6)).toBeLessThan(1e-5);
+      expect(r.peak).toBeLessThan(0.5);
+    } finally {
+      setDebrisGrainBufferForTest(null);
+    }
+  });
+});

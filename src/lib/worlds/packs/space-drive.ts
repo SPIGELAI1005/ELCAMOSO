@@ -11,7 +11,7 @@ export const SPACE_DRIVE_PACK: WorldPack = {
   liftOffThunder: SPACE_DRIVE_LIFTOFF_THUNDER,
   // Rocket Car thrust bass under the drive; whistle only swells briefly on build/launch.
   thrust: { level: 0.55, subHz: 44, roar: 0.4, cruise: 0.18 },
-  debris: { level: 0.24, glass: 0.65, pitch: 1 },
+  debris: { level: 0.43, metal: 0.5, pitch: 1 },
   whistle: { floor: 0.3, duck: 0.6, layers: ["windEnergy"] },
   layers: [
     { id: "reactor", label: "Reactor", kind: "drone", level: 0.52, tone: 82, subHz: 50, subLevel: 0.85 },

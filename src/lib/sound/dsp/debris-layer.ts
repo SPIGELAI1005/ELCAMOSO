@@ -1,17 +1,23 @@
 /**
- * Debris / micro-impacts: small stones and grit pinging off a glass or metal shell.
+ * Debris: small stones / grit hitting the shell on a hard launch.
  *
- * Fully procedural. Each burst is a sparse, randomized Poisson stream of tiny modal impacts
- * (inharmonic metal/glass partials, a soft tick, an occasional dull knock), each with its own
- * pitch, decay and pan. Bursts only fire on a hard launch (acceleration estimate above a high
- * threshold, rising edge), get denser with intensity, thin out and fade over ~1-2.5 s, then a
- * randomized cooldown blocks the next one. Nothing plays at rest, so idles are untouched.
+ * Plays randomized real impact grains (pebbles on metal, small rocks; CC BY 4.0, see
+ * debris-grains.ts and /credits): random grain, pitch (+-5 semitones), gain and pan. Grains are
+ * dry (<=70 ms, no ringing tails). Until the grain pack is decoded (or if it fails to load) each
+ * hit is a dry, band-limited noise click instead: no resonant partials.
  *
- * Tone safety: partials are kept below ~5 kHz, the bus is high-passed (no LF, sits under the
- * thrust bass), gently dipped around 3.5 kHz and low-passed, and every impact decays in tens of
- * milliseconds, so there is never sustained 2-6 kHz energy.
+ * Bursts only fire on a hard launch (acceleration estimate above a high threshold, rising edge);
+ * density follows the live acceleration intensity, then thins and fades over ~1-2.5 s, and a
+ * randomized cooldown blocks the next one. Nothing plays at rest, so idles are untouched. The bus
+ * is high-passed (sits under the thrust bass), dipped around 3.5 kHz and low-passed; every hit is
+ * tens of milliseconds, so there is never sustained 2-6 kHz energy.
  */
 import { clamp } from "@/lib/sound/dsp/math";
+import {
+  DEBRIS_GRAINS,
+  getDebrisGrainBuffer,
+  loadDebrisGrains,
+} from "@/lib/sound/dsp/debris-grains";
 import type { LayerHandle } from "@/lib/sound/dsp/layers";
 import type { MotionFrame } from "@/lib/sound/realism/types";
 
@@ -24,9 +30,9 @@ export interface DebrisOpts {
   fullMps2?: number;
   /** Cooldown between bursts in seconds (randomized between min and min*1.6). */
   cooldownS?: number;
-  /** 0 = all metal, 1 = all glass. */
-  glass?: number;
-  /** Pitch multiplier for the impacts (1 = 650-2300 Hz fundamentals). */
+  /** Share of pebble-on-metal grains (rest: stone/rock grains), 0..1. */
+  metal?: number;
+  /** Playback-rate multiplier for the grains (1 = as recorded). */
   pitch?: number;
 }
 
@@ -40,12 +46,9 @@ export interface DebrisBurst {
   dispose(): void;
 }
 
-/** Free-bar / plate (metal) and wine-glass-like (glass) inharmonic partial ratios. */
-const METAL = [1, 2.76, 5.4, 8.93];
-const PLATE = [1, 1.59, 2.14, 2.65, 3.16];
-const GLASS = [1, 2.32, 4.25, 6.63];
-const MAX_PARTIAL_HZ = 5000;
 const MAX_HITS = 42;
+const METAL_IDX = DEBRIS_GRAINS.flatMap((g, i) => (g[2] === "m" ? [i] : []));
+const STONE_IDX = DEBRIS_GRAINS.flatMap((g, i) => (g[2] === "s" ? [i] : []));
 
 function mulberry32(seed: number) {
   let a = seed >>> 0;
@@ -58,13 +61,18 @@ function mulberry32(seed: number) {
   };
 }
 
-export function createDebrisBurst(ctx: BaseAudioContext, dest: AudioNode, o: DebrisOpts): DebrisBurst {
+export function createDebrisBurst(
+  ctx: BaseAudioContext,
+  dest: AudioNode,
+  o: DebrisOpts,
+): DebrisBurst {
   const threshold = o.thresholdMps2 ?? 2.8;
   const full = Math.max(threshold + 0.5, o.fullMps2 ?? 4.2);
   const cooldownMin = o.cooldownS ?? 9;
-  const glass = clamp(o.glass ?? 0.5);
+  const metal = clamp(o.metal ?? 0.5);
   const pitch = o.pitch ?? 1;
   const rnd = mulberry32((Math.random() * 4294967296) ^ 0x5eed);
+  void loadDebrisGrains(ctx);
 
   const hp = ctx.createBiquadFilter();
   hp.type = "highpass";
@@ -85,10 +93,10 @@ export function createDebrisBurst(ctx: BaseAudioContext, dest: AudioNode, o: Deb
   mute.gain.value = 1;
   hp.connect(dip).connect(lp).connect(out).connect(mute).connect(dest);
 
-  // One short white-noise grain for the contact "tick" (shared buffer, random offsets).
-  const tickBuf = ctx.createBuffer(1, Math.round(ctx.sampleRate * 0.25), ctx.sampleRate);
-  const td = tickBuf.getChannelData(0);
-  for (let i = 0; i < td.length; i++) td[i] = rnd() * 2 - 1;
+  // Short white-noise buffer for the dry fallback clicks (random offsets).
+  const clickBuf = ctx.createBuffer(1, Math.round(ctx.sampleRate * 0.25), ctx.sampleRate);
+  const cd = clickBuf.getChannelData(0);
+  for (let i = 0; i < cd.length; i++) cd[i] = rnd() * 2 - 1;
 
   let armed = true;
   let nextAllowed = 0;
@@ -114,56 +122,64 @@ export function createDebrisBurst(ctx: BaseAudioContext, dest: AudioNode, o: Deb
   };
 
   function hit(at: number, amp: number) {
-    const pan = (rnd() * 2 - 1) * 0.8;
-    const bus = panner(pan);
-    const isGlass = rnd() < glass;
-    const ratios = isGlass ? GLASS : rnd() < 0.5 ? METAL : PLATE;
-    // Small stones: mostly bright pings, sometimes a dull knock on the shell.
-    const knock = rnd() < 0.22;
-    const f0 = (knock ? 260 + rnd() * 320 : 650 * Math.pow(2300 / 650, rnd())) * pitch;
-    const tau0 = knock ? 0.012 + rnd() * 0.018 : (isGlass ? 0.03 : 0.02) + rnd() * 0.06;
-    ratios.forEach((r, k) => {
-      const f = f0 * r * (1 + (rnd() * 2 - 1) * 0.03);
-      if (f > MAX_PARTIAL_HZ) return;
-      const osc = ctx.createOscillator();
-      osc.type = "sine";
-      osc.frequency.value = f;
+    const bus = panner((rnd() * 2 - 1) * 0.8);
+    const extra = bus === hp ? [] : [bus];
+    const buf = getDebrisGrainBuffer();
+    if (buf && DEBRIS_GRAINS.length > 0) {
+      const pool =
+        (rnd() < metal && METAL_IDX.length > 0) || STONE_IDX.length === 0 ? METAL_IDX : STONE_IDX;
+      const grain = DEBRIS_GRAINS[pool[Math.floor(rnd() * pool.length)] ?? 0];
+      const start = grain?.[0] ?? 0;
+      const dur = grain?.[1] ?? 0.05;
+      const src = ctx.createBufferSource();
+      src.buffer = buf;
+      src.playbackRate.value = pitch * Math.pow(2, ((rnd() * 2 - 1) * 5) / 12);
       const g = ctx.createGain();
-      const a = (amp * (0.35 + 0.65 * rnd())) / Math.pow(k + 1, 1.3);
-      const tau = tau0 / Math.pow(k + 1, 0.7);
-      g.gain.setValueAtTime(0, at);
-      g.gain.linearRampToValueAtTime(a, at + 0.0015);
-      g.gain.setTargetAtTime(0, at + 0.0015, tau);
-      osc.connect(g).connect(bus);
-      osc.start(at);
-      osc.stop(at + 0.0015 + tau * 7);
-      track(osc, bus === hp ? [osc, g] : [osc, g, bus]);
-    });
-    // contact tick: 2-4 ms band-limited noise grain
+      g.gain.value = amp;
+      src.connect(g).connect(bus);
+      src.start(at, start, dur);
+      track(src, [src, g, ...extra]);
+      return;
+    }
+    // Dry fallback click: 3-10 ms of low-Q band-limited noise, fast exponential decay.
     const src = ctx.createBufferSource();
-    src.buffer = tickBuf;
+    src.buffer = clickBuf;
     const bp = ctx.createBiquadFilter();
     bp.type = "bandpass";
-    bp.frequency.value = Math.min(4200, f0 * (1.2 + rnd()));
-    bp.Q.value = 1.2;
-    const tg = ctx.createGain();
-    const dur = 0.002 + rnd() * 0.002;
-    tg.gain.setValueAtTime(amp * 0.5, at);
-    tg.gain.setTargetAtTime(0, at, dur / 3);
-    src.connect(bp).connect(tg).connect(bus);
-    src.start(at, rnd() * 0.2, dur * 3);
-    track(src, [src, bp, tg]);
+    bp.frequency.value = (900 + rnd() * 2600) * pitch;
+    bp.Q.value = 0.7;
+    const g = ctx.createGain();
+    const len = 0.003 + rnd() * 0.007;
+    g.gain.setValueAtTime(amp, at);
+    g.gain.setTargetAtTime(0, at, len / 3);
+    src.connect(bp).connect(g).connect(bus);
+    src.start(at, rnd() * 0.2, len * 1.5);
+    track(src, [src, bp, g, ...extra]);
   }
 
   // Active burst: hits are generated as the burst runs, so density follows the live intensity.
-  let burst: { t0: number; until: number; peak: number; cursor: number; hits: number; rateJ: number } | null = null;
+  let burst: {
+    t0: number;
+    until: number;
+    peak: number;
+    cursor: number;
+    hits: number;
+    rateJ: number;
+  } | null = null;
 
   function trigger(t: number, intensity: number): boolean {
     if (t < nextAllowed) return false;
     bursts++;
     nextAllowed = t + cooldownMin * (1 + 0.6 * rnd());
     const t0 = t + 0.02 + rnd() * 0.06;
-    burst = { t0, until: t0 + 1.0, peak: clamp(intensity), cursor: t0, hits: 0, rateJ: 0.8 + 0.4 * rnd() };
+    burst = {
+      t0,
+      until: t0 + 1.0,
+      peak: clamp(intensity),
+      cursor: t0,
+      hits: 0,
+      rateJ: 0.8 + 0.4 * rnd(),
+    };
     extend(clamp(intensity));
     return true;
   }

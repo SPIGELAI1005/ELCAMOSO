@@ -336,7 +336,7 @@ const baseStrategies: ProfileStrategy[] = [
           roar: 0.3,
           cruise: 0.24,
         }),
-        createDebrisLayer(ctx, { id: "ufo-debris", destination: buses.accents, level: 0.3, glass: 0.7, pitch: 1.1 }),
+        createDebrisLayer(ctx, { id: "ufo-debris", destination: buses.accents, level: 0.54, metal: 0.4, pitch: 1.05 }),
       ];
     },
   },
