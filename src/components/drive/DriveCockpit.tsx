@@ -513,11 +513,16 @@ export function DriveCockpit({
             {speedView.showUnit ? (
               <p
                 className={cn(
-                  "mt-1.5 text-[11px] tracking-[0.34em] text-muted-foreground",
-                  speedUnit === "c" ? "normal-case" : "uppercase",
+                  "mt-1.5 text-[11px] tracking-[0.34em] text-muted-foreground uppercase",
+                  speedUnit === "c" ? "tracking-[0.22em]" : null,
                 )}
               >
-                {speedUnit === "c" ? "c · warp" : speedUnit}
+                {speedUnit === "c" ? "of light speed" : speedUnit}
+              </p>
+            ) : null}
+            {speedView.showUnit && speedUnit === "c" ? (
+              <p className="mt-1 text-[10px] tracking-[0.18em] text-muted-foreground/70 tabular-nums">
+                ≈ {Math.round(Math.max(0, speedMps) * 3.6)} km/h
               </p>
             ) : null}
             {speedView.caption ? (
