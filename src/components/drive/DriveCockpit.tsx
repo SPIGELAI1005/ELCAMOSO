@@ -52,6 +52,8 @@ import {
   resolveDriveShiftPersona,
 } from "@/lib/drive/drive-shift-persona";
 import { cn } from "@/lib/utils";
+import { ModeTachometer } from "@/components/drive/ModeTachometer";
+import { resolveTachThemeId } from "@/lib/drive/tach-theme";
 
 const COCKPIT_SELECT_TRIGGER =
   "h-12 min-h-12 w-full min-w-0 flex-1 rounded-full border border-border bg-background px-4 text-sm font-light shadow-none focus:ring-1 focus:ring-foreground/40 data-[state=open]:border-foreground/60";
@@ -65,12 +67,9 @@ const COCKPIT_SELECT_ITEM =
 const COCKPIT_FOOTER_BTN =
   "flex h-14 min-h-14 items-center justify-center rounded-full border border-border text-[11px] tracking-[0.2em] text-muted-foreground uppercase transition-colors hover:border-foreground/60 hover:text-foreground";
 
-const ARC_START = 135;
-const ARC_SWEEP = 270;
 /** Last portion of the tach treated as the redline zone. */
 const REDLINE_ZONE_START = 0.82;
 const REDLINE_COLOR = "#e53935";
-const TACH_COLOR = "oklch(0.97 0.002 250)";
 const CATALOG_IDS = new Set(SOUND_PROFILES.map((p) => p.id));
 
 function shiftPresetLabel(id: ShiftMapPresetId) {
@@ -86,18 +85,6 @@ function nextShiftPreset(id: ShiftMapPresetId): ShiftMapPresetId {
   return next ?? "legacy";
 }
 
-/** Blend tach stroke from white into brand red through the redline zone. */
-function tachStrokeForProgress(progress: number): string {
-  if (progress < REDLINE_ZONE_START) return TACH_COLOR;
-  const t = Math.min(1, (progress - REDLINE_ZONE_START) / (1 - REDLINE_ZONE_START));
-  // Ease in so the tip goes fully red near the needle tip.
-  const eased = t * t;
-  const r = Math.round(247 + (229 - 247) * eased);
-  const g = Math.round(247 + (57 - 247) * eased);
-  const b = Math.round(250 + (53 - 250) * eased);
-  return `rgb(${r} ${g} ${b})`;
-}
-
 export interface DriveCockpitProps {
   profile: SoundProfile;
   driveState: DriveState;
@@ -110,146 +97,6 @@ export interface DriveCockpitProps {
   reducedMotion?: boolean | undefined;
   onStop: () => void;
   className?: string | undefined;
-}
-
-function polar(cx: number, cy: number, r: number, deg: number) {
-  const rad = (deg * Math.PI) / 180;
-  return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
-}
-
-function arcPath(cx: number, cy: number, r: number, startDeg: number, endDeg: number) {
-  const start = polar(cx, cy, r, startDeg);
-  const end = polar(cx, cy, r, endDeg);
-  const large = endDeg - startDeg <= 180 ? 0 : 1;
-  return `M ${start.x} ${start.y} A ${r} ${r} 0 ${large} 1 ${end.x} ${end.y}`;
-}
-
-function CockpitTachArc({
-  progress,
-  size = 220,
-  reducedMotion,
-  showRedlineZone = false,
-}: {
-  progress: number;
-  size?: number;
-  reducedMotion: boolean;
-  /** Draw a red zone on the track and tint the fill near redline. */
-  showRedlineZone?: boolean;
-}) {
-  const stroke = 2.5;
-  const pad = 28;
-  const vb = size + pad * 2;
-  const r = (size - stroke) / 2;
-  const cx = vb / 2;
-  const cy = vb / 2;
-  const [visual, setVisual] = useState(progress);
-  const [built, setBuilt] = useState(reducedMotion);
-  const raf = useRef(0);
-  const trackLen = (ARC_SWEEP / 360) * 2 * Math.PI * r;
-
-  useEffect(() => {
-    if (reducedMotion) {
-      setBuilt(true);
-      return;
-    }
-    const id = window.setTimeout(() => setBuilt(true), 80);
-    return () => window.clearTimeout(id);
-  }, [reducedMotion]);
-
-  useEffect(() => {
-    if (reducedMotion) {
-      setVisual(progress);
-      return;
-    }
-    if (!built) {
-      setVisual(0);
-      return;
-    }
-    const target = Math.min(1, Math.max(0, progress));
-    const tick = () => {
-      setVisual((prev) => {
-        const next = prev + (target - prev) * 0.09;
-        if (Math.abs(next - target) < 0.002) return target;
-        raf.current = requestAnimationFrame(tick);
-        return next;
-      });
-    };
-    raf.current = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf.current);
-  }, [progress, reducedMotion, built]);
-
-  const clamped = Math.min(1, Math.max(0, visual));
-  const end = ARC_START + ARC_SWEEP * clamped;
-  const track = arcPath(cx, cy, r, ARC_START, ARC_START + ARC_SWEEP);
-  const zoneStartDeg = ARC_START + ARC_SWEEP * REDLINE_ZONE_START;
-  const zoneTrack = arcPath(cx, cy, r, zoneStartDeg, ARC_START + ARC_SWEEP);
-  const whiteEnd = Math.min(end, zoneStartDeg);
-  const whiteFill = whiteEnd > ARC_START + 0.2 ? arcPath(cx, cy, r, ARC_START, whiteEnd) : null;
-  const redFill =
-    showRedlineZone && clamped > REDLINE_ZONE_START ? arcPath(cx, cy, r, zoneStartDeg, end) : null;
-  const solidFill =
-    !showRedlineZone || clamped <= REDLINE_ZONE_START ? arcPath(cx, cy, r, ARC_START, end) : null;
-
-  return (
-    <svg
-      viewBox={`0 0 ${vb} ${vb}`}
-      className="drive-cockpit__arc pointer-events-none absolute inset-[-12%] h-[124%] w-[124%] overflow-visible"
-      aria-hidden="true"
-      preserveAspectRatio="xMidYMid meet"
-      overflow="visible"
-    >
-      <path
-        d={track}
-        fill="none"
-        stroke="oklch(1 0 0 / 12%)"
-        strokeWidth={stroke}
-        strokeLinecap="round"
-        className={cn("drive-cockpit__tach-draw", built && "drive-cockpit__tach-draw--built")}
-        style={{ ["--tach-len" as string]: String(trackLen) }}
-      />
-      {showRedlineZone ? (
-        <path
-          d={zoneTrack}
-          fill="none"
-          stroke="oklch(0.62 0.2 25 / 28%)"
-          strokeWidth={stroke}
-          strokeLinecap="round"
-          className={cn("drive-cockpit__tach-draw", built && "drive-cockpit__tach-draw--built")}
-          style={{
-            ["--tach-len" as string]: String(trackLen * (1 - REDLINE_ZONE_START)),
-            transitionDelay: built ? "200ms" : undefined,
-          }}
-        />
-      ) : null}
-      {built && solidFill ? (
-        <path
-          d={solidFill}
-          fill="none"
-          stroke={showRedlineZone ? tachStrokeForProgress(clamped) : TACH_COLOR}
-          strokeWidth={stroke}
-          strokeLinecap="round"
-        />
-      ) : null}
-      {built && whiteFill && redFill ? (
-        <path
-          d={whiteFill}
-          fill="none"
-          stroke={TACH_COLOR}
-          strokeWidth={stroke}
-          strokeLinecap="round"
-        />
-      ) : null}
-      {built && redFill ? (
-        <path
-          d={redFill}
-          fill="none"
-          stroke={tachStrokeForProgress(clamped)}
-          strokeWidth={stroke + 0.5}
-          strokeLinecap="round"
-        />
-      ) : null}
-    </svg>
-  );
 }
 
 /** Round paddle / stop controls: 36px → 54px (+50%). */
@@ -291,11 +138,7 @@ function CockpitGearLadder({
       className="mt-2 grid w-full grid-cols-3 items-center gap-x-2"
       role="group"
       aria-label={
-        shifting
-          ? `Shifting to gear ${active || 1}`
-          : inNeutral
-            ? "Neutral"
-            : `Gear ${active}`
+        shifting ? `Shifting to gear ${active || 1}` : inNeutral ? "Neutral" : `Gear ${active}`
       }
     >
       {/* Equal thirds: gears in the middle column stay on the tach center. */}
@@ -464,6 +307,13 @@ export function DriveCockpit({
     settings.shiftMapPreset,
   );
   const activeMoodLabel = moodLabel(shiftPersona, activeMoodId);
+  const tachThemeId = resolveTachThemeId({
+    profileId: profile.id,
+    category: profile.category,
+    modeBinding: shiftPersona.modeBinding,
+    modeId: activeMoodId,
+    speedUnit,
+  });
   const usesPowertrainGears = shiftPersona.modeBinding === "shift-map";
   const ladderCount = shiftPersona.ladderCount ?? 0;
   const motionStage = motionStageIndex(driveState, Math.max(2, ladderCount || 2));
@@ -608,11 +458,14 @@ export function DriveCockpit({
         aria-label="Speed and drivetrain"
       >
         <div className="relative mx-auto aspect-square w-[min(58vw,220px)] max-w-full place-items-center sm:w-[280px]">
-          <CockpitTachArc
+          <ModeTachometer
+            themeId={tachThemeId}
+            introKey={`${profile.id}:${activeMoodId}`}
             progress={arcProgress}
             size={300}
             reducedMotion={reducedMotion}
-            showRedlineZone={showTachRedline}
+            redlineRpm={showTachRedline ? redline : null}
+            showZone={showTachRedline || tachThemeId === "rocket" || tachThemeId === "warp"}
           />
           <div className="absolute inset-0 z-[1] flex flex-col items-center justify-center px-5 text-center">
             <p
@@ -818,7 +671,6 @@ export function DriveCockpit({
             +
           </button>
         </div>
-
       </footer>
 
       <Sheet open={soundsOpen} onOpenChange={setSoundsOpen}>
