@@ -352,7 +352,7 @@ export const FLAT_PLANE_V8_TOPOLOGY: CombustionTopologyV1 = {
   collectors: [{ id: 0 }, { id: 1 }],
   soundSpeedMetresPerSecond: TOPOLOGY_SOUND_SPEED_DEFAULT,
   // Alive idle: crank never dead-steady, small per-cycle lope (no valvetrain ticks: crackle).
-  cycleLope: 0.35,
+  cycleLope: 0.6,
   organic: { crankJitter: 0.004, crankWander: 0.004, wanderHz: 1.2 },
   cylinders: [1, 5, 3, 7, 4, 8, 2, 6].map((cylId, i) => ({
     id: cylId,
@@ -394,7 +394,7 @@ export const FLAT_SIX_TOPOLOGY: CombustionTopologyV1 = {
   collectors: [{ id: 0 }, { id: 1 }],
   soundSpeedMetresPerSecond: TOPOLOGY_SOUND_SPEED_DEFAULT,
   // Alive idle: crank never dead-steady, small per-cycle lope (no valvetrain ticks: crackle).
-  cycleLope: 0.3,
+  cycleLope: 0.42,
   organic: { crankJitter: 0.004, crankWander: 0.004, wanderHz: 1.2 },
   cylinders: [1, 6, 2, 4, 3, 5].map((cylId, i) => ({
     id: cylId,
@@ -417,7 +417,7 @@ export const TURBO_I6_TOPOLOGY: CombustionTopologyV1 = {
   collectors: [{ id: 0 }],
   soundSpeedMetresPerSecond: TOPOLOGY_SOUND_SPEED_DEFAULT,
   // Alive idle: crank never dead-steady, small per-cycle lope (no valvetrain ticks: crackle).
-  cycleLope: 0.25,
+  cycleLope: 0.32,
   organic: { crankJitter: 0.004, crankWander: 0.004, wanderHz: 1.2 },
   cylinders: [1, 5, 3, 6, 2, 4].map((cylId, i) => ({
     id: cylId,
@@ -445,7 +445,7 @@ export const V10_TOPOLOGY: CombustionTopologyV1 = {
   // carries its roughness there, not as a static hiss floor.
   rasp: { level: 0.34, startRpm: 5000, fullRpm: 8500, lowHz: 1000, highHz: 3000 },
   // Idle lope: one random gain per 720° (scaled by irregularity, so it lives at idle).
-  cycleLope: 0.45,
+  cycleLope: 0.6,
   // No dead-steady crank: slow wander + per-fire kick. (Valvetrain ticks removed: at idle
   // their sparse 3 kHz clicks read as stones/crackle in the car.)
   organic: {
@@ -480,7 +480,7 @@ export const F1_V10_TOPOLOGY: CombustionTopologyV1 = {
   noiseScale: 0.3,
   rasp: { level: 0.22, startRpm: 11000, fullRpm: 17500, lowHz: 1800, highHz: 4200 },
   pulseTauScale: 0.12,
-  cycleLope: 0.5,
+  cycleLope: 0.65,
   // Organic: crank never dead-steady (per-fire kick + slow wander = slight pitch instability),
   // airbox roar breathing with the intake pulses under load. No valvetrain ticks (idle crackle).
   organic: {

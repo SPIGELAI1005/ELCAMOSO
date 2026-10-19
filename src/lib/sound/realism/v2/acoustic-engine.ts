@@ -122,7 +122,16 @@ export interface AcousticEngineConfig {
     blipIntensity: number;
     /** Optional extra output trim (dB) while parked/idling only (fades out on the move). */
     idleGainDb?: number;
+    /** Optional idle "breathing": ±dB level that follows the slow rpm hunt. */
+    breathDb?: number;
+    /** Optional faint turbo hiss level while parked (turbo profiles). */
+    turboHiss?: number;
   };
+  /**
+   * Optional turbo whistle settle: full whistle for holdS once boost arrives, then it decays
+   * (tauS) to `floor` × level even on sustained boost; ducks to zero on blow-off.
+   */
+  whistleSettle?: { holdS: number; tauS: number; floor: number };
   /**
    * Optional GPS-robust gentle vs hard acceleration (vehicle speed slope, not the weak GPS
    * throttle): output trim and spectral tilt per character. Absent → unchanged.
@@ -227,7 +236,7 @@ const FLAT_SIX: AcousticEngineConfig = {
   architecture: "flat-six",
   banks: "flat",
   architectureCode: 2,
-  idleIrregularity: 0.2,
+  idleIrregularity: 0.28,
   exhaustPulse: 0.56,
   intakePresence: 0.82,
   mechanicalIntensity: 0.7,
@@ -247,7 +256,8 @@ const FLAT_SIX: AcousticEngineConfig = {
   redlineRpm: 9000,
   outputTrimDb: 18.8,
   throttleGapDb: 1.2,
-  idleLife: { wanderRpm: 60, wanderTauS: 0.45, blipRpm: [250, 700], blipEveryS: [6, 12], blipIntensity: 0.13 },
+  // Flat-six: smooth but alive - frequent soft blips, gentle breathing.
+  idleLife: { wanderRpm: 65, wanderTauS: 0.45, blipRpm: [350, 900], blipEveryS: [3.5, 8], blipIntensity: 0.15, breathDb: 1.2 },
   // GPS-robust gentle vs hard: gentle pulls stay smooth and a touch darker, hard pulls open up.
   accelCharacter: { gentleGainDb: -1, hardGainDb: 2, hardTiltDb: 3, gentleTiltDb: -1.5 },
   growl: { centersHz: [270, 540], q: 0.9, drive: 0.75, level: 0.03, lowpassHz: 3000 },
@@ -262,7 +272,7 @@ const TURBO_I6: AcousticEngineConfig = {
   architectureCode: 0,
   // Spec §NEW-E: Turbo I6 was near-silent at idle and cruise - raise exhaustPulse and
   // idle character. Even-firing I6 is smooth, but still needs audible presence.
-  idleIrregularity: 0.2,
+  idleIrregularity: 0.25,
   exhaustPulse: 0.68,
   intakePresence: 0.52,
   mechanicalIntensity: 0.4,
@@ -282,12 +292,15 @@ const TURBO_I6: AcousticEngineConfig = {
   redlineRpm: 7000,
   outputTrimDb: 18.7,
   throttleGapDb: 1.8,
-  idleLife: { wanderRpm: 50, wanderTauS: 0.5, blipRpm: [200, 500], blipEveryS: [7, 13], blipIntensity: 0.12 },
+  // I6: silky - smaller lope, but the same blip rhythm as the rally car.
+  idleLife: { wanderRpm: 55, wanderTauS: 0.5, blipRpm: [300, 750], blipEveryS: [4, 8], blipIntensity: 0.14, breathDb: 1, turboHiss: 0.006 },
   // GPS-robust gentle vs hard: gentle pulls stay smooth and a touch darker, hard pulls open up.
   accelCharacter: { gentleGainDb: -1, hardGainDb: 2.5, hardTiltDb: 2.5, gentleTiltDb: -1.5 },
   // Supra-style: spool whoosh + "stu-tu-tu" compressor/wastegate flutter on lift-off.
   turboFlutter: { chirps: 7, rateHz: 22, depth: 0.85, hz: 1700, q: 2.2, level: 1.1 },
   liftPops: { probability: 0.45, level: 0.22 },
+  // Whistle swells on boost, then settles under the engine within ~1.5 s; drops on blow-off.
+  whistleSettle: { holdS: 0.5, tauS: 0.6, floor: 0.2 },
 };
 
 const V10: AcousticEngineConfig = {
@@ -296,7 +309,7 @@ const V10: AcousticEngineConfig = {
   architecture: "v10-even",
   banks: "v90",
   architectureCode: 0,
-  idleIrregularity: 0.3,
+  idleIrregularity: 0.38,
   exhaustPulse: 0.64,
   intakePresence: 0.82,
   mechanicalIntensity: 0.58,
@@ -332,7 +345,7 @@ const V10: AcousticEngineConfig = {
   orderBandMaxHz: 5000,
   supportLowpassHz: 4200,
   // Alive idle: ~±70 rpm wander and an occasional small blip while parked.
-  idleLife: { wanderRpm: 60, wanderTauS: 0.5, blipRpm: [250, 650], blipEveryS: [5, 11], blipIntensity: 0.14 },
+  idleLife: { wanderRpm: 70, wanderTauS: 0.45, blipRpm: [400, 1000], blipEveryS: [3.5, 7.5], blipIntensity: 0.16, breathDb: 1.2 },
 };
 
 /**
@@ -344,7 +357,7 @@ const F1_V10: AcousticEngineConfig = {
   ...V10,
   idleIrregularity: 0.32,
   // Race-engine idle: hunts ±~100 rpm and gets the odd throttle blip, like a parked F1 car.
-  idleLife: { wanderRpm: 150, wanderTauS: 0.35, blipRpm: [700, 1700], blipEveryS: [4, 9], blipIntensity: 0.2, idleGainDb: 8 },
+  idleLife: { wanderRpm: 150, wanderTauS: 0.35, blipRpm: [1000, 2500], blipEveryS: [3, 6.5], blipIntensity: 0.22, idleGainDb: 8, breathDb: 1.5 },
   exhaustPulse: 0.7,
   intakePresence: 0.95,
   mechanicalIntensity: 0.62,
@@ -386,7 +399,7 @@ const FLAT_PLANE_V8_TRACK: AcousticEngineConfig = {
   // Spec §NEW-E: Race Car must sound distinct from GT V8 - flat-plane has even bank
   // alternation, sharper/brighter character, and higher-frequency exhaust resonance.
   architectureCode: 6,
-  idleIrregularity: 0.16,
+  idleIrregularity: 0.34,
   // Higher exhaust pulse and sharper combustion than GT V8's 0.72/0.43
   exhaustPulse: 0.78,
   intakePresence: 0.82,
@@ -409,7 +422,8 @@ const FLAT_PLANE_V8_TRACK: AcousticEngineConfig = {
   redlineRpm: 8600,
   outputTrimDb: 17.7,
   // Alive idle: slow rpm hunt and the odd blip while parked (no ticks, no crackle).
-  idleLife: { wanderRpm: 70, wanderTauS: 0.45, blipRpm: [300, 800], blipEveryS: [6, 12], blipIntensity: 0.14 },
+  // Flat-plane V8: sharper lope, bigger, more frequent blips.
+  idleLife: { wanderRpm: 75, wanderTauS: 0.4, blipRpm: [450, 1200], blipEveryS: [3.5, 7], blipIntensity: 0.16, breathDb: 1.5 },
   // GPS-robust gentle vs hard: gentle pulls stay smooth and a touch darker, hard pulls open up.
   accelCharacter: { gentleGainDb: -1, hardGainDb: 2, hardTiltDb: 3, gentleTiltDb: -1.5 },
   // Performance exhaust: titanium-style rasp on hard pulls, burble/pops on lift-off at speed.
@@ -450,6 +464,7 @@ const RALLY_TURBO_3: AcousticEngineConfig = {
   turboFlutter: { chirps: 9, rateHz: 18, depth: 0.9, hz: 1500, q: 2, level: 1.2 },
   // Anti-lag style bangs on lift-off at speed.
   liftPops: { probability: 0.85, level: 0.4 },
+  whistleSettle: { holdS: 0.4, tauS: 0.5, floor: 0.2 },
 };
 
 const INLINE_4: AcousticEngineConfig = {

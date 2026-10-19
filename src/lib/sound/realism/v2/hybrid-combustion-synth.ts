@@ -1369,7 +1369,11 @@ export class HybridCombustionSynth {
     });
     this.diagnostics.orderHz = orderHz;
     // Root-cause §loudness: compute outputTrimLinear once, apply to all output paths
-    const idleLiftDb = cfg.idleLife?.idleGainDb ? cfg.idleLife.idleGainDb * this.ilGate : 0;
+    let idleLiftDb = cfg.idleLife?.idleGainDb ? cfg.idleLife.idleGainDb * this.ilGate : 0;
+    // Idle breathing: level follows the slow rpm hunt a little (idleLife.breathDb only).
+    if (cfg.idleLife?.breathDb) {
+      idleLiftDb += cfg.idleLife.breathDb * (this.ilW1 * 0.4 + this.ilW2 * 0.6) * this.ilGate;
+    }
     const accLiftDb = accCfg
       ? accCfg.hardGainDb * accHard + accCfg.gentleGainDb * accGentle
       : 0;
@@ -1514,7 +1518,11 @@ export class HybridCombustionSynth {
       const spool = this.turbo.spool;
       targetParam(
         this.turbo.gain.gain,
-        (spool > 0.05 ? spool * 0.075 : 0.0001) * gate("boost"),
+        Math.max(
+          spool > 0.05 ? spool * 0.075 : 0.0001,
+          // Faint turbo breath while parked (idleLife.turboHiss only).
+          (cfg.idleLife?.turboHiss ?? 0) * this.ilGate,
+        ) * gate("boost"),
         audioTime,
         0.08,
       );
@@ -1566,8 +1574,20 @@ export class HybridCombustionSynth {
       }
       if (this.turboWhistle) {
         // Whistle: only audible once boost builds; follows spool² and load, never a constant tone.
-        const w =
+        let w =
           spool > 0.08 ? Math.pow(spool, 1.5) * (0.5 + Math.min(1, load * 2) * 0.5) * 0.05 : 0.0001;
+        const ws = cfg.whistleSettle;
+        if (ws) {
+          // Swell then settle: full whistle for holdS after boost arrives, then it sinks under
+          // the engine (to floor) even on sustained boost; re-arms once boost drops away.
+          this.wsT = spool > 0.3 ? this.wsT + dt : Math.max(0, this.wsT - dt);
+          const settle =
+            this.wsT <= ws.holdS
+              ? 1
+              : ws.floor + (1 - ws.floor) * Math.exp(-(this.wsT - ws.holdS) / ws.tauS);
+          this.wsDuck = Math.min(1, this.wsDuck + dt / 0.8);
+          w *= settle * this.wsDuck;
+        }
         targetParam(
           this.turboWhistle.gain.gain,
           Math.max(0.0001, w) * gate("boost"),
@@ -2386,6 +2406,8 @@ export class HybridCombustionSynth {
   /** Local diagnostics (lab renders): lift-pop and blow-off events fired. */
   popEvents = 0;
   bovEvents = 0;
+  private wsT = 0;
+  private wsDuck = 1;
   private flSpoolPeak = 0;
   private flHardPeak = 0;
   private flPrevOverrun = 0;
@@ -2394,6 +2416,10 @@ export class HybridCombustionSynth {
   private fireBlowOff(spool: number, audioTime: number, gateLevel: number) {
     if (!this.bov) return;
     this.bovEvents += 1;
+    // Blow-off: the whistle drops away with the boost; settle state is kept so a quick upshift does not re-swell (whistleSettle profiles only).
+    if (this.cfg?.whistleSettle) {
+      this.wsDuck = 0;
+    }
     const fl = this.cfg?.turboFlutter;
     if (fl) {
       // Supra-style compressor surge / wastegate flutter: a short "pssh" then a train of

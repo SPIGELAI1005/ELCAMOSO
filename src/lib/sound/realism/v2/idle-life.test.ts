@@ -40,12 +40,26 @@ describe("petrol car states (gentle/hard, turbo flutter, performance exhaust)", 
     expect(ACOUSTIC_ENGINE_BY_PROFILE["turbo-inline-6"]!.turboFlutter).toBeDefined();
     expect(ACOUSTIC_ENGINE_BY_PROFILE["rally-car"]!.turboFlutter).toBeDefined();
   });
+  it("settles the turbo whistle (1-2 s) on every forced-induction engine and nowhere else", () => {
+    for (const [id, cfg] of Object.entries(ACOUSTIC_ENGINE_BY_PROFILE)) {
+      if (cfg.whistleSettle) {
+        expect(cfg.forcedInduction, id).toBe(true);
+        expect(cfg.whistleSettle.holdS + cfg.whistleSettle.tauS * 1.5).toBeLessThanOrEqual(2);
+        expect(cfg.whistleSettle.floor).toBeGreaterThan(0);
+        expect(cfg.whistleSettle.floor).toBeLessThan(0.5);
+      }
+      if (cfg.forcedInduction) expect(cfg.whistleSettle, id).toBeDefined();
+      if (cfg.idleLife?.turboHiss) expect(cfg.forcedInduction, id).toBe(true);
+      if (cfg.idleLife?.breathDb !== undefined) expect(cfg.idleLife.breathDb).toBeLessThanOrEqual(2);
+    }
+  });
   it("leaves the American V8, GT V8, Big Twin and superbike configs alone", () => {
     for (const id of UNTOUCHED) {
       const cfg = ACOUSTIC_ENGINE_BY_PROFILE[id]!;
       expect(cfg.accelCharacter, id).toBeUndefined();
       expect(cfg.turboFlutter, id).toBeUndefined();
       expect(cfg.idleLife, id).toBeUndefined();
+      expect(cfg.whistleSettle, id).toBeUndefined();
       expect(combustionTopologyForProfile(id)?.organic, id).toBeUndefined();
     }
   });
