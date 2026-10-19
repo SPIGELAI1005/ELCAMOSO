@@ -71,6 +71,7 @@ describe("superbike (quickshifter, auto-blipper, thunder)", () => {
   it("has a quickshifter cut/crack and downshift blip only on the superbike", () => {
     for (const [id, cfg] of Object.entries(ACOUSTIC_ENGINE_BY_PROFILE)) {
       if (id === "motorcycle-superbike") continue;
+      expect(cfg.camLift, id).toBeUndefined();
       expect(cfg.quickshifter, id).toBeUndefined();
     }
     const q = ACOUSTIC_ENGINE_BY_PROFILE["motorcycle-superbike"]!.quickshifter!;

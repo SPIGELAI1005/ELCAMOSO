@@ -43,6 +43,7 @@ import type {
   VirtualPowertrainState,
 } from "@/lib/powertrain/types";
 import { IDLE_POWERTRAIN } from "@/lib/powertrain/types";
+import { HARD_REV_BY_PROFILE, HardRevOverlay } from "@/lib/powertrain/hard-rev-overlay";
 import { resolveDrivingMode } from "@/lib/powertrain/domain/driving-mode";
 import {
   createBoostModelState,
@@ -117,6 +118,8 @@ export class PowertrainSimulator {
   private raceLimiterSinceMs = 0;
   private raceUpshiftWantedSinceMs = 0;
   private raceBouncePhase = 0;
+  /** Superbike-only hard-rev ladder (null for every other profile). */
+  private hardRev: HardRevOverlay | null = null;
 
   constructor(options: PowertrainSimulatorOptions = {}) {
     this.baseProfile =
@@ -125,6 +128,8 @@ export class PowertrainSimulator {
     this.profile = applyShiftPresetToProfile(this.baseProfile, this.shiftMapPreset);
     this.internal = createPowertrainInternals();
     this.internal.shiftMap = resolveShiftMapForPreset(this.profile, this.shiftMapPreset);
+    const hr = HARD_REV_BY_PROFILE[this.baseProfile.id];
+    this.hardRev = hr ? new HardRevOverlay(hr) : null;
   }
 
   getProfile(): PowertrainProfile {
@@ -778,6 +783,11 @@ export class PowertrainSimulator {
       out.shiftLoadMultiplier = 1;
     }
 
+    if (this.hardRev) {
+      const hr = this.hardRev.apply(out, dtSafe * 1000, () => (this.internal.shiftSequenceId += 1));
+      if (hr !== out) hr.normalizedRpm = normalizeRpm(hr.rpm, this.profile);
+      return hr;
+    }
     return out;
   }
 }

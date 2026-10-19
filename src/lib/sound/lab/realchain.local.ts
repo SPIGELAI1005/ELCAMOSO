@@ -21,6 +21,8 @@ const PLANS: Record<string, [number, number][]> = {
   // hard: launch 0-100 in ~8 s, lift-off, hard 50-110, brake
   // idle: parked, engine idling for the whole render (idle liveliness checks)
   idle: [[0,0],[90,0]],
+  // wot: full-throttle launch 0-160 in 10 s, hold, lift + decel, second pull 40-150, stop
+  wot: [[0,0],[6,0],[16,160],[22,160],[34,40],[40,40],[48,150],[54,150],[66,0],[90,0]],
   hard: [[0,0],[6,0],[9,50],[14,100],[20,100],[28,50],[34,50],[40,110],[50,110],[62,30],[70,30],[74,90],[80,90],[88,0],[90,0]],
 };
 let PLAN = PLANS.std!;

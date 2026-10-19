@@ -83,6 +83,8 @@ export interface AcousticEngineConfig {
   throttleGapDb?: number;
   /** Optional synth-level lift-off / downshift exhaust pops (probability per event, level). */
   liftPops?: { probability: number; level: number };
+  /** ShiftCam-style cam step: brighter tilt and intake shriek above `rpm` under load. */
+  camLift?: { rpm: number; widthRpm: number; intakeGain: number; tiltDb: number };
   /** Bike quickshifter + auto-blipper (sound only): upshift cut/crack, downshift rev blip. */
   quickshifter?: {
     cutGain: number;
@@ -507,6 +509,9 @@ const INLINE_4: AcousticEngineConfig = {
   throttleGapDb: 2.3,
   // High-rpm scream: thin the low end and lift the upper-mid howl as the revs climb.
   highRpmVoicing: { startRpm: 2500, fullRpm: 9000, lowShelfHz: 200, lowShelfDb: -7, presenceHz: 1900, presenceQ: 0.85, presenceDb: 8, airHz: 4500, airDb: -1 },
+  // ShiftCam: the high-lift cam comes in ~9k, opening the airbox shriek and a brighter top.
+  camLift: { rpm: 9000, widthRpm: 900, intakeGain: 0.9, tiltDb: 3 },
+  orderBandMaxHz: 3200,
   // Alive idle: crisp four, quick light blips (rally-style hunt, no ticks / crackle).
   idleLife: { wanderRpm: 60, wanderTauS: 0.35, blipRpm: [700, 2000], blipEveryS: [3.5, 7], blipIntensity: 0.18, breathDb: 1.2 },
   accelCharacter: { gentleGainDb: -1, hardGainDb: 2.5, hardTiltDb: 3.5, gentleTiltDb: -1.5 },

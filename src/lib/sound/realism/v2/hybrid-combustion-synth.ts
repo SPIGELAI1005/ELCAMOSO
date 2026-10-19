@@ -1227,6 +1227,14 @@ export class HybridCombustionSynth {
     // Quickshifter: brief ignition cut through the upshift (not in race mode, which has its own).
     const qsCut = Boolean(qs) && !race && qsDir === "up" && shiftPhase !== "reengage";
     if (qs && qsCut) intensity *= qs.cutGain;
+    // Bike limiter bounce (hard-rev over-rev before the upshift): ignition cut on each bounce.
+    const qsLimCut = Boolean(qs) && !race && Boolean(pt?.limiterCut);
+    if (qsLimCut) intensity *= 0.32;
+    // ShiftCam-style cam step (cfg.camLift): timbre lifts above the cam rpm under load.
+    const cam = cfg.camLift;
+    const camAmt = cam
+      ? Math.min(1, Math.max(0, (rpm - cam.rpm) / cam.widthRpm)) * Math.min(1, Math.max(0, (load - 0.3) / 0.4)) * (overrun ? 0 : 1)
+      : 0;
     if (qs && this.qsBlipEnv > 0.001) intensity = Math.min(1, intensity + qs.blipLevel * this.qsBlipEnv);
     if (race && pt?.limiterActive) intensity *= 0.85;
     if (revMatch) intensity = Math.min(1, intensity + 0.28 * (pt?.revMatchProgress ?? 0.5));
@@ -1259,6 +1267,8 @@ export class HybridCombustionSynth {
       let tiltDb =
         -4 + load * 5.5 + demand * 2.5 * cfg.highLoadEnrichment + bark * 3 - (raceCut ? 12 : 0);
       if (qsCut && cfg.quickshifter) tiltDb -= cfg.quickshifter.cutTiltDb;
+      if (qsLimCut) tiltDb -= 6;
+      if (cam) tiltDb += cam.tiltDb * camAmt;
       if (accCfg) tiltDb += accCfg.hardTiltDb * accHard + (accCfg.gentleTiltDb ?? 0) * accGentle;
       targetParam(this.spectralTilt.gain, tiltDb, audioTime, 0.07);
       this.diagnostics.spectralTiltDb = tiltDb;
@@ -1315,6 +1325,7 @@ export class HybridCombustionSynth {
       }
       if (overrun) intake *= 0.12;
       if (bark > 0) intake += bark * 1.4;
+      if (cam) intake *= 1 + cam.intakeGain * camAmt;
       targetParam(band.gain.gain, base * (0.2 + intake), audioTime, 0.05);
       targetParam(band.filter.Q, 1.2 + demand * 0.5, audioTime, 0.1);
     });
