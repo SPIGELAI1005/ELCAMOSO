@@ -1,13 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { ACOUSTIC_ENGINE_BY_PROFILE } from "@/lib/sound/realism/v2/acoustic-engine";
+import { getBassEnhancerConfig } from "@/lib/sound/dsp/bass-enhancer";
 import { combustionTopologyForProfile } from "@/lib/sound/realism/v2/combustion-topology";
 
-const ALIVE_IDLE = ["racing-v10", "f1-v10", "race-car", "flat-six-sport", "turbo-inline-6", "rally-car"];
+const ALIVE_IDLE = ["racing-v10", "f1-v10", "race-car", "flat-six-sport", "turbo-inline-6", "rally-car", "motorcycle-superbike"];
 const PETROL = ["race-car", "flat-six-sport", "turbo-inline-6", "rally-car"];
-const UNTOUCHED = ["american-muscle-v8", "gt-v8", "big-twin", "motorcycle-superbike"];
+const UNTOUCHED = ["american-muscle-v8", "gt-v8", "big-twin"];
 
 describe("idleLife (alive idle)", () => {
-  it("is set only on the V10s and the petrol cars, within ±50-150 rpm wander", () => {
+  it("is set only on the V10s, the petrol cars and the superbike, within ±50-150 rpm wander", () => {
     for (const [id, cfg] of Object.entries(ACOUSTIC_ENGINE_BY_PROFILE)) {
       if (ALIVE_IDLE.includes(id)) {
         expect(cfg.idleLife, id).toBeDefined();
@@ -53,14 +54,35 @@ describe("petrol car states (gentle/hard, turbo flutter, performance exhaust)", 
       if (cfg.idleLife?.breathDb !== undefined) expect(cfg.idleLife.breathDb).toBeLessThanOrEqual(2);
     }
   });
-  it("leaves the American V8, GT V8, Big Twin and superbike configs alone", () => {
+  it("leaves the American V8, GT V8 and Big Twin configs alone", () => {
     for (const id of UNTOUCHED) {
       const cfg = ACOUSTIC_ENGINE_BY_PROFILE[id]!;
       expect(cfg.accelCharacter, id).toBeUndefined();
       expect(cfg.turboFlutter, id).toBeUndefined();
       expect(cfg.idleLife, id).toBeUndefined();
       expect(cfg.whistleSettle, id).toBeUndefined();
+      expect(cfg.quickshifter, id).toBeUndefined();
       expect(combustionTopologyForProfile(id)?.organic, id).toBeUndefined();
     }
+  });
+});
+
+describe("superbike (quickshifter, auto-blipper, thunder)", () => {
+  it("has a quickshifter cut/crack and downshift blip only on the superbike", () => {
+    for (const [id, cfg] of Object.entries(ACOUSTIC_ENGINE_BY_PROFILE)) {
+      if (id === "motorcycle-superbike") continue;
+      expect(cfg.quickshifter, id).toBeUndefined();
+    }
+    const q = ACOUSTIC_ENGINE_BY_PROFILE["motorcycle-superbike"]!.quickshifter!;
+    expect(q.cutGain).toBeGreaterThan(0.2);
+    expect(q.cutGain).toBeLessThan(1);
+    expect(q.blipRpmFrac).toBeLessThanOrEqual(0.2);
+    expect(ACOUSTIC_ENGINE_BY_PROFILE["motorcycle-superbike"]!.liftPops).toBeDefined();
+    const t = combustionTopologyForProfile("motorcycle-superbike");
+    expect(t?.organic?.valvetrain).toBeUndefined();
+  });
+  it("gives the superbike decel thunder and leaves the Big Twin bass chain alone", () => {
+    expect(getBassEnhancerConfig("motorcycle-superbike")?.decelOnly).toBe(true);
+    expect(getBassEnhancerConfig("big-twin")).toBeNull();
   });
 });

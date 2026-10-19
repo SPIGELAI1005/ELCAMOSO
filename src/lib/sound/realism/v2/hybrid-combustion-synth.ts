@@ -1131,7 +1131,7 @@ export class HybridCombustionSynth {
         : 1 / 60;
     this.lastUpdateTime = audioTime;
     const gate = (role: AudioLayerRole) => (this.mutedRoles.has(role) ? 0.0001 : 1);
-    const rpm = this.idleLifeRpm(Math.max(0, state.rpm || 0), state, audioTime, dt);
+    let rpm = this.idleLifeRpm(Math.max(0, state.rpm || 0), state, audioTime, dt);
     this.lastSpeedMs = Math.max(0, state.speed || 0);
     this.accelChar.update(this.lastSpeedMs, audioTime, dt);
     // GPS-robust gentle vs hard (profiles with cfg.accelCharacter only; 0 elsewhere).
@@ -1160,6 +1160,24 @@ export class HybridCombustionSynth {
     const shiftLoad = pt?.shiftLoadMultiplier ?? (shifting ? 0.55 : 1);
     const revMatch = Boolean(pt?.revMatchActive);
     const speedKmh = state.speed * 3.6;
+    // Bike quickshifter / auto-blipper (cfg.quickshifter only): sound-side only, gear logic untouched.
+    const qs = cfg.quickshifter;
+    const qsDir = shifting ? pt?.shiftDirection : undefined;
+    let qsUpEdge = false;
+    if (qs) {
+      const down = qsDir === "down";
+      if (down && !this.qsPrevDown && rpm > 1500) this.qsBlipT = 0;
+      this.qsPrevDown = down;
+      const up = qsDir === "up";
+      qsUpEdge = up && !this.qsPrevUp;
+      this.qsPrevUp = up;
+      if (this.qsBlipT >= 0) this.qsBlipT += dt;
+      const bt = this.qsBlipT;
+      // Auto-blip: ~40 ms rise, ~180 ms fall (smooth, no step).
+      this.qsBlipEnv = bt < 0 ? 0 : bt < 0.04 ? bt / 0.04 : Math.exp(-(bt - 0.04) / 0.18);
+      if (bt > 1.5) this.qsBlipT = -1;
+      rpm *= 1 + qs.blipRpmFrac * this.qsBlipEnv;
+    }
 
     const firingHz = firingHzFromRpm(rpm, cfg.cylinders, cfg.stroke);
     this.diagnostics.firingHz = firingHz;
@@ -1206,6 +1224,10 @@ export class HybridCombustionSynth {
     const race = pt?.diagnostics?.shiftMapPreset === "race";
     const raceCut = race && shifting && pt?.shiftDirection === "up" && shiftPhase !== "reengage";
     if (raceCut) intensity *= 0.45;
+    // Quickshifter: brief ignition cut through the upshift (not in race mode, which has its own).
+    const qsCut = Boolean(qs) && !race && qsDir === "up" && shiftPhase !== "reengage";
+    if (qs && qsCut) intensity *= qs.cutGain;
+    if (qs && this.qsBlipEnv > 0.001) intensity = Math.min(1, intensity + qs.blipLevel * this.qsBlipEnv);
     if (race && pt?.limiterActive) intensity *= 0.85;
     if (revMatch) intensity = Math.min(1, intensity + 0.28 * (pt?.revMatchProgress ?? 0.5));
     if (overrun) intensity *= 0.55;
@@ -1236,6 +1258,7 @@ export class HybridCombustionSynth {
     if (this.spectralTilt) {
       let tiltDb =
         -4 + load * 5.5 + demand * 2.5 * cfg.highLoadEnrichment + bark * 3 - (raceCut ? 12 : 0);
+      if (qsCut && cfg.quickshifter) tiltDb -= cfg.quickshifter.cutTiltDb;
       if (accCfg) tiltDb += accCfg.hardTiltDb * accHard + (accCfg.gentleTiltDb ?? 0) * accGentle;
       targetParam(this.spectralTilt.gain, tiltDb, audioTime, 0.07);
       this.diagnostics.spectralTiltDb = tiltDb;
@@ -1299,6 +1322,14 @@ export class HybridCombustionSynth {
     // Lift-off / downshift exhaust pops (profiles with cfg.liftPops): unburned fuel lighting
     // off in a hot pipe after a meaningful lift at speed. Deterministic RNG, with cooldown.
     if (race && this.popChain) this.updateRacePops(pt, rpm, rpmNorm, audioTime);
+    // Quickshifter crack: unburned charge lights off in the pipe on a hard upshift.
+    if (qs && qsUpEdge && this.popChain && !race && this.ilGate < 0.5 && rpm > 2500) {
+      const hard = Math.max(this.popPrevDemand, demand);
+      if (hard > 0.3 && this.popRand() < qs.crackProbability) {
+        this.popEvents += 1;
+        this.firePopSequence("rev-match", qs.crackLevel * (0.6 + rpmNorm * 0.6), audioTime + 0.02);
+      }
+    }
     this.updateRaceGate(race && Boolean(pt?.limiterActive), audioTime, raceCut);
     const liftPops = cfg.liftPops ?? (race ? RACE_LIFT_POPS : undefined);
     if (liftPops && this.popChain) {
@@ -1681,6 +1712,10 @@ export class HybridCombustionSynth {
   private ilBlipT = -1;
   private ilBlipAmp = 0;
   private ilBlipEnv = 0;
+  private qsBlipT = -1;
+  private qsBlipEnv = 0;
+  private qsPrevDown = false;
+  private qsPrevUp = false;
   private ilGate = 0;
 
   private ilRand(): number {

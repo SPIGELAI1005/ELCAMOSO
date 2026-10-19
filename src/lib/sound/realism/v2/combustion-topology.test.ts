@@ -213,8 +213,8 @@ describe("V10 bank asymmetry + rasp (Racing V10 voicing)", () => {
 });
 
 describe("V10 organic layer (alive idle, less synthetic F1)", () => {
-  it("is only on the V10s and petrol cars and survives validation", () => {
-    const withOrganic = ["racing-v10", "f1-v10", "race-car", "flat-six-sport", "turbo-inline-6", "rally-car"];
+  it("is only on the V10s, petrol cars and superbike and survives validation", () => {
+    const withOrganic = ["racing-v10", "f1-v10", "race-car", "flat-six-sport", "turbo-inline-6", "rally-car", "motorcycle-superbike"];
     for (const id of TOPOLOGY_PILOT_PROFILE_IDS) {
       const t = combustionTopologyForProfile(id);
       if (withOrganic.includes(id)) {

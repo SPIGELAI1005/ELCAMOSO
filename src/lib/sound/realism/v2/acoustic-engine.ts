@@ -83,6 +83,15 @@ export interface AcousticEngineConfig {
   throttleGapDb?: number;
   /** Optional synth-level lift-off / downshift exhaust pops (probability per event, level). */
   liftPops?: { probability: number; level: number };
+  /** Bike quickshifter + auto-blipper (sound only): upshift cut/crack, downshift rev blip. */
+  quickshifter?: {
+    cutGain: number;
+    cutTiltDb: number;
+    crackProbability: number;
+    crackLevel: number;
+    blipLevel: number;
+    blipRpmFrac: number;
+  };
   /**
    * Optional load-driven exhaust growl: mid-band excitation driven into a soft
    * saturator. Off below moderate load (it reads as rushing noise at cruise).
@@ -473,7 +482,7 @@ const INLINE_4: AcousticEngineConfig = {
   architecture: "inline-4",
   banks: "inline",
   architectureCode: 0,
-  idleIrregularity: 0.14,
+  idleIrregularity: 0.26,
   exhaustPulse: 0.55,
   intakePresence: 0.7,
   mechanicalIntensity: 0.6,
@@ -493,6 +502,12 @@ const INLINE_4: AcousticEngineConfig = {
   redlineRpm: 14000,
   outputTrimDb: 21.2,
   throttleGapDb: 2.3,
+  // Alive idle: crisp four, quick light blips (rally-style hunt, no ticks / crackle).
+  idleLife: { wanderRpm: 60, wanderTauS: 0.35, blipRpm: [700, 2000], blipEveryS: [3.5, 7], blipIntensity: 0.18, breathDb: 1.2 },
+  accelCharacter: { gentleGainDb: -1, hardGainDb: 2.5, hardTiltDb: 3.5, gentleTiltDb: -1.5 },
+  growl: { centersHz: [360, 760], q: 0.9, drive: 0.7, level: 0.03, lowpassHz: 3600 },
+  liftPops: { probability: 0.6, level: 0.26 },
+  quickshifter: { cutGain: 0.4, cutTiltDb: 9, crackProbability: 0.75, crackLevel: 0.3, blipLevel: 0.35, blipRpmFrac: 0.14 },
 };
 
 const V_TWIN: AcousticEngineConfig = {

@@ -547,6 +547,9 @@ export const SUPERBIKE_I4_TOPOLOGY: CombustionTopologyV1 = {
     pulseWeight: 1,
     primaryLengthMetres: 0.06,
   })),
+  // Alive idle: per-cycle lope and an organic crank (no valvetrain ticks).
+  cycleLope: 0.4,
+  organic: { crankJitter: 0.004, crankWander: 0.004, wanderHz: 1.2 },
 };
 
 /**
