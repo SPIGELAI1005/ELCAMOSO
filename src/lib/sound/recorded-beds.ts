@@ -12,6 +12,7 @@ const BASE = "/sample-packs/recorded/beds-v1";
 const HORSE_LEVEL = 0.55;
 const TRACTOR_LEVEL = 0.4;
 const DRAGON_LEVEL = 0.12;
+const UFO_LEVEL = 1;
 const SR = 48000;
 /** AAC priming; decoders that do not apply the edit list keep it at the head. */
 const AAC_DELAY = 1024;
@@ -123,6 +124,29 @@ export const RECORDED_BEDS: Record<string, RecordedBedConfig> = {
     highpassHz: 40,
     lowpassHz: 14000,
     oneShots: [{ start: 6.2, end: 11.15, level: 0.9, cooldown: 14, minKmh: 0 }],
+  },
+  ufo: {
+    profileId: "ufo",
+    url: `${BASE}/ufo.m4a`,
+    sourceSamples: 782400,
+    driver: "kmh",
+    // Two stretches of a waveform-generator UFO (Freesound 24351), cross-faded by speed.
+    loops: [
+      { start: 0.1, end: 8.1, ref: 30 },
+      { start: 8.2, end: 16.2, ref: 110 },
+    ],
+    rateExponent: 0.3,
+    minRate: 0.8,
+    maxRate: 1.25,
+    level: UFO_LEVEL,
+    presence: [
+      [0, 0.6],
+      [30, 1],
+    ],
+    throttleLift: 0,
+    duck: 0.5,
+    highpassHz: 40,
+    lowpassHz: 14000,
   },
 };
 
@@ -356,5 +380,15 @@ export const RECORDED_BED_CREDITS: RecordedCredit[] = [
     usedIn: "Dragon (roar on hard throttle)",
     attribution:
       "Dragon roar 7 by AMWD_Mortsel-Edegem-Kontich / Xander Bruyninckx (Freesound #651825), credited under CC BY 4.0, edited (trimmed, filtered).",
+  },
+  {
+    title: "CapturedUFO2 (Freesound #24351)",
+    author: "dargoth",
+    licence: "CC BY 3.0",
+    licenceUrl: "https://creativecommons.org/licenses/by/3.0/",
+    sourceUrl: "https://freesound.org/s/24351/",
+    usedIn: "UFO (hover bed)",
+    attribution:
+      "CapturedUFO2 by dargoth (Freesound #24351), CC BY 3.0 (creativecommons.org/licenses/by/3.0), edited (trimmed, filtered, looped).",
   },
 ];
