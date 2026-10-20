@@ -1,3 +1,4 @@
+import { PENDING_DRIVE_KEY } from "@/lib/inbox/inbox";
 import {
   applyDemoDriveOverrides,
   tickDemoSpeed,
@@ -729,6 +730,42 @@ class DriveSession {
 
   /** Paddle up/down while Dynamic Drive / virtual transmission is active. */
   private smilesHint = { raceMode: false, redlineRpm: 0 };
+  private liveSmiles = newLiveSmiles();
+  private liveSmilesPrevKmh = 0;
+  private liveSmilesInLaunch = false;
+
+  private noteLiveSmiles(next: DriveState, dt: number) {
+    const ms = Math.min(0.5, Math.max(0, dt)) * 1000;
+    const kmh = next.speed * 3.6;
+    const m = this.liveSmiles;
+    if (kmh > 4) m.movingMs += ms;
+    if (next.acceleration > 2.2) m.hardMs += ms;
+    if (!this.liveSmilesInLaunch && this.liveSmilesPrevKmh < 25 && next.acceleration > 2.5) {
+      m.launches += 1;
+      this.liveSmilesInLaunch = true;
+    } else if (this.liveSmilesInLaunch && next.acceleration < 1) {
+      this.liveSmilesInLaunch = false;
+    }
+    this.liveSmilesPrevKmh = kmh;
+    const rl = this.smilesHint.redlineRpm;
+    const frac = rl > 0 ? (next.powertrain?.rpm ?? next.rpm) / rl : 0;
+    if (frac >= 0.85) m.nearRedlineMs += ms;
+    if (frac > m.peakRpmFrac) m.peakRpmFrac = Math.min(1.5, frac);
+    if (this.smilesHint.raceMode) m.raceModeMs += ms;
+  }
+
+  /** Persist the running drive locally (tab hidden/closed without STOP). */
+  private persistPendingDrive() {
+    if (this.kind !== "drive" || this.status !== "running") return;
+    try {
+      const trace = this.recorder.snapshot();
+      if (!trace) return;
+      const journey = { ...summariseJourneyFromTrace(trace), smiles: { ...this.liveSmiles } };
+      localStorage.setItem(PENDING_DRIVE_KEY, JSON.stringify(journey));
+    } catch {
+      /* storage full / unavailable */
+    }
+  }
   /** UI hint for Smiles per Mile recording (Race dash active, redline). No audio effect. */
   setSmilesHint(hint: { raceMode: boolean; redlineRpm: number }) {
     this.smilesHint = hint;
@@ -790,6 +827,9 @@ class DriveSession {
       this.ruleLatched.clear();
       this.baseMix = normalizeMix(this.config.mix ?? DEFAULT_LAYER_MIX);
       this.recorder.start(this.config.profileId);
+      this.liveSmiles = newLiveSmiles();
+      this.liveSmilesPrevKmh = 0;
+      this.liveSmilesInLaunch = false;
       this.capturePausedByBrowser = false;
       this.suggestFinishJourney = false;
       this.recordingDistanceM = 0;
@@ -1180,6 +1220,11 @@ class DriveSession {
   }
 
   async stop() {
+    try {
+      localStorage.removeItem(PENDING_DRIVE_KEY);
+    } catch {
+      /* ignore */
+    }
     let nativeTrace: JourneyTraceV1 | null = null;
     try {
       nativeTrace = await this.motionCaptureProvider.stop();
@@ -1196,7 +1241,7 @@ class DriveSession {
       this.lastAggregates = trace.aggregates;
       void saveTrace(trace);
       try {
-        const journey = summariseJourneyFromTrace(trace);
+        const journey = { ...summariseJourneyFromTrace(trace), smiles: { ...this.liveSmiles } };
         this.lastJourneyId = journey.id;
         this.lastJourney = journey;
         void saveJourney(journey).catch(() => undefined);
@@ -1480,7 +1525,10 @@ class DriveSession {
       const audioState = this.applyMotionLatencyComp(next);
       this.noteMotion(next, dt);
       this.tickAudio(audioState, dt);
-      if (this.kind === "drive") this.recorder.push(next);
+      if (this.kind === "drive") {
+        this.recorder.push(next);
+        this.noteLiveSmiles(next, dt);
+      }
       if (this.kind === "drive" && this.journeySampler) {
         this.journeySampler.pushMotion(this.lastVehicleMotion, dt);
         const smRpm = next.powertrain?.rpm ?? next.rpm;
@@ -1715,6 +1763,7 @@ class DriveSession {
 
   private onPageHide = () => {
     this.clearHideTimer();
+    this.persistPendingDrive();
     if (this.kind === "drive" && this.journeySampler) {
       this.capturePausedByBrowser = true;
       this.journeySampler.markBrowserPaused("browser_suspend");
@@ -1736,6 +1785,7 @@ class DriveSession {
 
   private onVisibility = () => {
     if (document.hidden) {
+      this.persistPendingDrive();
       if (this.kind === "drive" && this.status === "running") {
         this.clearHideTimer();
         this.hideTimer = setTimeout(() => {
@@ -2125,4 +2175,8 @@ let singleton: DriveSession | null = null;
 export function getSession(): DriveSession {
   if (!singleton) singleton = new DriveSession();
   return singleton;
+}
+
+function newLiveSmiles() {
+  return { nearRedlineMs: 0, raceModeMs: 0, peakRpmFrac: 0, launches: 0, hardMs: 0, movingMs: 0 };
 }

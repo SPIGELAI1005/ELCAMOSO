@@ -12,6 +12,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { BrandNav } from "@/components/BrandNav";
 import { PrimaryBottomNav } from "@/components/PrimaryBottomNav";
 import { MiniPlayer } from "@/components/MiniPlayer";
+import { deliverPendingDrive } from "@/lib/inbox/inbox";
 import { SessionBridge } from "@/components/SessionBridge";
 import { VehicleTelemetryBridge } from "@/components/VehicleTelemetryBridge";
 import { InstallPrompt } from "@/components/InstallPrompt";
@@ -197,6 +198,10 @@ function RootComponent() {
 }
 
 function AppChrome({ showMiniPlayer }: { showMiniPlayer: boolean }) {
+  useEffect(() => {
+    // Deliver a drive left unfinished when the tab was closed (drive route handles its own pop-up).
+    if (!window.location.pathname.startsWith("/drive")) void deliverPendingDrive();
+  }, []);
   const { safetyMode } = useSessionSelector((snap) => ({ safetyMode: snap.safetyMode }));
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const onDrive = pathname === "/drive" || pathname.startsWith("/drive/");

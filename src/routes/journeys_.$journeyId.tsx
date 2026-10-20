@@ -238,6 +238,7 @@ function JourneyDetailPage() {
               distanceM={trace?.summary.distanceM || journey?.distanceM || 0}
               durationMs={displayedDurationMs}
               trace={trace}
+              live={journey?.smiles}
             />
           </div>
         ) : null}

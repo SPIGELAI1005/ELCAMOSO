@@ -102,6 +102,17 @@ export interface JourneySummary {
   reel: DriveReelMeta | null;
   /** Explicit opt-in cloud share id if shared */
   shareId: string | null;
+  /** Smiles per Mile metrics recorded live (absent on older journeys). */
+  smiles?: JourneySmilesLive;
+}
+
+export interface JourneySmilesLive {
+  nearRedlineMs: number;
+  raceModeMs: number;
+  peakRpmFrac: number;
+  launches: number;
+  hardMs: number;
+  movingMs: number;
 }
 
 /** Fields allowed in a cloud / link share payload. */

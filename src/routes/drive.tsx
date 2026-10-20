@@ -31,6 +31,9 @@ import { formatSpeed, t } from "@/lib/i18n";
 import { driveCoachFn } from "@/lib/cloud/server-fns";
 import { getProfile, type SoundProfile } from "@/lib/sound/profiles";
 import { PostDriveExperience } from "@/components/journey/PostDriveExperience";
+import { SmilesModal } from "@/components/smiles/SmilesModal";
+import { addDriveMessage, deliverPendingDrive, isSmilesWorthy } from "@/lib/inbox/inbox";
+import type { JourneySummary } from "@/lib/journey/types";
 import { DriveModePicker } from "@/components/drive/DriveModePicker";
 import { DriveCockpit } from "@/components/drive/DriveCockpit";
 import { DriveProfileBackdrop } from "@/components/drive/DriveProfileBackdrop";
@@ -134,6 +137,12 @@ function DriveScreen() {
   const [coach, setCoach] = useState<string | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [postDriveJourneyId, setPostDriveJourneyId] = useState<string | null>(null);
+  const [smilesJourney, setSmilesJourney] = useState<JourneySummary | null>(null);
+  useEffect(() => {
+    void deliverPendingDrive().then((j) => {
+      if (j && isSmilesWorthy(j)) setSmilesJourney(j);
+    });
+  }, []);
   const [postCaptureTraceId, setPostCaptureTraceId] = useState<string | null>(null);
   const [captureHadBrowserPause, setCaptureHadBrowserPause] = useState(false);
   const monetizationEnabled = useMonetizationEnabled();
@@ -254,8 +263,12 @@ function DriveScreen() {
     if (hadCapture && snap.lastJourneyTraceId) {
       setCaptureHadBrowserPause(paused);
       setPostCaptureTraceId(snap.lastJourneyTraceId);
-    } else if (snap.lastJourneyId) {
-      setPostDriveJourneyId(snap.lastJourneyId);
+    }
+    // Live drives: stay on Drive (ready to go again); the Smiles pop-up links to the drive-sound page.
+    const finished = getSession().getLastJourney();
+    if (finished && finished.id === snap.lastJourneyId) {
+      addDriveMessage(finished);
+      if (isSmilesWorthy(finished)) window.setTimeout(() => setSmilesJourney(finished), 1000);
     }
     if (aggregates && shouldPlayLiveAudio(before.driveOutputMode ?? "live")) {
       void driveCoachFn({ data: { aggregates } }).then((result) => {
@@ -302,6 +315,14 @@ function DriveScreen() {
           onDismiss={() => setPostCaptureTraceId(null)}
         />
       ) : null}
+      <SmilesModal
+        journey={smilesJourney}
+        onClose={() => setSmilesJourney(null)}
+        onOpenDriveSound={(id) => {
+          setSmilesJourney(null);
+          setPostDriveJourneyId(id);
+        }}
+      />
       {postDriveJourneyId ? (
         <PostDriveExperience
           journeyId={postDriveJourneyId}
@@ -450,9 +471,7 @@ function DriveScreen() {
               waveResponse={profile.voice.waveResponse}
               revealFace
               lines={
-                settings.driveOutputMode === "capture"
-                  ? ["Silent", "Capture"]
-                  : ["Start", "Drive"]
+                settings.driveOutputMode === "capture" ? ["Silent", "Capture"] : ["Start", "Drive"]
               }
               onStart={() => void handleStart()}
             />

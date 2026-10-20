@@ -85,6 +85,8 @@ export interface SmilesInput {
   durationMs: number;
   trace: JourneyTraceV1 | null;
   category?: string | undefined;
+  /** Live-recorded metrics (journey.smiles) – used when the trace lacks them. */
+  live?: import("@/lib/journey/types").JourneySmilesLive | undefined;
 }
 
 export function unitPrice(f: FuelSpec, s: SmilesSettings): number {
@@ -140,11 +142,12 @@ export function computeSmiles(input: SmilesInput, settings: SmilesSettings): Smi
       if ((s.longitudinalAccel ?? s.acceleration) > 2.2) hard++;
     }
   }
-  const hardShare = moving ? hard / moving : 0;
-  const launches = (input.trace?.semanticEvents ?? []).filter(
-    (e) => e.type === "strong_acceleration",
-  ).length;
-  const sm = input.trace?.summary.smiles;
+  const lv = input.live;
+  const hardShare = moving ? hard / moving : lv && lv.movingMs > 0 ? lv.hardMs / lv.movingMs : 0;
+  const launches = input.trace
+    ? input.trace.semanticEvents.filter((e) => e.type === "strong_acceleration").length
+    : (lv?.launches ?? 0);
+  const sm = input.trace?.summary.smiles ?? lv;
   const dur = Math.max(1, input.durationMs);
   const raceShare = sm ? Math.min(1, sm.raceModeMs / dur) : 0;
 

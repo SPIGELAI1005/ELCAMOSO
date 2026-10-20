@@ -58,6 +58,7 @@ export interface SmilesCardProps {
   durationMs: number;
   trace: JourneyTraceV1 | null;
   category?: string;
+  live?: import("@/lib/journey/types").JourneySmilesLive | undefined;
 }
 
 export function SmilesCard(props: SmilesCardProps) {
@@ -76,10 +77,19 @@ export function SmilesCard(props: SmilesCardProps) {
           durationMs: props.durationMs,
           trace: props.trace,
           category: props.category,
+          live: props.live,
         },
         settings,
       ),
-    [props.profileId, props.distanceM, props.durationMs, props.trace, settings],
+    [
+      props.profileId,
+      props.distanceM,
+      props.durationMs,
+      props.trace,
+      props.category,
+      props.live,
+      settings,
+    ],
   );
   useEffect(() => {
     rememberJourneySmiles(props.journeyId, r);

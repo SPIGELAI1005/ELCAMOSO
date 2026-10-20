@@ -16,6 +16,8 @@ import {
   type FeedbackCategory,
 } from "@/lib/feedback/feedback-core";
 import { cn } from "@/lib/utils";
+import { Link } from "@tanstack/react-router";
+import { loadInbox, markInboxRead, type InboxMessage } from "@/lib/inbox/inbox";
 
 const HISTORY_KEY = "elcamoso.feedback.history.v1";
 const CLIENT_KEY = "elcamoso.feedback.client.v1";
@@ -69,6 +71,7 @@ export function FeedbackSheet({
   const [message, setMessage] = useState("");
   const [attachContext, setAttachContext] = useState(true);
   const [history, setHistory] = useState<SentItem[]>([]);
+  const [inbox, setInbox] = useState<InboxMessage[]>([]);
   const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
   const [website, setWebsite] = useState("");
@@ -79,6 +82,10 @@ export function FeedbackSheet({
     if (!open) return;
     openedAt.current = Date.now();
     setHistory(loadHistory());
+    const msgs = loadInbox();
+    setInbox(msgs);
+    // Mark read after showing "New" once.
+    window.setTimeout(markInboxRead, 400);
     setStatus("idle");
     setError(null);
   }, [open]);
@@ -159,9 +166,10 @@ export function FeedbackSheet({
         className="mx-auto flex max-h-[88dvh] w-full max-w-2xl flex-col gap-3 rounded-t-3xl border-border px-5 pb-[max(1rem,env(safe-area-inset-bottom))] pt-6"
       >
         <SheetHeader className="space-y-1 text-left">
-          <SheetTitle className="font-light tracking-[0.18em] uppercase">Feedback</SheetTitle>
+          <SheetTitle className="font-light tracking-[0.18em] uppercase">Messages</SheetTitle>
           <SheetDescription className="text-xs text-muted-foreground">
-            Report an issue or suggest an improvement.
+            Drive summaries, news from ELCAMOSO, and your feedback: report an issue or suggest an
+            improvement.
           </SheetDescription>
           <p
             data-testid="feedback-drive-warning"
@@ -172,23 +180,81 @@ export function FeedbackSheet({
         </SheetHeader>
 
         <div className="min-h-[6rem] flex-1 space-y-2 overflow-y-auto rounded-2xl border border-border/60 bg-foreground/[0.03] p-3">
-          {history.length === 0 ? (
+          {history.length === 0 && inbox.length === 0 ? (
             <p className="py-6 text-center text-xs text-muted-foreground">
               Your messages will appear here. We read every one.
             </p>
           ) : (
-            history.map((h) => (
-              <div key={h.id} className="flex flex-col items-end">
-                <div className="max-w-[85%] rounded-2xl rounded-br-md bg-foreground px-3.5 py-2 text-sm font-light whitespace-pre-wrap text-background">
-                  {h.message}
-                </div>
-                <span className="mt-1 text-[10px] tracking-[0.12em] text-muted-foreground uppercase">
-                  {FEEDBACK_CATEGORY_LABEL[h.category]} ·{" "}
-                  {new Date(h.at).toLocaleString([], { dateStyle: "short", timeStyle: "short" })}
-                  {h.context ? ` · ${h.context}` : ""} · Sent ✓
-                </span>
-              </div>
-            ))
+            [
+              ...inbox.map((m) => ({
+                at: m.at,
+                key: m.id,
+                inbox: m,
+                sent: null as SentItem | null,
+              })),
+              ...history.map((h) => ({
+                at: h.at,
+                key: h.id,
+                inbox: null as InboxMessage | null,
+                sent: h,
+              })),
+            ]
+              .sort((x, y) => x.at.localeCompare(y.at))
+              .map(({ key, inbox: m, sent: h }) =>
+                m ? (
+                  <div
+                    key={key}
+                    className="flex flex-col items-start"
+                    data-testid={`inbox-${m.kind}`}
+                  >
+                    <div
+                      className={cn(
+                        "max-w-[85%] rounded-2xl rounded-bl-md border px-3.5 py-2 text-sm font-light",
+                        m.kind === "drive"
+                          ? "border-[#e53935]/40 bg-[#e53935]/[0.07]"
+                          : "border-border",
+                      )}
+                    >
+                      <div className="text-[10px] tracking-[0.18em] text-muted-foreground uppercase">
+                        {m.kind === "drive" ? "😁 " : "ELCAMOSO · "}
+                        {m.title}
+                      </div>
+                      <div className="mt-1">{m.body}</div>
+                      {m.journeyId ? (
+                        <Link
+                          to="/journeys/$journeyId"
+                          params={{ journeyId: m.journeyId }}
+                          onClick={() => onOpenChange(false)}
+                          className="mt-2 inline-flex h-8 items-center rounded-full border border-white/25 px-3 text-[10px] tracking-[0.18em] uppercase"
+                        >
+                          View card
+                        </Link>
+                      ) : null}
+                    </div>
+                    <span className="mt-1 text-[10px] tracking-[0.12em] text-muted-foreground uppercase">
+                      {new Date(m.at).toLocaleString([], {
+                        dateStyle: "short",
+                        timeStyle: "short",
+                      })}
+                      {!m.read ? " · New" : ""}
+                    </span>
+                  </div>
+                ) : h ? (
+                  <div key={key} className="flex flex-col items-end">
+                    <div className="max-w-[85%] rounded-2xl rounded-br-md bg-foreground px-3.5 py-2 text-sm font-light whitespace-pre-wrap text-background">
+                      {h.message}
+                    </div>
+                    <span className="mt-1 text-[10px] tracking-[0.12em] text-muted-foreground uppercase">
+                      {FEEDBACK_CATEGORY_LABEL[h.category]} ·{" "}
+                      {new Date(h.at).toLocaleString([], {
+                        dateStyle: "short",
+                        timeStyle: "short",
+                      })}
+                      {h.context ? ` · ${h.context}` : ""} · Sent ✓
+                    </span>
+                  </div>
+                ) : null,
+              )
           )}
           {status === "sent" ? (
             <div className="flex justify-start">
