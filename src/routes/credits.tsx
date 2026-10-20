@@ -3,8 +3,9 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { createSeoHeadFromPath } from "@/lib/seo";
 import { DEBRIS_GRAIN_CREDITS } from "@/lib/sound/dsp/debris-grains";
 import { RECORDED_LOOP_CREDITS } from "@/lib/sound/realism/v2/recorded-loops";
+import { RECORDED_BED_CREDITS } from "@/lib/sound/recorded-beds";
 
-const CREDITS = [...RECORDED_LOOP_CREDITS, ...DEBRIS_GRAIN_CREDITS];
+const CREDITS = [...RECORDED_LOOP_CREDITS, ...RECORDED_BED_CREDITS, ...DEBRIS_GRAIN_CREDITS];
 
 export const Route = createFileRoute("/credits")({
   component: CreditsPage,
@@ -20,8 +21,8 @@ function CreditsPage() {
         </Link>
         <h1 className="mt-4 text-3xl font-light">Sound credits & licences</h1>
         <p className="mt-3 max-w-md text-sm text-muted-foreground">
-          Some engine and effect sounds use real recordings shared under free licences. Thank you to the
-          recordists below. All other sounds are synthesised by ELCAMOSO.
+          Some engine and effect sounds use real recordings shared under free licences. Thank you to
+          the recordists below. All other sounds are synthesised by ELCAMOSO.
         </p>
         <ul className="mt-8 space-y-6">
           {CREDITS.map((c) => (

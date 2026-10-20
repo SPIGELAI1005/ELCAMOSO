@@ -56,6 +56,7 @@ import { isWorldProfileId, WorldSynth } from "@/lib/worlds";
 import { fetchSoundAssetManifest } from "@/lib/sound-assets/client-loader";
 import { getSharedSampleLoader } from "@/lib/sound/realism/samples";
 import { loadRecordedLoopBuffers } from "@/lib/sound/realism/v2/recorded-loops-loader";
+import { getRecordedBed, RecordedBed } from "@/lib/sound/recorded-beds";
 import { DEFAULT_TIMELINE_GAP_FLUSH_MS } from "@/lib/sound/realism/shift-events";
 import { resolvePersonalityId } from "@/lib/drive/drivetrain-resolve";
 
@@ -1166,6 +1167,7 @@ export class SoundEngine {
     this.hybridLoadController?.abort();
     this.hybridLoadController = null;
     this.profile = profile;
+    this.buildRecordedBed(profile);
 
     const busesOk = Boolean(this.body && this.accents && this.beds);
     const strategyBuses = busesOk
@@ -1524,10 +1526,44 @@ export class SoundEngine {
   }
 
   private samplesReady: Promise<void> = Promise.resolve();
+  private bed: RecordedBed | null = null;
+  private bedReady: Promise<void> = Promise.resolve();
 
   /** Resolves once the active profile's recorded loops are decoded (or failed). */
   whenSamplesReady(): Promise<void> {
-    return this.samplesReady;
+    return Promise.all([this.samplesReady, this.bedReady]).then(() => undefined);
+  }
+
+  /** Recorded texture bed (non-hybrid profiles with a RECORDED_BEDS entry). */
+  private buildRecordedBed(profile: SoundProfile) {
+    const cfg = getRecordedBed(profile.id);
+    const ctx = this.ctx;
+    if (!cfg || !ctx || !this.cabinIn) return;
+    const bed = new RecordedBed(ctx, cfg, this.cabinIn);
+    this.bed = bed;
+    this.bedReady = bed.load().catch((error) => {
+      console.warn("[elcamoso] recorded bed unavailable", cfg.profileId, error);
+    });
+  }
+
+  private disposeRecordedBed() {
+    this.bed?.dispose();
+    this.bed = null;
+    this.bedReady = Promise.resolve();
+    if (this.layers && this.ctx) {
+      const t = this.ctx.currentTime;
+      for (const layer of Object.values(this.layers)) layer?.input.gain.setTargetAtTime(1, t, 0.05);
+    }
+  }
+
+  private updateRecordedBed(state: DriveState, t: number) {
+    const bed = this.bed;
+    if (!bed || !this.layers) return;
+    const presence = bed.update(state, t);
+    const scale = Math.max(0.05, 1 - bed.cfg.duck * presence);
+    for (const layer of Object.values(this.layers)) {
+      layer?.input.gain.setTargetAtTime(scale, t, 0.2);
+    }
   }
 
   /* ------------------------------------------------------------- per-frame */
@@ -1537,6 +1573,7 @@ export class SoundEngine {
     const profile = this.profile;
     if (!ctx || !profile || !this.filter || this.swapping) return;
     const t = this.now();
+    this.updateRecordedBed(state, t);
 
     if (
       this.improved ||
@@ -2316,6 +2353,7 @@ export class SoundEngine {
   /* -------------------------------------------------------------- teardown */
 
   private teardownVoices() {
+    this.disposeRecordedBed();
     this.improved?.dispose();
     this.improved = null;
     this.dynamicDrive?.dispose();
