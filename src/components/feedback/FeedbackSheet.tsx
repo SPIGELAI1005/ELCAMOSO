@@ -161,8 +161,14 @@ export function FeedbackSheet({
         <SheetHeader className="space-y-1 text-left">
           <SheetTitle className="font-light tracking-[0.18em] uppercase">Feedback</SheetTitle>
           <SheetDescription className="text-xs text-muted-foreground">
-            Report an issue or suggest an improvement. Please don&apos;t type while driving.
+            Report an issue or suggest an improvement.
           </SheetDescription>
+          <p
+            data-testid="feedback-drive-warning"
+            className="text-xs font-semibold tracking-[0.14em] text-[#e53935]"
+          >
+            Please don&apos;t type and drive!
+          </p>
         </SheetHeader>
 
         <div className="min-h-[6rem] flex-1 space-y-2 overflow-y-auto rounded-2xl border border-border/60 bg-foreground/[0.03] p-3">

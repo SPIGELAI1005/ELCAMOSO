@@ -826,20 +826,35 @@ export function DriveCockpit({
             <Link to="/settings" onClick={() => setMoreOpen(false)} className={COCKPIT_FOOTER_BTN}>
               Settings
             </Link>
-            <button
-              type="button"
-              data-testid="open-feedback"
-              onClick={() => {
-                setMoreOpen(false);
-                setFeedbackOpen(true);
-              }}
-              className={cn(COCKPIT_FOOTER_BTN, "col-span-2")}
-            >
-              Feedback · Report / Suggest
-            </button>
           </div>
         </SheetContent>
       </Sheet>
+
+      <button
+        type="button"
+        data-testid="open-feedback"
+        aria-label="Send feedback"
+        title="Feedback"
+        onClick={() => setFeedbackOpen(true)}
+        className="fixed right-[max(0.75rem,env(safe-area-inset-right))] bottom-[calc(env(safe-area-inset-bottom)+var(--fab-bottom,13rem))] lg:[--fab-bottom:1.5rem] z-40 flex size-12 items-center justify-center rounded-full border border-white/15 bg-white/[0.06] text-foreground/80 shadow-[0_0_18px_rgba(229,57,53,0.18)] backdrop-blur-md transition-colors hover:border-[#e53935]/60 hover:text-foreground"
+      >
+        <svg
+          viewBox="0 0 24 24"
+          className="size-5"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.6"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M21 12a8 8 0 0 1-11.6 7.1L4 20.5l1.4-4.6A8 8 0 1 1 21 12Z" />
+          <circle cx="8.5" cy="12" r=".6" fill="currentColor" />
+          <circle cx="12" cy="12" r=".6" fill="currentColor" />
+          <circle cx="15.5" cy="12" r=".6" fill="currentColor" />
+        </svg>
+        <span className="absolute top-2 right-2 size-1.5 rounded-full bg-[#e53935]" />
+      </button>
 
       <FeedbackSheet
         open={feedbackOpen}
