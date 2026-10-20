@@ -45,6 +45,15 @@ export const Route = createFileRoute("/api/admin/users")({
           const [list, promos] = await Promise.all([searchUsers(url.searchParams.get("q") ?? ""), listPromos()]);
           return jsonResponse({ configured: true, users: list, promos });
         } catch (e) {
+          if (isMissingTables(e)) {
+            try {
+              const { runPendingMigrations } = await import("@/lib/db/runtime-migrate.server");
+              const applied = await runPendingMigrations();
+              return jsonResponse({ configured: true, users: [], promos: [], migrated: applied });
+            } catch (m) {
+              return fail(m);
+            }
+          }
           return fail(e);
         }
       },
@@ -89,16 +98,36 @@ export const Route = createFileRoute("/api/admin/users")({
   },
 });
 
-/** Error class only (never the connection string or password). */
+/** Error class + redacted message (never the connection string or password). */
 function classifyDbError(e: unknown): string {
-  const any = e as { code?: string; message?: string } | null;
-  const m = `${any?.code ?? ""} ${any?.message ?? ""}`;
-  if (/ENOTFOUND|EAI_AGAIN/i.test(m)) return "host not found (use the Shared/Session pooler host aws-…pooler.supabase.com)";
-  if (/ENETUNREACH|EHOSTUNREACH|ECONNREFUSED|ETIMEDOUT|timeout/i.test(m))
-    return "cannot reach database (db.… host is IPv6-only; use the Shared pooler aws-…pooler.supabase.com:6543)";
-  if (/password authentication|28P01/i.test(m)) return "wrong database password in DATABASE_URL";
-  if (/tenant|user not found|XX000/i.test(m)) return "pooler user/region wrong (user must be postgres.<project-ref>)";
-  if (/does not exist|42P01|42704/i.test(m)) return "tables missing (migrations not applied; redeploy)";
-  if (/Invalid URL|URI|malformed|percent/i.test(m)) return "DATABASE_URL malformed (remove [ ] and percent-encode special characters)";
-  return `unexpected (${String(any?.code ?? "no code").slice(0, 20)})`;
+  const chain: { code?: string; message?: string; name?: string }[] = [];
+  let cur = e as { cause?: unknown } | null;
+  for (let i = 0; cur && i < 5; i++) {
+    chain.push(cur as never);
+    cur = (cur as { cause?: unknown }).cause as never;
+  }
+  const root = chain[chain.length - 1] ?? {};
+  const code = chain.map((c) => c.code).find(Boolean) ?? "";
+  const m = chain.map((c) => `${c.code ?? ""} ${c.message ?? ""}`).join(" | ");
+  const redacted = String(root.message ?? "")
+    .replace(/postgres(ql)?:\/\/\S+/gi, "[url]")
+    .replace(/password=\S+/gi, "password=[x]")
+    .slice(0, 160);
+  let hint = "unexpected";
+  if (/ENOTFOUND|EAI_AGAIN/i.test(m)) hint = "host not found";
+  else if (/ENETUNREACH|EHOSTUNREACH|ECONNREFUSED|ETIMEDOUT|timeout/i.test(m)) hint = "cannot reach database host";
+  else if (/password authentication|28P01/i.test(m)) hint = "wrong database password";
+  else if (/tenant|user not found|XX000/i.test(m)) hint = "pooler user/region wrong";
+  else if (/does not exist|42P01|42704/i.test(m)) hint = "tables missing";
+  else if (/Invalid URL|malformed/i.test(m)) hint = "DATABASE_URL malformed";
+  return `${hint} [${code || root.name || "?"}] ${redacted}`;
+}
+
+function isMissingTables(e: unknown): boolean {
+  let cur = e as { code?: string; message?: string; cause?: unknown } | null;
+  for (let i = 0; cur && i < 5; i++) {
+    if (cur.code === "42P01" || /relation .* does not exist/i.test(cur.message ?? "")) return true;
+    cur = cur.cause as never;
+  }
+  return false;
 }
