@@ -338,6 +338,9 @@ export function DriveCockpit({
       modeId: activeMoodId,
       speedUnit,
     });
+  useEffect(() => {
+    getSession().setSmilesHint({ raceMode: tachThemeId === "race", redlineRpm: redline });
+  }, [tachThemeId, redline]);
   const usesPowertrainGears = shiftPersona.modeBinding === "shift-map";
   const ladderCount = shiftPersona.ladderCount ?? 0;
   const motionStage = motionStageIndex(driveState, Math.max(2, ladderCount || 2));

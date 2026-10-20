@@ -51,7 +51,7 @@ import { Route as DebugSymphonyRouteImport } from './routes/debug.symphony'
 import { Route as DebugSymphonyAssetsRouteImport } from './routes/debug.symphony-assets'
 import { Route as DebugCockpitRouteImport } from './routes/debug_.cockpit'
 import { Route as DebugTachoRouteImport } from './routes/debug_.tacho'
-import { Route as JourneysJourneyIdRouteImport } from './routes/journeys.$journeyId'
+import { Route as JourneysJourneyIdRouteImport } from './routes/journeys_.$journeyId'
 import { Route as LegalIndexRouteImport } from './routes/legal/index'
 import { Route as LegalAccessibilityRouteImport } from './routes/legal/accessibility'
 import { Route as LegalCookiesRouteImport } from './routes/legal/cookies'
@@ -285,9 +285,9 @@ const DebugTachoRoute = DebugTachoRouteImport.update({
   getParentRoute: () => rootRouteImport,
 } as any)
 const JourneysJourneyIdRoute = JourneysJourneyIdRouteImport.update({
-  id: '/$journeyId',
-  path: '/$journeyId',
-  getParentRoute: () => JourneysRoute,
+  id: '/journeys_/$journeyId',
+  path: '/journeys/$journeyId',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const LegalIndexRoute = LegalIndexRouteImport.update({
   id: '/',
@@ -409,7 +409,7 @@ export interface FileRoutesByFullPath {
   '/explore': typeof ExploreRoute
   '/fusion': typeof FusionRoute
   '/garage': typeof GarageRoute
-  '/journeys': typeof JourneysRouteWithChildren
+  '/journeys': typeof JourneysRoute
   '/onboarding': typeof OnboardingRoute
   '/pair': typeof PairRoute
   '/pricing': typeof PricingRoute
@@ -474,7 +474,7 @@ export interface FileRoutesByTo {
   '/explore': typeof ExploreRoute
   '/fusion': typeof FusionRoute
   '/garage': typeof GarageRoute
-  '/journeys': typeof JourneysRouteWithChildren
+  '/journeys': typeof JourneysRoute
   '/onboarding': typeof OnboardingRoute
   '/pair': typeof PairRoute
   '/pricing': typeof PricingRoute
@@ -541,7 +541,7 @@ export interface FileRoutesById {
   '/explore': typeof ExploreRoute
   '/fusion': typeof FusionRoute
   '/garage': typeof GarageRoute
-  '/journeys': typeof JourneysRouteWithChildren
+  '/journeys': typeof JourneysRoute
   '/onboarding': typeof OnboardingRoute
   '/pair': typeof PairRoute
   '/pricing': typeof PricingRoute
@@ -571,7 +571,7 @@ export interface FileRoutesById {
   '/debug/symphony-assets': typeof DebugSymphonyAssetsRoute
   '/debug_/cockpit': typeof DebugCockpitRoute
   '/debug_/tacho': typeof DebugTachoRoute
-  '/journeys/$journeyId': typeof JourneysJourneyIdRoute
+  '/journeys_/$journeyId': typeof JourneysJourneyIdRoute
   '/legal/accessibility': typeof LegalAccessibilityRoute
   '/legal/cookies': typeof LegalCookiesRoute
   '/legal/impressum': typeof LegalImpressumRoute
@@ -770,7 +770,7 @@ export interface FileRouteTypes {
     | '/debug/symphony-assets'
     | '/debug_/cockpit'
     | '/debug_/tacho'
-    | '/journeys/$journeyId'
+    | '/journeys_/$journeyId'
     | '/legal/accessibility'
     | '/legal/cookies'
     | '/legal/impressum'
@@ -807,7 +807,7 @@ export interface RootRouteChildren {
   ExploreRoute: typeof ExploreRoute
   FusionRoute: typeof FusionRoute
   GarageRoute: typeof GarageRoute
-  JourneysRoute: typeof JourneysRouteWithChildren
+  JourneysRoute: typeof JourneysRoute
   OnboardingRoute: typeof OnboardingRoute
   PairRoute: typeof PairRoute
   PricingRoute: typeof PricingRoute
@@ -829,6 +829,7 @@ export interface RootRouteChildren {
   ConnectSessionIdRoute: typeof ConnectSessionIdRoute
   DebugCockpitRoute: typeof DebugCockpitRoute
   DebugTachoRoute: typeof DebugTachoRoute
+  JourneysJourneyIdRoute: typeof JourneysJourneyIdRoute
   PairTokenRoute: typeof PairTokenRoute
   UpgradeTokenRoute: typeof UpgradeTokenRoute
   ApiAdminFeedbackRoute: typeof ApiAdminFeedbackRoute
@@ -1140,12 +1141,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DebugTachoRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/journeys/$journeyId': {
-      id: '/journeys/$journeyId'
-      path: '/$journeyId'
+    '/journeys_/$journeyId': {
+      id: '/journeys_/$journeyId'
+      path: '/journeys/$journeyId'
       fullPath: '/journeys/$journeyId'
       preLoaderRoute: typeof JourneysJourneyIdRouteImport
-      parentRoute: typeof JourneysRoute
+      parentRoute: typeof rootRouteImport
     }
     '/legal/': {
       id: '/legal/'
@@ -1343,18 +1344,6 @@ const DebugRouteChildren: DebugRouteChildren = {
 
 const DebugRouteWithChildren = DebugRoute._addFileChildren(DebugRouteChildren)
 
-interface JourneysRouteChildren {
-  JourneysJourneyIdRoute: typeof JourneysJourneyIdRoute
-}
-
-const JourneysRouteChildren: JourneysRouteChildren = {
-  JourneysJourneyIdRoute: JourneysJourneyIdRoute,
-}
-
-const JourneysRouteWithChildren = JourneysRoute._addFileChildren(
-  JourneysRouteChildren,
-)
-
 interface ShareRouteChildren {
   ShareDriveShareIdRoute: typeof ShareDriveShareIdRoute
 }
@@ -1388,7 +1377,7 @@ const rootRouteChildren: RootRouteChildren = {
   ExploreRoute: ExploreRoute,
   FusionRoute: FusionRoute,
   GarageRoute: GarageRoute,
-  JourneysRoute: JourneysRouteWithChildren,
+  JourneysRoute: JourneysRoute,
   OnboardingRoute: OnboardingRoute,
   PairRoute: PairRoute,
   PricingRoute: PricingRoute,
@@ -1410,6 +1399,7 @@ const rootRouteChildren: RootRouteChildren = {
   ConnectSessionIdRoute: ConnectSessionIdRoute,
   DebugCockpitRoute: DebugCockpitRoute,
   DebugTachoRoute: DebugTachoRoute,
+  JourneysJourneyIdRoute: JourneysJourneyIdRoute,
   PairTokenRoute: PairTokenRoute,
   UpgradeTokenRoute: UpgradeTokenRoute,
   ApiAdminFeedbackRoute: ApiAdminFeedbackRoute,

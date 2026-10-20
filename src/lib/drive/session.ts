@@ -728,6 +728,12 @@ class DriveSession {
   }
 
   /** Paddle up/down while Dynamic Drive / virtual transmission is active. */
+  private smilesHint = { raceMode: false, redlineRpm: 0 };
+  /** UI hint for Smiles per Mile recording (Race dash active, redline). No audio effect. */
+  setSmilesHint(hint: { raceMode: boolean; redlineRpm: number }) {
+    this.smilesHint = hint;
+  }
+
   requestManualShift(direction: "up" | "down"): boolean {
     if (!this.powertrainSim) return false;
     const ok = this.powertrainSim.requestManualShift(direction);
@@ -1477,6 +1483,12 @@ class DriveSession {
       if (this.kind === "drive") this.recorder.push(next);
       if (this.kind === "drive" && this.journeySampler) {
         this.journeySampler.pushMotion(this.lastVehicleMotion, dt);
+        const smRpm = next.powertrain?.rpm ?? next.rpm;
+        this.journeySampler.noteSmiles(
+          this.smilesHint.redlineRpm > 0 ? smRpm / this.smilesHint.redlineRpm : 0,
+          this.smilesHint.raceMode,
+          dt,
+        );
         this.recordingDistanceM = this.journeySampler.getDistanceM();
         if (this.journeySampler.shouldSuggestFinish()) {
           this.suggestFinishJourney = true;
@@ -1942,12 +1954,32 @@ class DriveSession {
     const dynamicLayers = this.engine?.getDynamicDriveDebug() ?? [];
     if (hybrid) {
       dynamicLayers.push(
-        { id: "v2-combustion", gain: hybrid.combustionGain, playbackRate: 1, fundamentalHz: hybrid.firingHz },
-        { id: "v2-support", gain: hybrid.supportGain, playbackRate: 1, fundamentalHz: hybrid.firingHz },
-        { id: "v2-formants", gain: Math.max(0, ...hybrid.formantGains), playbackRate: 1, fundamentalHz: hybrid.firingHz },
+        {
+          id: "v2-combustion",
+          gain: hybrid.combustionGain,
+          playbackRate: 1,
+          fundamentalHz: hybrid.firingHz,
+        },
+        {
+          id: "v2-support",
+          gain: hybrid.supportGain,
+          playbackRate: 1,
+          fundamentalHz: hybrid.firingHz,
+        },
+        {
+          id: "v2-formants",
+          gain: Math.max(0, ...hybrid.formantGains),
+          playbackRate: 1,
+          fundamentalHz: hybrid.firingHz,
+        },
       );
       if (hybrid.sampleAssisted) {
-        dynamicLayers.push({ id: "v2-recorded-samples", gain: 1, playbackRate: 1, fundamentalHz: hybrid.firingHz });
+        dynamicLayers.push({
+          id: "v2-recorded-samples",
+          gain: 1,
+          playbackRate: 1,
+          fundamentalHz: hybrid.firingHz,
+        });
       }
     }
     return collectDriveDiagnostics({

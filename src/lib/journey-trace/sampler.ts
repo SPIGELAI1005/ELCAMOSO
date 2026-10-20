@@ -56,6 +56,16 @@ export class AdaptiveTraceSampler {
   private endedUnexpectedly = false;
   private onChunk?: AdaptiveSamplerOptions["onChunk"];
   private distanceM = 0;
+  private smiles = { nearRedlineMs: 0, raceModeMs: 0, peakRpmFrac: 0 };
+
+  /** Record Smiles-per-Mile metrics. Read-only w.r.t. sound/gears. */
+  noteSmiles(rpmFrac: number, raceMode: boolean, wallDtSec: number) {
+    const ms = Math.max(0, Math.min(1, wallDtSec)) * 1000;
+    if (!Number.isFinite(rpmFrac) || !Number.isFinite(ms)) return;
+    if (rpmFrac >= 0.85) this.smiles.nearRedlineMs += ms;
+    if (raceMode) this.smiles.raceModeMs += ms;
+    if (rpmFrac > this.smiles.peakRpmFrac) this.smiles.peakRpmFrac = Math.min(1.5, rpmFrac);
+  }
 
   constructor(opts: AdaptiveSamplerOptions) {
     this.journeyId = opts.journeyId;
@@ -219,7 +229,7 @@ export class AdaptiveTraceSampler {
       samples: this.samples,
       semanticEvents: this.dedupeEvents(this.events),
       gaps: this.gaps,
-      summary: this.buildSummary(durationMs),
+      summary: { ...this.buildSummary(durationMs), smiles: { ...this.smiles } },
     };
   }
 

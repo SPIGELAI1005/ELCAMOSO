@@ -66,6 +66,17 @@ export interface JourneyTraceSummaryV1 {
   primarySource: TraceSensorSource;
   endedUnexpectedly: boolean;
   browserPaused: boolean;
+  /** Smiles per Mile metrics (absent on older journeys). */
+  smiles?: JourneySmilesMetricsV1;
+}
+
+export interface JourneySmilesMetricsV1 {
+  /** Time with engine rpm ≥ 85% of redline */
+  nearRedlineMs: number;
+  /** Time with the Race tach/dash active */
+  raceModeMs: number;
+  /** Peak rpm fraction of redline 0..1+ */
+  peakRpmFrac: number;
 }
 
 export interface JourneyTraceChunkV1 {
