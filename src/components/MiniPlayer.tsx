@@ -1,10 +1,7 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { HeadroomMeter } from "@/components/HeadroomMeter";
 import { getSession } from "@/lib/drive/session";
 import { useSessionSelector } from "@/lib/store/session-store";
 import { useSettings } from "@/lib/drive/useSettings";
-import { getProfile } from "@/lib/sound/profiles";
-import { getProfileGain } from "@/lib/drive/settings";
 import { t } from "@/lib/i18n";
 import { isLiveSessionStatus, miniPlayerTopClass } from "@/lib/ui/chrome";
 
@@ -15,18 +12,6 @@ export function MiniPlayer() {
     status: snap.status,
     profileId: snap.profileId,
     profileName: snap.profileName,
-    hasMeter: snap.meter !== null,
-    meterPeak: snap.meter ? Math.round(snap.meter.peak * 16) : 0,
-    meterRms: snap.meter ? Math.round(snap.meter.rms * 16) : 0,
-    meterHeadroom: snap.meter ? Math.round(snap.meter.headroom * 16) : 0,
-    meterReduction: snap.meter ? Math.round(snap.meter.reduction * 16) : 0,
-    meterPrePeak: snap.meter ? Math.round(snap.meter.prePeak * 16) : 0,
-    meterPreRms: snap.meter ? Math.round(snap.meter.preRms * 16) : 0,
-    meterCompressorReduction: snap.meter
-      ? Math.round(snap.meter.compressorReduction * 16)
-      : 0,
-    meterNearCeiling: snap.meter?.nearCeiling ?? false,
-    meterSamplePeakDbfs: snap.meter ? Math.round(snap.meter.samplePeakDbfs * 4) : 0,
   }));
   const { settings } = useSettings();
   if (pathname === "/") return null;
@@ -34,22 +19,6 @@ export function MiniPlayer() {
   if (ui.safetyMode && onDrive) return null;
   const live = isLiveSessionStatus(ui.status);
   if (!live) return null;
-  const profile = getProfile(ui.profileId);
-  const gain = getProfileGain(settings, ui.profileId);
-  const meter = ui.hasMeter
-    ? {
-        peak: ui.meterPeak / 16,
-        rms: ui.meterRms / 16,
-        headroom: ui.meterHeadroom / 16,
-        reduction: ui.meterReduction / 16,
-        prePeak: ui.meterPrePeak / 16,
-        preRms: ui.meterPreRms / 16,
-        compressorReduction: ui.meterCompressorReduction / 16,
-        samplePeakDbfs: ui.meterSamplePeakDbfs / 4,
-        nearCeiling: ui.meterNearCeiling,
-        overloadSampleCount: 0,
-      }
-    : null;
 
   return (
     <>
@@ -65,15 +34,7 @@ export function MiniPlayer() {
               {t(settings.language, "player.playing")}
             </p>
           </Link>
-          <div className="min-w-0 flex-1">
-            <HeadroomMeter
-              compact
-              meter={meter}
-              profile={profile}
-              volume={settings.volume}
-              profileGain={gain}
-            />
-          </div>
+          <div className="min-w-0 flex-1" aria-hidden="true" />
           {/* Drive cockpit owns Stop; keep MiniPlayer stop on other live routes only. */}
           {onDrive ? null : (
             <button
