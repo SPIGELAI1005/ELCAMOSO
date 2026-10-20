@@ -5,14 +5,12 @@ import { ChevronDown } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { PremiumBadge } from "@/components/premium/PremiumBadge";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { getSession } from "@/lib/drive/session";
 import { useSettings } from "@/lib/drive/useSettings";
+import { useAccount } from "@/lib/account/AccountProvider";
 import { useFeatureAccess } from "@/lib/entitlements/selectors";
+import { isSoundTierGateActive, SOUND_TIER_GATE_LABEL } from "@/lib/sound/profile-access-config";
 import { t, type Locale } from "@/lib/i18n";
 import {
   PROFILE_CATEGORIES,
@@ -47,7 +45,7 @@ export interface HeaderSoundsMenuProps {
 
 /**
  * Red header shortcut: pick any Sound Profile allowed by the current plan
- * (or all profiles while VITE_UNLOCK_ALL_SOUNDS testing unlock is on).
+ * (every profile is free until the Drive+ gate date in profile-access-config).
  */
 export function HeaderSoundsMenu({
   language,
@@ -60,14 +58,22 @@ export function HeaderSoundsMenu({
   const { canDriveWithProfile, canPreviewProfile } = useFeatureAccess();
   const sessionStatus = useSessionSelector((snap) => snap.status);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const { isAuthenticated } = useAccount();
+  const gateActive = isSoundTierGateActive();
+  const [upsellFor, setUpsellFor] = useState<string | null>(null);
   const groups = useMemo(() => profilesByCategory(), []);
 
   function canSelect(id: string) {
     return canDriveWithProfile(id) || canPreviewProfile(id);
   }
 
-  function selectProfile(id: string) {
+  function selectProfile(id: string, opts?: { preview?: boolean }) {
     if (!canSelect(id)) return;
+    if (!opts?.preview && !canDriveWithProfile(id)) {
+      setUpsellFor(id);
+      return;
+    }
+    setUpsellFor(null);
     update({ profileId: id });
     if (sessionStatus === "running" || sessionStatus === "starting") {
       const snap = getSession().snapshot();
@@ -82,8 +88,61 @@ export function HeaderSoundsMenu({
   const triggerLabel = t(language, "nav.sounds");
   const activeId = settings.profileId;
 
+  const upsellProfile = upsellFor ? SOUND_PROFILES.find((p) => p.id === upsellFor) : undefined;
+  const upsellPanel = upsellProfile ? (
+    <div
+      data-testid="sound-upsell"
+      className="mx-2 mb-2 rounded-sm border border-border/70 bg-secondary/40 px-3 py-2.5 text-xs"
+    >
+      <p className="text-foreground">{upsellProfile.name} is included with Drive+.</p>
+      <p className="mt-0.5 text-muted-foreground">
+        {isAuthenticated
+          ? "Upgrade to Drive+ to drive with every sound."
+          : "Sign in to use Drive+ or sounds granted to your account."}
+      </p>
+      <div className="mt-2 flex flex-wrap gap-2">
+        {isAuthenticated ? (
+          <Link
+            to="/pricing"
+            onClick={() => {
+              closeOtherNavGroups();
+              setSheetOpen(false);
+              onNavigate?.();
+            }}
+            className="rounded-sm bg-foreground px-2.5 py-1 text-[10px] tracking-[0.14em] text-background uppercase"
+          >
+            Get Drive+
+          </Link>
+        ) : (
+          <a
+            href="/auth/account/google/start"
+            className="rounded-sm bg-foreground px-2.5 py-1 text-[10px] tracking-[0.14em] text-background uppercase"
+          >
+            Sign in
+          </a>
+        )}
+        <button
+          type="button"
+          onClick={() => selectProfile(upsellProfile.id, { preview: true })}
+          className="rounded-sm border border-border px-2.5 py-1 text-[10px] tracking-[0.14em] text-muted-foreground uppercase"
+        >
+          Preview
+        </button>
+      </div>
+    </div>
+  ) : null;
+
   const profileList = (
     <div className="max-h-[min(70vh,28rem)] overflow-y-auto overscroll-contain">
+      {!gateActive ? (
+        <p
+          data-testid="sound-free-until"
+          className="px-3 pt-1.5 pb-0.5 text-[10px] text-muted-foreground/80"
+        >
+          All sounds free until {SOUND_TIER_GATE_LABEL}
+        </p>
+      ) : null}
+      {upsellPanel}
       {groups.map(({ category, profiles }) => (
         <div key={category} className="mb-1">
           <p className="px-3 py-1.5 text-[9px] tracking-[0.22em] text-muted-foreground/70 uppercase">
@@ -111,7 +170,7 @@ export function HeaderSoundsMenu({
                 )}
               >
                 <span className="min-w-0 truncate normal-case tracking-normal">{profile.name}</span>
-                {locked ? <PremiumBadge className="shrink-0" /> : null}
+                {locked ? <PremiumBadge className="shrink-0" label="🔒 Drive+" /> : null}
               </button>
             );
           })}

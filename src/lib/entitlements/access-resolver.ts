@@ -22,11 +22,7 @@ import {
 } from "@/lib/billing/subscription-access-policy";
 import { entitlementsForPlan } from "@/lib/entitlements/plans";
 import { isTrialActive } from "@/lib/entitlements/trial";
-import type {
-  Entitlement,
-  EntitlementUser,
-  SubscriptionStatus,
-} from "@/lib/entitlements/types";
+import type { Entitlement, EntitlementUser, SubscriptionStatus } from "@/lib/entitlements/types";
 import { canAccessExperience } from "@/lib/experiences/access";
 import { experienceForProfileId } from "@/lib/experiences/catalog";
 import {
@@ -38,7 +34,7 @@ import {
 import { getProfile } from "@/lib/sound/profiles";
 import {
   TESTING_UNLOCKED_SOUND_ENTITLEMENTS,
-  UNLOCK_ALL_SOUNDS_FOR_TESTING,
+  allSoundsFreeAt,
 } from "@/lib/sound/sound-unlock-flag";
 
 export type AccessSource =
@@ -128,10 +124,7 @@ function hasAllSoundsFromSubscription(
   return { allowed: false, source: "denied", expiresAtUtc: null };
 }
 
-function leaseValid(
-  input: AccessResolverInput,
-  now: number,
-): boolean {
+function leaseValid(input: AccessResolverInput, now: number): boolean {
   if (input.leaseExpiresAtUtc != null && input.leaseExpiresAtUtc <= now) return false;
   if (input.leaseAccountId != null && input.user.accountId !== input.leaseAccountId) return false;
   return Boolean(input.leaseEntitlements?.length || input.leaseProfileIds?.length);
@@ -152,7 +145,11 @@ export function resolveProfileDriveAccess(
     }
   })();
 
-  if (FREE_SET.has(profileId) || resolveProfileAccess(profile) === "free") {
+  if (
+    FREE_SET.has(profileId) ||
+    resolveProfileAccess(profile) === "free" ||
+    allSoundsFreeAt(input.now)
+  ) {
     return {
       allowed: true,
       source: "permanent_free",
@@ -171,7 +168,7 @@ export function resolveProfileDriveAccess(
     };
   }
 
-  // Symphony / World / Fusion IDs: experience entitlement (e.g. FREE symphony_essential).
+  // Symphony / World / Fusion IDs: paid experience entitlement (free-plan ones do not unlock driving).
   if (
     profileId.startsWith("symphony-") ||
     profileId.startsWith("fusion-") ||
@@ -190,12 +187,14 @@ export function resolveProfileDriveAccess(
       const cap = required
         ? resolveCapabilityAccess(required, input)
         : { allowed: true, source: "permanent_free" as const, expiresAtUtc: null };
-      return {
-        allowed: true,
-        source: cap.source,
-        expiresAtUtc: cap.expiresAtUtc,
-        fallbackProfileId,
-      };
+      // Free tier drives only the three free engine profiles (see profile-access-config).
+      if (cap.source !== "permanent_free")
+        return {
+          allowed: true,
+          source: cap.source,
+          expiresAtUtc: cap.expiresAtUtc,
+          fallbackProfileId,
+        };
     }
   }
 
@@ -304,8 +303,8 @@ export function resolveEffectiveEntitlements(input: AccessResolverInput): Readon
     for (const e of input.leaseEntitlements ?? []) granted.add(e);
   }
 
-  // TODO(revert after Tesla test): temporary unlock — see sound-unlock-flag.ts.
-  if (UNLOCK_ALL_SOUNDS_FOR_TESTING) {
+  // Pre-launch: every sound free until SOUND_TIER_GATE_STARTS_AT_ISO.
+  if (allSoundsFreeAt(input.now)) {
     for (const e of TESTING_UNLOCKED_SOUND_ENTITLEMENTS) granted.add(e);
   }
 

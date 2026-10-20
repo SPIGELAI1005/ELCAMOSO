@@ -4,7 +4,7 @@ import {
   FREE_SOUND_PROFILE_SET,
   LOCKED_PROFILE_PREVIEW_SECONDS,
 } from "@/lib/sound/profile-access-config";
-import { UNLOCK_ALL_SOUNDS_FOR_TESTING } from "@/lib/sound/sound-unlock-flag";
+import { allSoundsFreeAt } from "@/lib/sound/sound-unlock-flag";
 
 export type SoundProfileAccess = "free" | "drive_plus";
 
@@ -21,8 +21,6 @@ export function resolveProfileAccess(
   profile: ProfileAccessFields,
   resolveBase?: (baseId: string) => ProfileAccessFields | undefined,
 ): SoundProfileAccess {
-  // TODO(revert after Tesla test): temporary unlock — see sound-unlock-flag.ts.
-  if (UNLOCK_ALL_SOUNDS_FOR_TESTING) return "free";
   // Canonical free trio always wins — profile.access cannot invent extra free IDs.
   if (FREE_SET.has(profile.id)) return "free";
   if (profile.custom && profile.baseId) {
@@ -58,7 +56,9 @@ export function canDriveWithSoundProfile(
   resolveBase?: (baseId: string) => ProfileAccessFields | undefined,
   /** Purchased / grandfathered / reward profile unlocks (server-authoritative). */
   grantedProfileIds: readonly string[] = [],
+  now?: number,
 ): boolean {
+  if (allSoundsFreeAt(now)) return true;
   if (hasAllSoundProfiles) return true;
   if (grantedProfileIds.includes(profile.id)) return true;
   return resolveProfileAccess(profile, resolveBase) === "free";
@@ -73,7 +73,9 @@ export function lockedProfilePreviewSeconds(
   profile: ProfileAccessFields,
   hasAllSoundProfiles: boolean,
   resolveBase?: (baseId: string) => ProfileAccessFields | undefined,
+  now?: number,
 ): number | null {
+  if (allSoundsFreeAt(now)) return null;
   if (hasAllSoundProfiles) return null;
   if (resolveProfileAccess(profile, resolveBase) === "free") return null;
   return LOCKED_PROFILE_PREVIEW_SECONDS;

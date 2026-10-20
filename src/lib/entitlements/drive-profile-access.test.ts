@@ -21,7 +21,7 @@ describe("canDriveProfileWithAccess", () => {
     ).toBe(true);
   });
 
-  it("allows FREE symphony_essential / worlds_sampler experiences only", () => {
+  it("free tier drives no Symphony / World / Fusion profiles after the gate", () => {
     expect(
       canDriveProfileWithAccess({
         profileId: "symphony-cinematic-rock",
@@ -29,7 +29,7 @@ describe("canDriveProfileWithAccess", () => {
         grantedProfileIds: [],
         hasEntitlement: hasFromPlan("FREE"),
       }),
-    ).toBe(true);
+    ).toBe(false);
     expect(
       canDriveProfileWithAccess({
         profileId: "symphony-neon-run",

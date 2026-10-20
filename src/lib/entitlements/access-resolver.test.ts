@@ -29,14 +29,9 @@ function user(partial: Partial<EntitlementUser> = {}): EntitlementUser {
 }
 
 describe("Prompt 11 free trio", () => {
-  it("exposes exactly four permanent free profiles with required roles", () => {
-    expect(FREE_SOUND_PROFILE_IDS).toHaveLength(4);
-    expect(FREE_SOUND_PROFILE_IDS).toEqual([
-      "american-muscle-v8",
-      "gt-v8",
-      "racing-v10",
-      "rocket-car",
-    ]);
+  it("exposes exactly three permanent free profiles with required roles", () => {
+    expect(FREE_SOUND_PROFILE_IDS).toHaveLength(3);
+    expect(FREE_SOUND_PROFILE_IDS).toEqual(["american-muscle-v8", "gt-v8", "racing-v10"]);
   });
 });
 

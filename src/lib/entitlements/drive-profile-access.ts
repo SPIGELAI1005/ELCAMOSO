@@ -1,10 +1,8 @@
 import { canAccessExperience } from "@/lib/experiences/access";
 import { experienceForProfileId } from "@/lib/experiences/catalog";
+import { entitlementsForPlan } from "@/lib/entitlements/plans";
 import type { Entitlement } from "@/lib/entitlements/types";
-import {
-  canDriveWithSoundProfile,
-  FREE_SOUND_PROFILE_IDS,
-} from "@/lib/sound/profile-access";
+import { canDriveWithSoundProfile, FREE_SOUND_PROFILE_IDS } from "@/lib/sound/profile-access";
 import { getProfile } from "@/lib/sound/profiles";
 
 const FREE_SET = new Set(FREE_SOUND_PROFILE_IDS);
@@ -29,12 +27,7 @@ export function canDriveProfileWithAccess(input: {
 }): boolean {
   const profile = getProfile(input.profileId);
   if (
-    canDriveWithSoundProfile(
-      profile,
-      input.hasAllSoundProfiles,
-      undefined,
-      input.grantedProfileIds,
-    )
+    canDriveWithSoundProfile(profile, input.hasAllSoundProfiles, undefined, input.grantedProfileIds)
   ) {
     return true;
   }
@@ -46,5 +39,9 @@ export function canDriveProfileWithAccess(input: {
   const experience = experienceForProfileId(input.profileId);
   if (experience.kind === "engine") return false;
   if (!experience.capabilities.selectableInDrive) return false;
+  // Free tier = the three free engine profiles only: free-plan experience
+  // entitlements (symphony_essential / worlds_sampler) do not unlock driving.
+  const required = experience.capabilities.requiredEntitlement;
+  if (!required || entitlementsForPlan("FREE").includes(required)) return false;
   return canAccessExperience(experience, input.hasEntitlement);
 }

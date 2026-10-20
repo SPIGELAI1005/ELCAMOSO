@@ -1,4 +1,5 @@
 import type { Entitlement } from "@/lib/entitlements/types";
+import { isSoundTierGateActive, simulatedSoundGateNow } from "@/lib/sound/profile-access-config";
 
 /**
  * TEMPORARY TESTING SWITCH — unlocks every Sound Profile, World, Symphony and
@@ -17,6 +18,16 @@ const raw: string | undefined = import.meta.env["VITE_UNLOCK_ALL_SOUNDS"];
 
 export const UNLOCK_ALL_SOUNDS_FOR_TESTING: boolean =
   raw == null || raw === "" ? false : raw !== "false" && raw !== "0";
+
+/**
+ * Whether every sound is free at `now`: before the Drive+ gate date
+ * (SOUND_TIER_GATE_STARTS_AT_ISO) always; the legacy env switch is ignored
+ * after the gate so a stale Vercel flag cannot keep Drive+ sounds free.
+ */
+export function allSoundsFreeAt(now?: number): boolean {
+  // A non-production simulation (VITE_SOUND_GATE_SIMULATE_NOW) overrides only the gate clock.
+  return !isSoundTierGateActive(simulatedSoundGateNow() ?? now ?? Date.now());
+}
 
 /** Sound-content entitlements granted to everyone while the switch is on. */
 export const TESTING_UNLOCKED_SOUND_ENTITLEMENTS: readonly Entitlement[] = [
