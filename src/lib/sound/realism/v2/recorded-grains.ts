@@ -35,6 +35,8 @@ export class GranularStream {
   private grains: Grain[] = [];
   private rng: number;
   private readonly win = sineWindow(64);
+  private readonly minRate: number;
+  private readonly maxRate: number;
   constructor(
     private readonly ctx: BaseAudioContext,
     private readonly buffer: AudioBuffer,
@@ -43,6 +45,8 @@ export class GranularStream {
     seed: number,
   ) {
     this.rng = seed >>> 0 || 1;
+    this.minRate = source.minRate ?? MIN_GRAIN_RATE;
+    this.maxRate = source.maxRate ?? MAX_GRAIN_RATE;
   }
 
   private rand(): number {
@@ -63,7 +67,7 @@ export class GranularStream {
     this.grains = this.grains.filter((g) => {
       // Nodes disconnect themselves on "ended" (render-time safe for offline contexts).
       if (g.end <= audioTime) return false;
-      const rate = Math.min(MAX_GRAIN_RATE, Math.max(MIN_GRAIN_RATE, (rpm / g.baseRpm) * g.jitter));
+      const rate = Math.min(this.maxRate, Math.max(this.minRate, (rpm / g.baseRpm) * g.jitter));
       g.src.playbackRate.setTargetAtTime(rate, audioTime, 0.05);
       return true;
     });
@@ -75,7 +79,13 @@ export class GranularStream {
 
   private spawn(rpm: number, at: number): void {
     const dur = 0.32 + this.rand() * 0.34;
-    const region = pickRegion(this.source.regions, rpm, () => this.rand());
+    const region = pickRegion(
+      this.source.regions,
+      rpm,
+      () => this.rand(),
+      this.minRate,
+      this.maxRate,
+    );
     if (!region) {
       this.next = at + dur / 2;
       return;
@@ -84,7 +94,7 @@ export class GranularStream {
     const level = 10 ** (((this.rand() - 0.5) * 2) / 20); // ±1 dB
     const span = region.end - region.start - 2 * EDGE;
     const baseGuess = regionRpmAt(region, region.start + span / 2);
-    const rate = Math.min(MAX_GRAIN_RATE, Math.max(MIN_GRAIN_RATE, (rpm / baseGuess) * jitter));
+    const rate = Math.min(this.maxRate, Math.max(this.minRate, (rpm / baseGuess) * jitter));
     const srcLen = dur * rate;
     const room = Math.max(0, span - srcLen);
     const offset = region.start + EDGE + this.rand() * room;
@@ -92,8 +102,8 @@ export class GranularStream {
     const src = this.ctx.createBufferSource();
     src.buffer = this.buffer;
     src.playbackRate.value = Math.min(
-      MAX_GRAIN_RATE,
-      Math.max(MIN_GRAIN_RATE, (rpm / baseRpm) * jitter),
+      this.maxRate,
+      Math.max(this.minRate, (rpm / baseRpm) * jitter),
     );
     const gain = this.ctx.createGain();
     gain.gain.value = 0;

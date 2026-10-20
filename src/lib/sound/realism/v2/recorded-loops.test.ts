@@ -97,3 +97,20 @@ describe("recordedLowShelfHz", () => {
     expect(recordedLowShelfHz(eq, 9000)).toBe(240);
   });
 });
+
+describe("motorcycle recorded banks", () => {
+  it("superbike keeps recordings at idle and fades them out before the 14k scream", async () => {
+    const { getRecordedLoopBank, recordedSampleWeight } = await import("./recorded-loops");
+    const sb = getRecordedLoopBank("motorcycle-inline-4")!;
+    expect(sb.sources[0]!.maxRate).toBeGreaterThan(2);
+    expect(recordedSampleWeight(1200, 0.1, 0, sb.handover)).toBe(1);
+    expect(recordedSampleWeight(9000, 0.9, 1, sb.handover)).toBeGreaterThanOrEqual(0.3);
+    expect(recordedSampleWeight(13000, 1, 1, sb.handover)).toBe(0);
+  });
+
+  it("V8 hand-over is unchanged", async () => {
+    const { getRecordedLoopBank } = await import("./recorded-loops");
+    expect(getRecordedLoopBank("gt-v8")!.handover.topRpm).toBeUndefined();
+    expect(getRecordedLoopBank("american-v8")!.handover.topRpm).toBeUndefined();
+  });
+});

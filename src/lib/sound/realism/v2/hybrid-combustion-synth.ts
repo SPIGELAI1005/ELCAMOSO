@@ -1138,7 +1138,7 @@ export class HybridCombustionSynth {
     const accCfg = cfg.accelCharacter;
     const accHard = accCfg ? this.accelChar.aggression : 0;
     const accGentle = accCfg ? this.accelChar.onLoad * (1 - this.accelChar.aggression) : 0;
-    if (this.bass && this.bassDecelOnly && !this.recordedBank) {
+    if (this.bass && this.bassDecelOnly) {
       // Decel thunder for synth-only cars: bass bloom only while lifting / on overrun
       // (recorded banks drive their own bass in updateRecordedLoops).
       const ac = this.accelChar;
@@ -1233,9 +1233,12 @@ export class HybridCombustionSynth {
     // ShiftCam-style cam step (cfg.camLift): timbre lifts above the cam rpm under load.
     const cam = cfg.camLift;
     const camAmt = cam
-      ? Math.min(1, Math.max(0, (rpm - cam.rpm) / cam.widthRpm)) * Math.min(1, Math.max(0, (load - 0.3) / 0.4)) * (overrun ? 0 : 1)
+      ? Math.min(1, Math.max(0, (rpm - cam.rpm) / cam.widthRpm)) *
+        Math.min(1, Math.max(0, (load - 0.3) / 0.4)) *
+        (overrun ? 0 : 1)
       : 0;
-    if (qs && this.qsBlipEnv > 0.001) intensity = Math.min(1, intensity + qs.blipLevel * this.qsBlipEnv);
+    if (qs && this.qsBlipEnv > 0.001)
+      intensity = Math.min(1, intensity + qs.blipLevel * this.qsBlipEnv);
     if (race && pt?.limiterActive) intensity *= 0.85;
     if (revMatch) intensity = Math.min(1, intensity + 0.28 * (pt?.revMatchProgress ?? 0.5));
     if (overrun) intensity *= 0.55;
@@ -1416,9 +1419,7 @@ export class HybridCombustionSynth {
     if (cfg.idleLife?.breathDb) {
       idleLiftDb += cfg.idleLife.breathDb * (this.ilW1 * 0.4 + this.ilW2 * 0.6) * this.ilGate;
     }
-    const accLiftDb = accCfg
-      ? accCfg.hardGainDb * accHard + accCfg.gentleGainDb * accGentle
-      : 0;
+    const accLiftDb = accCfg ? accCfg.hardGainDb * accHard + accCfg.gentleGainDb * accGentle : 0;
     const outputTrimLinear = Math.pow(10, ((cfg.outputTrimDb ?? 0) + idleLiftDb + accLiftDb) / 20);
     // Load-flat paths (support, pipe) get only part of the trim: trimming them fully
     // raises the cruise floor as much as the pull and collapses the 8-10 dB gap.
@@ -1597,8 +1598,7 @@ export class HybridCombustionSynth {
           this.flHardPeak = Math.max(accHard, this.flHardPeak - dt * 0.3);
           const ov = this.accelChar.overrun;
           const gpsLift = ov > 0.35 && this.flPrevOverrun <= 0.35;
-          const anyShift =
-            shifting && pt?.shiftDirection === "up" && !this.flPrevShift;
+          const anyShift = shifting && pt?.shiftDirection === "up" && !this.flPrevShift;
           if (
             (gpsLift || anyShift) &&
             Math.max(this.flSpoolPeak, this.flHardPeak * 0.8) >= 0.3 &&
@@ -1608,7 +1608,11 @@ export class HybridCombustionSynth {
           ) {
             this.bovLastAt = audioTime;
             const st = Math.max(this.flSpoolPeak, this.flHardPeak * 0.8);
-            this.fireBlowOff(Math.min(1, st) * (anyShift && !gpsLift ? 0.6 : 1), audioTime, gate("boost"));
+            this.fireBlowOff(
+              Math.min(1, st) * (anyShift && !gpsLift ? 0.6 : 1),
+              audioTime,
+              gate("boost"),
+            );
           }
           this.flPrevOverrun = ov;
           this.flPrevShift = shifting && pt?.shiftDirection === "up";
@@ -1760,12 +1764,14 @@ export class HybridCombustionSynth {
     // Blips: only after ~2 s of steady idle, at random intervals.
     this.ilHeld = gate > 0.98 ? this.ilHeld + dt : 0;
     if (this.ilNextBlip < 0) {
-      this.ilNextBlip = audioTime + il.blipEveryS[0] + this.ilRand() * (il.blipEveryS[1] - il.blipEveryS[0]);
+      this.ilNextBlip =
+        audioTime + il.blipEveryS[0] + this.ilRand() * (il.blipEveryS[1] - il.blipEveryS[0]);
     }
     if (this.ilHeld > 2 && audioTime >= this.ilNextBlip && this.ilBlipT < 0) {
       this.ilBlipT = 0;
       this.ilBlipAmp = il.blipRpm[0] + this.ilRand() * (il.blipRpm[1] - il.blipRpm[0]);
-      this.ilNextBlip = audioTime + il.blipEveryS[0] + this.ilRand() * (il.blipEveryS[1] - il.blipEveryS[0]);
+      this.ilNextBlip =
+        audioTime + il.blipEveryS[0] + this.ilRand() * (il.blipEveryS[1] - il.blipEveryS[0]);
     } else if (this.ilHeld <= 2 && audioTime >= this.ilNextBlip) {
       this.ilNextBlip = audioTime + 1;
     }
@@ -1773,7 +1779,8 @@ export class HybridCombustionSynth {
       this.ilBlipT += dt;
       const t = this.ilBlipT;
       // 90 ms rise, then a ~0.35 s fall back to idle.
-      this.ilBlipEnv = t < 0.09 ? Math.sin((t / 0.09) * (Math.PI / 2)) : Math.exp(-(t - 0.09) / 0.35);
+      this.ilBlipEnv =
+        t < 0.09 ? Math.sin((t / 0.09) * (Math.PI / 2)) : Math.exp(-(t - 0.09) / 0.35);
       if (t > 2) {
         this.ilBlipT = -1;
         this.ilBlipEnv = 0;
@@ -2164,7 +2171,10 @@ export class HybridCombustionSynth {
     }
     const synthMute = (globalThis as { __ELC_SYNTH_MUTE?: boolean }).__ELC_SYNTH_MUTE ? 0 : 1;
     // Load-dependent bass swell on acceleration; a little extra thump on lift-off (pops).
-    this.bass?.setDrive(0.5 * ac.onLoad + 0.5 * ac.aggression, ac.overrun, audioTime);
+    // Decel-only bass (superbike) keeps its own lift-off bloom from update().
+    if (!this.bassDecelOnly) {
+      this.bass?.setDrive(0.5 * ac.onLoad + 0.5 * ac.aggression, ac.overrun, audioTime);
+    }
     if (this.combustionBus) {
       targetParam(
         this.combustionBus.gain,
