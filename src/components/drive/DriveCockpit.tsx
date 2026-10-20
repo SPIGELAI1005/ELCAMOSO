@@ -599,7 +599,8 @@ export function DriveCockpit({
         </div>
 
         <div className="mt-2 flex w-full flex-col items-center gap-0.5 sm:mt-3 sm:gap-1">
-          <div className="flex items-baseline gap-3">
+          {/* Race dash already shows gear + rpm inside the tach: hide the duplicate row. */}
+          <div className={cn("flex items-baseline gap-3", tachThemeId === "race" && "sr-only")}>
             <p
               className={cn(
                 "text-3xl font-extralight tabular-nums transition-colors duration-200 sm:text-4xl",
@@ -621,7 +622,7 @@ export function DriveCockpit({
               </p>
             ) : null}
           </div>
-          <p className="text-[10px] tracking-[0.28em] text-muted-foreground uppercase">
+          <p className={cn("text-[10px] tracking-[0.28em] text-muted-foreground uppercase", tachThemeId === "race" && "sr-only")}>
             {secondary.label}
             {secondary.showRpm ? " · Rev" : ""}
           </p>
@@ -848,7 +849,7 @@ export function DriveCockpit({
           {showShiftPreset ? (
             <div className="flex min-h-12 items-center gap-3">
               <span className="shrink-0 text-[10px] tracking-[0.2em] text-muted-foreground uppercase">
-                Shift
+                Mode
               </span>
               <Select
                 value={settings.shiftMapPreset}
