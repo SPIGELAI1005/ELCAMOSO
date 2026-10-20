@@ -28,7 +28,7 @@ async function guard(request: Request): Promise<AdminIdentity | Response> {
 function fail(e: unknown) {
   if (e instanceof AccountsError) return jsonResponse({ error: e.message }, e.status);
   console.error("[admin users]", e instanceof Error ? e.message : e);
-  return jsonResponse({ error: "Database error" }, 500);
+  return jsonResponse({ error: `Database error: ${classifyDbError(e)}` }, 500);
 }
 
 export const Route = createFileRoute("/api/admin/users")({
@@ -88,3 +88,17 @@ export const Route = createFileRoute("/api/admin/users")({
     },
   },
 });
+
+/** Error class only (never the connection string or password). */
+function classifyDbError(e: unknown): string {
+  const any = e as { code?: string; message?: string } | null;
+  const m = `${any?.code ?? ""} ${any?.message ?? ""}`;
+  if (/ENOTFOUND|EAI_AGAIN/i.test(m)) return "host not found (use the Shared/Session pooler host aws-…pooler.supabase.com)";
+  if (/ENETUNREACH|EHOSTUNREACH|ECONNREFUSED|ETIMEDOUT|timeout/i.test(m))
+    return "cannot reach database (db.… host is IPv6-only; use the Shared pooler aws-…pooler.supabase.com:6543)";
+  if (/password authentication|28P01/i.test(m)) return "wrong database password in DATABASE_URL";
+  if (/tenant|user not found|XX000/i.test(m)) return "pooler user/region wrong (user must be postgres.<project-ref>)";
+  if (/does not exist|42P01|42704/i.test(m)) return "tables missing (migrations not applied; redeploy)";
+  if (/Invalid URL|URI|malformed|percent/i.test(m)) return "DATABASE_URL malformed (remove [ ] and percent-encode special characters)";
+  return `unexpected (${String(any?.code ?? "no code").slice(0, 20)})`;
+}
