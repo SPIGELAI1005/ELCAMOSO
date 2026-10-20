@@ -43,7 +43,7 @@ function CockpitPreview() {
   const raw = q.get("theme") as TachThemeId | null;
   const theme: TachThemeId = raw && TACH_THEMES[raw] ? raw : "classic";
   const tesla = q.get("tesla") === "1";
-  const profile = getProfile(PROFILE_FOR[theme]);
+  const profile = getProfile(q.get("profile") ?? PROFILE_FOR[theme]);
   const speedMps = 25;
   const state: DriveState = {
     ...IDLE_STATE,

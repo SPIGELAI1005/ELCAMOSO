@@ -57,7 +57,9 @@ export const ModeTachometer = memo(function ModeTachometer({
   const vb = size + pad * 2;
   const cx = vb / 2;
   const cy = vb / 2;
-  const r = size / 2 - 2;
+  const theme0 = TACH_THEMES[themeId];
+  // Leave a clear gap under the shift-light row (Sport/Race).
+  const r = size / 2 - (theme0.shiftLights ? 9 : 2);
   const target = Math.min(1, Math.max(0, progress));
   const [visual, setVisual] = useState(reducedMotion ? target : 0);
   const [intro, setIntro] = useState(!reducedMotion);
@@ -534,8 +536,8 @@ export const ModeTachometer = memo(function ModeTachometer({
               <circle
                 key={i}
                 cx={cx - 56 + i * 14}
-                cy={11}
-                r={3.8}
+                cy={8}
+                r={3.4}
                 fill={on ? col : "oklch(1 0 0 / 10%)"}
                 className={flash && !reducedMotion ? "mode-tach__flash" : undefined}
               />
