@@ -29,6 +29,7 @@ import {
   type SmilesSettings,
 } from "@/lib/smiles/smiles";
 import { cn } from "@/lib/utils";
+import { track } from "@/lib/analytics/track";
 
 const RED = "#e53935";
 
@@ -68,6 +69,9 @@ export function SmilesCard(props: SmilesCardProps) {
   const [shareNote, setShareNote] = useState<string | null>(null);
 
   useEffect(() => setSettings(loadSmilesSettings()), []);
+  useEffect(() => {
+    track("smiles_shown", { profileId: props.profileId });
+  }, [props.journeyId, props.profileId]);
   const r = useMemo(
     () =>
       computeSmiles(
@@ -135,6 +139,7 @@ export function SmilesCard(props: SmilesCardProps) {
       const nav = navigator as Navigator & { canShare?: (d: ShareData) => boolean };
       if (nav.share && nav.canShare?.({ files: [file] })) {
         await nav.share({ files: [file], title: "Smiles per Mile", text });
+        track("smiles_shared", { kind: "web-share" });
         return;
       }
       const url = URL.createObjectURL(blob);
@@ -144,6 +149,7 @@ export function SmilesCard(props: SmilesCardProps) {
       a.click();
       setTimeout(() => URL.revokeObjectURL(url), 2000);
       setShareNote("Image downloaded.");
+      track("smiles_shared", { kind: "download" });
     } catch (e) {
       if ((e as Error)?.name !== "AbortError") setShareNote("Could not create the image.");
     }

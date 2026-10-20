@@ -37,6 +37,8 @@ import { Route as StoryRouteImport } from './routes/story'
 import { Route as StudioRouteImport } from './routes/studio'
 import { Route as SymphonyRouteImport } from './routes/symphony'
 import { Route as WorldsRouteImport } from './routes/worlds'
+import { Route as ApiAnalyticsRouteImport } from './routes/api/analytics'
+import { Route as ApiBroadcastRouteImport } from './routes/api/broadcast'
 import { Route as ApiDriveLogsRouteImport } from './routes/api/drive-logs'
 import { Route as ApiFeedbackRouteImport } from './routes/api/feedback'
 import { Route as ApiOgRouteImport } from './routes/api/og'
@@ -60,6 +62,7 @@ import { Route as LegalPrivacyRouteImport } from './routes/legal/privacy'
 import { Route as LegalTermsRouteImport } from './routes/legal/terms'
 import { Route as PairTokenRouteImport } from './routes/pair_.$token'
 import { Route as UpgradeTokenRouteImport } from './routes/upgrade.$token'
+import { Route as ApiAdminAnalyticsRouteImport } from './routes/api/admin/analytics'
 import { Route as ApiAdminFeedbackRouteImport } from './routes/api/admin/feedback'
 import { Route as ApiAdminMeRouteImport } from './routes/api/admin/me'
 import { Route as ApiBillingCheckoutRouteImport } from './routes/api/billing/checkout'
@@ -214,6 +217,16 @@ const WorldsRoute = WorldsRouteImport.update({
   path: '/worlds',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAnalyticsRoute = ApiAnalyticsRouteImport.update({
+  id: '/api/analytics',
+  path: '/api/analytics',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiBroadcastRoute = ApiBroadcastRouteImport.update({
+  id: '/api/broadcast',
+  path: '/api/broadcast',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiDriveLogsRoute = ApiDriveLogsRouteImport.update({
   id: '/api/drive-logs',
   path: '/api/drive-logs',
@@ -329,6 +342,11 @@ const UpgradeTokenRoute = UpgradeTokenRouteImport.update({
   path: '/upgrade/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAdminAnalyticsRoute = ApiAdminAnalyticsRouteImport.update({
+  id: '/api/admin/analytics',
+  path: '/api/admin/analytics',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAdminFeedbackRoute = ApiAdminFeedbackRouteImport.update({
   id: '/api/admin/feedback',
   path: '/api/admin/feedback',
@@ -425,6 +443,8 @@ export interface FileRoutesByFullPath {
   '/studio': typeof StudioRoute
   '/symphony': typeof SymphonyRoute
   '/worlds': typeof WorldsRoute
+  '/api/analytics': typeof ApiAnalyticsRoute
+  '/api/broadcast': typeof ApiBroadcastRoute
   '/api/drive-logs': typeof ApiDriveLogsRoute
   '/api/feedback': typeof ApiFeedbackRoute
   '/api/og': typeof ApiOgRouteWithChildren
@@ -448,6 +468,7 @@ export interface FileRoutesByFullPath {
   '/pair/$token': typeof PairTokenRoute
   '/upgrade/$token': typeof UpgradeTokenRoute
   '/legal/': typeof LegalIndexRoute
+  '/api/admin/analytics': typeof ApiAdminAnalyticsRoute
   '/api/admin/feedback': typeof ApiAdminFeedbackRoute
   '/api/admin/me': typeof ApiAdminMeRoute
   '/api/billing/checkout': typeof ApiBillingCheckoutRoute
@@ -490,6 +511,8 @@ export interface FileRoutesByTo {
   '/studio': typeof StudioRoute
   '/symphony': typeof SymphonyRoute
   '/worlds': typeof WorldsRoute
+  '/api/analytics': typeof ApiAnalyticsRoute
+  '/api/broadcast': typeof ApiBroadcastRoute
   '/api/drive-logs': typeof ApiDriveLogsRoute
   '/api/feedback': typeof ApiFeedbackRoute
   '/api/og': typeof ApiOgRouteWithChildren
@@ -513,6 +536,7 @@ export interface FileRoutesByTo {
   '/pair/$token': typeof PairTokenRoute
   '/upgrade/$token': typeof UpgradeTokenRoute
   '/legal': typeof LegalIndexRoute
+  '/api/admin/analytics': typeof ApiAdminAnalyticsRoute
   '/api/admin/feedback': typeof ApiAdminFeedbackRoute
   '/api/admin/me': typeof ApiAdminMeRoute
   '/api/billing/checkout': typeof ApiBillingCheckoutRoute
@@ -557,6 +581,8 @@ export interface FileRoutesById {
   '/studio': typeof StudioRoute
   '/symphony': typeof SymphonyRoute
   '/worlds': typeof WorldsRoute
+  '/api/analytics': typeof ApiAnalyticsRoute
+  '/api/broadcast': typeof ApiBroadcastRoute
   '/api/drive-logs': typeof ApiDriveLogsRoute
   '/api/feedback': typeof ApiFeedbackRoute
   '/api/og': typeof ApiOgRouteWithChildren
@@ -580,6 +606,7 @@ export interface FileRoutesById {
   '/pair_/$token': typeof PairTokenRoute
   '/upgrade/$token': typeof UpgradeTokenRoute
   '/legal/': typeof LegalIndexRoute
+  '/api/admin/analytics': typeof ApiAdminAnalyticsRoute
   '/api/admin/feedback': typeof ApiAdminFeedbackRoute
   '/api/admin/me': typeof ApiAdminMeRoute
   '/api/billing/checkout': typeof ApiBillingCheckoutRoute
@@ -625,6 +652,8 @@ export interface FileRouteTypes {
     | '/studio'
     | '/symphony'
     | '/worlds'
+    | '/api/analytics'
+    | '/api/broadcast'
     | '/api/drive-logs'
     | '/api/feedback'
     | '/api/og'
@@ -648,6 +677,7 @@ export interface FileRouteTypes {
     | '/pair/$token'
     | '/upgrade/$token'
     | '/legal/'
+    | '/api/admin/analytics'
     | '/api/admin/feedback'
     | '/api/admin/me'
     | '/api/billing/checkout'
@@ -690,6 +720,8 @@ export interface FileRouteTypes {
     | '/studio'
     | '/symphony'
     | '/worlds'
+    | '/api/analytics'
+    | '/api/broadcast'
     | '/api/drive-logs'
     | '/api/feedback'
     | '/api/og'
@@ -713,6 +745,7 @@ export interface FileRouteTypes {
     | '/pair/$token'
     | '/upgrade/$token'
     | '/legal'
+    | '/api/admin/analytics'
     | '/api/admin/feedback'
     | '/api/admin/me'
     | '/api/billing/checkout'
@@ -756,6 +789,8 @@ export interface FileRouteTypes {
     | '/studio'
     | '/symphony'
     | '/worlds'
+    | '/api/analytics'
+    | '/api/broadcast'
     | '/api/drive-logs'
     | '/api/feedback'
     | '/api/og'
@@ -779,6 +814,7 @@ export interface FileRouteTypes {
     | '/pair_/$token'
     | '/upgrade/$token'
     | '/legal/'
+    | '/api/admin/analytics'
     | '/api/admin/feedback'
     | '/api/admin/me'
     | '/api/billing/checkout'
@@ -823,6 +859,8 @@ export interface RootRouteChildren {
   StudioRoute: typeof StudioRoute
   SymphonyRoute: typeof SymphonyRoute
   WorldsRoute: typeof WorldsRoute
+  ApiAnalyticsRoute: typeof ApiAnalyticsRoute
+  ApiBroadcastRoute: typeof ApiBroadcastRoute
   ApiDriveLogsRoute: typeof ApiDriveLogsRoute
   ApiFeedbackRoute: typeof ApiFeedbackRoute
   ApiOgRoute: typeof ApiOgRouteWithChildren
@@ -832,6 +870,7 @@ export interface RootRouteChildren {
   JourneysJourneyIdRoute: typeof JourneysJourneyIdRoute
   PairTokenRoute: typeof PairTokenRoute
   UpgradeTokenRoute: typeof UpgradeTokenRoute
+  ApiAdminAnalyticsRoute: typeof ApiAdminAnalyticsRoute
   ApiAdminFeedbackRoute: typeof ApiAdminFeedbackRoute
   ApiAdminMeRoute: typeof ApiAdminMeRoute
   ApiBillingCheckoutRoute: typeof ApiBillingCheckoutRoute
@@ -1043,6 +1082,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WorldsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/analytics': {
+      id: '/api/analytics'
+      path: '/api/analytics'
+      fullPath: '/api/analytics'
+      preLoaderRoute: typeof ApiAnalyticsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/broadcast': {
+      id: '/api/broadcast'
+      path: '/api/broadcast'
+      fullPath: '/api/broadcast'
+      preLoaderRoute: typeof ApiBroadcastRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/drive-logs': {
       id: '/api/drive-logs'
       path: '/api/drive-logs'
@@ -1202,6 +1255,13 @@ declare module '@tanstack/react-router' {
       path: '/upgrade/$token'
       fullPath: '/upgrade/$token'
       preLoaderRoute: typeof UpgradeTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/admin/analytics': {
+      id: '/api/admin/analytics'
+      path: '/api/admin/analytics'
+      fullPath: '/api/admin/analytics'
+      preLoaderRoute: typeof ApiAdminAnalyticsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/admin/feedback': {
@@ -1393,6 +1453,8 @@ const rootRouteChildren: RootRouteChildren = {
   StudioRoute: StudioRoute,
   SymphonyRoute: SymphonyRoute,
   WorldsRoute: WorldsRoute,
+  ApiAnalyticsRoute: ApiAnalyticsRoute,
+  ApiBroadcastRoute: ApiBroadcastRoute,
   ApiDriveLogsRoute: ApiDriveLogsRoute,
   ApiFeedbackRoute: ApiFeedbackRoute,
   ApiOgRoute: ApiOgRouteWithChildren,
@@ -1402,6 +1464,7 @@ const rootRouteChildren: RootRouteChildren = {
   JourneysJourneyIdRoute: JourneysJourneyIdRoute,
   PairTokenRoute: PairTokenRoute,
   UpgradeTokenRoute: UpgradeTokenRoute,
+  ApiAdminAnalyticsRoute: ApiAdminAnalyticsRoute,
   ApiAdminFeedbackRoute: ApiAdminFeedbackRoute,
   ApiAdminMeRoute: ApiAdminMeRoute,
   ApiBillingCheckoutRoute: ApiBillingCheckoutRoute,

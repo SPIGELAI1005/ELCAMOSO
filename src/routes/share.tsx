@@ -1,3 +1,4 @@
+import { track } from "@/lib/analytics/track";
 import { useEffect, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { createSeoHeadFromPath } from "@/lib/seo";
@@ -20,6 +21,9 @@ export const Route = createFileRoute("/share")({
 });
 
 function ShareSound() {
+  useEffect(() => {
+    track("share_visit", { kind: "sound" });
+  }, []);
   const { p, c } = Route.useSearch();
   const navigate = useNavigate();
   const { settings, update } = useSettings();

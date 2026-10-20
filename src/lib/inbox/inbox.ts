@@ -70,6 +70,32 @@ function write(list: InboxMessage[]) {
   window.dispatchEvent(new Event(EVT));
 }
 
+const BC_CACHE = "elcamoso.inbox.broadcast.v1";
+const BC_AT = "elcamoso.inbox.broadcastAt.v1";
+/** Fetch admin broadcasts at most hourly (CDN-cached endpoint). */
+export async function refreshBroadcast(force = false) {
+  try {
+    const last = Number(localStorage.getItem(BC_AT) ?? 0);
+    if (!force && Date.now() - last < 3600_000) return;
+    localStorage.setItem(BC_AT, String(Date.now()));
+    const r = await fetch("/api/broadcast");
+    if (!r.ok) return;
+    const { messages } = (await r.json()) as { messages?: { id: string; at: string; title: string; body: string }[] };
+    localStorage.setItem(BC_CACHE, JSON.stringify((messages ?? []).slice(-20)));
+    window.dispatchEvent(new Event(EVT));
+  } catch {
+    /* offline */
+  }
+}
+function broadcastSystem(): Omit<InboxMessage, "read">[] {
+  try {
+    const l = JSON.parse(localStorage.getItem(BC_CACHE) ?? "[]") as { id: string; at: string; title: string; body: string }[];
+    return l.map((m) => ({ id: `bc:${m.id}`, at: m.at, kind: "system" as const, title: m.title, body: m.body }));
+  } catch {
+    return [];
+  }
+}
+
 /** Merge system notifications (once each) and return all messages, oldest first. */
 export function loadInbox(): InboxMessage[] {
   const list = read();
@@ -79,7 +105,7 @@ export function loadInbox(): InboxMessage[] {
   } catch {
     seen = [];
   }
-  const fresh = SYSTEM_MESSAGES.filter((m) => !seen.includes(m.id));
+  const fresh = [...SYSTEM_MESSAGES, ...broadcastSystem()].filter((m) => !seen.includes(m.id));
   if (fresh.length) {
     try {
       localStorage.setItem(SEEN_SYS, JSON.stringify([...seen, ...fresh.map((m) => m.id)]));

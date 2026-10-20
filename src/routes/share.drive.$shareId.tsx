@@ -1,3 +1,4 @@
+import { track } from "@/lib/analytics/track";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { createSeoMetadata, driveSongSocialMeta } from "@/lib/seo";
@@ -33,6 +34,9 @@ export const Route = createFileRoute("/share/drive/$shareId")({
 });
 
 function ShareDriveSongPage() {
+  useEffect(() => {
+    track("share_visit", { kind: "drive-song" });
+  }, []);
   const { shareId } = Route.useParams();
   const payload = useMemo(() => decodeJourneyShare(decodeURIComponent(shareId)), [shareId]);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);

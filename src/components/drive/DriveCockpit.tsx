@@ -55,6 +55,7 @@ import { cn } from "@/lib/utils";
 import { ModeTachometer } from "@/components/drive/ModeTachometer";
 import { FeedbackSheet } from "@/components/feedback/FeedbackSheet";
 import { useInboxUnread } from "@/lib/inbox/inbox";
+import { track } from "@/lib/analytics/track";
 import { resolveTachThemeId, type TachThemeId } from "@/lib/drive/tach-theme";
 
 const COCKPIT_SELECT_TRIGGER =
@@ -340,6 +341,20 @@ export function DriveCockpit({
       modeId: activeMoodId,
       speedUnit,
     });
+  useEffect(() => {
+    const started = Date.now();
+    const id = profile.id;
+    return () => track("sound_listen", { profileId: id, ms: Date.now() - started });
+  }, [profile.id]);
+  const firstMood = useRef(true);
+  useEffect(() => {
+    if (firstMood.current) {
+      firstMood.current = false;
+      return;
+    }
+    track("shift_mode", { mode: String(activeMoodId), profileId: profile.id });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeMoodId]);
   useEffect(() => {
     getSession().setSmilesHint({ raceMode: tachThemeId === "race", redlineRpm: redline });
   }, [tachThemeId, redline]);

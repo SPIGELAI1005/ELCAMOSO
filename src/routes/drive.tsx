@@ -31,6 +31,7 @@ import { formatSpeed, t } from "@/lib/i18n";
 import { driveCoachFn } from "@/lib/cloud/server-fns";
 import { getProfile, type SoundProfile } from "@/lib/sound/profiles";
 import { PostDriveExperience } from "@/components/journey/PostDriveExperience";
+import { track } from "@/lib/analytics/track";
 import { SmilesModal } from "@/components/smiles/SmilesModal";
 import { addDriveMessage, deliverPendingDrive, isSmilesWorthy } from "@/lib/inbox/inbox";
 import type { JourneySummary } from "@/lib/journey/types";
@@ -268,6 +269,11 @@ function DriveScreen() {
     const finished = getSession().getLastJourney();
     if (finished && finished.id === snap.lastJourneyId) {
       addDriveMessage(finished);
+      track("drive_end", {
+        km: Math.round((finished.distanceM ?? 0) / 100) / 10,
+        durationMs: finished.durationMs,
+        profileId: finished.profileId,
+      });
       if (isSmilesWorthy(finished)) window.setTimeout(() => setSmilesJourney(finished), 1000);
     }
     if (aggregates && shouldPlayLiveAudio(before.driveOutputMode ?? "live")) {
