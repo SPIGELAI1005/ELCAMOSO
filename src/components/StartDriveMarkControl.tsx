@@ -3,8 +3,8 @@ import { ElcamosoMark, type HeroWavePhase } from "@/components/ElcamosoLogo";
 import { getSession } from "@/lib/drive/session";
 import { cn } from "@/lib/utils";
 
-/** One ignition pulse at 1.4s (matches CSS), then navigate. */
-const DEFAULT_IGNITE_MS = 1400;
+/** Short ignition (rays ~560 ms keep playing), then start. */
+const DEFAULT_IGNITE_MS = 450;
 const DEFAULT_IGNITE_REDUCED_MS = 280;
 
 const MARK_CLASS = "h-[8.57rem] w-auto sm:h-[10.1rem] lg:h-[12.85rem] xl:h-[14.35rem]";
@@ -73,7 +73,7 @@ export function StartDriveMarkControl({
       aria-label="Start Drive"
       aria-busy={igniting || undefined}
       className={cn(
-        "group relative z-10 block aspect-[92/72] shrink-0 overflow-visible",
+        "start-drive-press group relative z-10 block aspect-[92/72] shrink-0 overflow-visible",
         "cursor-pointer border-0 bg-transparent p-0 outline-none",
         "focus-visible:rounded-full focus-visible:ring-2 focus-visible:ring-foreground/45 focus-visible:ring-offset-4 focus-visible:ring-offset-background",
         igniting || !faceReady ? "pointer-events-none" : "hover:opacity-95",
@@ -100,6 +100,10 @@ export function StartDriveMarkControl({
           height: `${(30.6 / 72) * 100}%`,
         }}
       >
+        <span
+          aria-hidden="true"
+          className={cn("start-drive-rays", igniting && !reducedMotion && "start-drive-rays--on")}
+        />
         <span
           className={cn(
             "engine-start-button flex size-full flex-col items-center justify-center rounded-full",

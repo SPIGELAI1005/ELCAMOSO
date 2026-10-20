@@ -820,13 +820,94 @@
   }
 }
 
+/* Face no longer moves on its own (looked like a text-only glitch); the whole button presses. */
 @keyframes engine-start-ignite-press {
   0%,
   100% {
-    transform: translateY(4px) scale(0.93);
+    transform: none;
   }
-  50% {
-    transform: translateY(3px) scale(0.95);
+}
+
+.start-drive-press {
+  transition: transform 140ms cubic-bezier(0.33, 1, 0.68, 1);
+  will-change: transform;
+}
+.start-drive-press:active,
+.start-drive-press[aria-busy="true"] {
+  transform: translateY(1px) scale(0.98);
+}
+
+/* Ignition rays: red glow ring + soft radial rays from the face edge (transform/opacity only). */
+.start-drive-rays {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: 9999px;
+}
+.start-drive-rays::before,
+.start-drive-rays::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  opacity: 0;
+}
+.start-drive-rays::before {
+  box-shadow:
+    0 0 0 2px rgba(229, 57, 53, 0.85),
+    0 0 18px 4px rgba(229, 57, 53, 0.45);
+}
+.start-drive-rays::after {
+  inset: -45%;
+  background: repeating-conic-gradient(
+    from 0deg,
+    rgba(229, 57, 53, 0.55) 0deg 4deg,
+    transparent 4deg 22deg
+  );
+  -webkit-mask: radial-gradient(circle, transparent 34%, #000 38%, transparent 70%);
+  mask: radial-gradient(circle, transparent 34%, #000 38%, transparent 70%);
+}
+.start-drive-rays--on::before {
+  animation: start-drive-ring 560ms cubic-bezier(0.2, 0.7, 0.3, 1) 1 both;
+}
+.start-drive-rays--on::after {
+  animation: start-drive-burst 560ms cubic-bezier(0.2, 0.7, 0.3, 1) 1 both;
+}
+@keyframes start-drive-ring {
+  0% {
+    opacity: 0.95;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.55);
+  }
+}
+@keyframes start-drive-burst {
+  0% {
+    opacity: 0;
+    transform: scale(0.7) rotate(0deg);
+  }
+  30% {
+    opacity: 0.9;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.25) rotate(12deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .start-drive-press,
+  .start-drive-press:active,
+  .start-drive-press[aria-busy="true"] {
+    transition: none;
+    transform: none;
+  }
+  .start-drive-rays--on::before,
+  .start-drive-rays--on::after {
+    animation: none;
+    opacity: 0;
   }
 }
 
