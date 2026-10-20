@@ -10,6 +10,7 @@ import type { RecordedCredit } from "@/lib/sound/realism/v2/recorded-loops";
 
 const BASE = "/sample-packs/recorded/beds-v1";
 const HORSE_LEVEL = 0.55;
+const TRACTOR_LEVEL = 0.4;
 const SR = 48000;
 /** AAC priming; decoders that do not apply the edit list keep it at the head. */
 const AAC_DELAY = 1024;
@@ -78,6 +79,27 @@ export const RECORDED_BEDS: Record<string, RecordedBedConfig> = {
     duck: 0.7,
     highpassHz: 60,
     lowpassHz: 12000,
+  },
+  "wiesn-tractor": {
+    profileId: "wiesn-tractor",
+    url: `${BASE}/tractor.m4a`,
+    sourceSamples: 344255,
+    driver: "rpm",
+    // Porsche Allgaier 1957 single-cylinder (Freesound 157839): idle ~846 rpm and a ~1,940 rpm
+    // pull, mapped to the tractor model's 280 / 650 rpm scale; loops are whole putt cycles.
+    loops: [
+      { start: 0.1, end: 3.50558, ref: 280 },
+      { start: 3.60558, end: 7.07198, ref: 650 },
+    ],
+    rateExponent: 1,
+    minRate: 0.7,
+    maxRate: 1.4,
+    level: TRACTOR_LEVEL,
+    presence: [[0, 1]],
+    throttleLift: 0,
+    duck: 0.75,
+    highpassHz: 30,
+    lowpassHz: 9000,
   },
 };
 
@@ -281,5 +303,15 @@ export const RECORDED_BED_CREDITS: RecordedCredit[] = [
     usedIn: "Horse Gallop (trot-pace bed)",
     attribution:
       "FEETHors-Samsung Galaxy Smartphone_Horse Galloping, Coconut Shells, Looped 03_Nicholas Judy_TDC by designerschoice (Freesound #807858), CC BY 4.0 (creativecommons.org/licenses/by/4.0), edited (mono, filtered, looped).",
+  },
+  {
+    title: "Porsche Allgaier 1957 12 hp (Freesound #157839)",
+    author: "viertelnachvier",
+    licence: "CC BY 3.0",
+    licenceUrl: "https://creativecommons.org/licenses/by/3.0/",
+    sourceUrl: "https://freesound.org/s/157839/",
+    usedIn: "Wiesn Tractor (idle and pull loops)",
+    attribution:
+      "Porsche Allgaier 1957 12 hp by viertelnachvier (Freesound #157839), CC BY 3.0 (creativecommons.org/licenses/by/3.0), edited (trimmed, filtered, looped, re-pitched).",
   },
 ];
