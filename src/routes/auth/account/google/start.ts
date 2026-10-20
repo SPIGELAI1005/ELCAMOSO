@@ -21,7 +21,7 @@ export const Route = createFileRoute("/auth/account/google/start")({
         const origin = url.origin;
 
         const { beginGoogleSignIn } = await import("@/lib/account/auth-service");
-        const started = beginGoogleSignIn(returnTo);
+        const started = beginGoogleSignIn(returnTo, origin);
 
         if (!started.available || !started.authorizeUrl || !started.pendingCookie) {
           const target = new URL("/drive", origin);

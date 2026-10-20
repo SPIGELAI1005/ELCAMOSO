@@ -12,7 +12,11 @@ export type EntitlementGrantKind =
   | "purchased_profile"
   | "grandfathered_profile"
   | "reward_profile"
-  | "reward_entitlement";
+  | "reward_entitlement"
+  | "admin_profile"
+  | "admin_entitlement"
+  | "promo_profile"
+  | "promo_entitlement";
 
 export interface EntitlementGrant {
   id: string;

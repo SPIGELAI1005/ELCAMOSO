@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 
+import { AdminUsersPanel } from "@/components/admin/AdminUsersPanel";
 import { AdminAnalyticsPanel } from "@/components/admin/AdminAnalyticsPanel";
 import { AdminFeedbackPanel } from "@/components/feedback/AdminFeedbackPanel";
 import { getAdminOverviewFn, type AdminOverviewResult } from "@/lib/admin/server-fns";
@@ -59,6 +60,7 @@ function AdminPage() {
         <Stat label="Subscriptions" value={o.subscriptionCount} />
         <Stat label="Active sessions" value={o.activeSessionCount} />
       </section>
+      <AdminUsersPanel />
       <AdminAnalyticsPanel />
       <AdminFeedbackPanel />
       <section className="mt-8">

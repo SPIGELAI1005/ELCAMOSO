@@ -50,6 +50,13 @@
       "when": 1792000000000,
       "tag": "0006_admin_foundations",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1793000000000,
+      "tag": "0007_accounts_promos_rls",
+      "breakpoints": true
     }
   ]
 }

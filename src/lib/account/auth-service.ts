@@ -23,7 +23,8 @@ import {
 } from "@/lib/account/google-oauth";
 import { mintAccountSessionTicket, verifyAccountSessionTicket } from "@/lib/account/session-ticket";
 import { sanitizeReturnTo } from "@/lib/account/return-to";
-import { isEmailOtpConfigured } from "@/lib/account/supabase-config";
+import { isEmailOtpConfigured, readSupabaseAuthConfig } from "@/lib/account/supabase-config";
+import { buildSupabaseGoogleAuthorizeUrl, exchangeSupabasePkceCode } from "@/lib/account/supabase-google";
 import {
   assertEmailOtpSendAllowed,
   assertEmailOtpVerifyAllowed,
@@ -324,10 +325,20 @@ export async function verifyAccountMagicLink(
 }
 
 export function getGoogleSignInAvailability(): { available: boolean } {
-  return { available: isGoogleOAuthConfigured() };
+  return { available: isGoogleOAuthConfigured() || readSupabaseAuthConfig() != null };
 }
 
-export function beginGoogleSignIn(returnTo: string): BeginGoogleSignInResult {
+export function beginGoogleSignIn(returnTo: string, origin?: string): BeginGoogleSignInResult {
+  // Fallback: Google via Supabase Auth (provider configured in the Supabase dashboard).
+  if (!isGoogleOAuthConfigured() && readSupabaseAuthConfig() && origin) {
+    const { state, codeChallenge, pending } = createGoogleOAuthState(sanitizeReturnTo(returnTo));
+    pending.provider = "supabase";
+    return {
+      available: true,
+      authorizeUrl: buildSupabaseGoogleAuthorizeUrl(origin, state, codeChallenge),
+      pendingCookie: mintGoogleOAuthPendingCookie(pending),
+    };
+  }
   if (!isGoogleOAuthConfigured()) {
     return {
       available: false,
@@ -358,6 +369,12 @@ export async function completeGoogleSignIn(
   }
   const pending = consumeGoogleOAuthState(state, now, pendingCookie);
   if (!pending) throw new Error("Google sign-in expired. Try again.");
+
+  if (pending.provider === "supabase") {
+    const email = await exchangeSupabasePkceCode(code, pending.codeVerifier);
+    await syncDurableUserIdForEmail(email);
+    return { ...createSessionForEmail(email, now), returnTo: pending.returnTo };
+  }
 
   const tokens = await exchangeGoogleAuthorizationCode(code, pending.codeVerifier);
   // Google access/refresh tokens are discarded after ID token verification - never stored or returned.

@@ -62,9 +62,12 @@ import { Route as LegalPrivacyRouteImport } from './routes/legal/privacy'
 import { Route as LegalTermsRouteImport } from './routes/legal/terms'
 import { Route as PairTokenRouteImport } from './routes/pair_.$token'
 import { Route as UpgradeTokenRouteImport } from './routes/upgrade.$token'
+import { Route as ApiAccountLinkDeviceRouteImport } from './routes/api/account/link-device'
+import { Route as ApiAccountPromoRouteImport } from './routes/api/account/promo'
 import { Route as ApiAdminAnalyticsRouteImport } from './routes/api/admin/analytics'
 import { Route as ApiAdminFeedbackRouteImport } from './routes/api/admin/feedback'
 import { Route as ApiAdminMeRouteImport } from './routes/api/admin/me'
+import { Route as ApiAdminUsersRouteImport } from './routes/api/admin/users'
 import { Route as ApiBillingCheckoutRouteImport } from './routes/api/billing/checkout'
 import { Route as ApiBillingPortalRouteImport } from './routes/api/billing/portal'
 import { Route as ApiSoundAssetsDeliveryRouteImport } from './routes/api/sound-assets/delivery'
@@ -342,6 +345,16 @@ const UpgradeTokenRoute = UpgradeTokenRouteImport.update({
   path: '/upgrade/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAccountLinkDeviceRoute = ApiAccountLinkDeviceRouteImport.update({
+  id: '/api/account/link-device',
+  path: '/api/account/link-device',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAccountPromoRoute = ApiAccountPromoRouteImport.update({
+  id: '/api/account/promo',
+  path: '/api/account/promo',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAdminAnalyticsRoute = ApiAdminAnalyticsRouteImport.update({
   id: '/api/admin/analytics',
   path: '/api/admin/analytics',
@@ -355,6 +368,11 @@ const ApiAdminFeedbackRoute = ApiAdminFeedbackRouteImport.update({
 const ApiAdminMeRoute = ApiAdminMeRouteImport.update({
   id: '/api/admin/me',
   path: '/api/admin/me',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAdminUsersRoute = ApiAdminUsersRouteImport.update({
+  id: '/api/admin/users',
+  path: '/api/admin/users',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiBillingCheckoutRoute = ApiBillingCheckoutRouteImport.update({
@@ -468,9 +486,12 @@ export interface FileRoutesByFullPath {
   '/pair/$token': typeof PairTokenRoute
   '/upgrade/$token': typeof UpgradeTokenRoute
   '/legal/': typeof LegalIndexRoute
+  '/api/account/link-device': typeof ApiAccountLinkDeviceRoute
+  '/api/account/promo': typeof ApiAccountPromoRoute
   '/api/admin/analytics': typeof ApiAdminAnalyticsRoute
   '/api/admin/feedback': typeof ApiAdminFeedbackRoute
   '/api/admin/me': typeof ApiAdminMeRoute
+  '/api/admin/users': typeof ApiAdminUsersRoute
   '/api/billing/checkout': typeof ApiBillingCheckoutRoute
   '/api/billing/portal': typeof ApiBillingPortalRoute
   '/api/sound-assets/delivery': typeof ApiSoundAssetsDeliveryRoute
@@ -536,9 +557,12 @@ export interface FileRoutesByTo {
   '/pair/$token': typeof PairTokenRoute
   '/upgrade/$token': typeof UpgradeTokenRoute
   '/legal': typeof LegalIndexRoute
+  '/api/account/link-device': typeof ApiAccountLinkDeviceRoute
+  '/api/account/promo': typeof ApiAccountPromoRoute
   '/api/admin/analytics': typeof ApiAdminAnalyticsRoute
   '/api/admin/feedback': typeof ApiAdminFeedbackRoute
   '/api/admin/me': typeof ApiAdminMeRoute
+  '/api/admin/users': typeof ApiAdminUsersRoute
   '/api/billing/checkout': typeof ApiBillingCheckoutRoute
   '/api/billing/portal': typeof ApiBillingPortalRoute
   '/api/sound-assets/delivery': typeof ApiSoundAssetsDeliveryRoute
@@ -606,9 +630,12 @@ export interface FileRoutesById {
   '/pair_/$token': typeof PairTokenRoute
   '/upgrade/$token': typeof UpgradeTokenRoute
   '/legal/': typeof LegalIndexRoute
+  '/api/account/link-device': typeof ApiAccountLinkDeviceRoute
+  '/api/account/promo': typeof ApiAccountPromoRoute
   '/api/admin/analytics': typeof ApiAdminAnalyticsRoute
   '/api/admin/feedback': typeof ApiAdminFeedbackRoute
   '/api/admin/me': typeof ApiAdminMeRoute
+  '/api/admin/users': typeof ApiAdminUsersRoute
   '/api/billing/checkout': typeof ApiBillingCheckoutRoute
   '/api/billing/portal': typeof ApiBillingPortalRoute
   '/api/sound-assets/delivery': typeof ApiSoundAssetsDeliveryRoute
@@ -677,9 +704,12 @@ export interface FileRouteTypes {
     | '/pair/$token'
     | '/upgrade/$token'
     | '/legal/'
+    | '/api/account/link-device'
+    | '/api/account/promo'
     | '/api/admin/analytics'
     | '/api/admin/feedback'
     | '/api/admin/me'
+    | '/api/admin/users'
     | '/api/billing/checkout'
     | '/api/billing/portal'
     | '/api/sound-assets/delivery'
@@ -745,9 +775,12 @@ export interface FileRouteTypes {
     | '/pair/$token'
     | '/upgrade/$token'
     | '/legal'
+    | '/api/account/link-device'
+    | '/api/account/promo'
     | '/api/admin/analytics'
     | '/api/admin/feedback'
     | '/api/admin/me'
+    | '/api/admin/users'
     | '/api/billing/checkout'
     | '/api/billing/portal'
     | '/api/sound-assets/delivery'
@@ -814,9 +847,12 @@ export interface FileRouteTypes {
     | '/pair_/$token'
     | '/upgrade/$token'
     | '/legal/'
+    | '/api/account/link-device'
+    | '/api/account/promo'
     | '/api/admin/analytics'
     | '/api/admin/feedback'
     | '/api/admin/me'
+    | '/api/admin/users'
     | '/api/billing/checkout'
     | '/api/billing/portal'
     | '/api/sound-assets/delivery'
@@ -870,9 +906,12 @@ export interface RootRouteChildren {
   JourneysJourneyIdRoute: typeof JourneysJourneyIdRoute
   PairTokenRoute: typeof PairTokenRoute
   UpgradeTokenRoute: typeof UpgradeTokenRoute
+  ApiAccountLinkDeviceRoute: typeof ApiAccountLinkDeviceRoute
+  ApiAccountPromoRoute: typeof ApiAccountPromoRoute
   ApiAdminAnalyticsRoute: typeof ApiAdminAnalyticsRoute
   ApiAdminFeedbackRoute: typeof ApiAdminFeedbackRoute
   ApiAdminMeRoute: typeof ApiAdminMeRoute
+  ApiAdminUsersRoute: typeof ApiAdminUsersRoute
   ApiBillingCheckoutRoute: typeof ApiBillingCheckoutRoute
   ApiBillingPortalRoute: typeof ApiBillingPortalRoute
   ApiSoundAssetsDeliveryRoute: typeof ApiSoundAssetsDeliveryRoute
@@ -1257,6 +1296,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof UpgradeTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/account/link-device': {
+      id: '/api/account/link-device'
+      path: '/api/account/link-device'
+      fullPath: '/api/account/link-device'
+      preLoaderRoute: typeof ApiAccountLinkDeviceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/account/promo': {
+      id: '/api/account/promo'
+      path: '/api/account/promo'
+      fullPath: '/api/account/promo'
+      preLoaderRoute: typeof ApiAccountPromoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/admin/analytics': {
       id: '/api/admin/analytics'
       path: '/api/admin/analytics'
@@ -1276,6 +1329,13 @@ declare module '@tanstack/react-router' {
       path: '/api/admin/me'
       fullPath: '/api/admin/me'
       preLoaderRoute: typeof ApiAdminMeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/admin/users': {
+      id: '/api/admin/users'
+      path: '/api/admin/users'
+      fullPath: '/api/admin/users'
+      preLoaderRoute: typeof ApiAdminUsersRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/billing/checkout': {
@@ -1464,9 +1524,12 @@ const rootRouteChildren: RootRouteChildren = {
   JourneysJourneyIdRoute: JourneysJourneyIdRoute,
   PairTokenRoute: PairTokenRoute,
   UpgradeTokenRoute: UpgradeTokenRoute,
+  ApiAccountLinkDeviceRoute: ApiAccountLinkDeviceRoute,
+  ApiAccountPromoRoute: ApiAccountPromoRoute,
   ApiAdminAnalyticsRoute: ApiAdminAnalyticsRoute,
   ApiAdminFeedbackRoute: ApiAdminFeedbackRoute,
   ApiAdminMeRoute: ApiAdminMeRoute,
+  ApiAdminUsersRoute: ApiAdminUsersRoute,
   ApiBillingCheckoutRoute: ApiBillingCheckoutRoute,
   ApiBillingPortalRoute: ApiBillingPortalRoute,
   ApiSoundAssetsDeliveryRoute: ApiSoundAssetsDeliveryRoute,

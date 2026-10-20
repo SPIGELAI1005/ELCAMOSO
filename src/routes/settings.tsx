@@ -799,7 +799,7 @@ function PrivacyWorkspace({
     <div className="space-y-12">
       <RowToggle
         title="Usage insights"
-        hint="Optional counts with an anonymous install id. No Motion, GPS or audio."
+        hint="Optional counts with an anonymous install id (linked to your account only if you sign in). No Motion, GPS or audio."
         checked={settings.analyticsEnabled}
         onChange={(v) => update({ analyticsEnabled: v })}
         label="Usage insights"

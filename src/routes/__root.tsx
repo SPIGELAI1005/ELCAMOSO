@@ -15,6 +15,7 @@ import { MiniPlayer } from "@/components/MiniPlayer";
 import { deliverPendingDrive, refreshBroadcast } from "@/lib/inbox/inbox";
 import { installAnalytics } from "@/lib/analytics/track";
 import { SessionBridge } from "@/components/SessionBridge";
+import { DeviceLinkBridge } from "@/components/account/DeviceLinkBridge";
 import { VehicleTelemetryBridge } from "@/components/VehicleTelemetryBridge";
 import { InstallPrompt } from "@/components/InstallPrompt";
 import { TelemetryBridge } from "@/components/TelemetryBridge";
@@ -183,6 +184,7 @@ function RootComponent() {
             data-hydrated={hydrated ? "true" : "false"}
           >
             <SessionBridge />
+            <DeviceLinkBridge />
             <EntitlementEnforcer />
             <DynamicDriveSessionBridge />
             <DynamicDriveTrialBridge />

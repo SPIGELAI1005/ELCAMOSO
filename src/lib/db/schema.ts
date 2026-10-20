@@ -185,6 +185,10 @@ export const entitlementGrantKindEnum = pgEnum("entitlement_grant_kind", [
   "grandfathered_profile",
   "reward_profile",
   "reward_entitlement",
+  "admin_profile",
+  "admin_entitlement",
+  "promo_profile",
+  "promo_entitlement",
 ]);
 
 export const entitlementGrants = pgTable(
@@ -214,6 +218,45 @@ export const entitlementGrants = pgTable(
       .on(table.userId, table.kind, table.entitlement)
       .where(sql`${table.entitlement} is not null`),
   ],
+);
+
+/** Anonymous install ids (elc-…) linked to a signed-in account. */
+export const accountDevices = pgTable("account_devices", {
+  installId: text("install_id").primaryKey(),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  linkedAt: timestamp("linked_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+  lastSeenAt: timestamp("last_seen_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+});
+
+export const promoCodes = pgTable("promo_codes", {
+  code: text("code").primaryKey(),
+  profileIds: text("profile_ids").array().notNull().default(sql`'{}'::text[]`),
+  drivePlusDays: integer("drive_plus_days"),
+  /** Days the profile grants last; null = permanent. */
+  grantDays: integer("grant_days"),
+  maxRedemptions: integer("max_redemptions"),
+  redemptions: integer("redemptions").notNull().default(0),
+  expiresAt: timestamp("expires_at", { withTimezone: true, mode: "date" }),
+  active: boolean("active").notNull().default(true),
+  note: text("note"),
+  createdBy: text("created_by"),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+});
+
+export const promoRedemptions = pgTable(
+  "promo_redemptions",
+  {
+    code: text("code")
+      .notNull()
+      .references(() => promoCodes.code, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    redeemedAt: timestamp("redeemed_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+  },
+  (table) => [primaryKey({ columns: [table.code, table.userId] })],
 );
 
 export const usersRelations = relations(users, ({ many }) => ({

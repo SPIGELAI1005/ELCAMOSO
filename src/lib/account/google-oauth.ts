@@ -12,6 +12,8 @@ export interface PendingGoogleOAuthState {
   createdAt: number;
   codeVerifier: string;
   nonce: string;
+  /** "supabase" when Google runs through Supabase Auth instead of a direct client. */
+  provider?: "google" | "supabase";
 }
 
 export interface GoogleTokenResponse {

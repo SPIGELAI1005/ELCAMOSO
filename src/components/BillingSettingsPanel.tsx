@@ -1,3 +1,4 @@
+import { PromoCodeForm } from "@/components/account/PromoCodeForm";
 import { Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 
@@ -120,6 +121,7 @@ export function BillingSettingsPanel({ billingFlash = null }: BillingSettingsPan
             </button>
           </div>
         )}
+        {isAuthenticated && accountEmail ? <PromoCodeForm /> : null}
       </section>
 
       <section className="rounded-2xl border border-border/60 bg-card/40 p-4">
