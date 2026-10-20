@@ -1,6 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import { feedbackConfigured, submitFeedback } from "@/lib/feedback/feedback-store.server";
+import {
+  feedbackAuthSource,
+  feedbackConfigured,
+  submitFeedback,
+} from "@/lib/feedback/feedback-store.server";
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {
@@ -11,7 +15,7 @@ const json = (body: unknown, status = 200) =>
 export const Route = createFileRoute("/api/feedback")({
   server: {
     handlers: {
-      GET: async () => json({ available: feedbackConfigured() }),
+      GET: async () => json({ available: feedbackConfigured(), auth: feedbackAuthSource() }),
       POST: async ({ request }) => {
         try {
           const r = await submitFeedback(request);

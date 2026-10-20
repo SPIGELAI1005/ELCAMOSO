@@ -18,8 +18,11 @@ export function rateLimited(key: string, now = Date.now()): boolean {
   return false;
 }
 
-const token = () => process.env["BLOB_READ_WRITE_TOKEN"]?.trim();
-export const feedbackConfigured = () => Boolean(token());
+import { blobAccess, blobConfigured, resolveBlobAuth } from "@/lib/blob/blob-env.server";
+
+const auth = () => resolveBlobAuth().opts;
+export const feedbackConfigured = () => blobConfigured();
+export const feedbackAuthSource = () => resolveBlobAuth().source;
 
 export async function submitFeedback(request: Request) {
   if (!feedbackConfigured())
@@ -51,10 +54,10 @@ export async function submitFeedback(request: Request) {
   };
   const { put } = await import("@vercel/blob");
   await put(`${PREFIX}${now.toISOString().slice(0, 10)}/${id}.json`, JSON.stringify(record), {
-    access: "public",
+    access: blobAccess(),
     addRandomSuffix: true,
     contentType: "application/json",
-    token: token() ?? "",
+    ...auth(),
   });
   return { status: 200, body: { ok: true, id, at: record.at } };
 }
@@ -64,7 +67,12 @@ export async function listFeedback(limit = 200) {
   const blobs: { url: string; pathname: string; uploadedAt: Date }[] = [];
   let cursor: string | undefined;
   do {
-    const res = await list({ prefix: PREFIX, ...(cursor ? { cursor } : {}), limit: 1000, token: token() ?? "" });
+    const res = await list({
+      prefix: PREFIX,
+      ...(cursor ? { cursor } : {}),
+      limit: 1000,
+      ...auth(),
+    });
     blobs.push(...res.blobs);
     cursor = res.hasMore ? res.cursor : undefined;
   } while (cursor && blobs.length < 5000);
@@ -72,8 +80,10 @@ export async function listFeedback(limit = 200) {
   const items = await Promise.all(
     blobs.slice(0, limit).map(async (b) => {
       try {
-        const r = await fetch(b.url, { cache: "no-store" });
-        return { ...((await r.json()) as FeedbackRecord), blobUrl: b.url };
+        const { get } = await import("@vercel/blob");
+        const g = await get(b.url, { access: blobAccess(), useCache: false, ...auth() });
+        if (!g || !g.stream) return null;
+        return { ...((await new Response(g.stream).json()) as FeedbackRecord), blobUrl: b.url };
       } catch {
         return null;
       }
@@ -86,5 +96,5 @@ export async function deleteFeedback(blobUrl: string) {
   if (!/^https:\/\/[a-z0-9.-]+\.blob\.vercel-storage\.com\/feedback\//i.test(blobUrl))
     throw new Error("Not a feedback blob");
   const { del } = await import("@vercel/blob");
-  await del(blobUrl, { token: token() ?? "" });
+  await del(blobUrl, { ...auth() });
 }

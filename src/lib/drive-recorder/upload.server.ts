@@ -1,7 +1,9 @@
 import { DRIVE_LOG_MAX_UPLOAD_BYTES, driveLogBlobPath } from "./recorder-core";
 
+import { blobAccess, blobConfigured, resolveBlobAuth } from "@/lib/blob/blob-env.server";
+
 export function driveLogUploadConfigured(env: NodeJS.ProcessEnv = process.env): boolean {
-  return Boolean(env["BLOB_READ_WRITE_TOKEN"]?.trim());
+  return blobConfigured(env);
 }
 
 export type DriveLogUploadResult =
@@ -54,10 +56,10 @@ export async function handleDriveLogUpload(
     });
   try {
     const res = await put(driveLogBlobPath(id, deps.now), body, {
-      access: "public",
+      access: blobAccess(env),
       addRandomSuffix: true,
       contentType: "application/gzip",
-      token: env["BLOB_READ_WRITE_TOKEN"],
+      ...resolveBlobAuth(env).opts,
     });
     return { ok: true, pathname: res.pathname, url: res.url, bytes: body.byteLength };
   } catch (error) {
