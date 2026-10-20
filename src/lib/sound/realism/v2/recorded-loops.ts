@@ -9,6 +9,7 @@
 
 export const RECORDED_LOOPS_VERSION = "v3";
 const BASE = `/sample-packs/recorded/${RECORDED_LOOPS_VERSION}`;
+const F1_LEVEL = 0.4;
 
 /** A steady stretch inside a source file with its measured RPM track (one value per 0.1 s). */
 export interface RecordedRegion {
@@ -242,6 +243,102 @@ const BIG_TWIN_REGIONS: RecordedRegion[] = [
   },
 ];
 
+/**
+ * F1 (f1-v10): eleven near pass-bys from a CC0 trackside recording (Freesound 150337, 2012
+ * Melbourne GP practice, 2.4 L V8s). RPM from the bank firing order (rpm / 30 Hz), 13k-19k,
+ * Doppler included. Used as a high-rpm texture band under the V10 synth, not at idle.
+ */
+const F1_PASSBY_REGIONS: RecordedRegion[] = [
+  {
+    start: 0.08,
+    end: 1.58,
+    rpm: [
+      18057, 16782, 16585, 16083, 15894, 15782, 15932, 15708, 15708, 16236, 16468, 16468, 16468,
+      16121,
+    ],
+  },
+  {
+    start: 1.66,
+    end: 3.16,
+    rpm: [
+      17845, 18314, 18576, 18664, 19020, 18930, 18314, 17635, 17061, 16545, 15894, 14983, 14359,
+      13761,
+    ],
+  },
+  {
+    start: 3.24,
+    end: 4.74,
+    rpm: [
+      18314, 18271, 18664, 18975, 19291, 19383, 19246, 18057, 16742, 16083, 15782, 15523, 15161,
+      15233,
+    ],
+  },
+  {
+    start: 4.82,
+    end: 6.32,
+    rpm: [
+      18708, 18708, 17719, 16742, 16121, 15671, 15341, 15233, 14983, 14807, 14737, 14702, 14668,
+      14737,
+    ],
+  },
+  {
+    start: 6.4,
+    end: 7.9,
+    rpm: [
+      15819, 15671, 15054, 14124, 13377, 13095, 13065, 13536, 13504, 13600, 13632, 13536, 13568,
+      13345,
+    ],
+  },
+  {
+    start: 7.98,
+    end: 9.48,
+    rpm: [
+      18532, 18620, 18445, 18445, 17971, 17677, 17428, 16351, 15597, 15125, 14842, 14702, 14461,
+      14224,
+    ],
+  },
+  {
+    start: 9.56,
+    end: 11.06,
+    rpm: [
+      18185, 18488, 18532, 18841, 18796, 18796, 18796, 18358, 17802, 16861, 15857, 15125, 14983,
+      14912,
+    ],
+  },
+  {
+    start: 11.14,
+    end: 12.64,
+    rpm: [
+      16313, 16313, 16429, 16429, 16390, 16351, 16045, 16007, 15819, 15708, 15745, 15819, 15487,
+      15018,
+    ],
+  },
+  {
+    start: 12.72,
+    end: 14.22,
+    rpm: [
+      17635, 17929, 18142, 18358, 18620, 18796, 18796, 18708, 18185, 17428, 16703, 16083, 15487,
+      14947,
+    ],
+  },
+  {
+    start: 14.3,
+    end: 15.8,
+    rpm: [
+      18271, 18488, 18576, 18358, 17971, 17971, 17469, 16045, 15450, 15450, 15054, 14877, 14842,
+      14807,
+    ],
+  },
+  {
+    start: 15.88,
+    end: 17.38,
+    rpm: [
+      18576, 17887, 17593, 17223, 17021, 16663, 16351, 16083, 16007, 15414, 15233, 15125, 15089,
+      15089,
+    ],
+  },
+];
+
 export interface RecordedHandover {
   rpmStart: number;
   rpmSpan: number;
@@ -251,6 +348,11 @@ export interface RecordedHandover {
   /** Where the rpmKeep texture fades out (default 4,400 rpm over 700 rpm, V8 tuning). */
   topRpm?: number;
   topSpan?: number;
+  /**
+   * High-rpm texture band (F1 pass-by material): weight = level × smoothstep from fromRpm to
+   * fullRpm, scaled 40-100 % by demand. Replaces the low-rpm hand-over curve when set.
+   */
+  band?: { fromRpm: number; fullRpm: number; level: number };
 }
 
 export const DEFAULT_HANDOVER: RecordedHandover = { rpmStart: 2400, rpmSpan: 900, accelKeep: 0.15 };
@@ -422,6 +524,35 @@ export const RECORDED_LOOP_BANKS: Record<string, RecordedLoopBank> = {
     },
     eq: BIG_TWIN_EQ,
   },
+  "f1-v10": {
+    personalityId: "f1-v10",
+    sources: [
+      {
+        id: "f1-passby",
+        url: `${BASE}/f1_passby_regions.m4a`,
+        regions: F1_PASSBY_REGIONS,
+        weight: 1,
+        minRate: 0.7,
+        maxRate: 1.3,
+      },
+    ],
+    level: F1_LEVEL,
+    // Screaming texture only on the way up: none below ~9k, full share from ~14k.
+    handover: {
+      rpmStart: 0,
+      rpmSpan: 1,
+      accelKeep: 1,
+      band: { fromRpm: 9000, fullRpm: 14000, level: 0.45 },
+    },
+    eq: {
+      lowShelfDb: 0,
+      midDb: 0,
+      midHz: 800,
+      highShelfDb: -2,
+      highShelfHz: 4000,
+      lowpassHz: 11000,
+    },
+  },
 };
 
 export function getRecordedLoopBank(personalityId: string): RecordedLoopBank | null {
@@ -445,6 +576,11 @@ export function recordedSampleWeight(
   aggression = 0,
   handover: RecordedHandover = DEFAULT_HANDOVER,
 ): number {
+  if (handover.band) {
+    const b = handover.band;
+    const ramp = smoothstep((rpm - b.fromRpm) / Math.max(1, b.fullRpm - b.fromRpm));
+    return b.level * ramp * (0.4 + 0.6 * Math.min(1, Math.max(0, demand) / 0.6));
+  }
   const rpmKeep = handover.rpmKeep ?? 0;
   const byRpm = 1 - (1 - rpmKeep) * smoothstep((rpm - handover.rpmStart) / handover.rpmSpan);
   const keep = handover.accelKeep;
@@ -643,5 +779,15 @@ export const RECORDED_LOOP_CREDITS: RecordedCredit[] = [
     usedIn: "Big Twin (idle and low cruise)",
     attribution:
       "\u201CMoto Harley Davidson Arrancando\u201D by Mariayolanda511 (Freesound #850565), CC0 1.0, edited (trimmed, filtered, granular).",
+  },
+  {
+    title: "F1practice3MelbGP2012DR066 (Freesound #150337)",
+    author: "Ears68",
+    licence: "CC0 1.0",
+    licenceUrl: "https://creativecommons.org/publicdomain/zero/1.0/",
+    sourceUrl: "https://freesound.org/s/150337/",
+    usedIn: "F1 (high-rpm pass-by texture)",
+    attribution:
+      "F1practice3MelbGP2012DR066 by Ears68 (Freesound #150337), CC0 1.0, edited (short pass-by clips, filtered, granular).",
   },
 ];

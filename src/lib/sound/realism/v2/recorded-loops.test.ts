@@ -119,3 +119,12 @@ describe("motorcycle recorded banks", () => {
     expect(getRecordedLoopBank("american-v8")!.handover.topRpm).toBeUndefined();
   });
 });
+
+describe("F1 pass-by band", () => {
+  it("adds texture only at high rpm", async () => {
+    const { getRecordedLoopBank, recordedSampleWeight } = await import("./recorded-loops");
+    const f1 = getRecordedLoopBank("f1-v10")!;
+    expect(recordedSampleWeight(4500, 0.1, 0, f1.handover)).toBe(0);
+    expect(recordedSampleWeight(16000, 1, 1, f1.handover)).toBeCloseTo(0.45, 2);
+  });
+});
