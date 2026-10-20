@@ -11,6 +11,7 @@ import type { RecordedCredit } from "@/lib/sound/realism/v2/recorded-loops";
 const BASE = "/sample-packs/recorded/beds-v1";
 const HORSE_LEVEL = 0.55;
 const TRACTOR_LEVEL = 0.4;
+const DRAGON_LEVEL = 0.12;
 const SR = 48000;
 /** AAC priming; decoders that do not apply the edit list keep it at the head. */
 const AAC_DELAY = 1024;
@@ -100,6 +101,28 @@ export const RECORDED_BEDS: Record<string, RecordedBedConfig> = {
     duck: 0.75,
     highpassHz: 30,
     lowpassHz: 9000,
+  },
+  dragon: {
+    profileId: "dragon",
+    url: `${BASE}/dragon.m4a`,
+    sourceSamples: 540000,
+    driver: "kmh",
+    // Wing beats (Freesound 735299) speed up gently with speed; a roar (651825) on hard throttle.
+    loops: [{ start: 0.1, end: 6.1, ref: 40 }],
+    rateExponent: 0.35,
+    minRate: 0.75,
+    maxRate: 1.35,
+    level: DRAGON_LEVEL,
+    presence: [
+      [0, 0.35],
+      [15, 0.8],
+      [60, 1],
+    ],
+    throttleLift: 0,
+    duck: 0.4,
+    highpassHz: 40,
+    lowpassHz: 14000,
+    oneShots: [{ start: 6.2, end: 11.15, level: 0.9, cooldown: 14, minKmh: 0 }],
   },
 };
 
@@ -313,5 +336,25 @@ export const RECORDED_BED_CREDITS: RecordedCredit[] = [
     usedIn: "Wiesn Tractor (idle and pull loops)",
     attribution:
       "Porsche Allgaier 1957 12 hp by viertelnachvier (Freesound #157839), CC BY 3.0 (creativecommons.org/licenses/by/3.0), edited (trimmed, filtered, looped, re-pitched).",
+  },
+  {
+    title: "Dragon-Wings-3 (Freesound #735299)",
+    author: "BenignChaos",
+    licence: "CC BY 4.0",
+    licenceUrl: "https://creativecommons.org/licenses/by/4.0/",
+    sourceUrl: "https://freesound.org/s/735299/",
+    usedIn: "Dragon (wing-beat bed)",
+    attribution:
+      "Dragon-Wings-3 by BenignChaos (Freesound #735299), CC BY 4.0 (creativecommons.org/licenses/by/4.0), edited (mono, filtered, looped).",
+  },
+  {
+    title: "Dragon roar 7 (Freesound #651825)",
+    author: "AMWD_Mortsel-Edegem-Kontich (made by Xander Bruyninckx)",
+    licence: "CC BY 4.0",
+    licenceUrl: "https://creativecommons.org/licenses/by/4.0/",
+    sourceUrl: "https://freesound.org/s/651825/",
+    usedIn: "Dragon (roar on hard throttle)",
+    attribution:
+      "Dragon roar 7 by AMWD_Mortsel-Edegem-Kontich / Xander Bruyninckx (Freesound #651825), credited under CC BY 4.0, edited (trimmed, filtered).",
   },
 ];
