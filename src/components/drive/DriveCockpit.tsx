@@ -836,24 +836,27 @@ export function DriveCockpit({
         aria-label="Send feedback"
         title="Feedback"
         onClick={() => setFeedbackOpen(true)}
-        className="fixed right-[max(0.75rem,env(safe-area-inset-right))] bottom-[calc(env(safe-area-inset-bottom)+var(--fab-bottom,13rem))] lg:[--fab-bottom:1.5rem] z-40 flex size-12 items-center justify-center rounded-full border border-white/15 bg-white/[0.06] text-foreground/80 shadow-[0_0_18px_rgba(229,57,53,0.18)] backdrop-blur-md transition-colors hover:border-[#e53935]/60 hover:text-foreground"
+        className="fixed right-[max(0.75rem,env(safe-area-inset-right))] bottom-[calc(env(safe-area-inset-bottom)+var(--fab-bottom,13rem))] lg:[--fab-bottom:1.5rem] z-40 flex h-12 w-[4.75rem] items-center justify-center rounded-full border border-white/15 bg-white/[0.06] text-foreground/80 shadow-[0_0_18px_rgba(229,57,53,0.18)] backdrop-blur-md transition-colors hover:border-[#e53935]/60 hover:text-foreground"
       >
         <svg
-          viewBox="0 0 24 24"
-          className="size-5"
+          viewBox="-2 0 94 72"
           fill="none"
+          aria-hidden="true"
+          className="h-7 w-auto overflow-visible"
           stroke="currentColor"
-          strokeWidth="1.6"
           strokeLinecap="round"
           strokeLinejoin="round"
-          aria-hidden="true"
         >
-          <path d="M21 12a8 8 0 0 1-11.6 7.1L4 20.5l1.4-4.6A8 8 0 1 1 21 12Z" />
-          <circle cx="8.5" cy="12" r=".6" fill="currentColor" />
-          <circle cx="12" cy="12" r=".6" fill="currentColor" />
-          <circle cx="15.5" cy="12" r=".6" fill="currentColor" />
+          {/* "O" of the ELCAMOSO mark as a chat bubble (gap + tail bottom-left). */}
+          <path d="M9.6 49.4 A17 17 0 1 1 15.5 52.4" strokeWidth="3.4" />
+          <path d="M15.5 52.4 L4 57 L9.6 49.4" strokeWidth="3.4" />
+          <circle cx="13.5" cy="36" r="1.9" fill="currentColor" stroke="none" />
+          <circle cx="20" cy="36" r="1.9" fill="currentColor" stroke="none" />
+          <circle cx="26.5" cy="36" r="1.9" fill="currentColor" stroke="none" />
+          <path d="M40 14 C 52 24, 52 48, 40 58" strokeWidth="3.2" />
+          <path d="M54 9 C 69 22, 69 50, 54 63" strokeWidth="3.0" opacity="0.85" />
+          <path d="M68 4 C 86 20, 86 52, 68 68" strokeWidth="2.8" opacity="0.7" />
         </svg>
-        <span className="absolute top-2 right-2 size-1.5 rounded-full bg-[#e53935]" />
       </button>
 
       <FeedbackSheet
