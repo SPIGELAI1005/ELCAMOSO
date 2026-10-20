@@ -227,6 +227,21 @@ const SUPERBIKE_REGIONS: RecordedRegion[] = [
   },
 ];
 
+/** Big Twin (v-twin-cruiser): warm idle of a Harley-Davidson V-twin, CC0 Freesound 850565. */
+const BIG_TWIN_REGIONS: RecordedRegion[] = [
+  {
+    start: 0.08,
+    end: 7.48,
+    rpm: [
+      1559, 1540, 1448, 1451, 1424, 1400, 1403, 1386, 1388, 1376, 1379, 1379, 1316, 1316, 1331,
+      1335, 1338, 1338, 1345, 1362, 1374, 1393, 1395, 1400, 1403, 1403, 1403, 1403, 1355, 1355,
+      1352, 1362, 1359, 1379, 1391, 1391, 1391, 1391, 1391, 1391, 1408, 1403, 1403, 1400, 1400,
+      1383, 1383, 1364, 1338, 1343, 1331, 1321, 1311, 1309, 1309, 1282, 1285, 1297, 1287, 1287,
+      1292, 1278, 1278, 1278, 1282, 1285, 1304, 1302, 1299, 1299, 1299, 1299, 1292, 1287,
+    ],
+  },
+];
+
 export interface RecordedHandover {
   rpmStart: number;
   rpmSpan: number;
@@ -301,6 +316,15 @@ const SUPERBIKE_EQ: RecordedLoopBank["eq"] = {
   highShelfHz: 2500,
   lowpassHz: 12000,
 };
+// Measured the same way: the close-mic idle is thin at 200-800 Hz and ~7 dB hissier above 2.5 kHz.
+const BIG_TWIN_EQ: RecordedLoopBank["eq"] = {
+  lowShelfDb: 2,
+  midDb: 5,
+  midHz: 450,
+  highShelfDb: -6,
+  highShelfHz: 2500,
+  lowpassHz: 6000,
+};
 
 export const RECORDED_LOOP_BANKS: Record<string, RecordedLoopBank> = {
   "american-v8": {
@@ -373,6 +397,30 @@ export const RECORDED_LOOP_BANKS: Record<string, RecordedLoopBank> = {
       topSpan: 2500,
     },
     eq: SUPERBIKE_EQ,
+  },
+  "v-twin-cruiser": {
+    personalityId: "v-twin-cruiser",
+    sources: [
+      {
+        id: "big-twin",
+        url: `${BASE}/big_twin_regions.m4a`,
+        regions: BIG_TWIN_REGIONS,
+        weight: 1,
+        // Recorded idle is ~1,300 rpm (cold); pitch down to the 900 rpm potato-potato idle.
+        minRate: 0.62,
+        maxRate: 1.75,
+      },
+    ],
+    level: 0.5,
+    handover: {
+      rpmStart: 1700,
+      rpmSpan: 900,
+      accelKeep: 0.3,
+      rpmKeep: 0.2,
+      topRpm: 2300,
+      topSpan: 700,
+    },
+    eq: BIG_TWIN_EQ,
   },
 };
 
@@ -585,5 +633,15 @@ export const RECORDED_LOOP_CREDITS: RecordedCredit[] = [
     usedIn: "Superbike (idle and onboard pulls up to ~5,100 rpm)",
     attribution:
       "\u201Cmotorbike hornet 600 onboard.clip 0005.N3.F\u201D by martian (Freesound #181161), CC0 1.0, edited (trimmed, filtered, re-sequenced, granular).",
+  },
+  {
+    title: "Moto Harley Davidson Arrancando (Freesound #850565)",
+    author: "Mariayolanda511",
+    licence: "CC0 1.0",
+    licenceUrl: "https://creativecommons.org/publicdomain/zero/1.0/",
+    sourceUrl: "https://freesound.org/s/850565/",
+    usedIn: "Big Twin (idle and low cruise)",
+    attribution:
+      "\u201CMoto Harley Davidson Arrancando\u201D by Mariayolanda511 (Freesound #850565), CC0 1.0, edited (trimmed, filtered, granular).",
   },
 ];

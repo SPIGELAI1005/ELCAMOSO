@@ -107,7 +107,12 @@ describe("motorcycle recorded banks", () => {
     expect(recordedSampleWeight(9000, 0.9, 1, sb.handover)).toBeGreaterThanOrEqual(0.3);
     expect(recordedSampleWeight(13000, 1, 1, sb.handover)).toBe(0);
   });
-
+  it("big twin recording reaches down to the 900 rpm idle", async () => {
+    const { getRecordedLoopBank, pickRegion } = await import("./recorded-loops");
+    const bt = getRecordedLoopBank("v-twin-cruiser")!;
+    const src = bt.sources[0]!;
+    expect(pickRegion(src.regions, 900, () => 0.5, src.minRate, src.maxRate)).not.toBeNull();
+  });
   it("V8 hand-over is unchanged", async () => {
     const { getRecordedLoopBank } = await import("./recorded-loops");
     expect(getRecordedLoopBank("gt-v8")!.handover.topRpm).toBeUndefined();
