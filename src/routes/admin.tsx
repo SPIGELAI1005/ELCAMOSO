@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 
+import { AdminFeedbackPanel } from "@/components/feedback/AdminFeedbackPanel";
 import { getAdminOverviewFn, type AdminOverviewResult } from "@/lib/admin/server-fns";
 
 export const Route = createFileRoute("/admin")({
@@ -57,6 +58,7 @@ function AdminPage() {
         <Stat label="Subscriptions" value={o.subscriptionCount} />
         <Stat label="Active sessions" value={o.activeSessionCount} />
       </section>
+      <AdminFeedbackPanel />
       <section className="mt-8">
         <h2 className="text-lg font-semibold">Audit log</h2>
         {o.recentAudit.length === 0 ? (

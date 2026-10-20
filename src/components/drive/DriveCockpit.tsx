@@ -53,6 +53,7 @@ import {
 } from "@/lib/drive/drive-shift-persona";
 import { cn } from "@/lib/utils";
 import { ModeTachometer } from "@/components/drive/ModeTachometer";
+import { FeedbackSheet } from "@/components/feedback/FeedbackSheet";
 import { resolveTachThemeId, type TachThemeId } from "@/lib/drive/tach-theme";
 
 const COCKPIT_SELECT_TRIGGER =
@@ -273,6 +274,7 @@ export function DriveCockpit({
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [soundsOpen, setSoundsOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
   /** Thematic stage paddle hold (continuous personas). */
   const [stageOverride, setStageOverride] = useState<number | null>(null);
   const stageHoldTimer = useRef(0);
@@ -499,7 +501,12 @@ export function DriveCockpit({
                 : null
             }
           />
-          <div className={cn("absolute inset-0 z-[1] flex flex-col items-center justify-center px-5 text-center", tachThemeId === "race" && "sr-only")}>
+          <div
+            className={cn(
+              "absolute inset-0 z-[1] flex flex-col items-center justify-center px-5 text-center",
+              tachThemeId === "race" && "sr-only",
+            )}
+          >
             <p
               className={cn(
                 "drive-cockpit__speed font-extralight tabular-nums leading-none tracking-tight transition-colors duration-200",
@@ -819,9 +826,28 @@ export function DriveCockpit({
             <Link to="/settings" onClick={() => setMoreOpen(false)} className={COCKPIT_FOOTER_BTN}>
               Settings
             </Link>
+            <button
+              type="button"
+              data-testid="open-feedback"
+              onClick={() => {
+                setMoreOpen(false);
+                setFeedbackOpen(true);
+              }}
+              className={cn(COCKPIT_FOOTER_BTN, "col-span-2")}
+            >
+              Feedback · Report / Suggest
+            </button>
           </div>
         </SheetContent>
       </Sheet>
+
+      <FeedbackSheet
+        open={feedbackOpen}
+        onOpenChange={setFeedbackOpen}
+        soundProfileId={profile.id}
+        soundProfileName={profile.name}
+        screen="drive"
+      />
     </div>
   );
 }

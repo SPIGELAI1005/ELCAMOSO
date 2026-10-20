@@ -38,6 +38,7 @@ import { Route as StudioRouteImport } from './routes/studio'
 import { Route as SymphonyRouteImport } from './routes/symphony'
 import { Route as WorldsRouteImport } from './routes/worlds'
 import { Route as ApiDriveLogsRouteImport } from './routes/api/drive-logs'
+import { Route as ApiFeedbackRouteImport } from './routes/api/feedback'
 import { Route as ApiOgRouteImport } from './routes/api/og'
 import { Route as ConnectSessionIdRouteImport } from './routes/connect.$sessionId'
 import { Route as DebugAudioLabRouteImport } from './routes/debug.audio-lab'
@@ -59,6 +60,7 @@ import { Route as LegalPrivacyRouteImport } from './routes/legal/privacy'
 import { Route as LegalTermsRouteImport } from './routes/legal/terms'
 import { Route as PairTokenRouteImport } from './routes/pair_.$token'
 import { Route as UpgradeTokenRouteImport } from './routes/upgrade.$token'
+import { Route as ApiAdminFeedbackRouteImport } from './routes/api/admin/feedback'
 import { Route as ApiAdminMeRouteImport } from './routes/api/admin/me'
 import { Route as ApiBillingCheckoutRouteImport } from './routes/api/billing/checkout'
 import { Route as ApiBillingPortalRouteImport } from './routes/api/billing/portal'
@@ -217,6 +219,11 @@ const ApiDriveLogsRoute = ApiDriveLogsRouteImport.update({
   path: '/api/drive-logs',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiFeedbackRoute = ApiFeedbackRouteImport.update({
+  id: '/api/feedback',
+  path: '/api/feedback',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiOgRoute = ApiOgRouteImport.update({
   id: '/api/og',
   path: '/api/og',
@@ -322,6 +329,11 @@ const UpgradeTokenRoute = UpgradeTokenRouteImport.update({
   path: '/upgrade/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAdminFeedbackRoute = ApiAdminFeedbackRouteImport.update({
+  id: '/api/admin/feedback',
+  path: '/api/admin/feedback',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAdminMeRoute = ApiAdminMeRouteImport.update({
   id: '/api/admin/me',
   path: '/api/admin/me',
@@ -414,6 +426,7 @@ export interface FileRoutesByFullPath {
   '/symphony': typeof SymphonyRoute
   '/worlds': typeof WorldsRoute
   '/api/drive-logs': typeof ApiDriveLogsRoute
+  '/api/feedback': typeof ApiFeedbackRoute
   '/api/og': typeof ApiOgRouteWithChildren
   '/connect/$sessionId': typeof ConnectSessionIdRoute
   '/debug/audio-lab': typeof DebugAudioLabRoute
@@ -435,6 +448,7 @@ export interface FileRoutesByFullPath {
   '/pair/$token': typeof PairTokenRoute
   '/upgrade/$token': typeof UpgradeTokenRoute
   '/legal/': typeof LegalIndexRoute
+  '/api/admin/feedback': typeof ApiAdminFeedbackRoute
   '/api/admin/me': typeof ApiAdminMeRoute
   '/api/billing/checkout': typeof ApiBillingCheckoutRoute
   '/api/billing/portal': typeof ApiBillingPortalRoute
@@ -477,6 +491,7 @@ export interface FileRoutesByTo {
   '/symphony': typeof SymphonyRoute
   '/worlds': typeof WorldsRoute
   '/api/drive-logs': typeof ApiDriveLogsRoute
+  '/api/feedback': typeof ApiFeedbackRoute
   '/api/og': typeof ApiOgRouteWithChildren
   '/connect/$sessionId': typeof ConnectSessionIdRoute
   '/debug/audio-lab': typeof DebugAudioLabRoute
@@ -498,6 +513,7 @@ export interface FileRoutesByTo {
   '/pair/$token': typeof PairTokenRoute
   '/upgrade/$token': typeof UpgradeTokenRoute
   '/legal': typeof LegalIndexRoute
+  '/api/admin/feedback': typeof ApiAdminFeedbackRoute
   '/api/admin/me': typeof ApiAdminMeRoute
   '/api/billing/checkout': typeof ApiBillingCheckoutRoute
   '/api/billing/portal': typeof ApiBillingPortalRoute
@@ -542,6 +558,7 @@ export interface FileRoutesById {
   '/symphony': typeof SymphonyRoute
   '/worlds': typeof WorldsRoute
   '/api/drive-logs': typeof ApiDriveLogsRoute
+  '/api/feedback': typeof ApiFeedbackRoute
   '/api/og': typeof ApiOgRouteWithChildren
   '/connect/$sessionId': typeof ConnectSessionIdRoute
   '/debug/audio-lab': typeof DebugAudioLabRoute
@@ -563,6 +580,7 @@ export interface FileRoutesById {
   '/pair_/$token': typeof PairTokenRoute
   '/upgrade/$token': typeof UpgradeTokenRoute
   '/legal/': typeof LegalIndexRoute
+  '/api/admin/feedback': typeof ApiAdminFeedbackRoute
   '/api/admin/me': typeof ApiAdminMeRoute
   '/api/billing/checkout': typeof ApiBillingCheckoutRoute
   '/api/billing/portal': typeof ApiBillingPortalRoute
@@ -608,6 +626,7 @@ export interface FileRouteTypes {
     | '/symphony'
     | '/worlds'
     | '/api/drive-logs'
+    | '/api/feedback'
     | '/api/og'
     | '/connect/$sessionId'
     | '/debug/audio-lab'
@@ -629,6 +648,7 @@ export interface FileRouteTypes {
     | '/pair/$token'
     | '/upgrade/$token'
     | '/legal/'
+    | '/api/admin/feedback'
     | '/api/admin/me'
     | '/api/billing/checkout'
     | '/api/billing/portal'
@@ -671,6 +691,7 @@ export interface FileRouteTypes {
     | '/symphony'
     | '/worlds'
     | '/api/drive-logs'
+    | '/api/feedback'
     | '/api/og'
     | '/connect/$sessionId'
     | '/debug/audio-lab'
@@ -692,6 +713,7 @@ export interface FileRouteTypes {
     | '/pair/$token'
     | '/upgrade/$token'
     | '/legal'
+    | '/api/admin/feedback'
     | '/api/admin/me'
     | '/api/billing/checkout'
     | '/api/billing/portal'
@@ -735,6 +757,7 @@ export interface FileRouteTypes {
     | '/symphony'
     | '/worlds'
     | '/api/drive-logs'
+    | '/api/feedback'
     | '/api/og'
     | '/connect/$sessionId'
     | '/debug/audio-lab'
@@ -756,6 +779,7 @@ export interface FileRouteTypes {
     | '/pair_/$token'
     | '/upgrade/$token'
     | '/legal/'
+    | '/api/admin/feedback'
     | '/api/admin/me'
     | '/api/billing/checkout'
     | '/api/billing/portal'
@@ -800,12 +824,14 @@ export interface RootRouteChildren {
   SymphonyRoute: typeof SymphonyRoute
   WorldsRoute: typeof WorldsRoute
   ApiDriveLogsRoute: typeof ApiDriveLogsRoute
+  ApiFeedbackRoute: typeof ApiFeedbackRoute
   ApiOgRoute: typeof ApiOgRouteWithChildren
   ConnectSessionIdRoute: typeof ConnectSessionIdRoute
   DebugCockpitRoute: typeof DebugCockpitRoute
   DebugTachoRoute: typeof DebugTachoRoute
   PairTokenRoute: typeof PairTokenRoute
   UpgradeTokenRoute: typeof UpgradeTokenRoute
+  ApiAdminFeedbackRoute: typeof ApiAdminFeedbackRoute
   ApiAdminMeRoute: typeof ApiAdminMeRoute
   ApiBillingCheckoutRoute: typeof ApiBillingCheckoutRoute
   ApiBillingPortalRoute: typeof ApiBillingPortalRoute
@@ -1023,6 +1049,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiDriveLogsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/feedback': {
+      id: '/api/feedback'
+      path: '/api/feedback'
+      fullPath: '/api/feedback'
+      preLoaderRoute: typeof ApiFeedbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/og': {
       id: '/api/og'
       path: '/api/og'
@@ -1168,6 +1201,13 @@ declare module '@tanstack/react-router' {
       path: '/upgrade/$token'
       fullPath: '/upgrade/$token'
       preLoaderRoute: typeof UpgradeTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/admin/feedback': {
+      id: '/api/admin/feedback'
+      path: '/api/admin/feedback'
+      fullPath: '/api/admin/feedback'
+      preLoaderRoute: typeof ApiAdminFeedbackRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/admin/me': {
@@ -1365,12 +1405,14 @@ const rootRouteChildren: RootRouteChildren = {
   SymphonyRoute: SymphonyRoute,
   WorldsRoute: WorldsRoute,
   ApiDriveLogsRoute: ApiDriveLogsRoute,
+  ApiFeedbackRoute: ApiFeedbackRoute,
   ApiOgRoute: ApiOgRouteWithChildren,
   ConnectSessionIdRoute: ConnectSessionIdRoute,
   DebugCockpitRoute: DebugCockpitRoute,
   DebugTachoRoute: DebugTachoRoute,
   PairTokenRoute: PairTokenRoute,
   UpgradeTokenRoute: UpgradeTokenRoute,
+  ApiAdminFeedbackRoute: ApiAdminFeedbackRoute,
   ApiAdminMeRoute: ApiAdminMeRoute,
   ApiBillingCheckoutRoute: ApiBillingCheckoutRoute,
   ApiBillingPortalRoute: ApiBillingPortalRoute,
