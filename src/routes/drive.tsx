@@ -33,7 +33,7 @@ import { getProfile, type SoundProfile } from "@/lib/sound/profiles";
 import { PostDriveExperience } from "@/components/journey/PostDriveExperience";
 import { track } from "@/lib/analytics/track";
 import { SmilesModal } from "@/components/smiles/SmilesModal";
-import { addDriveMessage, deliverPendingDrive, isSmilesWorthy } from "@/lib/inbox/inbox";
+import { addDriveMessage, deliverPendingDrive } from "@/lib/inbox/inbox";
 import type { JourneySummary } from "@/lib/journey/types";
 import { DriveModePicker } from "@/components/drive/DriveModePicker";
 import { DriveCockpit } from "@/components/drive/DriveCockpit";
@@ -141,7 +141,7 @@ function DriveScreen() {
   const [smilesJourney, setSmilesJourney] = useState<JourneySummary | null>(null);
   useEffect(() => {
     void deliverPendingDrive().then((j) => {
-      if (j && isSmilesWorthy(j)) setSmilesJourney(j);
+      if (j) setSmilesJourney(j);
     });
   }, []);
   const [postCaptureTraceId, setPostCaptureTraceId] = useState<string | null>(null);
@@ -274,7 +274,8 @@ function DriveScreen() {
         durationMs: finished.durationMs,
         profileId: finished.profileId,
       });
-      if (isSmilesWorthy(finished)) window.setTimeout(() => setSmilesJourney(finished), 1000);
+      // Always show the card after STOP; very short drives get a friendly note inside the card.
+      window.setTimeout(() => setSmilesJourney(finished), 600);
     }
     if (aggregates && shouldPlayLiveAudio(before.driveOutputMode ?? "live")) {
       void driveCoachFn({ data: { aggregates } }).then((result) => {
