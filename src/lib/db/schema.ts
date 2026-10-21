@@ -7,6 +7,7 @@ import {
   pgEnum,
   pgTable,
   primaryKey,
+  real,
   text,
   timestamp,
   uniqueIndex,
@@ -227,12 +228,17 @@ export const accountDevices = pgTable("account_devices", {
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
   linkedAt: timestamp("linked_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
-  lastSeenAt: timestamp("last_seen_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+  lastSeenAt: timestamp("last_seen_at", { withTimezone: true, mode: "date" })
+    .notNull()
+    .defaultNow(),
 });
 
 export const promoCodes = pgTable("promo_codes", {
   code: text("code").primaryKey(),
-  profileIds: text("profile_ids").array().notNull().default(sql`'{}'::text[]`),
+  profileIds: text("profile_ids")
+    .array()
+    .notNull()
+    .default(sql`'{}'::text[]`),
   drivePlusDays: integer("drive_plus_days"),
   /** Days the profile grants last; null = permanent. */
   grantDays: integer("grant_days"),
@@ -254,7 +260,9 @@ export const promoRedemptions = pgTable(
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
-    redeemedAt: timestamp("redeemed_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+    redeemedAt: timestamp("redeemed_at", { withTimezone: true, mode: "date" })
+      .notNull()
+      .defaultNow(),
   },
   (table) => [primaryKey({ columns: [table.code, table.userId] })],
 );
@@ -447,7 +455,9 @@ export const rewardCockpitThemes = pgTable(
       .references(() => users.id, { onDelete: "cascade" }),
     themeId: text("theme_id").notNull(),
     claimId: uuid("claim_id"),
-    unlockedAt: timestamp("unlocked_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+    unlockedAt: timestamp("unlocked_at", { withTimezone: true, mode: "date" })
+      .notNull()
+      .defaultNow(),
   },
   (table) => [primaryKey({ columns: [table.userId, table.themeId] })],
 );
@@ -488,3 +498,24 @@ export const adminAuditLog = pgTable(
 
 export type AccountSessionRow = typeof accountSessions.$inferSelect;
 export type AdminAuditLogRow = typeof adminAuditLog.$inferSelect;
+
+/** Smiles per Mile cards per account (image rendered on demand from `result`). */
+export const smilesCards = pgTable(
+  "smiles_cards",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: text("user_id").notNull(),
+    journeyId: text("journey_id").notNull(),
+    profileId: text("profile_id").notNull(),
+    profileName: text("profile_name").notNull(),
+    score: integer("score").notNull(),
+    distanceKm: real("distance_km").notNull(),
+    result: jsonb("result").notNull(),
+    pinned: boolean("pinned").notNull().default(false),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("smiles_cards_user_journey_uq").on(table.userId, table.journeyId),
+    index("smiles_cards_user_created_idx").on(table.userId, table.createdAt),
+  ],
+);

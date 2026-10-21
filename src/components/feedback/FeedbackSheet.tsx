@@ -178,6 +178,12 @@ export function FeedbackSheet({
             Please don&apos;t type and drive!
           </p>
         </SheetHeader>
+        <Link
+          to="/my-cards"
+          className="flex h-11 items-center justify-center rounded-full border border-border text-[10px] tracking-[0.22em] uppercase"
+        >
+          My Smiles cards
+        </Link>
 
         <div className="min-h-[6rem] flex-1 space-y-2 overflow-y-auto rounded-2xl border border-border/60 bg-foreground/[0.03] p-3">
           {history.length === 0 && inbox.length === 0 ? (

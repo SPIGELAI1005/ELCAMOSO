@@ -227,7 +227,17 @@ function Settings() {
                 />
               </AccordionTrigger>
               <AccordionContent className="pb-10">
-                {workspace.id === "plan" ? <PlanWorkspace billingFlash={billingFlash} /> : null}
+                {workspace.id === "plan" ? (
+                  <>
+                    <PlanWorkspace billingFlash={billingFlash} />
+                    <Link
+                      to="/my-cards"
+                      className="mt-4 flex h-11 items-center justify-center rounded-full border border-border text-[10px] tracking-[0.22em] uppercase"
+                    >
+                      My Smiles cards
+                    </Link>
+                  </>
+                ) : null}
                 {workspace.id === "sound" ? (
                   <SoundWorkspace
                     settings={settings}

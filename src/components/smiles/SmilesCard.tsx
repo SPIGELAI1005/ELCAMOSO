@@ -1,4 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Link } from "@tanstack/react-router";
+import { rememberSmilesCard } from "@/lib/smiles/useSmilesCards";
 
 import {
   Sheet,
@@ -105,6 +107,21 @@ export function SmilesCard(props: SmilesCardProps) {
       .then((js) => setLife(lifetimeSmiles(js, settings)))
       .catch(() => setLife(null));
   }, [props.journeyId, r, settings]);
+  const savedCardKey = useRef<string | null>(null);
+  useEffect(() => {
+    if (!props.journeyId) return;
+    const key = `${props.journeyId}:${r.score}`;
+    if (savedCardKey.current === key) return;
+    savedCardKey.current = key;
+    void rememberSmilesCard({
+      journeyId: props.journeyId,
+      profileId: props.profileId,
+      profileName: props.profileName,
+      score: r.score,
+      distanceKm: r.distanceKm,
+      result: r,
+    });
+  }, [props.journeyId, props.profileId, props.profileName, r]);
 
   const u = settings.units;
   const c = settings.currency;
@@ -294,6 +311,13 @@ export function SmilesCard(props: SmilesCardProps) {
         >
           Share my smiles
         </button>
+        <Link
+          to="/my-cards"
+          data-testid="smiles-my-cards"
+          className="mt-3 flex h-11 w-full items-center justify-center rounded-full border border-white/20 text-[10px] tracking-[0.22em] text-foreground/80 uppercase"
+        >
+          My cards
+        </Link>
         <SmilesShareSheet
           open={shareOpen}
           onOpenChange={setShareOpen}
@@ -486,7 +510,7 @@ function Field({
 }
 
 /* ---------------- share image (client-side canvas) ---------------- */
-async function renderShareImage(
+export async function renderShareImage(
   r: SmilesResult,
   s: SmilesSettings,
   profileName: string,

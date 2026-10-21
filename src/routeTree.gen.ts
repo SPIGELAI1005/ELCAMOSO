@@ -22,6 +22,7 @@ import { Route as FusionRouteImport } from './routes/fusion'
 import { Route as GarageRouteImport } from './routes/garage'
 import { Route as JourneysRouteImport } from './routes/journeys'
 import { Route as LegalRouteRouteImport } from './routes/legal/route'
+import { Route as MyCardsRouteImport } from './routes/my-cards'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as PairRouteImport } from './routes/pair'
 import { Route as PricingRouteImport } from './routes/pricing'
@@ -144,6 +145,11 @@ const JourneysRoute = JourneysRouteImport.update({
 const LegalRouteRoute = LegalRouteRouteImport.update({
   id: '/legal',
   path: '/legal',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MyCardsRoute = MyCardsRouteImport.update({
+  id: '/my-cards',
+  path: '/my-cards',
   getParentRoute: () => rootRouteImport,
 } as any)
 const OnboardingRoute = OnboardingRouteImport.update({
@@ -452,6 +458,7 @@ export interface FileRoutesByFullPath {
   '/fusion': typeof FusionRoute
   '/garage': typeof GarageRoute
   '/journeys': typeof JourneysRoute
+  '/my-cards': typeof MyCardsRoute
   '/onboarding': typeof OnboardingRoute
   '/pair': typeof PairRoute
   '/pricing': typeof PricingRoute
@@ -524,6 +531,7 @@ export interface FileRoutesByTo {
   '/fusion': typeof FusionRoute
   '/garage': typeof GarageRoute
   '/journeys': typeof JourneysRoute
+  '/my-cards': typeof MyCardsRoute
   '/onboarding': typeof OnboardingRoute
   '/pair': typeof PairRoute
   '/pricing': typeof PricingRoute
@@ -598,6 +606,7 @@ export interface FileRoutesById {
   '/fusion': typeof FusionRoute
   '/garage': typeof GarageRoute
   '/journeys': typeof JourneysRoute
+  '/my-cards': typeof MyCardsRoute
   '/onboarding': typeof OnboardingRoute
   '/pair': typeof PairRoute
   '/pricing': typeof PricingRoute
@@ -673,6 +682,7 @@ export interface FileRouteTypes {
     | '/fusion'
     | '/garage'
     | '/journeys'
+    | '/my-cards'
     | '/onboarding'
     | '/pair'
     | '/pricing'
@@ -745,6 +755,7 @@ export interface FileRouteTypes {
     | '/fusion'
     | '/garage'
     | '/journeys'
+    | '/my-cards'
     | '/onboarding'
     | '/pair'
     | '/pricing'
@@ -818,6 +829,7 @@ export interface FileRouteTypes {
     | '/fusion'
     | '/garage'
     | '/journeys'
+    | '/my-cards'
     | '/onboarding'
     | '/pair'
     | '/pricing'
@@ -892,6 +904,7 @@ export interface RootRouteChildren {
   FusionRoute: typeof FusionRoute
   GarageRoute: typeof GarageRoute
   JourneysRoute: typeof JourneysRoute
+  MyCardsRoute: typeof MyCardsRoute
   OnboardingRoute: typeof OnboardingRoute
   PairRoute: typeof PairRoute
   PricingRoute: typeof PricingRoute
@@ -1027,6 +1040,13 @@ declare module '@tanstack/react-router' {
       path: '/legal'
       fullPath: '/legal'
       preLoaderRoute: typeof LegalRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/my-cards': {
+      id: '/my-cards'
+      path: '/my-cards'
+      fullPath: '/my-cards'
+      preLoaderRoute: typeof MyCardsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/onboarding': {
@@ -1518,6 +1538,7 @@ const rootRouteChildren: RootRouteChildren = {
   FusionRoute: FusionRoute,
   GarageRoute: GarageRoute,
   JourneysRoute: JourneysRoute,
+  MyCardsRoute: MyCardsRoute,
   OnboardingRoute: OnboardingRoute,
   PairRoute: PairRoute,
   PricingRoute: PricingRoute,
