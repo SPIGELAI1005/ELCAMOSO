@@ -837,7 +837,8 @@
   transform: translateY(1px) scale(0.98);
 }
 
-/* Ignition rays: red glow ring + soft radial rays from the face edge (transform/opacity only). */
+/* Ignition glow: one continuous, soft volumetric red light around the whole edge (no discrete rays).
+   Opacity/transform only on pre-blurred layers, so it stays cheap on the Tesla browser. */
 .start-drive-rays {
   pointer-events: none;
   position: absolute;
@@ -849,53 +850,47 @@
 .start-drive-rays::after {
   content: "";
   position: absolute;
-  inset: 0;
   border-radius: 9999px;
   opacity: 0;
+  will-change: opacity, transform;
 }
+/* Tight luminous ring hugging the edge. */
 .start-drive-rays::before {
+  inset: 0;
   box-shadow:
-    0 0 0 2px rgba(229, 57, 53, 0.85),
-    0 0 18px 4px rgba(229, 57, 53, 0.45);
+    0 0 0 1.5px rgba(229, 57, 53, 0.9),
+    0 0 10px 2px rgba(229, 57, 53, 0.6),
+    0 0 28px 8px rgba(229, 57, 53, 0.35),
+    inset 0 0 14px 2px rgba(229, 57, 53, 0.35);
 }
+/* Wide haze spilling evenly outward (stronger upward, like light rising from a ring). */
 .start-drive-rays::after {
-  inset: -45%;
-  background: repeating-conic-gradient(
-    from 0deg,
-    rgba(229, 57, 53, 0.55) 0deg 4deg,
-    transparent 4deg 22deg
-  );
-  -webkit-mask: radial-gradient(circle, transparent 34%, #000 38%, transparent 70%);
-  mask: radial-gradient(circle, transparent 34%, #000 38%, transparent 70%);
+  inset: -60% -22% -40% -22%;
+  background:
+    radial-gradient(ellipse 60% 70% at 50% 42%, rgba(229, 57, 53, 0.5) 0%, rgba(229, 57, 53, 0.22) 38%, rgba(229, 57, 53, 0.08) 60%, transparent 75%);
+  -webkit-mask: radial-gradient(ellipse 50% 50% at 50% 50%, #000 0%, #000 55%, transparent 100%);
+  mask: radial-gradient(ellipse 50% 50% at 50% 50%, #000 0%, #000 55%, transparent 100%);
+  filter: blur(14px);
 }
 .start-drive-rays--on::before {
-  animation: start-drive-ring 560ms cubic-bezier(0.2, 0.7, 0.3, 1) 1 both;
+  animation: start-drive-ring 1.6s cubic-bezier(0.25, 0.6, 0.3, 1) 1 both;
 }
 .start-drive-rays--on::after {
-  animation: start-drive-burst 560ms cubic-bezier(0.2, 0.7, 0.3, 1) 1 both;
+  animation: start-drive-haze 1.6s cubic-bezier(0.25, 0.6, 0.3, 1) 1 both;
 }
 @keyframes start-drive-ring {
-  0% {
-    opacity: 0.95;
-    transform: scale(1);
-  }
-  100% {
-    opacity: 0;
-    transform: scale(1.55);
-  }
+  0% { opacity: 0; }
+  18% { opacity: 1; }
+  50% { opacity: 0.8; }
+  70% { opacity: 0.95; }
+  100% { opacity: 0; }
 }
-@keyframes start-drive-burst {
-  0% {
-    opacity: 0;
-    transform: scale(0.7) rotate(0deg);
-  }
-  30% {
-    opacity: 0.9;
-  }
-  100% {
-    opacity: 0;
-    transform: scale(1.25) rotate(12deg);
-  }
+@keyframes start-drive-haze {
+  0% { opacity: 0; transform: scale(0.92); }
+  22% { opacity: 0.95; transform: scale(1); }
+  50% { opacity: 0.75; transform: scale(1.03); }
+  72% { opacity: 0.9; transform: scale(1.05); }
+  100% { opacity: 0; transform: scale(1.1); }
 }
 @media (prefers-reduced-motion: reduce) {
   .start-drive-press,
