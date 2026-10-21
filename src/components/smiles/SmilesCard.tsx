@@ -30,6 +30,8 @@ import {
 } from "@/lib/smiles/smiles";
 import { cn } from "@/lib/utils";
 import { track } from "@/lib/analytics/track";
+import { smilesCardUrl, smilesShareText } from "@/lib/smiles/share";
+import { SmilesShareSheet } from "@/components/smiles/SmilesShareSheet";
 
 const RED = "#e53935";
 
@@ -67,6 +69,8 @@ export function SmilesCard(props: SmilesCardProps) {
   const [editOpen, setEditOpen] = useState(false);
   const [life, setLife] = useState<ReturnType<typeof lifetimeSmiles> | null>(null);
   const [shareNote, setShareNote] = useState<string | null>(null);
+  const [shareOpen, setShareOpen] = useState(false);
+  const [shareImage, setShareImage] = useState<Blob | null>(null);
 
   useEffect(() => setSettings(loadSmilesSettings()), []);
   useEffect(() => {
@@ -130,29 +134,38 @@ export function SmilesCard(props: SmilesCardProps) {
       : []),
   ];
 
+  const shareInfo = {
+    score: r.score,
+    distance: fmtDistance(r.distanceKm, u),
+    profileName: props.profileName,
+  };
+  const shareText = smilesShareText(shareInfo);
+  const cardUrl = smilesCardUrl(shareInfo);
+
   async function share() {
     setShareNote(null);
+    let blob: Blob | null = null;
     try {
-      const blob = await renderShareImage(r, settings, props.profileName);
-      const file = new File([blob], "elcamoso-smiles.png", { type: "image/png" });
-      const text = `${r.score} smiles on a ${fmtDistance(r.distanceKm, u)} drive with ${props.profileName} · elcamoso.com`;
-      const nav = navigator as Navigator & { canShare?: (d: ShareData) => boolean };
-      if (nav.share && nav.canShare?.({ files: [file] })) {
-        await nav.share({ files: [file], title: "Smiles per Mile", text });
-        track("smiles_shared", { kind: "web-share" });
-        return;
-      }
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "elcamoso-smiles.png";
-      a.click();
-      setTimeout(() => URL.revokeObjectURL(url), 2000);
-      setShareNote("Image downloaded.");
-      track("smiles_shared", { kind: "download" });
-    } catch (e) {
-      if ((e as Error)?.name !== "AbortError") setShareNote("Could not create the image.");
+      blob = await renderShareImage(r, settings, props.profileName);
+    } catch {
+      blob = null;
     }
+    setShareImage(blob);
+    const nav = navigator as Navigator & { canShare?: (d: ShareData) => boolean };
+    try {
+      if (blob && nav.share) {
+        const file = new File([blob], "elcamoso-smiles.png", { type: "image/png" });
+        if (nav.canShare?.({ files: [file] })) {
+          await nav.share({ files: [file], title: "Smiles per Mile", text: shareText });
+          track("smiles_shared", { kind: "web-share" });
+          return;
+        }
+      }
+    } catch (e) {
+      if ((e as Error)?.name === "AbortError") return;
+    }
+    // Tesla browser / desktop: no Web Share with files. Offer explicit options.
+    setShareOpen(true);
   }
 
   return (
@@ -281,6 +294,13 @@ export function SmilesCard(props: SmilesCardProps) {
         >
           Share my smiles
         </button>
+        <SmilesShareSheet
+          open={shareOpen}
+          onOpenChange={setShareOpen}
+          text={shareText}
+          cardUrl={cardUrl}
+          image={shareImage}
+        />
         {shareNote ? (
           <p className="mt-2 text-center text-xs text-muted-foreground">{shareNote}</p>
         ) : null}

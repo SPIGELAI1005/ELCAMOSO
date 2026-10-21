@@ -31,7 +31,10 @@ export function SmilesModal({
         {journey && p ? (
           <>
             {!isSmilesWorthy(journey) ? (
-              <p data-testid="smiles-short-drive" className="px-2 pt-6 text-center text-xs tracking-[0.12em] text-foreground/70">
+              <p
+                data-testid="smiles-short-drive"
+                className="px-2 pt-6 text-center text-xs tracking-[0.12em] text-foreground/70"
+              >
                 Short drive. Go a little further next time for a full Smiles score.
               </p>
             ) : null}
