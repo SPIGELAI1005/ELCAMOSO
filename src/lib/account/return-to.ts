@@ -22,6 +22,7 @@ const ALLOWED_PATH_PREFIXES = [
   "/account",
   "/auth/account",
   "/legal",
+  "/pair",
 ] as const;
 
 const DEFAULT_RETURN_TO = "/drive";

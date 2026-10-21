@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { useEffect, useRef, useState } from "react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 
 import { ElcamosoMark } from "@/components/ElcamosoLogo";
 import {
@@ -11,6 +11,9 @@ import {
 import { claimDriveRelayTokenFn, peekDriveRelayClaimFn } from "@/lib/drive-relay/server-fns";
 import { createSeoHeadFromPath } from "@/lib/seo";
 import { useSettings } from "@/lib/drive/useSettings";
+import { useAccount } from "@/lib/account/AccountProvider";
+import { AccountSignInDialog } from "@/components/AccountSignInDialog";
+import { clearPendingPair, savePendingPair } from "@/lib/drive-relay/pair-intent";
 import type { ElcamosoSettings } from "@/lib/drive/settings";
 import { getProfile } from "@/lib/sound/profiles";
 import { isShiftMapPresetModeId } from "@/lib/drive/drive-shift-persona";
@@ -28,6 +31,14 @@ function PairTokenScreen() {
   const { token } = Route.useParams();
   const { s: soundId, m: modeId } = Route.useSearch();
   const { update, loaded } = useSettings();
+  const { isAuthenticated, isLoading: accountLoading } = useAccount();
+  const navigate = useNavigate();
+  const [signInOpen, setSignInOpen] = useState(false);
+  const autoClaimed = useRef(false);
+  const here =
+    typeof window === "undefined"
+      ? `/pair/${token}`
+      : window.location.pathname + window.location.search;
   useEffect(() => {
     // Mirror the car's sound + mode on this phone.
     if (!loaded) return;
@@ -61,6 +72,29 @@ function PairTokenScreen() {
     };
   }, [token]);
 
+  // Not signed in: remember this pair link and ask for login; we come back here after.
+  useEffect(() => {
+    if (accountLoading || isAuthenticated || cred) return;
+    savePendingPair(here);
+    setSignInOpen(true);
+  }, [accountLoading, isAuthenticated, cred, here]);
+
+  // Signed in (e.g. just returned from login): finish pairing without another tap.
+  useEffect(() => {
+    if (!isAuthenticated || cred || autoClaimed.current) return;
+    if (phase === "ready") {
+      autoClaimed.current = true;
+      clearPendingPair();
+      void claim();
+    } else if (phase === "expired" || phase === "used" || phase === "invalid") {
+      autoClaimed.current = true;
+      clearPendingPair();
+      // Token timed out during login: still open Drive with the car's sound + mode.
+      void navigate({ to: "/drive", search: { pair: "expired" } });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated, phase, cred]);
+
   const claim = async () => {
     setClaiming(true);
     setError(null);
@@ -69,6 +103,7 @@ function PairTokenScreen() {
       if (!result.ok) {
         setError("This link expired or was already used.");
         setPhase("expired");
+        void navigate({ to: "/drive", search: { pair: "expired" } });
         return;
       }
       const next = {
@@ -153,6 +188,7 @@ function PairTokenScreen() {
       >
         Enter code instead
       </Link>
+      <AccountSignInDialog open={signInOpen} onOpenChange={setSignInOpen} returnTo={here} />
     </main>
   );
 }

@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { sanitizeReturnTo } from "@/lib/account/return-to";
 import { getCookie } from "@tanstack/react-start/server";
 
 import {
@@ -67,8 +68,8 @@ export const Route = createFileRoute("/auth/account/google/callback")({
             // Trial activation is best-effort; account session is already established.
           }
 
-          const returnTo = result.returnTo.startsWith("/") ? result.returnTo : "/drive";
-          const nextPath = returnTo.startsWith("/drive") ? "/drive?activateTrial=1" : returnTo;
+          const returnTo = sanitizeReturnTo(result.returnTo);
+          const nextPath = returnTo === "/drive" ? "/drive?activateTrial=1" : returnTo;
           return redirectWithCookies(origin, nextPath, [sessionCookie, clearPending]);
         } catch (error) {
           const message = error instanceof Error ? error.message : "Google sign-in failed";

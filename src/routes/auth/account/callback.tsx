@@ -5,6 +5,8 @@ import { activateDynamicDriveTrialForSession } from "@/components/TryDynamicDriv
 import { writePersistedAccountSession } from "@/lib/account/persist";
 import { verifyAccountMagicLinkFn } from "@/lib/account/server-fns";
 import { useSettings } from "@/lib/drive/useSettings";
+import { sanitizeReturnTo } from "@/lib/account/return-to";
+import { takePendingPair } from "@/lib/drive-relay/pair-intent";
 
 function parseSearch(search: Record<string, unknown>): {
   token?: string;
@@ -45,8 +47,9 @@ function AccountCallbackPage() {
           expiresAt: verified.expiresAt,
         });
         await activateDynamicDriveTrialForSession(update, verified.email);
-        const next = returnTo?.startsWith("/") && !returnTo.startsWith("//") ? returnTo : "/drive";
-        if (next.startsWith("/drive")) {
+        // Magic link may open in a new tab without returnTo: fall back to a pending QR pair.
+        const next = sanitizeReturnTo(returnTo ?? takePendingPair() ?? "/drive");
+        if (next === "/drive" || next.startsWith("/drive?")) {
           await navigate({ to: "/drive", search: { activateTrial: true } });
           return;
         }

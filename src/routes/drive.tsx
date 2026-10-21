@@ -60,6 +60,7 @@ export const Route = createFileRoute("/drive")({
     upgrade?: string;
     start?: boolean;
     googleAuth?: string;
+    pair?: string;
   } => {
     const raw = search["cockpit"];
     const debugRaw = search["debug"];
@@ -76,6 +77,7 @@ export const Route = createFileRoute("/drive")({
       upgrade?: string;
       start?: boolean;
       googleAuth?: string;
+      pair?: string;
     } = {};
     if (raw === true || raw === "1" || raw === 1) out.cockpit = true;
     if (debugRaw === true || debugRaw === "1" || debugRaw === 1) out.debug = true;
@@ -84,6 +86,7 @@ export const Route = createFileRoute("/drive")({
     if (startRaw === true || startRaw === "1" || startRaw === 1) out.start = true;
     if (upgrade) out.upgrade = upgrade;
     if (googleAuth) out.googleAuth = googleAuth;
+    if (search["pair"] === "expired" || search["pair"] === "linked") out.pair = search["pair"];
     return out;
   },
   component: DriveScreen,
@@ -112,10 +115,17 @@ function DriveScreen() {
     upgrade,
     start: autostart,
     googleAuth,
+    pair,
   } = Route.useSearch();
   const navigate = useNavigate();
   const autostartHandled = useRef(false);
-  const googleAuthNotice = googleAuthMessage(googleAuth);
+  const googleAuthNotice =
+    googleAuthMessage(googleAuth) ??
+    (pair === "expired"
+      ? "Pairing code timed out. Same sound and mode are ready. Show a new QR on the car to link sensors."
+      : pair === "linked"
+        ? "Phone linked. Same sound and mode as the car."
+        : null);
   const { plan } = useEntitlements();
   const [relaySessionId, setRelaySessionId] = useState<string | null>(null);
   const [showTeslaUpgrade, setShowTeslaUpgrade] = useState(false);
