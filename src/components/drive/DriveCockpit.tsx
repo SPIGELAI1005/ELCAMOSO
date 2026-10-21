@@ -48,6 +48,8 @@ import {
   moodLabel,
   motionStageIndex,
   nextMoodId,
+  isSingleModePersona,
+  SINGLE_MODE_MESSAGE,
   resolveActiveMoodId,
   resolveDriveShiftPersona,
 } from "@/lib/drive/drive-shift-persona";
@@ -120,6 +122,7 @@ function CockpitGearLadder({
   onGearDown,
   onGearUp,
   onCycleMode,
+  modeLocked = false,
 }: {
   gearCount: number;
   activeGear: number;
@@ -131,6 +134,7 @@ function CockpitGearLadder({
   onGearDown: () => void;
   onGearUp: () => void;
   onCycleMode: (() => void) | null;
+  modeLocked?: boolean;
 }) {
   if (gearCount < 2) return null;
   const inNeutral = activeGear < 1;
@@ -218,8 +222,13 @@ function CockpitGearLadder({
           <button
             type="button"
             onClick={onCycleMode}
-            className={GEAR_ROW_BTN}
-            aria-label={`Mode ${modeLabel}. Tap to cycle.`}
+            className={cn(GEAR_ROW_BTN, modeLocked && "opacity-35")}
+            aria-disabled={modeLocked || undefined}
+            aria-label={
+              modeLocked
+                ? `Mode ${modeLabel}. One mode available.`
+                : `Mode ${modeLabel}. Tap to cycle.`
+            }
           >
             Mode
           </button>
@@ -359,6 +368,14 @@ export function DriveCockpit({
     getSession().setSmilesHint({ raceMode: tachThemeId === "race", redlineRpm: redline });
   }, [tachThemeId, redline]);
   const usesPowertrainGears = shiftPersona.modeBinding === "shift-map";
+  const [modeNotice, setModeNotice] = useState(false);
+  const modeNoticeTimer = useRef<number | null>(null);
+  useEffect(() => {
+    setModeNotice(false);
+    return () => {
+      if (modeNoticeTimer.current) window.clearTimeout(modeNoticeTimer.current);
+    };
+  }, [profile.id]);
   const ladderCount = shiftPersona.ladderCount ?? 0;
   const motionStage = motionStageIndex(driveState, Math.max(2, ladderCount || 2));
   const activeLadderGear = usesPowertrainGears
@@ -622,7 +639,12 @@ export function DriveCockpit({
               </p>
             ) : null}
           </div>
-          <p className={cn("text-[10px] tracking-[0.28em] text-muted-foreground uppercase", tachThemeId === "race" && "sr-only")}>
+          <p
+            className={cn(
+              "text-[10px] tracking-[0.28em] text-muted-foreground uppercase",
+              tachThemeId === "race" && "sr-only",
+            )}
+          >
             {secondary.label}
             {secondary.showRpm ? " · Rev" : ""}
           </p>
@@ -657,7 +679,14 @@ export function DriveCockpit({
                 if (stageHoldTimer.current) window.clearTimeout(stageHoldTimer.current);
                 stageHoldTimer.current = window.setTimeout(() => setStageOverride(null), 2200);
               }}
+              modeLocked={isSingleModePersona(shiftPersona)}
               onCycleMode={() => {
+                if (isSingleModePersona(shiftPersona)) {
+                  setModeNotice(true);
+                  if (modeNoticeTimer.current) window.clearTimeout(modeNoticeTimer.current);
+                  modeNoticeTimer.current = window.setTimeout(() => setModeNotice(false), 1800);
+                  return;
+                }
                 if (shiftPersona.modeBinding === "shift-map") {
                   update({ shiftMapPreset: nextShiftPreset(settings.shiftMapPreset) });
                   return;
@@ -671,6 +700,15 @@ export function DriveCockpit({
                 });
               }}
             />
+          ) : null}
+          {modeNotice ? (
+            <p
+              role="status"
+              aria-live="polite"
+              className="rounded-full bg-foreground px-3 py-1.5 text-[10px] tracking-[0.12em] text-background uppercase"
+            >
+              {SINGLE_MODE_MESSAGE}
+            </p>
           ) : null}
           <p className="text-[10px] tracking-[0.16em] text-muted-foreground/80 uppercase">
             {secondary.simulatedCaption}

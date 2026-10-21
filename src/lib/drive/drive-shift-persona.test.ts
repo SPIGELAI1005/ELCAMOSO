@@ -4,6 +4,7 @@ import {
   moodLabel,
   motionStageIndex,
   nextMoodId,
+  isSingleModePersona,
   resolveActiveMoodId,
   resolveDriveShiftPersona,
   stageDisplayValue,
@@ -38,8 +39,9 @@ describe("drive-shift-persona", () => {
     expect(persona.modes.map((m) => m.label)).toContain("1985");
     expect(persona.modes.map((m) => m.label)).toContain("3000");
     const mid = resolveActiveMoodId(persona, "era-1985", "city");
-    expect(moodLabel(persona, mid)).toBe("1985");
-    expect(moodLabel(persona, nextMoodId(persona, mid))).toBe("2000");
+    // Special sounds are single-mode: stored mood is ignored, default wins.
+    expect(isSingleModePersona(persona)).toBe(true);
+    expect(moodLabel(persona, mid)).toBe("100 BC");
   });
 
   it("maps idle motion to N and motion energy to a stage", () => {

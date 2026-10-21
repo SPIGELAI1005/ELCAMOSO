@@ -1,9 +1,6 @@
 import type { DriveState } from "@/lib/drive/model";
 import type { SoundProfile } from "@/lib/sound/profiles";
-import {
-  SHIFT_MAP_PRESET_IDS,
-  type ShiftMapPresetId,
-} from "@/lib/powertrain/shift-presets";
+import { SHIFT_MAP_PRESET_IDS, type ShiftMapPresetId } from "@/lib/powertrain/shift-presets";
 
 /**
  * Drive Shift Persona
@@ -672,10 +669,7 @@ export function motionStageIndex(state: DriveState, count: number): number {
   return Math.min(count, Math.max(1, Math.ceil(energy * count)));
 }
 
-export function stageDisplayValue(
-  persona: DriveShiftPersona,
-  activeStage: number,
-): string {
+export function stageDisplayValue(persona: DriveShiftPersona, activeStage: number): string {
   if (activeStage < 1) return "N";
   const names = persona.stageNames;
   if (names && names[activeStage - 1]) return names[activeStage - 1]!;
@@ -688,6 +682,8 @@ export function resolveActiveMoodId(
   shiftMapPreset: ShiftMapPresetId,
 ): string {
   if (persona.modeBinding === "shift-map") return shiftMapPreset;
+  // Special (non-engine) sounds have a single mode: always its default.
+  if (isSingleModePersona(persona)) return persona.modes[0]?.id ?? "cruise";
   const known = persona.modes.some((m) => m.id === storedMoodId);
   return known && storedMoodId ? storedMoodId : (persona.modes[0]?.id ?? "cruise");
 }
@@ -707,3 +703,10 @@ export function nextMoodId(persona: DriveShiftPersona, currentId: string): strin
 export function isShiftMapPresetModeId(id: string): id is ShiftMapPresetId {
   return (SHIFT_MAP_PRESET_IDS as readonly string[]).includes(id);
 }
+
+/** Mood personas (non-engine sounds) don't change synthesis, so they get one mode only. */
+export function isSingleModePersona(persona: DriveShiftPersona): boolean {
+  return persona.modeBinding !== "shift-map";
+}
+
+export const SINGLE_MODE_MESSAGE = "One mode available. One mode needed.";
