@@ -43,6 +43,11 @@ export function SiteFooter() {
           ELCAMOSO Cloud or Usage insights. Not a vehicle control or safety system. Drive
           attentively and obey local traffic law.
         </p>
+        <p className="mt-3 max-w-xl text-[11px] leading-relaxed text-muted-foreground">
+          All vehicle images are illustrative and for orientation only. ELCAMOSO is an independent
+          project and is not affiliated with, endorsed by or sponsored by any brand or car
+          manufacturer. All brand and model names are trademarks of their respective owners.
+        </p>
       </div>
     </footer>
   );
