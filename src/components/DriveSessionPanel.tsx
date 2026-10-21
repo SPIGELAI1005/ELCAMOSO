@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import QRCode from "qrcode";
+import { qrOrigin, SCANNABLE_QR_OPTIONS } from "@/lib/qr";
 
 import { useDriveRelay, relayStatusLabel } from "@/lib/drive-relay/client";
 import { formatPairingCode, pairPagePath } from "@/lib/drive-relay/protocol";
@@ -62,8 +63,12 @@ export function DriveSessionPanel({
 
   const pairUrl = useMemo(() => {
     if (!pairPath || typeof window === "undefined") return "";
-    return new URL(pairPath, window.location.origin).toString();
-  }, [pairPath]);
+    const url = new URL(pairPath, qrOrigin());
+    // Phone opens the same sound + mode as the car.
+    url.searchParams.set("s", settings.profileId);
+    url.searchParams.set("m", settings.shiftMapPreset);
+    return url.toString();
+  }, [pairPath, settings.profileId, settings.shiftMapPreset]);
 
   useEffect(() => {
     if (!pairUrl) {
@@ -71,12 +76,7 @@ export function DriveSessionPanel({
       return;
     }
     let cancelled = false;
-    void QRCode.toDataURL(pairUrl, {
-      margin: 2,
-      width: 320,
-      errorCorrectionLevel: "M",
-      color: { dark: "#000000", light: "#FFFFFF" },
-    }).then((dataUrl) => {
+    void QRCode.toDataURL(pairUrl, SCANNABLE_QR_OPTIONS).then((dataUrl) => {
       if (!cancelled) setQrDataUrl(dataUrl);
     });
     return () => {
@@ -325,7 +325,7 @@ export function DriveSessionPanel({
                   <img
                     src={qrDataUrl}
                     alt="QR code to pair your phone"
-                    className="h-[280px] w-[280px] rounded-lg border-2 border-foreground bg-white p-2 sm:h-[320px] sm:w-[320px]"
+                    className="h-[280px] w-[280px] rounded-lg bg-white [image-rendering:pixelated] sm:h-[320px] sm:w-[320px]"
                   />
                 ) : (
                   <div className="h-[280px] w-[280px] animate-pulse rounded-lg border border-border bg-surface-2 sm:h-[320px] sm:w-[320px]" />

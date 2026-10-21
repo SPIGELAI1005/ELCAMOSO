@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import QRCode from "qrcode";
+import { SCANNABLE_QR_OPTIONS } from "@/lib/qr";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { useAccount } from "@/lib/account/AccountProvider";
@@ -78,11 +79,7 @@ export function TeslaDrivePlusUpgrade({
       return;
     }
     let cancelled = false;
-    void QRCode.toDataURL(upgradeUrl, {
-      margin: 1,
-      width: 240,
-      color: { dark: "#F5F5F7", light: "#00000000" },
-    }).then((dataUrl) => {
+    void QRCode.toDataURL(upgradeUrl, SCANNABLE_QR_OPTIONS).then((dataUrl) => {
       if (!cancelled) setQrDataUrl(dataUrl);
     });
     return () => {
@@ -164,7 +161,7 @@ export function TeslaDrivePlusUpgrade({
               <img
                 src={qrDataUrl}
                 alt="QR code to continue with Drive+ on your phone"
-                className="h-[240px] w-[240px] rounded-lg border border-border/60 bg-black"
+                className="h-[240px] w-[240px] rounded-lg bg-white [image-rendering:pixelated]"
               />
             ) : (
               <div className="h-[240px] w-[240px] animate-pulse rounded-lg border border-border/60 bg-surface-2" />

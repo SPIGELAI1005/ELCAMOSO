@@ -10,14 +10,33 @@ import {
 } from "@/components/PhonePairSession";
 import { claimDriveRelayTokenFn, peekDriveRelayClaimFn } from "@/lib/drive-relay/server-fns";
 import { createSeoHeadFromPath } from "@/lib/seo";
+import { useSettings } from "@/lib/drive/useSettings";
+import type { ElcamosoSettings } from "@/lib/drive/settings";
+import { getProfile } from "@/lib/sound/profiles";
+import { isShiftMapPresetModeId } from "@/lib/drive/drive-shift-persona";
 
 export const Route = createFileRoute("/pair_/$token")({
+  validateSearch: (search: Record<string, unknown>): { s?: string; m?: string } => ({
+    ...(typeof search["s"] === "string" ? { s: search["s"] } : {}),
+    ...(typeof search["m"] === "string" ? { m: search["m"] } : {}),
+  }),
   component: PairTokenScreen,
   head: () => createSeoHeadFromPath("/pair"),
 });
 
 function PairTokenScreen() {
   const { token } = Route.useParams();
+  const { s: soundId, m: modeId } = Route.useSearch();
+  const { update, loaded } = useSettings();
+  useEffect(() => {
+    // Mirror the car's sound + mode on this phone.
+    if (!loaded) return;
+    const next: Partial<ElcamosoSettings> = {};
+    if (soundId && getProfile(soundId)?.id === soundId) next.profileId = soundId;
+    if (modeId && isShiftMapPresetModeId(modeId)) next.shiftMapPreset = modeId;
+    if (Object.keys(next).length) update(next);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loaded, soundId, modeId]);
   const [phase, setPhase] = useState<"loading" | "ready" | "invalid" | "expired" | "used">(
     "loading",
   );
