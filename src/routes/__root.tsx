@@ -9,6 +9,7 @@ import {
   Scripts,
 } from "@tanstack/react-router";
 import { useEffect, useState, type ReactNode } from "react";
+import { Analytics } from "@vercel/analytics/react";
 import { BrandNav } from "@/components/BrandNav";
 import { PrimaryBottomNav } from "@/components/PrimaryBottomNav";
 import { MiniPlayer } from "@/components/MiniPlayer";
@@ -158,6 +159,7 @@ function RootShell({ children }: { children: ReactNode }) {
       <body>
         {children}
         <script dangerouslySetInnerHTML={{ __html: DESKTOP_NAV_DISMISS_SCRIPT }} />
+        <Analytics />
         <Scripts />
       </body>
     </html>
