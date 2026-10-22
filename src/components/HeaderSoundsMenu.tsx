@@ -176,7 +176,7 @@ export function HeaderSoundsMenu({
                 )}
               >
                 <span className="min-w-0 truncate normal-case tracking-normal">{profile.name}</span>
-                {locked ? <PremiumBadge className="shrink-0" label="🔒 Drive+" /> : null}
+                {locked ? <PremiumBadge className="shrink-0" /> : null}
               </button>
             );
           })}
