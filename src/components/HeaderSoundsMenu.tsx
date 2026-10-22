@@ -10,7 +10,11 @@ import { getSession } from "@/lib/drive/session";
 import { useSettings } from "@/lib/drive/useSettings";
 import { useAccount } from "@/lib/account/AccountProvider";
 import { useFeatureAccess } from "@/lib/entitlements/selectors";
-import { isSoundTierGateActive, SOUND_TIER_GATE_LABEL } from "@/lib/sound/profile-access-config";
+import {
+  DRIVE_PLUS_LOCKED_MESSAGE,
+  isSoundTierGateActive,
+  SOUND_TIER_GATE_LABEL,
+} from "@/lib/sound/profile-access-config";
 import { t, type Locale } from "@/lib/i18n";
 import {
   PROFILE_CATEGORIES,
@@ -94,7 +98,9 @@ export function HeaderSoundsMenu({
       data-testid="sound-upsell"
       className="mx-2 mb-2 rounded-sm border border-border/70 bg-secondary/40 px-3 py-2.5 text-xs"
     >
-      <p className="text-foreground">{upsellProfile.name} is included with Drive+.</p>
+      <p className="text-foreground">
+        {upsellProfile.name}: {DRIVE_PLUS_LOCKED_MESSAGE}
+      </p>
       <p className="mt-0.5 text-muted-foreground">
         {isAuthenticated
           ? "Upgrade to Drive+ to drive with every sound."

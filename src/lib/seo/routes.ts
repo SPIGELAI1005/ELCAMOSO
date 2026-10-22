@@ -93,9 +93,9 @@ export const INDEXABLE_ROUTE_POLICIES: SeoRoutePolicy[] = [
   {
     path: "/pricing",
     indexable: true,
-    title: "Pricing - Early Access Free | ELCAMOSO",
+    title: "Pricing - Three Free Sounds | ELCAMOSO",
     description:
-      "Early access is free until 9.11.2026 with American Muscle V8, GT V8, Racing V10, and Rocket Car. Drive+ opens on 9.11.2026.",
+      "Racing V10, American Muscle V8 and GT V8 are free. Drive+ with every other sound opens on 9.11.2026.",
     image: IMG,
     imageAlt: ALT,
     breadcrumbs: [

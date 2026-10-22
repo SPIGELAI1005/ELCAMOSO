@@ -14,20 +14,20 @@ import {
 import { canDriveWithSoundProfile } from "@/lib/sound/profile-access";
 import { getProfile, SOUND_PROFILES } from "@/lib/sound/profiles";
 
-const BEFORE = Date.parse("2026-11-08T22:59:59Z"); // 8 Nov 23:59:59 Berlin
-const AFTER = Date.parse("2026-11-08T23:00:00Z"); // 9 Nov 00:00 Berlin
+const BEFORE = Date.parse("2026-10-21T21:59:59Z"); // 21 Oct 23:59:59 Berlin
+const AFTER = Date.parse("2026-10-21T22:00:00Z"); // 22 Oct 00:00 Berlin (locked from now)
 const signedOut = { ...DEFAULT_ENTITLEMENT_USER };
 const lockedIds = SOUND_PROFILES.map((p) => p.id).filter(
   (id) => !FREE_SOUND_PROFILE_IDS.includes(id),
 );
 
-describe("Drive+ sound tier gate (9 Nov 2026 Europe/Berlin)", () => {
+describe("Drive+ sound tier gate (22 Oct 2026 Europe/Berlin)", () => {
   beforeEach(() => vi.stubEnv("VITE_SOUND_GATE_SIMULATE_NOW", ""));
   afterEach(() => vi.unstubAllEnvs());
 
-  it("starts at 9 Nov 2026 00:00 Europe/Berlin", () => {
+  it("starts at 22 Oct 2026 00:00 Europe/Berlin", () => {
     expect(new Date(SOUND_TIER_GATE_STARTS_AT_UTC_MS).toISOString()).toBe(
-      "2026-11-08T23:00:00.000Z",
+      "2026-10-21T22:00:00.000Z",
     );
     expect(isSoundTierGateActive(BEFORE)).toBe(false);
     expect(isSoundTierGateActive(AFTER)).toBe(true);
@@ -108,5 +108,14 @@ describe("Drive+ sound tier gate (9 Nov 2026 Europe/Berlin)", () => {
     expect(resolveProfileDriveAccess(lockedIds[0]!, { user: signedOut, now: BEFORE }).allowed).toBe(
       false,
     );
+  });
+});
+
+describe("locked sound copy + fallback", () => {
+  it("uses the George copy and racing-v10 fallback", async () => {
+    const m = await import("@/lib/sound/profile-access-config");
+    expect(m.DRIVE_PLUS_LOCKED_MESSAGE).toBe("Drive+ sound. Available from 09.11.");
+    expect(m.FALLBACK_SOUND_PROFILE_ID).toBe("racing-v10");
+    expect(m.isSoundTierGateActive(Date.parse("2026-10-22T16:00:00Z"))).toBe(true);
   });
 });

@@ -42,21 +42,25 @@ export const FREE_SOUND_PROFILE_IDS: readonly string[] = FREE_SOUND_PROFILE_SET.
   (slot) => slot.id,
 );
 
-/** Safe fallback when a Drive+ profile is denied mid-drive (always a free id). */
-export const FALLBACK_SOUND_PROFILE_ID: string = FREE_SOUND_PROFILE_IDS[0] ?? "american-muscle-v8";
+/** Safe fallback when a Drive+ profile is denied or locked (always a free id). */
+export const FALLBACK_SOUND_PROFILE_ID: string = "racing-v10";
 
 /** Max seconds for a non-driving preview of a Drive+ profile without entitlement. */
 export const LOCKED_PROFILE_PREVIEW_SECONDS = 20;
 
 /**
- * Single source of truth for when the free/Drive+ sound split starts:
- * 9 November 2026 00:00 Europe/Berlin (CET, UTC+1) = 2026-11-08T23:00:00Z.
- * Before this instant every Sound Profile (and Symphony/World/Fusion sound) is free.
+ * Single source of truth for when the free/Drive+ sound split starts.
+ * George, 22 Oct 2026: lock Drive+ sounds now (was 9 Nov). The Drive+
+ * subscription itself still opens on 9 Nov (DRIVE_PLUS_OPENS_LABEL).
  */
-export const SOUND_TIER_GATE_STARTS_AT_ISO = "2026-11-09T00:00:00+01:00";
+export const SOUND_TIER_GATE_STARTS_AT_ISO = "2026-10-22T00:00:00+02:00";
 export const SOUND_TIER_GATE_STARTS_AT_UTC_MS: number = Date.parse(SOUND_TIER_GATE_STARTS_AT_ISO);
 /** Short label for UI copy ("Free until 9 Nov"). */
 export const SOUND_TIER_GATE_LABEL = "9 Nov";
+/** When the Drive+ subscription opens (sounds are already locked). */
+export const DRIVE_PLUS_OPENS_LABEL = "09.11.";
+/** Shown when someone taps a locked Drive+ sound. */
+export const DRIVE_PLUS_LOCKED_MESSAGE = `Drive+ sound. Available from ${DRIVE_PLUS_OPENS_LABEL}`;
 
 export function simulatedSoundGateNow(): number | null {
   // Local/preview simulation only — ignored in production builds.

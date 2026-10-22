@@ -1,3 +1,4 @@
+import { DRIVE_PLUS_LOCKED_MESSAGE } from "@/lib/sound/profile-access-config";
 import { useMemo, useRef, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { createSeoHeadFromPath } from "@/lib/seo";
@@ -413,7 +414,7 @@ function Sounds() {
                 disabled={!access.canDriveWithProfile(detail.id)}
                 className="h-11 rounded-full bg-primary px-6 text-[11px] tracking-[0.2em] text-primary-foreground uppercase disabled:opacity-40"
               >
-                {access.canDriveWithProfile(detail.id) ? "Use Sound" : "Included with Drive+"}
+                {access.canDriveWithProfile(detail.id) ? "Use Sound" : DRIVE_PLUS_LOCKED_MESSAGE}
               </button>
             </div>
             <button

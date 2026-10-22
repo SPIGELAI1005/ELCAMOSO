@@ -63,7 +63,7 @@ function PricingFooterNotes({ showCancel = true }: { showCancel?: boolean }) {
           showCancel ? "mt-2 text-sm text-muted-foreground" : "text-sm text-muted-foreground"
         }
       >
-        Early access is free until 9.11.2026. Four sounds stay free after launch.
+        Racing V10, American Muscle V8 and GT V8 are free. Every other sound is Drive+, opening 09.11.2026.
       </p>
     </section>
   );

@@ -26,7 +26,7 @@ describe("sound profile catalog entitlements", () => {
   });
 
   it("uses a stable free-tier fallback profile id", () => {
-    expect(FALLBACK_SOUND_PROFILE_ID).toBe("american-muscle-v8");
+    expect(FALLBACK_SOUND_PROFILE_ID).toBe("racing-v10");
     expect(FREE_SOUND_PROFILE_IDS).toContain(FALLBACK_SOUND_PROFILE_ID);
   });
 });

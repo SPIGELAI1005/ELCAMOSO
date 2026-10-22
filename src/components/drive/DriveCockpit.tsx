@@ -54,6 +54,7 @@ import {
   resolveDriveShiftPersona,
 } from "@/lib/drive/drive-shift-persona";
 import { cn } from "@/lib/utils";
+import { DRIVE_PLUS_LOCKED_MESSAGE } from "@/lib/sound/profile-access-config";
 import { ModeTachometer } from "@/components/drive/ModeTachometer";
 import { FeedbackSheet } from "@/components/feedback/FeedbackSheet";
 import { useInboxUnread } from "@/lib/inbox/inbox";
@@ -422,7 +423,7 @@ export function DriveCockpit({
       },
     });
     if (outcome === "locked") {
-      setSwitchStatus("Locked - Drive+ required");
+      setSwitchStatus(DRIVE_PLUS_LOCKED_MESSAGE);
       return;
     }
     if (outcome === "failed") {
@@ -839,8 +840,14 @@ export function DriveCockpit({
                       <button
                         key={item.id}
                         type="button"
-                        disabled={locked && !active}
-                        onClick={() => void pickSound(item.id)}
+                        aria-disabled={(locked && !active) || undefined}
+                        onClick={() => {
+                          if (locked && !active) {
+                            setSwitchStatus(DRIVE_PLUS_LOCKED_MESSAGE);
+                            return;
+                          }
+                          void pickSound(item.id);
+                        }}
                         className={cn(
                           "flex w-full items-start justify-between gap-3 rounded-2xl px-3 py-3 text-left transition-colors",
                           active

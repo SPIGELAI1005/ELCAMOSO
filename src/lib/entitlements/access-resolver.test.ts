@@ -53,7 +53,7 @@ describe("resolveProfileDriveAccess", () => {
     const decision = resolveProfileDriveAccess("dragon", { user: user(), now: NOW });
     expect(decision.allowed).toBe(false);
     expect(decision.source).toBe("denied");
-    expect(decision.fallbackProfileId).toBe("american-muscle-v8");
+    expect(decision.fallbackProfileId).toBe("racing-v10");
   });
 
   it("preserves grandfathered ownership when free set differs", () => {
@@ -178,7 +178,7 @@ describe("offline lease", () => {
     const action = resolveOfflineLeaseExpiryAction(NOW + 2_000, "acct-a");
     expect(action.expired).toBe(true);
     expect(action.policy).toBe(OFFLINE_LEASE_EXPIRY_POLICY);
-    expect(action.fallbackProfileId).toBe("american-muscle-v8");
+    expect(action.fallbackProfileId).toBe("racing-v10");
   });
 
   it("invalidates prior-user lease on account switch", () => {
