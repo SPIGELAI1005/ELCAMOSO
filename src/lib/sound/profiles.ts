@@ -820,7 +820,7 @@ export const PROFILE_CATEGORIES: ProfileCategory[] = [
 ];
 
 /** Default selection — must remain a permanent free Sound Profile id. */
-export const DEFAULT_PROFILE_ID = "american-muscle-v8";
+export const DEFAULT_PROFILE_ID = "racing-v10";
 
 /* ------------------------------------------------ custom profile registry */
 

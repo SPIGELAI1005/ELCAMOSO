@@ -320,7 +320,8 @@ export const DEFAULT_SETTINGS: ElcamosoSettings = {
   layerMix: normalizeMix(undefined),
   cabinEq: DEFAULT_CABIN_EQ,
   shiftFeel: DEFAULT_SHIFT_FEEL,
-  shiftMapPreset: defaultShiftMapPreset(),
+  // New users: Racing V10 + Race mode. Stored settings keep their own mode.
+  shiftMapPreset: "race",
   driveMoodByProfile: {},
   autoRules: [],
   autoRulesEnabled: false,

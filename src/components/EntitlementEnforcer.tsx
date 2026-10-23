@@ -42,7 +42,7 @@ export function EntitlementEnforcer() {
 
     // Mid-drive fade_to_free applies immediately (quiet profile crossfade). Never defer.
     if (mustFadeToFree && settings.profileId !== FALLBACK_SOUND_PROFILE_ID) {
-      update({ profileId: leaseAction.fallbackProfileId });
+      update({ profileId: leaseAction.fallbackProfileId, shiftMapPreset: "race" });
     }
 
     const patch: Partial<typeof settings> = {};
@@ -71,6 +71,7 @@ export function EntitlementEnforcer() {
       settings.profileId !== FALLBACK_SOUND_PROFILE_ID
     ) {
       patch.profileId = FALLBACK_SOUND_PROFILE_ID;
+      patch.shiftMapPreset = "race";
     }
 
     if (Object.keys(patch).length === 0) return;
