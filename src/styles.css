@@ -755,6 +755,86 @@
   }
 }
 
+/* Phones: Start Drive text slowly cross-fades white <-> red (2.5 s loop). */
+@media (max-width: 639px) {
+  .engine-start-button__label--pulse {
+    animation: start-drive-label-white-red 2.5s ease-in-out infinite;
+  }
+}
+
+@keyframes start-drive-label-white-red {
+  0%,
+  100% {
+    color: #ffffff;
+    text-shadow: 0 0 4px oklch(1 0 0 / 0.25);
+  }
+  50% {
+    color: #e53935;
+    text-shadow:
+      0 0 4px oklch(0.72 0.2 25 / 0.4),
+      0 0 8px oklch(0.62 0.18 25 / 0.22);
+  }
+}
+
+/* Phone-only "Tap here" hint beside the Start Drive mark: thin icon, muted text, red accent, soft pulse. */
+.start-drive-hint__icon::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  border: 1px solid oklch(0.58 0.2 25 / 0.55);
+  opacity: 0.45;
+}
+.start-drive-hint__finger {
+  transform: rotate(90deg);
+}
+.start-drive-hint--pulse .start-drive-hint__icon::before {
+  animation: start-drive-hint-ring 2.5s ease-in-out infinite;
+}
+.start-drive-hint--pulse .start-drive-hint__finger {
+  animation: start-drive-hint-nudge 2.5s ease-in-out infinite;
+}
+.start-drive-hint--pulse .start-drive-hint__text {
+  animation: start-drive-hint-text 2.5s ease-in-out infinite;
+}
+@keyframes start-drive-hint-ring {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scale(0.92);
+  }
+  50% {
+    opacity: 0.9;
+    transform: scale(1.18);
+  }
+}
+@keyframes start-drive-hint-nudge {
+  0%,
+  100% {
+    transform: translateX(0) rotate(90deg);
+  }
+  50% {
+    transform: translateX(2px) rotate(90deg);
+  }
+}
+@keyframes start-drive-hint-text {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .engine-start-button__label--pulse,
+  .start-drive-hint--pulse .start-drive-hint__icon::before,
+  .start-drive-hint--pulse .start-drive-hint__finger,
+  .start-drive-hint--pulse .start-drive-hint__text {
+    animation: none;
+  }
+}
+
 .group:hover .engine-start-button::before {
   border-color: oklch(1 0 0 / 0.16);
   box-shadow:
