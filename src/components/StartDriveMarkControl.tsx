@@ -9,8 +9,8 @@ import { cn } from "@/lib/utils";
 const DEFAULT_IGNITE_MS = 450;
 const DEFAULT_IGNITE_REDUCED_MS = 280;
 
-/** Phones are ~15% larger than before (8.57rem -> 9.86rem); sm and up unchanged. */
-const MARK_CLASS = "h-[9.86rem] w-auto sm:h-[10.1rem] lg:h-[12.85rem] xl:h-[14.35rem]";
+/** Phones are ~8% larger than before (8.57rem -> 9.25rem); sm and up unchanged. */
+const MARK_CLASS = "h-[9.25rem] w-auto sm:h-[10.1rem] lg:h-[12.85rem] xl:h-[14.35rem]";
 
 /** Thin outline pointing finger (stroke 1.5, like the Drive+ lock), rotated to point at the button. */
 function TapGlyph({ className = "" }: { className?: string }) {
