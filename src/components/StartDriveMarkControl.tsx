@@ -12,13 +12,16 @@ const DEFAULT_IGNITE_REDUCED_MS = 280;
 /** Phones are ~8% larger than before (8.57rem -> 9.25rem); sm and up unchanged. */
 const MARK_CLASS = "h-[9.25rem] w-auto sm:h-[10.1rem] lg:h-[12.85rem] xl:h-[14.35rem]";
 
-/** Thin outline pointing finger (stroke 1.5, like the Drive+ lock), rotated to point at the button. */
-function TapGlyph({ className = "" }: { className?: string }) {
+/** localStorage flag: set after the first Start Drive; the first-time hint never shows again. */
+const HINT_SEEN_KEY = "elcamoso.startHintSeen.v1";
+
+/** Thin arrow (stroke 1.5, like the Drive+ lock) pointing right at the O button. */
+function HintArrow({ className = "" }: { className?: string }) {
   return (
     <svg
-      viewBox="0 0 24 24"
-      width="22"
-      height="22"
+      viewBox="0 0 28 10"
+      width="28"
+      height="10"
       fill="none"
       stroke="currentColor"
       strokeWidth={1.5}
@@ -28,11 +31,8 @@ function TapGlyph({ className = "" }: { className?: string }) {
       focusable="false"
       className={cn("shrink-0", className)}
     >
-      <path d="M22 14a8 8 0 0 1-8 8" />
-      <path d="M18 11v-1a2 2 0 0 0-2-2a2 2 0 0 0-2 2" />
-      <path d="M14 10V9a2 2 0 0 0-2-2a2 2 0 0 0-2 2v1" />
-      <path d="M10 9.5V4a2 2 0 0 0-2-2a2 2 0 0 0-2 2v10" />
-      <path d="M18 11a2 2 0 1 1 4 0v3a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15" />
+      <path d="M1 5h25" />
+      <path d="M21.5 1.2 26 5l-4.5 3.8" />
     </svg>
   );
 }
@@ -76,7 +76,17 @@ export function StartDriveMarkControl({
   const { settings } = useSettings();
   const [igniting, setIgniting] = useState(false);
   const timer = useRef(0);
+  // Start hidden (SSR-safe); show the hint only if no drive was ever started on this device.
+  const [hintSeen, setHintSeen] = useState(true);
   const faceReady = revealFace || reducedMotion;
+
+  useEffect(() => {
+    try {
+      setHintSeen(window.localStorage.getItem(HINT_SEEN_KEY) === "1");
+    } catch {
+      setHintSeen(false);
+    }
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -88,6 +98,11 @@ export function StartDriveMarkControl({
     if (igniting || !faceReady) return;
     getSession().primeAudioFromUserGesture();
     setIgniting(true);
+    try {
+      window.localStorage.setItem(HINT_SEEN_KEY, "1");
+    } catch {
+      /* storage unavailable: hint may show again, harmless */
+    }
     const delay = reducedMotion ? igniteReducedMs : igniteMs;
     timer.current = window.setTimeout(() => {
       onStart();
@@ -110,23 +125,29 @@ export function StartDriveMarkControl({
         className,
       )}
     >
-      {/* Phone-only tap hint, left of the O. Part of the button, so tapping it also starts. */}
-      <span
-        aria-hidden="true"
-        className={cn(
-          "start-drive-hint absolute right-full top-1/2 z-20 -translate-y-1/2 sm:hidden",
-          "mr-0.5 flex w-[4.4rem] flex-col items-center gap-1 text-center transition-opacity duration-500",
-          faceReady && !igniting ? "opacity-100" : "opacity-0",
-          !reducedMotion && faceReady && !igniting && "start-drive-hint--pulse",
-        )}
-      >
-        <span className="start-drive-hint__icon relative flex size-7 items-center justify-center rounded-full text-foreground/75">
-          <TapGlyph className="start-drive-hint__finger" />
+      {/* Phone-only first-run hint, left of the O. Part of the button, so tapping it also starts. */}
+      {!hintSeen && (
+        <span
+          aria-hidden="true"
+          className={cn(
+            "start-drive-hint absolute right-full top-1/2 z-20 -translate-y-1/2 sm:hidden",
+            "-mr-0.5 flex w-[4.9rem] flex-col items-center gap-1 text-center transition-opacity duration-500",
+            faceReady && !igniting ? "opacity-100" : "opacity-0",
+            !reducedMotion && faceReady && !igniting && "start-drive-hint--pulse",
+          )}
+        >
+          <span className="start-drive-hint__welcome text-[9px] leading-none font-normal tracking-[0.08em] text-foreground/50">
+            {t(settings.language, "drive.hintWelcome")}
+          </span>
+          <span className="start-drive-hint__row flex items-center gap-1 text-foreground/70">
+            <span className="start-drive-hint__dot relative block size-[7px] shrink-0 rounded-full" />
+            <HintArrow className="start-drive-hint__arrow" />
+          </span>
+          <span className="start-drive-hint__text text-[10px] leading-none font-medium tracking-[0.06em] whitespace-nowrap text-foreground/80">
+            {t(settings.language, "drive.hintTap")}
+          </span>
         </span>
-        <span className="start-drive-hint__text text-[9px] leading-[1.15] font-normal tracking-[0.16em] text-foreground/65 uppercase">
-          {t(settings.language, "drive.tapHint")}
-        </span>
-      </span>
+      )}
       <ElcamosoMark
         {...(heroPhase ? { heroPhase } : { animate: true })}
         intensity={1}

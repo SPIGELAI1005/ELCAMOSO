@@ -776,51 +776,52 @@
   }
 }
 
-/* Phone-only "Tap here" hint beside the Start Drive mark: thin icon, muted text, red accent, soft pulse. */
-.start-drive-hint__icon::before {
+/* Phone-only first-run hint: Welcome! / red dot + ripple + thin arrow / Tap to Start. Soft 2.4s pulse. */
+.start-drive-hint__dot {
+  background: oklch(0.58 0.2 25);
+  box-shadow: 0 0 6px oklch(0.58 0.2 25 / 0.55);
+}
+.start-drive-hint__dot::before {
   content: "";
   position: absolute;
-  inset: 0;
+  inset: -1px;
   border-radius: 9999px;
-  border: 1px solid oklch(0.58 0.2 25 / 0.55);
-  opacity: 0.45;
+  border: 1px solid oklch(0.58 0.2 25 / 0.6);
+  opacity: 0.4;
 }
-.start-drive-hint__finger {
-  transform: rotate(90deg);
+.start-drive-hint--pulse .start-drive-hint__dot::before {
+  animation: start-drive-hint-ripple 2.4s ease-out infinite;
 }
-.start-drive-hint--pulse .start-drive-hint__icon::before {
-  animation: start-drive-hint-ring 2.5s ease-in-out infinite;
-}
-.start-drive-hint--pulse .start-drive-hint__finger {
-  animation: start-drive-hint-nudge 2.5s ease-in-out infinite;
+.start-drive-hint--pulse .start-drive-hint__arrow {
+  animation: start-drive-hint-nudge 2.4s ease-in-out infinite;
 }
 .start-drive-hint--pulse .start-drive-hint__text {
-  animation: start-drive-hint-text 2.5s ease-in-out infinite;
+  animation: start-drive-hint-text 2.4s ease-in-out infinite;
 }
-@keyframes start-drive-hint-ring {
-  0%,
-  100% {
-    opacity: 0.35;
-    transform: scale(0.92);
+@keyframes start-drive-hint-ripple {
+  0% {
+    opacity: 0.7;
+    transform: scale(1);
   }
-  50% {
-    opacity: 0.9;
-    transform: scale(1.18);
+  80%,
+  100% {
+    opacity: 0;
+    transform: scale(3.2);
   }
 }
 @keyframes start-drive-hint-nudge {
   0%,
   100% {
-    transform: translateX(0) rotate(90deg);
+    transform: translateX(0);
   }
   50% {
-    transform: translateX(2px) rotate(90deg);
+    transform: translateX(2px);
   }
 }
 @keyframes start-drive-hint-text {
   0%,
   100% {
-    opacity: 0.55;
+    opacity: 0.75;
   }
   50% {
     opacity: 1;
@@ -828,8 +829,8 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .engine-start-button__label--pulse,
-  .start-drive-hint--pulse .start-drive-hint__icon::before,
-  .start-drive-hint--pulse .start-drive-hint__finger,
+  .start-drive-hint--pulse .start-drive-hint__dot::before,
+  .start-drive-hint--pulse .start-drive-hint__arrow,
   .start-drive-hint--pulse .start-drive-hint__text {
     animation: none;
   }
