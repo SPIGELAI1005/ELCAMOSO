@@ -168,6 +168,18 @@ export const INDEXABLE_ROUTE_POLICIES: SeoRoutePolicy[] = [
     ],
   },
   {
+    path: "/news",
+    indexable: true,
+    title: "News | ELCAMOSO",
+    description: "The latest from ELCAMOSO: new sounds, Crew levels, Smiles per Mile and more.",
+    image: IMG,
+    imageAlt: ALT,
+    breadcrumbs: [
+      { name: "Home", path: "/" },
+      { name: "News", path: "/news" },
+    ],
+  },
+  {
     path: "/legal",
     indexable: true,
     title: "Legal | ELCAMOSO",

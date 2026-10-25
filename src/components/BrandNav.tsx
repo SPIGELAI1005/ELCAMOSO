@@ -68,6 +68,7 @@ const NAV_ENTRIES: NavEntry[] = [
       { to: "/story", key: "nav.story" },
       { to: "/science", key: "nav.science" },
       { to: "/crew", key: "nav.crew" },
+      { to: "/news", key: "nav.news" },
     ],
   },
   { kind: "link", to: "/settings", key: "nav.settings" },
