@@ -14,6 +14,18 @@ export function SiteFooter() {
       <div className="mx-auto w-full max-w-3xl px-6 py-10 sm:px-10">
         <ElcamosoWordmark className="text-[11px] text-foreground" />
         <p className="mt-2 text-sm text-muted-foreground">Your EV. Your Sound. More Emotion.</p>
+        <a
+          href="https://x.com/CO_FE_X"
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="ELCAMOSO on X (opens in a new tab)"
+          className="mt-5 inline-flex items-center gap-2 text-xs tracking-[0.14em] text-white uppercase underline-offset-4 hover:underline"
+        >
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true">
+            <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+          </svg>
+          <span>Follow on X</span>
+        </a>
 
         <p className="mt-8 text-[10px] tracking-[0.28em] text-muted-foreground uppercase">Legal</p>
         <nav
