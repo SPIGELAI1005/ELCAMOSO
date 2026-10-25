@@ -7,6 +7,7 @@ import {
 } from "@/lib/drive/tach-theme";
 import { cn } from "@/lib/utils";
 import { RaceDash, type RaceDashReadout } from "@/components/drive/RaceDash";
+import { TachNeedleAnimator } from "@/lib/drive/tach-needle";
 
 function polar(cx: number, cy: number, r: number, deg: number) {
   const rad = (deg * Math.PI) / 180;
@@ -61,54 +62,34 @@ export const ModeTachometer = memo(function ModeTachometer({
   // Leave a clear gap under the shift-light row (Sport/Race).
   const r = size / 2 - (theme0.shiftLights ? 9 : 2);
   const target = Math.min(1, Math.max(0, progress));
-  const [visual, setVisual] = useState(reducedMotion ? target : 0);
-  const [intro, setIntro] = useState(!reducedMotion);
-  const targetRef = useRef(target);
-  targetRef.current = target;
-  const raf = useRef(0);
-
-  // Intro: sweep to redline and back, then hand over to live smoothing.
+  const [frame, setFrame] = useState(() => ({
+    visual: reducedMotion ? target : 0,
+    intro: !reducedMotion,
+  }));
+  const animRef = useRef<TachNeedleAnimator | null>(null);
+  if (!animRef.current) {
+    animRef.current = new TachNeedleAnimator(
+      {
+        request: (cb) => requestAnimationFrame(cb),
+        cancel: (id) => cancelAnimationFrame(id),
+        now: () => performance.now(),
+      },
+      (f) => setFrame((prev) => (prev.visual === f.visual && prev.intro === f.intro ? prev : f)),
+      { target, reducedMotion },
+    );
+  }
+  useEffect(() => () => animRef.current?.dispose(), []);
   useEffect(() => {
-    cancelAnimationFrame(raf.current);
-    if (reducedMotion) {
-      setIntro(false);
-      setVisual(targetRef.current);
-      return;
-    }
-    setIntro(true);
-    const t0 = performance.now();
-    const step = (now: number) => {
-      const t = (now - t0) / theme.introMs;
-      if (t >= 1) {
-        setVisual(targetRef.current);
-        setIntro(false);
-        return;
-      }
-      setVisual(introNeedle(t, targetRef.current));
-      raf.current = requestAnimationFrame(step);
-    };
-    raf.current = requestAnimationFrame(step);
-    return () => cancelAnimationFrame(raf.current);
-  }, [introKey, themeId, reducedMotion, theme.introMs]);
-
-  // Live smoothing after the intro.
+    animRef.current?.setReducedMotion(reducedMotion);
+  }, [reducedMotion]);
+  // Intro: sweep to redline and back on mount / mode switch, then live smoothing.
   useEffect(() => {
-    if (intro) return;
-    if (reducedMotion) {
-      setVisual(target);
-      return;
-    }
-    const tick = () => {
-      setVisual((prev) => {
-        const next = prev + (target - prev) * 0.12;
-        if (Math.abs(next - target) < 0.002) return target;
-        raf.current = requestAnimationFrame(tick);
-        return next;
-      });
-    };
-    raf.current = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf.current);
-  }, [target, intro, reducedMotion]);
+    animRef.current?.playIntro(theme.introMs);
+  }, [introKey, themeId, theme.introMs]);
+  useEffect(() => {
+    animRef.current?.setTarget(target);
+  }, [target]);
+  const { visual, intro } = frame;
 
   const v = Math.min(1, Math.max(0, visual));
   const { start, sweep } = theme;
