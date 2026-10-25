@@ -6,6 +6,7 @@ import { useState } from "react";
 import { AccountSignInDialog } from "@/components/AccountSignInDialog";
 import { AccountUserIcon } from "@/components/AccountUserIcon";
 import { ElcamosoMark } from "@/components/ElcamosoLogo";
+import { SmileLevelRing, useSmileStatus } from "@/components/smiles/SmileRewards";
 import {
   Dialog,
   DialogContent,
@@ -211,6 +212,7 @@ function AccountProfileDialog({
           </div>
         </div>
 
+        <ProfileSmiles open={open} onNavigate={onNavigate} />
         <div className="space-y-2 px-6 py-6">
           <Link
             to="/settings"
@@ -244,5 +246,21 @@ function AccountProfileDialog({
         </div>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function ProfileSmiles({ open, onNavigate }: { open: boolean; onNavigate: () => void }) {
+  const status = useSmileStatus(open);
+  return (
+    <div className="border-b border-border/60 px-6 py-5">
+      <SmileLevelRing status={status} />
+      <Link
+        to="/smile-shop"
+        onClick={onNavigate}
+        className="mt-4 flex h-10 items-center justify-center rounded-full border border-[#e53935]/50 text-[11px] tracking-[0.2em] text-foreground uppercase transition-colors hover:border-[#e53935]"
+      >
+        Smile Shop
+      </Link>
+    </div>
   );
 }

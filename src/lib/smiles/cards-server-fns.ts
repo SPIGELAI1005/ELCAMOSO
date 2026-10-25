@@ -11,6 +11,16 @@ async function currentUserId(): Promise<string | null> {
   return token ? (getAccountSession(token)?.userId ?? null) : null;
 }
 
+async function requestCountry(): Promise<string | null> {
+  try {
+    const { getRequestHeader } = await import("@tanstack/react-start/server");
+    const c = getRequestHeader("x-vercel-ip-country");
+    return c && /^[A-Z]{2}$/.test(c) ? c : null;
+  } catch {
+    return null;
+  }
+}
+
 async function requireUser(): Promise<string> {
   const id = await currentUserId();
   if (!id) throw new Error("Authentication required");
@@ -44,9 +54,17 @@ export const saveSmilesCardFn = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const { hasCardsDb, saveCard } = await import("./cards.server");
     const userId = await currentUserId();
-    if (!userId || !hasCardsDb()) return { cloud: false };
+    if (!userId || !hasCardsDb()) return { cloud: false, smiles: null };
     await saveCard(userId, data);
-    return { cloud: true };
+    const { awardCard } = await import("./rewards.server");
+    const smiles = await awardCard(userId, {
+      journeyId: data.journeyId,
+      score: data.score,
+      distanceKm: data.distanceKm,
+      sound: data.profileName,
+      country: await requestCountry(),
+    });
+    return { cloud: true, smiles };
   });
 
 export const pinSmilesCardFn = createServerFn({ method: "POST" })

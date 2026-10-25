@@ -33,6 +33,7 @@ import { Route as ScienceRouteImport } from './routes/science'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as ShareRouteImport } from './routes/share'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
+import { Route as SmileShopRouteImport } from './routes/smile-shop'
 import { Route as SmilesCardRouteImport } from './routes/smiles-card'
 import { Route as SoundsRouteImport } from './routes/sounds'
 import { Route as StoryRouteImport } from './routes/story'
@@ -200,6 +201,11 @@ const ShareRoute = ShareRouteImport.update({
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   id: '/sitemap.xml',
   path: '/sitemap.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SmileShopRoute = SmileShopRouteImport.update({
+  id: '/smile-shop',
+  path: '/smile-shop',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SmilesCardRoute = SmilesCardRouteImport.update({
@@ -469,6 +475,7 @@ export interface FileRoutesByFullPath {
   '/settings': typeof SettingsRoute
   '/share': typeof ShareRouteWithChildren
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/smile-shop': typeof SmileShopRoute
   '/smiles-card': typeof SmilesCardRoute
   '/sounds': typeof SoundsRoute
   '/story': typeof StoryRoute
@@ -542,6 +549,7 @@ export interface FileRoutesByTo {
   '/settings': typeof SettingsRoute
   '/share': typeof ShareRouteWithChildren
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/smile-shop': typeof SmileShopRoute
   '/smiles-card': typeof SmilesCardRoute
   '/sounds': typeof SoundsRoute
   '/story': typeof StoryRoute
@@ -617,6 +625,7 @@ export interface FileRoutesById {
   '/settings': typeof SettingsRoute
   '/share': typeof ShareRouteWithChildren
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/smile-shop': typeof SmileShopRoute
   '/smiles-card': typeof SmilesCardRoute
   '/sounds': typeof SoundsRoute
   '/story': typeof StoryRoute
@@ -693,6 +702,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/share'
     | '/sitemap.xml'
+    | '/smile-shop'
     | '/smiles-card'
     | '/sounds'
     | '/story'
@@ -766,6 +776,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/share'
     | '/sitemap.xml'
+    | '/smile-shop'
     | '/smiles-card'
     | '/sounds'
     | '/story'
@@ -840,6 +851,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/share'
     | '/sitemap.xml'
+    | '/smile-shop'
     | '/smiles-card'
     | '/sounds'
     | '/story'
@@ -915,6 +927,7 @@ export interface RootRouteChildren {
   SettingsRoute: typeof SettingsRoute
   ShareRoute: typeof ShareRouteWithChildren
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  SmileShopRoute: typeof SmileShopRoute
   SmilesCardRoute: typeof SmilesCardRoute
   SoundsRoute: typeof SoundsRoute
   StoryRoute: typeof StoryRoute
@@ -1117,6 +1130,13 @@ declare module '@tanstack/react-router' {
       path: '/sitemap.xml'
       fullPath: '/sitemap.xml'
       preLoaderRoute: typeof SitemapDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/smile-shop': {
+      id: '/smile-shop'
+      path: '/smile-shop'
+      fullPath: '/smile-shop'
+      preLoaderRoute: typeof SmileShopRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/smiles-card': {
@@ -1549,6 +1569,7 @@ const rootRouteChildren: RootRouteChildren = {
   SettingsRoute: SettingsRoute,
   ShareRoute: ShareRouteWithChildren,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
+  SmileShopRoute: SmileShopRoute,
   SmilesCardRoute: SmilesCardRoute,
   SoundsRoute: SoundsRoute,
   StoryRoute: StoryRoute,

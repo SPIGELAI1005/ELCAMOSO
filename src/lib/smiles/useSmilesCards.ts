@@ -18,14 +18,22 @@ import {
 } from "@/lib/smiles/cards-server-fns";
 
 /** Save a card for the signed-in account, or locally for guests. Never throws. */
-export async function rememberSmilesCard(input: SmilesCardInput): Promise<void> {
+export async function rememberSmilesCard(
+  input: SmilesCardInput,
+): Promise<{ awarded: number; streak: number; total: number; level: string } | null> {
   try {
     const res = await saveSmilesCardFn({ data: input });
-    if (res.cloud) return;
+    if (res.cloud) {
+      const s = res.smiles;
+      return s && s.status.available
+        ? { awarded: s.awarded, streak: s.streak, total: s.status.balance, level: s.status.level.name }
+        : null;
+    }
   } catch {
     /* fall back to local */
   }
   saveLocalCards(upsertCard(loadLocalCards(), input));
+  return null;
 }
 
 export function useSmilesCards() {

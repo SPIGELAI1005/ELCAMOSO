@@ -245,3 +245,12 @@ export async function linkDevice(userId: string, installId: string) {
     .onConflictDoUpdate({ target: accountDevices.installId, set: { userId, lastSeenAt: new Date() } });
   return true;
 }
+
+/** Smile Shop: grant (or extend) Drive+ for `days` days. */
+export async function grantSmileDrivePlus(userId: string, days: number) {
+  need();
+  await ensureUserRow(userId);
+  for (const entitlement of drivePlusEntitlements())
+    await upsertGrant(userId, "promo_entitlement", { entitlement }, daysFromNow(days), "smile-shop");
+  invalidateDurableBillingCache(userId);
+}

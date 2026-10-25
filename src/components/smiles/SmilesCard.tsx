@@ -40,6 +40,8 @@ import {
 import { cn } from "@/lib/utils";
 import { track } from "@/lib/analytics/track";
 import { smilesCardUrl, smilesShareText } from "@/lib/smiles/share";
+import { notifySmilesChanged, SmileToast, useSmileStatus } from "@/components/smiles/SmileRewards";
+import { shareSmilesBonusFn } from "@/lib/smiles/rewards-server-fns";
 import { SmilesShareSheet } from "@/components/smiles/SmilesShareSheet";
 
 const RED = "#e53935";
@@ -81,6 +83,8 @@ export function SmilesCard(props: SmilesCardProps) {
   const founder = useOptionalFounder();
   const [shareOpen, setShareOpen] = useState(false);
   const [shareImage, setShareImage] = useState<Blob | null>(null);
+  const [toast, setToast] = useState<{ amount: number; label?: string | undefined } | null>(null);
+  const smileStatus = useSmileStatus();
 
   const { settings: appSettings } = useSettings();
   const lang = appSettings.language;
@@ -132,6 +136,11 @@ export function SmilesCard(props: SmilesCardProps) {
       score: r.score,
       distanceKm: r.distanceKm,
       result: r,
+    }).then((award) => {
+      if (!award) return;
+      notifySmilesChanged();
+      const n = award.awarded + award.streak;
+      if (n > 0) setToast({ amount: n, label: award.streak ? "7-day streak!" : undefined });
     });
   }, [props.journeyId, props.profileId, props.profileName, r, tooShort]);
 
@@ -167,15 +176,30 @@ export function SmilesCard(props: SmilesCardProps) {
     score: r.score,
     distance: fmtDistance(r.distanceKm, u),
     profileName: props.profileName,
+    refCode: smileStatus.refCode,
   };
   const shareText = smilesShareText(shareInfo);
   const cardUrl = smilesCardUrl(shareInfo);
 
   async function share() {
     setShareNote(null);
+    if (props.journeyId)
+      void shareSmilesBonusFn({ data: { journeyId: props.journeyId } })
+        .then((b) => {
+          if (b.awarded > 0) {
+            notifySmilesChanged();
+            setToast({ amount: b.awarded, label: "share bonus" });
+          }
+        })
+        .catch(() => undefined);
     let blob: Blob | null = null;
     try {
-      blob = await renderShareImage(r, settings, props.profileName);
+      blob = await renderShareImage(
+        r,
+        settings,
+        props.profileName,
+        smileStatus.available ? { total: smileStatus.balance, level: smileStatus.level.name } : undefined,
+      );
     } catch {
       blob = null;
     }
@@ -261,6 +285,7 @@ export function SmilesCard(props: SmilesCardProps) {
 
   return (
     <section data-testid="smiles-card">
+      {toast ? <SmileToast amount={toast.amount} label={toast.label} onDone={() => setToast(null)} /> : null}
       <p className="text-center text-[10px] tracking-[0.28em] text-muted-foreground uppercase">
         Smiles per Mile
       </p>
@@ -596,6 +621,7 @@ export async function renderShareImage(
   r: SmilesResult,
   s: SmilesSettings,
   profileName: string,
+  smiles?: { total: number; level: string },
 ): Promise<Blob> {
   const W = 1080;
   const H = 1350;
@@ -776,6 +802,14 @@ export async function renderShareImage(
     g.fillStyle = "#9a9a9a";
     g.font = F(300, 34);
     g.fillText(`${r.launches} hard launches · zero fuel, all smiles`, cx, 1000);
+  }
+  if (smiles) {
+    g.textAlign = "center";
+    g.letterSpacing = "6px";
+    g.fillStyle = "#f2f2f2";
+    g.font = F(300, 28);
+    g.fillText(`${smiles.total.toLocaleString("en")} SMILES · ${smiles.level.toUpperCase()}`, cx, 1140);
+    g.letterSpacing = "0px";
   }
   logo(cx - 150, 1205, 0.55, "#777");
   g.fillStyle = "#9a9a9a";

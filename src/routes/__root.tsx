@@ -32,6 +32,7 @@ import { useSessionSelector } from "@/lib/store/session-store";
 import appCss from "../styles.css?url";
 import { reportRuntimeError } from "../lib/runtime-error-reporting";
 import { SEO_CONFIG, isSeoPreviewDeployment, seoHtmlLang } from "@/lib/seo";
+import { SmileReferralBridge } from "@/components/smiles/SmileRewards";
 
 function NotFoundComponent() {
   return (
@@ -225,6 +226,7 @@ function AppChrome({ showMiniPlayer }: { showMiniPlayer: boolean }) {
     <div className={`flex flex-1 flex-col ${padTop} ${padBottom}`}>
       {showMiniPlayer ? <MiniPlayer /> : null}
       <InstallPrompt />
+      <SmileReferralBridge />
       <div className="flex-1">
         <Outlet />
       </div>

@@ -3,6 +3,8 @@ export interface SmilesShareInfo {
   score: number;
   distance: string;
   profileName: string;
+  /** Referral code: share links carry ?ref= so new sign-ups reward the sharer. */
+  refCode?: string | null;
 }
 
 export function smilesShareText(i: SmilesShareInfo): string {
@@ -14,6 +16,7 @@ export function smilesCardUrl(i: SmilesShareInfo): string {
   u.searchParams.set("s", String(Math.max(0, Math.min(100, Math.round(i.score)))));
   u.searchParams.set("d", i.distance.slice(0, 16));
   u.searchParams.set("p", i.profileName.slice(0, 40));
+  if (i.refCode) u.searchParams.set("ref", i.refCode);
   return u.toString();
 }
 
