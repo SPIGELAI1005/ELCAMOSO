@@ -57,6 +57,7 @@ import { fetchSoundAssetManifest } from "@/lib/sound-assets/client-loader";
 import { getSharedSampleLoader } from "@/lib/sound/realism/samples";
 import { loadRecordedLoopBuffers } from "@/lib/sound/realism/v2/recorded-loops-loader";
 import { getRecordedBed, RecordedBed } from "@/lib/sound/recorded-beds";
+import { HorseSnorts, isHorseSnortProfile } from "@/lib/sound/horse-snorts";
 import { DEFAULT_TIMELINE_GAP_FLUSH_MS } from "@/lib/sound/realism/shift-events";
 import { resolvePersonalityId } from "@/lib/drive/drivetrain-resolve";
 
@@ -1536,6 +1537,13 @@ export class SoundEngine {
 
   /** Recorded texture bed (non-hybrid profiles with a RECORDED_BEDS entry). */
   private buildRecordedBed(profile: SoundProfile) {
+    this.snorts?.dispose();
+    this.snorts = null;
+    if (isHorseSnortProfile(profile.id) && this.ctx && this.cabinIn) {
+      const snorts = new HorseSnorts(this.ctx, this.cabinIn);
+      this.snorts = snorts;
+      snorts.load().catch((error) => console.warn("[elcamoso] snorts unavailable", error));
+    }
     const cfg = getRecordedBed(profile.id);
     const ctx = this.ctx;
     if (!cfg || !ctx || !this.cabinIn) return;
@@ -1546,7 +1554,11 @@ export class SoundEngine {
     });
   }
 
+  private snorts: HorseSnorts | null = null;
+
   private disposeRecordedBed() {
+    this.snorts?.dispose();
+    this.snorts = null;
     this.bed?.dispose();
     this.bed = null;
     this.bedReady = Promise.resolve();
@@ -1574,6 +1586,7 @@ export class SoundEngine {
     if (!ctx || !profile || !this.filter || this.swapping) return;
     const t = this.now();
     this.updateRecordedBed(state, t);
+    if (this.snorts && isHorseSnortProfile(profile.id)) this.snorts.update(state, t);
 
     if (
       this.improved ||
