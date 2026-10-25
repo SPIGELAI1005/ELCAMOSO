@@ -59,7 +59,6 @@ export function FoundersBanner({ compact = false, className }: { compact?: boole
 
   const { d, h, m, s } = splitCountdown(msUntilFounderDeadline(now));
   const left = seats.data?.left;
-  const limit = seats.data?.limit ?? 458;
   const full = left === 0 && !founder;
 
   let message: React.ReactNode;
@@ -144,11 +143,11 @@ export function FoundersBanner({ compact = false, className }: { compact?: boole
             {compact ? (
               <>
                 {left}
-                <span className="hidden sm:inline"> of {limit} seats</span> left
+                <span className="hidden sm:inline"> seats</span> left
               </>
             ) : (
               <>
-                {left} of {limit} seats left
+                {left} seats left
               </>
             )}
           </span>
