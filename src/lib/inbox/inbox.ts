@@ -50,7 +50,7 @@ const KEY = "elcamoso.inbox.v1";
 const SEEN_SYS = "elcamoso.inbox.sys.v1";
 const EVT = "elcamoso-inbox";
 export const PENDING_DRIVE_KEY = "elcamoso.pendingDrive.v1";
-export const MIN_SMILES_DISTANCE_M = 200;
+export const MIN_SMILES_DISTANCE_M = 1000;
 export const MIN_SMILES_DURATION_MS = 60_000;
 
 function read(): InboxMessage[] {

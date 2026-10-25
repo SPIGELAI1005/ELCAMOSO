@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { rememberSmilesCard } from "@/lib/smiles/useSmilesCards";
+import { useSettings } from "@/lib/drive/useSettings";
+import { t } from "@/lib/i18n";
+import { isTooShortDrive, tooShortVariant } from "@/lib/smiles/smiles";
 
 import {
   Sheet,
@@ -74,6 +77,9 @@ export function SmilesCard(props: SmilesCardProps) {
   const [shareOpen, setShareOpen] = useState(false);
   const [shareImage, setShareImage] = useState<Blob | null>(null);
 
+  const { settings: appSettings } = useSettings();
+  const lang = appSettings.language;
+  const tooShort = isTooShortDrive(props.distanceM, props.durationMs);
   useEffect(() => setSettings(loadSmilesSettings()), []);
   useEffect(() => {
     track("smiles_shown", { profileId: props.profileId });
@@ -102,14 +108,15 @@ export function SmilesCard(props: SmilesCardProps) {
     ],
   );
   useEffect(() => {
+    if (tooShort) return;
     rememberJourneySmiles(props.journeyId, r);
     void listJourneys()
       .then((js) => setLife(lifetimeSmiles(js, settings)))
       .catch(() => setLife(null));
-  }, [props.journeyId, r, settings]);
+  }, [props.journeyId, r, settings, tooShort]);
   const savedCardKey = useRef<string | null>(null);
   useEffect(() => {
-    if (!props.journeyId) return;
+    if (!props.journeyId || tooShort) return;
     const key = `${props.journeyId}:${r.score}`;
     if (savedCardKey.current === key) return;
     savedCardKey.current = key;
@@ -121,7 +128,7 @@ export function SmilesCard(props: SmilesCardProps) {
       distanceKm: r.distanceKm,
       result: r,
     });
-  }, [props.journeyId, props.profileId, props.profileName, r]);
+  }, [props.journeyId, props.profileId, props.profileName, r, tooShort]);
 
   const u = settings.units;
   const c = settings.currency;
@@ -183,6 +190,68 @@ export function SmilesCard(props: SmilesCardProps) {
     }
     // Tesla browser / desktop: no Web Share with files. Offer explicit options.
     setShareOpen(true);
+  }
+
+  if (tooShort) {
+    return (
+      <section data-testid="smiles-card">
+        <p className="text-center text-[10px] tracking-[0.28em] text-muted-foreground uppercase">
+          Smiles per Mile
+        </p>
+        <div
+          data-testid="smiles-too-short"
+          className="relative mt-4 overflow-hidden rounded-[28px] border border-white/12 bg-[linear-gradient(160deg,rgba(255,255,255,.07),rgba(255,255,255,.02))] p-6 backdrop-blur-xl"
+        >
+          <div className="mb-5 flex items-center gap-2.5 border-b border-white/8 pb-4">
+            <SmilesLogo className="h-[22px] w-auto" />
+            <span className="text-[13px] font-normal tracking-[0.3em]">ELCAMOSO</span>
+            <span className="ml-auto text-[9px] tracking-[0.14em] whitespace-nowrap text-white/40 uppercase">
+              Smiles per Mile
+            </span>
+          </div>
+          <div className="flex items-center gap-5">
+            <svg
+              viewBox="0 0 100 100"
+              className="size-[96px] shrink-0 text-white/45"
+              aria-label="No smile score yet"
+            >
+              <circle
+                cx="50"
+                cy="50"
+                r="44"
+                fill="none"
+                stroke="#2a2a2a"
+                strokeWidth="4"
+                strokeDasharray="3 7"
+              />
+              <text
+                x="50"
+                y="58"
+                textAnchor="middle"
+                fill="currentColor"
+                fontWeight="200"
+                fontSize="26"
+              >
+                --
+              </text>
+            </svg>
+            <div className="min-w-0">
+              <div className="text-[10px] tracking-[0.3em] text-muted-foreground uppercase">
+                Smile score
+              </div>
+              <div className="mt-1.5 text-lg font-light">{t(lang, "smiles.tooShortTitle")}</div>
+              <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                {t(lang, `smiles.tooShort.${tooShortVariant(props.journeyId)}`)}{" "}
+                {t(lang, "smiles.tooShortHint")}
+              </p>
+            </div>
+          </div>
+          <div className="mt-4 text-center text-[11px] text-white/35">
+            {fmtDistance(r.distanceKm, u)} · {Math.round(props.durationMs / 1000)} s
+          </div>
+        </div>
+      </section>
+    );
   }
 
   return (

@@ -268,3 +268,16 @@ function num(v: unknown, d: number) {
 function round2(v: number) {
   return Math.round(v * 100) / 100;
 }
+
+/** Drives shorter than this get no Smiles score ("Too early to tell"). */
+export const SMILES_MIN_DISTANCE_M = 1000;
+export const SMILES_MIN_DURATION_MS = 60_000;
+export function isTooShortDrive(distanceM: number, durationMs: number): boolean {
+  return !(distanceM >= SMILES_MIN_DISTANCE_M && durationMs >= SMILES_MIN_DURATION_MS);
+}
+/** Stable witty-line index (0..2) for a journey id. */
+export function tooShortVariant(seed: string): number {
+  let h = 0;
+  for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) >>> 0;
+  return h % 3;
+}

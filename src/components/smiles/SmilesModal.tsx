@@ -4,7 +4,6 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/compone
 import { SmilesCard } from "@/components/smiles/SmilesCard";
 import type { JourneySummary } from "@/lib/journey/types";
 import { getProfile } from "@/lib/sound/profiles";
-import { isSmilesWorthy } from "@/lib/inbox/inbox";
 
 /** Centered pop-up with the Smiles per Mile card, shown right after STOP. */
 export function SmilesModal({
@@ -30,14 +29,6 @@ export function SmilesModal({
         </DialogDescription>
         {journey && p ? (
           <>
-            {!isSmilesWorthy(journey) ? (
-              <p
-                data-testid="smiles-short-drive"
-                className="px-2 pt-6 text-center text-xs tracking-[0.12em] text-foreground/70"
-              >
-                Short drive. Go a little further next time for a full Smiles score.
-              </p>
-            ) : null}
             <SmilesCard
               journeyId={journey.id}
               profileId={journey.profileId}
