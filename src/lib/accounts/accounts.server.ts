@@ -247,10 +247,41 @@ export async function linkDevice(userId: string, installId: string) {
 }
 
 /** Smile Shop: grant (or extend) Drive+ for `days` days. */
-export async function grantSmileDrivePlus(userId: string, days: number) {
-  need();
+/**
+ * Time-limited Drive+ that stacks: the new end date is (latest active Drive+ end) + days,
+ * where "active" covers Founders Drive+ and any existing promo grant. A permanent grant stays permanent.
+ */
+export async function grantSmileDrivePlus(
+  userId: string,
+  days: number,
+  source = "smile-shop",
+  now = Date.now(),
+): Promise<Date | null> {
+  const db = need();
   await ensureUserRow(userId);
-  for (const entitlement of drivePlusEntitlements())
-    await upsertGrant(userId, "promo_entitlement", { entitlement }, daysFromNow(days), "smile-shop");
+  const ents = drivePlusEntitlements();
+  const existing = await db
+    .select({ expiresAt: entitlementGrants.expiresAt })
+    .from(entitlementGrants)
+    .where(
+      and(
+        eq(entitlementGrants.userId, userId),
+        eq(entitlementGrants.kind, "promo_entitlement"),
+        inArray(entitlementGrants.entitlement, ents),
+      ),
+    );
+  if (existing.length && existing.some((g) => g.expiresAt == null)) return null; // already permanent
+  let base = now;
+  for (const g of existing) if (g.expiresAt) base = Math.max(base, g.expiresAt.getTime());
+  try {
+    const { loadFounderRecord } = await import("@/lib/founders/founders.server");
+    const { FOUNDER_DRIVE_PLUS_UNTIL_MS } = await import("@/lib/founders/founders");
+    if ((await loadFounderRecord(userId)).founderAt != null) base = Math.max(base, FOUNDER_DRIVE_PLUS_UNTIL_MS);
+  } catch {
+    /* founders store unavailable: stack onto grants only */
+  }
+  const expiresAt = new Date(base + Math.min(days, 3650) * 86400_000);
+  for (const entitlement of ents) await upsertGrant(userId, "promo_entitlement", { entitlement }, expiresAt, source);
   invalidateDurableBillingCache(userId);
+  return expiresAt;
 }

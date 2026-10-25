@@ -137,6 +137,7 @@ export function SmilesCard(props: SmilesCardProps) {
       score: r.score,
       distanceKm: r.distanceKm,
       result: r,
+      durationMs: props.durationMs,
     }).then((award) => {
       if (!award) return;
       notifySmilesChanged();

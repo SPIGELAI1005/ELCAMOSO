@@ -19,7 +19,7 @@ import {
 
 /** Save a card for the signed-in account, or locally for guests. Never throws. */
 export async function rememberSmilesCard(
-  input: SmilesCardInput,
+  input: SmilesCardInput & { durationMs?: number | undefined },
 ): Promise<{ awarded: number; streak: number; total: number; level: string } | null> {
   try {
     const res = await saveSmilesCardFn({ data: input });
@@ -32,7 +32,8 @@ export async function rememberSmilesCard(
   } catch {
     /* fall back to local */
   }
-  saveLocalCards(upsertCard(loadLocalCards(), input));
+  const { durationMs: _d, ...card } = input;
+  saveLocalCards(upsertCard(loadLocalCards(), card));
   return null;
 }
 

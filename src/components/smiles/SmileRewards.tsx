@@ -72,13 +72,23 @@ export function SmileLevelRing({ status, className }: { status: SmileStatus; cla
 }
 
 /** Floating "+N smiles" toast. */
-export function SmileToast({ amount, label, onDone }: { amount: number; label?: string | undefined; onDone: () => void }) {
+export function SmileToast({
+  amount,
+  label,
+  text,
+  onDone,
+}: {
+  amount: number;
+  label?: string | undefined;
+  text?: string | undefined;
+  onDone: () => void;
+}) {
   const done = useRef(onDone);
   done.current = onDone;
   useEffect(() => {
-    const t = setTimeout(() => done.current(), 3200);
+    const t = setTimeout(() => done.current(), text ? 5200 : 3200);
     return () => clearTimeout(t);
-  }, [amount]);
+  }, [amount, text]);
   return (
     <div
       role="status"
@@ -87,7 +97,7 @@ export function SmileToast({ amount, label, onDone }: { amount: number; label?: 
     >
       <div className="flex items-center gap-3 rounded-full border border-white/15 bg-black/85 px-5 py-2.5 text-white shadow-[0_0_30px_rgba(229,57,53,0.35)] backdrop-blur">
         <SmileSymbol className="h-6 w-auto text-white" />
-        <span className="text-lg font-light tabular-nums">+{amount} smiles</span>
+        <span className="text-lg font-light tabular-nums">{text ?? `+${amount} smiles`}</span>
         {label ? <span className="text-xs text-white/60">{label}</span> : null}
       </div>
     </div>
@@ -95,8 +105,30 @@ export function SmileToast({ amount, label, onDone }: { amount: number; label?: 
 }
 
 /** Captures ?ref=code from any page; credits the referrer once the visitor is signed in. */
+const INVITE_SEEN_KEY = "elcamoso.inviteRewardSeen.v1";
+
 export function SmileReferralBridge() {
   const { isAuthenticated } = useAccount();
+  const status = useSmileStatus(isAuthenticated);
+  const [invite, setInvite] = useState<string | null>(null);
+  const rewardId = status.inviteReward?.id ?? null;
+  const role = status.inviteReward?.role ?? null;
+  useEffect(() => {
+    if (!rewardId) return;
+    try {
+      if (localStorage.getItem(INVITE_SEEN_KEY) === rewardId) return;
+      localStorage.setItem(INVITE_SEEN_KEY, rewardId);
+    } catch {
+      return;
+    }
+    setInvite(
+      role === "friend"
+        ? "Drive+ unlocked: 1 month on your crew"
+        : role === "inviter"
+          ? "Your friend drove! +1 month Drive+ for you"
+          : "Your friend drove! They got 1 month Drive+",
+    );
+  }, [rewardId, role]);
   useEffect(() => {
     try {
       const ref = new URLSearchParams(window.location.search).get("ref")?.toLowerCase();
@@ -124,7 +156,7 @@ export function SmileReferralBridge() {
         }
       });
   }, [isAuthenticated]);
-  return null;
+  return invite ? <SmileToast amount={0} text={invite} onDone={() => setInvite(null)} /> : null;
 }
 
 /** Active Smiles card theme: server value, else localStorage; always an owned theme or default. */

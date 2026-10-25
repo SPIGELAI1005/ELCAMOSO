@@ -2,6 +2,7 @@
 export const DAILY_SMILE_CAP = 150;
 export const SHARE_BONUS_RATE = 0.25;
 export const REFERRAL_BONUS = 100;
+export const INVITE_MAX_MONTHS = 6;
 export const STREAK_BONUS = 50;
 export const STREAK_DAYS = 7;
 export const FOUNDER_MULTIPLIER = 1.5;
@@ -134,6 +135,10 @@ export interface SmileStatus {
   owned: string[];
   /** Active card theme id (null = not stored / column missing). */
   activeTheme: string | null;
+  /** Latest "Bring a friend" Drive+ unlock (last 30 days), for a one-time toast. */
+  inviteReward: { id: string; role: "inviter" | "inviter-capped" | "friend" } | null;
+  /** Drive+ months earned from invites (lifetime cap INVITE_MAX_MONTHS). */
+  inviteMonths: number;
 }
 
 export const emptySmileStatus = (): SmileStatus => ({
@@ -146,4 +151,6 @@ export const emptySmileStatus = (): SmileStatus => ({
   handle: null,
   owned: [],
   activeTheme: null,
+  inviteReward: null,
+  inviteMonths: 0,
 });

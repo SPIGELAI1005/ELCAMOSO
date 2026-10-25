@@ -15,6 +15,7 @@ import {
   adminRemoveSound,
   adminUpsertPromo,
   getUserDetail,
+  grantSmileDrivePlus,
   linkDevice,
   redeemPromo,
   searchUsers,
@@ -67,5 +68,15 @@ describe("accounts admin + promos (PGlite)", () => {
     expect(d.devices[0]?.installId).toBe("elc-abcd1234");
     expect(d.promos).toEqual(["LAUNCH"]);
     expect(d.grants.some((g) => g.kind === "promo_profile")).toBe(true);
+  });
+  it("smile Drive+ months stack onto an active end date", async () => {
+    const now = Date.now();
+    const day = 86400_000;
+    const a = await grantSmileDrivePlus(U, 30, "smile-invite:x", now);
+    const b = await grantSmileDrivePlus(U, 30, "smile-invite:y", now);
+    expect(Math.round((a!.getTime() - now) / day)).toBe(30);
+    expect(Math.round((b!.getTime() - now) / day)).toBe(60);
+    const c = await grantSmileDrivePlus(U, 3, "smile-shop", now);
+    expect(Math.round((c!.getTime() - now) / day)).toBe(63);
   });
 });

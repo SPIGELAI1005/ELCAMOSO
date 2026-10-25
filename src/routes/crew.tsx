@@ -10,6 +10,7 @@ import { createSeoHeadFromPath } from "@/lib/seo";
 import {
   DAILY_SMILE_CAP,
   FOUNDER_MULTIPLIER,
+  INVITE_MAX_MONTHS,
   REFERRAL_BONUS,
   SHARE_BONUS_RATE,
   SMILE_LEVELS,
@@ -53,7 +54,7 @@ function CrewPage() {
     ["Drive", "Every Smiles card pays out its smiles."],
     ["Share", `+${Math.round(SHARE_BONUS_RATE * 100)}% on top, once a day.`],
     [`${STREAK_DAYS}-day streak`, `+${STREAK_BONUS}. Drive daily, grin weekly.`],
-    ["Invite a friend", `+${REFERRAL_BONUS} when they join.`],
+    ["Bring a friend", `They get 1 month Drive+ free, you earn up to ${INVITE_MAX_MONTHS} months. Plus +${REFERRAL_BONUS} smiles.`],
     ["Daily cap", `${DAILY_SMILE_CAP} a day. Leave some joy for tomorrow.`],
     ["Founders", `${FOUNDER_MULTIPLIER}x on everything.`],
   ];
@@ -124,9 +125,13 @@ function CrewPage() {
           </div>
         </Section>
 
-        <Section id="invite" eyebrow="Bring a friend" title={refLink ? `+${REFERRAL_BONUS} per friend` : "Join the Crew"}>
+        <Section id="invite" eyebrow="Bring a friend" title={refLink ? "They get 1 month, you earn up to 6" : "Join the Crew"}>
           {refLink ? (
             <>
+              <p>{"Bring a friend: they get 1 month Drive+ free, you earn up to 6 months."} Unlocks once they confirm their email and finish a real drive. Plus +{REFERRAL_BONUS} smiles for you, always.</p>
+              <p className="text-[#e53935]" data-testid="invite-months">
+                {status.inviteMonths} of {INVITE_MAX_MONTHS} free months earned
+              </p>
               <p className="break-all text-foreground" data-testid="crew-invite">{refLink}</p>
               <button
                 type="button"

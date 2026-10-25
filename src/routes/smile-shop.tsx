@@ -5,7 +5,7 @@ import { notifySmilesChanged, SmileLevelRing, useActiveTheme } from "@/component
 import { SmileLeaderboard } from "@/components/smiles/SmileLeaderboard";
 import { SmileSymbol } from "@/components/smiles/SmilesSymbols";
 import { useAccount } from "@/lib/account/AccountProvider";
-import { DAILY_SMILE_CAP, SMILE_LEVELS, SMILE_SHOP, type ShopItem } from "@/lib/smiles/rewards";
+import { DAILY_SMILE_CAP, INVITE_MAX_MONTHS, SMILE_LEVELS, SMILE_SHOP, type ShopItem } from "@/lib/smiles/rewards";
 import {
   redeemSmileItemFn,
   setSmileThemeFn,
@@ -74,7 +74,7 @@ function SmileShopPage() {
         <div className="text-xs leading-relaxed text-muted-foreground sm:text-right">
           <div>Drive: smiles from your card</div>
           <div>Share: +25% (once a day)</div>
-          <div>Bring a friend: +100</div>
+          <div>Bring a friend: they get 1 month Drive+, you earn up to 6</div>
           <div>7-day streak: +50</div>
           <div>Up to {DAILY_SMILE_CAP} a day · Founders 1.5x</div>
         </div>
@@ -150,7 +150,9 @@ function SmileShopPage() {
 
       {refLink ? (
         <section className={card}>
-          <div className="text-lg font-light">Bring a friend, get +100</div>
+          <div className="text-lg font-light">Bring a friend: they get 1 month Drive+ free, you earn up to 6 months.</div>
+          <div className="text-xs text-muted-foreground">After their first real drive. Plus +100 smiles for you, always.</div>
+          <div className="mt-1 text-xs text-[#e53935]" data-testid="invite-months">{status.inviteMonths} of {INVITE_MAX_MONTHS} free months earned</div>
           <div className="mt-1 break-all text-xs text-muted-foreground">{refLink}</div>
           <button
             type="button"

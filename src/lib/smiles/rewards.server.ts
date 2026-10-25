@@ -11,6 +11,7 @@ import {
   cappedAward,
   emptySmileStatus,
   hasStreak,
+  INVITE_MAX_MONTHS,
   REFERRAL_BONUS,
   REF_CODE_RE,
   shareBonusBase,
@@ -20,7 +21,7 @@ import {
   type SmileStatus,
   weekStart,
 } from "@/lib/smiles/rewards";
-import { SMILES_MIN_DISTANCE_M } from "@/lib/smiles/smiles";
+import { SMILES_MIN_DISTANCE_M, SMILES_MIN_DURATION_MS } from "@/lib/smiles/smiles";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const EARN = sql`reason in ('card','share','streak','referral')`;
@@ -123,6 +124,16 @@ export async function getSmileStatus(userId: string, now = Date.now()): Promise<
       db,
       sql`select ref from smile_ledger where user_id = ${userId} and reason = 'redeem' and ref like 'theme-%'`,
     );
+    const [inv] = await rows<{ id: string; ref: string }>(
+      db,
+      sql`select id::text as id, ref from smile_ledger where user_id = ${userId} and reason = ${INVITE_REWARD_REASON}
+          and created_at > now() - interval '30 days' order by created_at desc limit 1`,
+    );
+    const [ic] = await rows<{ n: number }>(
+      db,
+      sql`select count(*)::int as n from smile_ledger where user_id = ${userId} and reason = ${INVITE_REWARD_REASON} and ref <> ${userId}`,
+    );
+    const invites = Number(ic?.n ?? 0);
     const earned = Number(r?.earned ?? 0);
     let activeTheme: string | null = null;
     try {
@@ -141,6 +152,10 @@ export async function getSmileStatus(userId: string, now = Date.now()): Promise<
       handle: u?.handle ?? null,
       owned: owned.map((o) => o.ref),
       activeTheme,
+      inviteReward: inv
+        ? { id: inv.id, role: inv.ref === userId ? "friend" : invites > INVITE_MAX_MONTHS ? "inviter-capped" : "inviter" }
+        : null,
+      inviteMonths: Math.min(invites, INVITE_MAX_MONTHS),
     };
   } catch (e) {
     return soft("status", emptySmileStatus())(e);
@@ -156,12 +171,20 @@ export interface AwardResult {
 /** Award a saved, valid Smiles card once per journey. Too-short drives earn nothing. */
 export async function awardCard(
   userId: string,
-  card: { journeyId: string; score: number; distanceKm: number; sound: string; country: string | null },
+  card: {
+    journeyId: string;
+    score: number;
+    distanceKm: number;
+    sound: string;
+    country: string | null;
+    durationMs?: number | undefined;
+  },
   now = Date.now(),
 ): Promise<AwardResult> {
   const none = async () => ({ awarded: 0, streak: 0, status: await getSmileStatus(userId, now) });
   if (!hasRewardsDb(userId)) return { awarded: 0, streak: 0, status: emptySmileStatus() };
   if (card.distanceKm * 1000 < SMILES_MIN_DISTANCE_M || card.score <= 0) return none();
+  if (card.durationMs != null && card.durationMs < SMILES_MIN_DURATION_MS) return none();
   const founder = await isFounder(userId);
   try {
     const out = await getDb().transaction(async (tx) => {
@@ -195,6 +218,7 @@ export async function awardCard(
       await refreshTotals(tx, userId);
       return { awarded: amount, streak };
     });
+    await qualifyReferral(userId);
     return { ...out, status: await getSmileStatus(userId, now) };
   } catch (e) {
     return soft("award", { awarded: 0, streak: 0, status: emptySmileStatus() })(e);
@@ -233,7 +257,7 @@ export async function awardShare(userId: string, journeyId: string, now = Date.n
 export async function applyReferral(userId: string, code: string): Promise<boolean> {
   if (!hasRewardsDb(userId) || !REF_CODE_RE.test(code)) return false;
   try {
-    return await getDb().transaction(async (tx) => {
+    const applied = await getDb().transaction(async (tx) => {
       const [me] = await rows<{ by: string | null; fresh: boolean }>(
         tx,
         sql`select smile_referred_by as by, created_at > now() - interval '3 days' as fresh from users where id = ${userId}::uuid`,
@@ -248,8 +272,60 @@ export async function applyReferral(userId: string, code: string): Promise<boole
       if (ok) await refreshTotals(tx, ref.id);
       return ok;
     });
+    if (applied) await qualifyReferral(userId);
+    return applied;
   } catch (e) {
     return soft("referral", false)(e);
+  }
+}
+
+export const INVITE_DRIVE_PLUS_DAYS = 30;
+
+export const INVITE_REWARD_REASON = "invite_driveplus";
+
+/**
+ * Friend qualifies once: referred (fresh account, not self), email confirmed (users.email is only
+ * set from a verified identity) and at least one real drive (a 'card' ledger row, which is only
+ * written for >= 1 km, >= 1 min). Then both get 1 month of Drive+, stacked. Idempotent via the
+ * ledger unique index (user_id, reason, ref): the friend's id is the ref on both rows.
+ */
+export async function qualifyReferral(
+  friendId: string,
+  now = Date.now(),
+): Promise<{ inviter: string; inviterGotDrivePlus: boolean } | null> {
+  if (!hasRewardsDb(friendId)) return null;
+  try {
+    const inviter = await getDb().transaction(async (tx) => {
+      const [f] = await rows<{ by: string | null; email: string | null }>(
+        tx,
+        sql`select smile_referred_by as by, email from users where id = ${friendId}::uuid`,
+      );
+      if (!f?.by || f.by === friendId || !f.email) return null;
+      const drove = await rows<{ id: string }>(
+        tx,
+        sql`select id from smile_ledger where user_id = ${friendId} and reason = 'card' limit 1`,
+      );
+      if (!drove.length) return null;
+      await lockUser(tx, f.by);
+      const ok = await insertEntry(tx, { userId: f.by, amount: 0, reason: INVITE_REWARD_REASON, ref: friendId });
+      if (!ok) return null; // already rewarded for this friend
+      await insertEntry(tx, { userId: friendId, amount: 0, reason: INVITE_REWARD_REASON, ref: friendId });
+      const [c] = await rows<{ n: number }>(
+        tx,
+        sql`select count(*)::int as n from smile_ledger where user_id = ${f.by} and reason = ${INVITE_REWARD_REASON} and ref <> ${f.by}`,
+      );
+      return { id: f.by, inviterGets: Number(c?.n ?? 0) <= INVITE_MAX_MONTHS };
+    });
+    if (!inviter) return null;
+    // Grants run after commit: the pool has a single connection.
+    const { grantSmileDrivePlus } = await import("@/lib/accounts/accounts.server");
+    for (const id of inviter.inviterGets ? [inviter.id, friendId] : [friendId])
+      await grantSmileDrivePlus(id, INVITE_DRIVE_PLUS_DAYS, `smile-invite:${friendId}`, now).catch(
+        soft(`invite grant ${id}`, null),
+      );
+    return { inviter: inviter.id, inviterGotDrivePlus: inviter.inviterGets };
+  } catch (e) {
+    return soft("invite reward", null)(e);
   }
 }
 

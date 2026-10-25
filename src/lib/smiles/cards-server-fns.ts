@@ -36,7 +36,7 @@ export const listSmilesCardsFn = createServerFn({ method: "POST" }).handler(asyn
 });
 
 export const saveSmilesCardFn = createServerFn({ method: "POST" })
-  .inputValidator((data: SmilesCardInput) => {
+  .inputValidator((data: SmilesCardInput & { durationMs?: number | undefined }) => {
     if (typeof data.journeyId !== "string" || data.journeyId.length > 120)
       throw new Error("Bad card");
     if (typeof data.profileId !== "string" || data.profileId.length > 80)
@@ -49,13 +49,15 @@ export const saveSmilesCardFn = createServerFn({ method: "POST" })
       score: Math.max(0, Math.min(100, Number(data.score) || 0)),
       distanceKm: Math.max(0, Number(data.distanceKm) || 0),
       result: data.result,
+      durationMs: data.durationMs == null ? undefined : Math.max(0, Number(data.durationMs) || 0),
     };
   })
   .handler(async ({ data }) => {
     const { hasCardsDb, saveCard } = await import("./cards.server");
     const userId = await currentUserId();
     if (!userId || !hasCardsDb()) return { cloud: false, smiles: null };
-    await saveCard(userId, data);
+    const { durationMs, ...cardData } = data;
+    await saveCard(userId, cardData);
     const { awardCard } = await import("./rewards.server");
     const smiles = await awardCard(userId, {
       journeyId: data.journeyId,
@@ -63,6 +65,7 @@ export const saveSmilesCardFn = createServerFn({ method: "POST" })
       distanceKm: data.distanceKm,
       sound: data.profileName,
       country: await requestCountry(),
+      durationMs,
     });
     return { cloud: true, smiles };
   });
