@@ -64,6 +64,7 @@ import { Route as LegalAccessibilityRouteImport } from './routes/legal/accessibi
 import { Route as LegalCookiesRouteImport } from './routes/legal/cookies'
 import { Route as LegalImpressumRouteImport } from './routes/legal/impressum'
 import { Route as LegalPrivacyRouteImport } from './routes/legal/privacy'
+import { Route as LegalRewardsRouteImport } from './routes/legal/rewards'
 import { Route as LegalTermsRouteImport } from './routes/legal/terms'
 import { Route as PairTokenRouteImport } from './routes/pair_.$token'
 import { Route as UpgradeTokenRouteImport } from './routes/upgrade.$token'
@@ -360,6 +361,11 @@ const LegalPrivacyRoute = LegalPrivacyRouteImport.update({
   path: '/privacy',
   getParentRoute: () => LegalRouteRoute,
 } as any)
+const LegalRewardsRoute = LegalRewardsRouteImport.update({
+  id: '/rewards',
+  path: '/rewards',
+  getParentRoute: () => LegalRouteRoute,
+} as any)
 const LegalTermsRoute = LegalTermsRouteImport.update({
   id: '/terms',
   path: '/terms',
@@ -517,6 +523,7 @@ export interface FileRoutesByFullPath {
   '/legal/cookies': typeof LegalCookiesRoute
   '/legal/impressum': typeof LegalImpressumRoute
   '/legal/privacy': typeof LegalPrivacyRoute
+  '/legal/rewards': typeof LegalRewardsRoute
   '/legal/terms': typeof LegalTermsRoute
   '/pair/$token': typeof PairTokenRoute
   '/upgrade/$token': typeof UpgradeTokenRoute
@@ -593,6 +600,7 @@ export interface FileRoutesByTo {
   '/legal/cookies': typeof LegalCookiesRoute
   '/legal/impressum': typeof LegalImpressumRoute
   '/legal/privacy': typeof LegalPrivacyRoute
+  '/legal/rewards': typeof LegalRewardsRoute
   '/legal/terms': typeof LegalTermsRoute
   '/pair/$token': typeof PairTokenRoute
   '/upgrade/$token': typeof UpgradeTokenRoute
@@ -671,6 +679,7 @@ export interface FileRoutesById {
   '/legal/cookies': typeof LegalCookiesRoute
   '/legal/impressum': typeof LegalImpressumRoute
   '/legal/privacy': typeof LegalPrivacyRoute
+  '/legal/rewards': typeof LegalRewardsRoute
   '/legal/terms': typeof LegalTermsRoute
   '/pair_/$token': typeof PairTokenRoute
   '/upgrade/$token': typeof UpgradeTokenRoute
@@ -750,6 +759,7 @@ export interface FileRouteTypes {
     | '/legal/cookies'
     | '/legal/impressum'
     | '/legal/privacy'
+    | '/legal/rewards'
     | '/legal/terms'
     | '/pair/$token'
     | '/upgrade/$token'
@@ -826,6 +836,7 @@ export interface FileRouteTypes {
     | '/legal/cookies'
     | '/legal/impressum'
     | '/legal/privacy'
+    | '/legal/rewards'
     | '/legal/terms'
     | '/pair/$token'
     | '/upgrade/$token'
@@ -903,6 +914,7 @@ export interface FileRouteTypes {
     | '/legal/cookies'
     | '/legal/impressum'
     | '/legal/privacy'
+    | '/legal/rewards'
     | '/legal/terms'
     | '/pair_/$token'
     | '/upgrade/$token'
@@ -1375,6 +1387,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LegalPrivacyRouteImport
       parentRoute: typeof LegalRouteRoute
     }
+    '/legal/rewards': {
+      id: '/legal/rewards'
+      path: '/rewards'
+      fullPath: '/legal/rewards'
+      preLoaderRoute: typeof LegalRewardsRouteImport
+      parentRoute: typeof LegalRouteRoute
+    }
     '/legal/terms': {
       id: '/legal/terms'
       path: '/terms'
@@ -1523,6 +1542,7 @@ interface LegalRouteRouteChildren {
   LegalCookiesRoute: typeof LegalCookiesRoute
   LegalImpressumRoute: typeof LegalImpressumRoute
   LegalPrivacyRoute: typeof LegalPrivacyRoute
+  LegalRewardsRoute: typeof LegalRewardsRoute
   LegalTermsRoute: typeof LegalTermsRoute
   LegalIndexRoute: typeof LegalIndexRoute
 }
@@ -1532,6 +1552,7 @@ const LegalRouteRouteChildren: LegalRouteRouteChildren = {
   LegalCookiesRoute: LegalCookiesRoute,
   LegalImpressumRoute: LegalImpressumRoute,
   LegalPrivacyRoute: LegalPrivacyRoute,
+  LegalRewardsRoute: LegalRewardsRoute,
   LegalTermsRoute: LegalTermsRoute,
   LegalIndexRoute: LegalIndexRoute,
 }

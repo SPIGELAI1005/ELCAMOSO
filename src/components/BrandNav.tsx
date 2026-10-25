@@ -423,6 +423,9 @@ export function BrandNav() {
                   <Link to="/legal/terms" onClick={closeSheet} className="hover:text-foreground">
                     Terms
                   </Link>
+                  <Link to="/legal/rewards" onClick={closeSheet} className="hover:text-foreground">
+                    Rewards terms
+                  </Link>
                   <Link to="/legal" onClick={closeSheet} className="hover:text-foreground">
                     All legal
                   </Link>

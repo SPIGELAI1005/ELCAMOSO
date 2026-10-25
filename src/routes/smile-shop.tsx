@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 
 import { notifySmilesChanged, SmileLevelRing, useActiveTheme } from "@/components/smiles/SmileRewards";
 import { SmileLeaderboard } from "@/components/smiles/SmileLeaderboard";
@@ -161,6 +161,9 @@ function SmileShopPage() {
           >
             Copy link
           </button>
+          <div className="mt-2 text-[11px] text-muted-foreground">
+            <Link to="/legal/rewards" className="underline-offset-2 hover:underline">Terms apply</Link>
+          </div>
         </section>
       ) : null}
 
@@ -174,6 +177,13 @@ function SmileShopPage() {
           ))}
         </ul>
       </section>
+
+      <p className="text-center text-[11px] text-muted-foreground">
+        Smiles have no cash value.{" "}
+        <Link to="/legal/rewards" data-testid="shop-terms" className="underline-offset-2 hover:underline">
+          Founders, Crew &amp; Rewards Terms
+        </Link>
+      </p>
     </main>
   );
 }

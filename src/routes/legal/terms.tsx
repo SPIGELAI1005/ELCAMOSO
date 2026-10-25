@@ -107,6 +107,17 @@ function Terms() {
         </p>
       </LegalSection>
 
+      <LegalSection title="7a. Founders, Crew and rewards">
+        <p>
+          The Founders Pack, Founders Test Crew, Smiles, Smile Shop, invite rewards, leaderboards,
+          challenges and promotions are governed additionally by our{" "}
+          <Link to="/legal/rewards" className="text-foreground underline-offset-2 hover:underline">
+            Founders, Crew &amp; Rewards Terms
+          </Link>
+          .
+        </p>
+      </LegalSection>
+
       <LegalSection title="8. Third-party services">
         <p>
           Optional AI, hosting, or Cloud backends may be provided by processors. Their outages or

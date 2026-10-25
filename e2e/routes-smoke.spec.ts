@@ -23,6 +23,7 @@ const ROUTES: { path: string; signal: RegExp }[] = [
   { path: "/legal/privacy", signal: /Privacy/i },
   { path: "/legal/cookies", signal: /Cookie/i },
   { path: "/legal/terms", signal: /Term/i },
+  { path: "/legal/rewards", signal: /Rewards Terms/i },
   { path: "/legal/accessibility", signal: /Accessibility/i },
 ];
 

@@ -224,6 +224,15 @@ export const INDEXABLE_ROUTE_POLICIES: SeoRoutePolicy[] = [
     imageAlt: ALT,
   },
   {
+    path: "/legal/rewards",
+    indexable: true,
+    title: "Founders, Crew & Rewards Terms | ELCAMOSO",
+    description:
+      "Terms for the ELCAMOSO Founders Pack, Founders Test Crew, Smiles, Smile Shop, invites, leaderboards and promotions.",
+    image: IMG,
+    imageAlt: ALT,
+  },
+  {
     path: "/legal/accessibility",
     indexable: true,
     title: "Accessibility | ELCAMOSO",

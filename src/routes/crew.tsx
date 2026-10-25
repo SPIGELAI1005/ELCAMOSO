@@ -161,10 +161,20 @@ function CrewPage() {
               Spend your smiles in the Smile Shop →
             </Link>
           </div>
+          <p className="text-xs text-muted-foreground">
+            Invite rewards: <Link to="/legal/rewards" className="underline-offset-2 hover:underline">terms apply</Link>.
+          </p>
         </Section>
 
         <Section id="founders" eyebrow="Founders Test Crew" title="First in the seat">
           <p className="text-foreground">Exclusive Crew perks to follow.</p>
+          <p className="text-xs text-muted-foreground">
+            Founders, Crew &amp; Rewards{" "}
+            <Link to="/legal/rewards" data-testid="crew-terms" className="underline-offset-2 hover:underline">
+              Terms apply
+            </Link>
+            .
+          </p>
         </Section>
       </article>
     </main>

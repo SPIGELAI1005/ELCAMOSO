@@ -174,6 +174,12 @@ export function FoundersBanner({ compact = false, className }: { compact?: boole
             Perks
           </Link>
         ) : null}
+        <Link
+          to="/legal/rewards"
+          className={cn("shrink-0 text-[9px] tracking-[0.16em] text-muted-foreground/80 uppercase underline-offset-2 hover:text-foreground hover:underline", !compact && "order-4 sm:order-none", compact && "hidden sm:inline")}
+        >
+          Terms apply
+        </Link>
         <button
           type="button"
           onClick={dismiss}
