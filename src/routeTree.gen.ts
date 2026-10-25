@@ -14,6 +14,7 @@ import { Route as AboutRouteImport } from './routes/about'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as CalibrateRouteImport } from './routes/calibrate'
 import { Route as CreditsRouteImport } from './routes/credits'
+import { Route as CrewRouteImport } from './routes/crew'
 import { Route as DebugRouteImport } from './routes/debug'
 import { Route as DemoRouteImport } from './routes/demo'
 import { Route as DriveRouteImport } from './routes/drive'
@@ -106,6 +107,11 @@ const CalibrateRoute = CalibrateRouteImport.update({
 const CreditsRoute = CreditsRouteImport.update({
   id: '/credits',
   path: '/credits',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CrewRoute = CrewRouteImport.update({
+  id: '/crew',
+  path: '/crew',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DebugRoute = DebugRouteImport.update({
@@ -457,6 +463,7 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AdminRoute
   '/calibrate': typeof CalibrateRoute
   '/credits': typeof CreditsRoute
+  '/crew': typeof CrewRoute
   '/debug': typeof DebugRouteWithChildren
   '/demo': typeof DemoRoute
   '/drive': typeof DriveRoute
@@ -531,6 +538,7 @@ export interface FileRoutesByTo {
   '/admin': typeof AdminRoute
   '/calibrate': typeof CalibrateRoute
   '/credits': typeof CreditsRoute
+  '/crew': typeof CrewRoute
   '/debug': typeof DebugRouteWithChildren
   '/demo': typeof DemoRoute
   '/drive': typeof DriveRoute
@@ -607,6 +615,7 @@ export interface FileRoutesById {
   '/admin': typeof AdminRoute
   '/calibrate': typeof CalibrateRoute
   '/credits': typeof CreditsRoute
+  '/crew': typeof CrewRoute
   '/debug': typeof DebugRouteWithChildren
   '/demo': typeof DemoRoute
   '/drive': typeof DriveRoute
@@ -684,6 +693,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/calibrate'
     | '/credits'
+    | '/crew'
     | '/debug'
     | '/demo'
     | '/drive'
@@ -758,6 +768,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/calibrate'
     | '/credits'
+    | '/crew'
     | '/debug'
     | '/demo'
     | '/drive'
@@ -833,6 +844,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/calibrate'
     | '/credits'
+    | '/crew'
     | '/debug'
     | '/demo'
     | '/drive'
@@ -909,6 +921,7 @@ export interface RootRouteChildren {
   AdminRoute: typeof AdminRoute
   CalibrateRoute: typeof CalibrateRoute
   CreditsRoute: typeof CreditsRoute
+  CrewRoute: typeof CrewRoute
   DebugRoute: typeof DebugRouteWithChildren
   DemoRoute: typeof DemoRoute
   DriveRoute: typeof DriveRoute
@@ -997,6 +1010,13 @@ declare module '@tanstack/react-router' {
       path: '/credits'
       fullPath: '/credits'
       preLoaderRoute: typeof CreditsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/crew': {
+      id: '/crew'
+      path: '/crew'
+      fullPath: '/crew'
+      preLoaderRoute: typeof CrewRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/debug': {
@@ -1551,6 +1571,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminRoute: AdminRoute,
   CalibrateRoute: CalibrateRoute,
   CreditsRoute: CreditsRoute,
+  CrewRoute: CrewRoute,
   DebugRoute: DebugRouteWithChildren,
   DemoRoute: DemoRoute,
   DriveRoute: DriveRoute,

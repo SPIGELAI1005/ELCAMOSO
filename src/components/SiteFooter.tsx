@@ -36,6 +36,9 @@ export function SiteFooter() {
           <Link to="/science" className="underline-offset-4 hover:underline">
             Science
           </Link>
+          <Link to="/crew" className="underline-offset-4 hover:underline">
+            Crew
+          </Link>
         </nav>
 
         <p className="mt-8 max-w-xl text-[11px] leading-relaxed text-muted-foreground">

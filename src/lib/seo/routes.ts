@@ -156,6 +156,18 @@ export const INDEXABLE_ROUTE_POLICIES: SeoRoutePolicy[] = [
     ],
   },
   {
+    path: "/crew",
+    indexable: true,
+    title: "Crew - Smiles, Levels & Leaderboard | ELCAMOSO",
+    description: "How ELCAMOSO Smiles work: earn on every drive, climb the levels, top the weekly board.",
+    image: IMG,
+    imageAlt: ALT,
+    breadcrumbs: [
+      { name: "Home", path: "/" },
+      { name: "Crew", path: "/crew" },
+    ],
+  },
+  {
     path: "/legal",
     indexable: true,
     title: "Legal | ELCAMOSO",

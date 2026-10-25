@@ -145,6 +145,7 @@ function Landing() {
               ["/pricing", "Pricing"],
               ["/story", "Story"],
               ["/science", "Science"],
+              ["/crew", "Crew"],
             ] as const
           ).map(([to, label]) => (
             <Link
