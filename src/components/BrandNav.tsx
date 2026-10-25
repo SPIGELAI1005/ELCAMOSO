@@ -314,7 +314,7 @@ export function BrandNav() {
               side="right"
               id="nav-sheet"
               data-testid="nav-sheet"
-              className="flex w-[min(100%,20rem)] flex-col border-border bg-background px-0 pt-14"
+              className="nav-sheet-scroll flex w-[min(100%,20rem)] flex-col border-border bg-background px-0 pt-14"
             >
               <SheetHeader className="space-y-4 border-b border-border px-6 pb-6 text-left">
                 <div className="flex items-center gap-3">

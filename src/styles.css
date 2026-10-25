@@ -1248,3 +1248,16 @@
 @media (prefers-reduced-motion: reduce) {
   .mode-tach__draw, .mode-tach__fade, .mode-tach__spin, .mode-tach__flash { animation: none !important; }
 }
+
+/* Mobile nav sheet: scrollable when fully expanded (About group open, small phones, landscape). */
+.nav-sheet-scroll {
+  height: 100vh;
+  height: 100dvh;
+  max-height: 100vh;
+  max-height: 100dvh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.nav-sheet-scroll > * { flex-shrink: 0; }
