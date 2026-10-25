@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 
-import { notifySmilesChanged, SmileLevelRing, useSmileStatus } from "@/components/smiles/SmileRewards";
+import { notifySmilesChanged, SmileLevelRing, useActiveTheme } from "@/components/smiles/SmileRewards";
 import { SmileSymbol } from "@/components/smiles/SmilesSymbols";
 import { useAccount } from "@/lib/account/AccountProvider";
 import { DAILY_SMILE_CAP, SMILE_LEVELS, SMILE_SHOP, type ShopItem } from "@/lib/smiles/rewards";
@@ -9,7 +9,9 @@ import {
   getSmileLeaderboardFn,
   redeemSmileItemFn,
   setSmileHandleFn,
+  setSmileThemeFn,
 } from "@/lib/smiles/rewards-server-fns";
+import { CARD_THEMES, DEFAULT_THEME_ID, saveLocalTheme } from "@/lib/smiles/themes";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/smile-shop")({
@@ -22,7 +24,7 @@ const card = "rounded-3xl border border-white/10 bg-white/[0.03] p-5";
 
 function SmileShopPage() {
   const { isAuthenticated } = useAccount();
-  const status = useSmileStatus(isAuthenticated);
+  const { theme: active, status } = useActiveTheme();
   const [board, setBoard] = useState<Board | null>(null);
   const [tab, setTab] = useState<"country" | "sound">("country");
   const [note, setNote] = useState<string | null>(null);
@@ -47,6 +49,17 @@ function SmileShopPage() {
       setNote("Could not redeem right now.");
     } finally {
       setBusy(null);
+    }
+  }
+
+  async function pickTheme(id: string) {
+    saveLocalTheme(id);
+    notifySmilesChanged();
+    try {
+      await setSmileThemeFn({ data: { themeId: id } });
+      notifySmilesChanged();
+    } catch {
+      /* local fallback already applied */
     }
   }
 
@@ -124,6 +137,32 @@ function SmileShopPage() {
             </div>
           );
         })}
+      </section>
+
+      <section className={card} data-testid="theme-picker">
+        <div className="text-lg font-light">Card theme</div>
+        <div className="text-xs text-muted-foreground">Your Smiles cards and share images wear it.</div>
+        <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {CARD_THEMES.map((t) => {
+            const owned = t.id === DEFAULT_THEME_ID || status.owned.includes(t.id);
+            const on = active.id === t.id;
+            return (
+              <button
+                key={t.id}
+                type="button"
+                disabled={!owned}
+                onClick={() => void pickTheme(t.id)}
+                style={{ background: t.css, borderColor: on ? "#e53935" : t.border }}
+                className={cn("flex h-20 flex-col justify-end rounded-2xl border-2 p-3 text-left disabled:opacity-40")}
+              >
+                <span className="text-sm text-white">{t.name}</span>
+                <span className="text-[10px] tracking-[0.18em] text-white/70 uppercase">
+                  {on ? "Active" : owned ? "Use" : "Locked"}
+                </span>
+              </button>
+            );
+          })}
+        </div>
       </section>
 
       <section className={card} data-testid="smile-leaderboard">

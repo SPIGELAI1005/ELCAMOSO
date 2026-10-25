@@ -124,6 +124,13 @@ export async function getSmileStatus(userId: string, now = Date.now()): Promise<
       sql`select ref from smile_ledger where user_id = ${userId} and reason = 'redeem' and ref like 'theme-%'`,
     );
     const earned = Number(r?.earned ?? 0);
+    let activeTheme: string | null = null;
+    try {
+      const [t] = await rows<{ t: string | null }>(db, sql`select smile_theme as t from users where id = ${userId}::uuid`);
+      activeTheme = t?.t ?? null;
+    } catch {
+      /* migration 0011 not applied yet: client falls back to localStorage */
+    }
     return {
       available: true,
       balance: Number(r?.bal ?? 0),
@@ -133,6 +140,7 @@ export async function getSmileStatus(userId: string, now = Date.now()): Promise<
       refCode: code,
       handle: u?.handle ?? null,
       owned: owned.map((o) => o.ref),
+      activeTheme,
     };
   } catch (e) {
     return soft("status", emptySmileStatus())(e);
@@ -331,5 +339,24 @@ export async function getLeaderboard(viewerId: string | null, now = Date.now()):
     return { weekOf, byCountry: await load("country"), bySound: await load("sound") };
   } catch (e) {
     return soft<Leaderboard>("leaderboard", empty)(e);
+  }
+}
+
+/** Store the active card theme; only owned themes (or default). False if not stored. */
+export async function setSmileTheme(userId: string, themeId: string): Promise<boolean> {
+  if (!hasRewardsDb(userId)) return false;
+  try {
+    const db = getDb();
+    if (themeId !== "default") {
+      const own = await rows<{ id: string }>(
+        db,
+        sql`select id from smile_ledger where user_id = ${userId} and reason = 'redeem' and ref = ${themeId}`,
+      );
+      if (!own.length) return false;
+    }
+    await db.execute(sql`update users set smile_theme = ${themeId} where id = ${userId}::uuid`);
+    return true;
+  } catch (e) {
+    return soft("theme", false)(e);
   }
 }

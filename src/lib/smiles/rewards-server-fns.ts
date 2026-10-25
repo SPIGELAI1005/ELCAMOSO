@@ -66,3 +66,16 @@ export const getSmileLeaderboardFn = createServerFn({ method: "POST" }).handler(
   const { getLeaderboard } = await import("./rewards.server");
   return getLeaderboard(await currentUserId());
 });
+
+export const setSmileThemeFn = createServerFn({ method: "POST" })
+  .inputValidator((data: { themeId: string }) => {
+    const id = String(data.themeId);
+    if (!/^(default|theme-[a-z]{3,20})$/.test(id)) throw new Error("Bad theme");
+    return { themeId: id };
+  })
+  .handler(async ({ data }) => {
+    const userId = await currentUserId();
+    if (!userId) return { ok: false };
+    const { setSmileTheme } = await import("./rewards.server");
+    return { ok: await setSmileTheme(userId, data.themeId) };
+  });

@@ -2,6 +2,7 @@ import { useOptionalFounder } from "@/lib/entitlements/EntitlementsProvider";
 import { FounderBadge } from "@/components/FoundersBanner";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
+import { CARD_THEMES, type CardTheme } from "@/lib/smiles/themes";
 import { rememberSmilesCard } from "@/lib/smiles/useSmilesCards";
 import { useSettings } from "@/lib/drive/useSettings";
 import { t } from "@/lib/i18n";
@@ -40,7 +41,7 @@ import {
 import { cn } from "@/lib/utils";
 import { track } from "@/lib/analytics/track";
 import { smilesCardUrl, smilesShareText } from "@/lib/smiles/share";
-import { notifySmilesChanged, SmileToast, useSmileStatus } from "@/components/smiles/SmileRewards";
+import { notifySmilesChanged, SmileToast, useActiveTheme } from "@/components/smiles/SmileRewards";
 import { shareSmilesBonusFn } from "@/lib/smiles/rewards-server-fns";
 import { SmilesShareSheet } from "@/components/smiles/SmilesShareSheet";
 
@@ -84,7 +85,7 @@ export function SmilesCard(props: SmilesCardProps) {
   const [shareOpen, setShareOpen] = useState(false);
   const [shareImage, setShareImage] = useState<Blob | null>(null);
   const [toast, setToast] = useState<{ amount: number; label?: string | undefined } | null>(null);
-  const smileStatus = useSmileStatus();
+  const { theme, status: smileStatus } = useActiveTheme();
 
   const { settings: appSettings } = useSettings();
   const lang = appSettings.language;
@@ -199,6 +200,7 @@ export function SmilesCard(props: SmilesCardProps) {
         settings,
         props.profileName,
         smileStatus.available ? { total: smileStatus.balance, level: smileStatus.level.name } : undefined,
+        theme,
       );
     } catch {
       blob = null;
@@ -289,7 +291,11 @@ export function SmilesCard(props: SmilesCardProps) {
       <p className="text-center text-[10px] tracking-[0.28em] text-muted-foreground uppercase">
         Smiles per Mile
       </p>
-      <div className="relative mt-4 overflow-hidden rounded-[28px] border border-white/12 bg-[linear-gradient(160deg,rgba(255,255,255,.07),rgba(255,255,255,.02))] p-6 shadow-[0_0_40px_rgba(229,57,53,.08)] backdrop-blur-xl">
+      <div
+        data-theme={theme.id}
+        style={{ background: theme.css, borderColor: theme.border }}
+        className="relative mt-4 overflow-hidden rounded-[28px] border p-6 shadow-[0_0_40px_rgba(229,57,53,.08)] backdrop-blur-xl"
+      >
         <div className="mb-5 flex items-center gap-2.5 border-b border-white/8 pb-4">
           <SmilesLogo className="h-[22px] w-auto" />
           <span className="text-[13px] font-normal tracking-[0.3em]">ELCAMOSO</span>
@@ -622,6 +628,7 @@ export async function renderShareImage(
   s: SmilesSettings,
   profileName: string,
   smiles?: { total: number; level: string },
+  theme: CardTheme = CARD_THEMES[0]!,
 ): Promise<Blob> {
   const W = 1080;
   const H = 1350;
@@ -635,10 +642,10 @@ export async function renderShareImage(
     /* ignore */
   }
   const F = (w: number, px: number) => `${w} ${px}px Outfit, system-ui, sans-serif`;
-  g.fillStyle = "#050505";
+  g.fillStyle = theme.base;
   g.fillRect(0, 0, W, H);
   const grd = g.createRadialGradient(W / 2, 520, 50, W / 2, 520, 700);
-  grd.addColorStop(0, "rgba(229,57,53,0.14)");
+  grd.addColorStop(0, theme.glow);
   grd.addColorStop(1, "rgba(0,0,0,0)");
   g.fillStyle = grd;
   g.fillRect(0, 0, W, H);

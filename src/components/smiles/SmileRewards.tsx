@@ -6,6 +6,7 @@ import { SmileSymbol } from "@/components/smiles/SmilesSymbols";
 import { useAccount } from "@/lib/account/AccountProvider";
 import { emptySmileStatus, REF_CODE_RE, type SmileStatus } from "@/lib/smiles/rewards";
 import { applySmileReferralFn, getSmileStatusFn } from "@/lib/smiles/rewards-server-fns";
+import { type CardTheme, loadLocalTheme, resolveTheme } from "@/lib/smiles/themes";
 import { cn } from "@/lib/utils";
 
 const EVT = "elcamoso:smiles";
@@ -124,4 +125,17 @@ export function SmileReferralBridge() {
       });
   }, [isAuthenticated]);
   return null;
+}
+
+/** Active Smiles card theme: server value, else localStorage; always an owned theme or default. */
+export function useActiveTheme(): { theme: CardTheme; status: SmileStatus } {
+  const status = useSmileStatus();
+  const [local, setLocal] = useState<string | null>(null);
+  useEffect(() => {
+    const load = () => setLocal(loadLocalTheme());
+    load();
+    window.addEventListener(EVT, load);
+    return () => window.removeEventListener(EVT, load);
+  }, []);
+  return { theme: resolveTheme(status.activeTheme ?? local, status.owned), status };
 }

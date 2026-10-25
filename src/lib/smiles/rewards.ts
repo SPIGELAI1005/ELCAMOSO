@@ -132,6 +132,8 @@ export interface SmileStatus {
   refCode: string | null;
   handle: string | null;
   owned: string[];
+  /** Active card theme id (null = not stored / column missing). */
+  activeTheme: string | null;
 }
 
 export const emptySmileStatus = (): SmileStatus => ({
@@ -143,4 +145,5 @@ export const emptySmileStatus = (): SmileStatus => ({
   refCode: null,
   handle: null,
   owned: [],
+  activeTheme: null,
 });

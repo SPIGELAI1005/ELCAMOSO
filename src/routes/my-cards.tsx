@@ -4,6 +4,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 
 import { ElcamosoMark } from "@/components/ElcamosoLogo";
 import { renderShareImage } from "@/components/smiles/SmilesCard";
+import { useActiveTheme } from "@/components/smiles/SmileRewards";
 import { SmilesShareSheet } from "@/components/smiles/SmilesShareSheet";
 import { MAX_PINNED_CARDS, MAX_UNPINNED_CARDS, type SmilesCardRecord } from "@/lib/smiles/cards";
 import { smilesCardUrl, smilesShareText } from "@/lib/smiles/share";
@@ -24,6 +25,7 @@ function MyCardsPage() {
     null,
   );
 
+  const { theme } = useActiveTheme();
   const share = async (card: SmilesCardRecord) => {
     const settings = loadSmilesSettings();
     const info = {
@@ -34,7 +36,7 @@ function MyCardsPage() {
     const text = smilesShareText(info);
     let image: Blob | null = null;
     try {
-      image = await renderShareImage(card.result, settings, card.profileName);
+      image = await renderShareImage(card.result, settings, card.profileName, undefined, theme);
     } catch {
       image = null;
     }
@@ -58,7 +60,12 @@ function MyCardsPage() {
 
   const list = (items: SmilesCardRecord[]) =>
     items.map((card) => (
-      <li key={card.id} className="rounded-2xl border border-border p-4">
+      <li
+        key={card.id}
+        data-theme={theme.id}
+        style={{ background: theme.css, borderColor: theme.border }}
+        className="rounded-2xl border p-4"
+      >
         <div className="flex items-baseline justify-between gap-3">
           <SmilesSymbolRow
             smiles={card.score}
