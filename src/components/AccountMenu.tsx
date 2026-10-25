@@ -14,6 +14,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useAccount } from "@/lib/account/AccountProvider";
+import { useOptionalFounder } from "@/lib/entitlements/EntitlementsProvider";
 import { useReducedMotion } from "@/lib/drive/useReducedMotion";
 import { useSettings } from "@/lib/drive/useSettings";
 import { t } from "@/lib/i18n";
@@ -31,6 +32,8 @@ export function AccountMenu({ className, variant = "icon", onNavigate }: Account
   const { settings } = useSettings();
   const reducedMotion = useReducedMotion();
   const location = useRouterState({ select: (s) => s.location });
+  const founder = useOptionalFounder();
+  const isFounder = isAuthenticated && Boolean(founder);
   const [signInOpen, setSignInOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
@@ -85,7 +88,8 @@ export function AccountMenu({ className, variant = "icon", onNavigate }: Account
           open={profileOpen}
           onOpenChange={setProfileOpen}
           email={session?.email ?? ""}
-          signingOut={signingOut}
+          founderSeat={isFounder ? (founder?.seat ?? null) : undefined}
+        signingOut={signingOut}
           onSignOut={() => void handleSignOut()}
           onNavigate={() => {
             setProfileOpen(false);
@@ -105,7 +109,7 @@ export function AccountMenu({ className, variant = "icon", onNavigate }: Account
         onClick={openAccount}
         data-testid="nav-account"
         className={cn(
-          "inline-flex h-12 w-12 items-center justify-center rounded-full text-foreground transition-colors hover:bg-secondary",
+          "relative inline-flex h-12 w-12 items-center justify-center rounded-full text-foreground transition-colors hover:bg-secondary",
           isAuthenticated && "ring-1 ring-border",
           className,
         )}
@@ -114,6 +118,13 @@ export function AccountMenu({ className, variant = "icon", onNavigate }: Account
         }
       >
         <AccountUserIcon className="h-[1.375rem] w-auto" />
+        {isFounder ? (
+          <span
+            data-testid="nav-founder-dot"
+            aria-hidden
+            className="absolute top-2.5 right-2.5 h-2 w-2 rounded-full bg-[#e53935] ring-2 ring-background"
+          />
+        ) : null}
       </button>
 
       <AccountSignInDialog
@@ -127,6 +138,7 @@ export function AccountMenu({ className, variant = "icon", onNavigate }: Account
         open={profileOpen}
         onOpenChange={setProfileOpen}
         email={session?.email ?? ""}
+        founderSeat={isFounder ? (founder?.seat ?? null) : undefined}
         signingOut={signingOut}
         onSignOut={() => void handleSignOut()}
         onNavigate={() => {
@@ -144,6 +156,7 @@ function AccountProfileDialog({
   open,
   onOpenChange,
   email,
+  founderSeat,
   signingOut,
   onSignOut,
   onNavigate,
@@ -153,6 +166,8 @@ function AccountProfileDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
   email: string;
+  /** undefined = not a Founder; null = Founder without a seat number. */
+  founderSeat?: number | null | undefined;
   signingOut: boolean;
   onSignOut: () => void;
   onNavigate: () => void;
@@ -171,6 +186,15 @@ function AccountProfileDialog({
               reducedMotion={reducedMotion}
               className="h-14 w-auto text-foreground"
             />
+            {founderSeat !== undefined ? (
+              <span
+                data-testid="profile-founder-ribbon"
+                className="relative -mt-1 inline-flex items-center gap-1.5 rounded-full border border-[#e53935]/70 bg-background px-3 py-0.5 text-[10px] font-medium tracking-[0.28em] text-[#e53935] uppercase shadow-[0_0_12px_rgba(229,57,53,0.25)]"
+              >
+                <span className="h-1 w-1 rounded-full bg-[#e53935]" aria-hidden />
+                Founder{founderSeat != null ? ` · #${founderSeat}` : ""}
+              </span>
+            ) : null}
             <DialogHeader className="mt-6 space-y-2">
               <DialogTitle className="text-center text-xl font-light tracking-tight">
                 {t(language, "account.profileTitle")}
@@ -178,6 +202,11 @@ function AccountProfileDialog({
               <DialogDescription className="text-center text-sm text-muted-foreground">
                 {email}
               </DialogDescription>
+              {founderSeat !== undefined ? (
+                <p className="text-center text-[11px] tracking-[0.18em] text-[#e53935]/80 uppercase">
+                  Founders Test Crew member
+                </p>
+              ) : null}
             </DialogHeader>
           </div>
         </div>
