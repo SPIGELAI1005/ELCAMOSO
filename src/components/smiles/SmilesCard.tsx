@@ -678,7 +678,7 @@ export async function renderShareImage(
       s.units === "us" ? (r.distanceKm / KM_PER_MI).toFixed(1) : r.distanceKm.toFixed(1);
     const dLabel = s.units === "us" ? "MILES" : "KM";
     const smileSym = (x: number, y: number, sc: number) => {
-      // O))) rotated 90° clockwise: arcs below the O, red accent
+      // O))) rotated 90° clockwise: arcs below the O, all white
       g.save();
       g.translate(x + 72 * sc, y);
       g.rotate(Math.PI / 2);
@@ -689,7 +689,6 @@ export async function renderShareImage(
       g.beginPath();
       g.arc(20, 36, 17, 0, Math.PI * 2);
       g.stroke();
-      g.strokeStyle = RED;
       for (const [d, w] of [
         [[40, 14, 52, 24, 52, 48, 40, 58], 3.2],
         [[54, 9, 69, 22, 69, 50, 54, 63], 3],

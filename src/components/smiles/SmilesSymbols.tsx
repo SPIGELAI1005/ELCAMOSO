@@ -33,7 +33,7 @@ export function SmileSymbol({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 72 90" className={cn("inline-block", className)} aria-label="smiles" role="img">
       <g transform="translate(72 0) rotate(90)">
-        <Mark waveColor="#e53935" />
+        <Mark waveColor="currentColor" />
       </g>
     </svg>
   );
