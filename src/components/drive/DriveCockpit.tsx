@@ -557,7 +557,7 @@ export function DriveCockpit({
         className="drive-cockpit__centre relative z-[1] mx-auto flex min-h-0 w-full max-w-lg flex-1 flex-col items-center justify-center py-2 sm:py-4"
         aria-label="Speed and drivetrain"
       >
-        <div className="relative mx-auto aspect-square w-[min(58vw,220px)] max-w-full place-items-center sm:w-[280px]">
+        <div className="relative mx-auto mt-3 aspect-square w-[min(58vw,220px)] max-w-full place-items-center sm:mt-5 sm:w-[280px]">
           <ModeTachometer
             themeId={tachThemeId}
             introKey={`${profile.id}:${activeMoodId}`}
@@ -617,8 +617,12 @@ export function DriveCockpit({
         </div>
 
         <div className="mt-2 flex w-full flex-col items-center gap-0.5 sm:mt-3 sm:gap-1">
-          {/* Race dash already shows gear + rpm inside the tach: hide the duplicate row. */}
-          <div className={cn("flex items-baseline gap-3", tachThemeId === "race" && "sr-only")}>
+          {/* Race dash already shows gear + rpm inside the tach: hide the duplicate row
+              but keep its space so the controls below never shift between modes. */}
+          <div
+            className={cn("flex items-baseline gap-3", tachThemeId === "race" && "invisible")}
+            aria-hidden={tachThemeId === "race" ? true : undefined}
+          >
             <p
               className={cn(
                 "text-3xl font-extralight tabular-nums transition-colors duration-200 sm:text-4xl",
@@ -643,7 +647,7 @@ export function DriveCockpit({
           <p
             className={cn(
               "text-[10px] tracking-[0.28em] text-muted-foreground uppercase",
-              tachThemeId === "race" && "sr-only",
+              tachThemeId === "race" && "invisible",
             )}
           >
             {secondary.label}

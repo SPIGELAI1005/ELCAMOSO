@@ -16,7 +16,9 @@ export function MiniPlayer() {
   const { settings } = useSettings();
   if (pathname === "/") return null;
   const onDrive = pathname === "/drive" || pathname.startsWith("/drive/");
-  if (ui.safetyMode && onDrive) return null;
+  // The drive cockpit already shows the sound name/status; a toggling bar here
+  // shifted the tachometer and controls between idle and playing.
+  if (onDrive) return null;
   const live = isLiveSessionStatus(ui.status);
   if (!live) return null;
 
@@ -35,16 +37,13 @@ export function MiniPlayer() {
             </p>
           </Link>
           <div className="min-w-0 flex-1" aria-hidden="true" />
-          {/* Drive cockpit owns Stop; keep MiniPlayer stop on other live routes only. */}
-          {onDrive ? null : (
-            <button
-              type="button"
-              onClick={() => getSession().stop()}
-              className="h-11 min-w-11 shrink-0 rounded-full border border-border px-5 text-[11px] tracking-[0.2em] uppercase"
-            >
-              {t(settings.language, "player.stop")}
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={() => getSession().stop()}
+            className="h-11 min-w-11 shrink-0 rounded-full border border-border px-5 text-[11px] tracking-[0.2em] uppercase"
+          >
+            {t(settings.language, "player.stop")}
+          </button>
         </div>
       </div>
     </>
