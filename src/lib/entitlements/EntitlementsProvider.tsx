@@ -88,3 +88,9 @@ export function useEntitlementsContext(): EntitlementsContextValue {
   }
   return ctx;
 }
+
+/** Founder status if an EntitlementsProvider is mounted (null otherwise; never throws). */
+export function useOptionalFounder() {
+  const ctx = useContext(EntitlementsContext);
+  return ctx?.snapshot.founder ?? null;
+}

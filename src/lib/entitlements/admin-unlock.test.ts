@@ -1,3 +1,5 @@
+import { setFoundersEnabledForTests } from "@/lib/founders/founders.server";
+setFoundersEnabledForTests(false);
 import { beforeEach, describe, expect, it } from "vitest";
 
 import { resetAccountAuthStoreForTests, saveAccountSession } from "@/lib/account/session-store";

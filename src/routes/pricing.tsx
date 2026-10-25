@@ -38,6 +38,18 @@ function EarlyAccessBanner() {
         <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
           {t(language, "pricing.earlyAccessBody")}
         </p>
+        <div className="mt-6 border-l-2 border-[#e53935] pl-4">
+          <p className="text-[10px] tracking-[0.3em] text-[#e53935] uppercase">Founders Pack</p>
+          <h3 className="mt-2 text-lg font-light tracking-tight">{t(language, "pricing.founders.title")}</h3>
+          <p className="mt-2 text-sm text-muted-foreground">{t(language, "pricing.founders.body")}</p>
+          <ul className="mt-3 space-y-1 text-sm text-muted-foreground">
+            {(["perk1", "perk2", "perk3", "perk4"] as const).map((k) => (
+              <li key={k}>
+                <span className="text-[#e53935]">—</span> {t(language, `pricing.founders.${k}`)}
+              </li>
+            ))}
+          </ul>
+        </div>
       </div>
     </aside>
   );

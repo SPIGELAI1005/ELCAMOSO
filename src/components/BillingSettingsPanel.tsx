@@ -1,3 +1,4 @@
+import { FounderAccountCard } from "@/components/FounderAccountCard";
 import { PromoCodeForm } from "@/components/account/PromoCodeForm";
 import { Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
@@ -94,6 +95,7 @@ export function BillingSettingsPanel({ billingFlash = null }: BillingSettingsPan
 
   return (
     <div className="space-y-6">
+      <FounderAccountCard />
       <section className="rounded-2xl border border-border/60 bg-card/40 p-4">
         <p className="text-[11px] tracking-[0.24em] text-muted-foreground uppercase">Account</p>
         {isAuthenticated && accountEmail ? (

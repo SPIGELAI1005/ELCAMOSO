@@ -55,6 +55,16 @@ export interface EntitlementUser {
   grantedEntitlements?: readonly Entitlement[];
   /** Monotonic revision for cache invalidation when server snapshot updates. */
   revision?: number;
+  /** Founders Pack status (server-authored); null/undefined = not a Founder. */
+  founder?: FounderInfo | null;
+}
+
+export interface FounderInfo {
+  since: number;
+  seat: number | null;
+  drivePlusUntil: number;
+  drivePlusActive: boolean;
+  testCrewOptIn: boolean;
 }
 
 /** Resolved entitlement state for UI and gates. */
@@ -69,4 +79,6 @@ export interface EntitlementSnapshot {
   grantedProfileIds: readonly string[];
   /** UTC epoch ms when the current offline lease tip expires; null if none issued. */
   offlineLeaseExpiresAt: number | null;
+  /** Founders Pack status; null when not a Founder. */
+  founder?: FounderInfo | null;
 }

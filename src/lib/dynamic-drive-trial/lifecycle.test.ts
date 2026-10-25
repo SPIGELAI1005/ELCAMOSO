@@ -1,3 +1,5 @@
+import { setFoundersEnabledForTests } from "@/lib/founders/founders.server";
+setFoundersEnabledForTests(false);
 import { randomUUID } from "node:crypto";
 
 import { beforeEach, describe, expect, it, vi } from "vitest";

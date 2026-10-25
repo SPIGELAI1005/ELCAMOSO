@@ -20,6 +20,9 @@ import type {
 } from "@/lib/entitlements/types";
 import type { Plan } from "@/lib/entitlements/types";
 import type { BillingStatus } from "@/lib/billing/status";
+import { entitlementsForPlan } from "@/lib/entitlements/plans";
+import { founderStatusFrom, isFounderDrivePlusActive } from "@/lib/founders/founders";
+import type { FounderInfo } from "@/lib/entitlements/types";
 
 function mapBillingStatusToSubscription(status: BillingStatus): SubscriptionStatus {
   switch (status) {
@@ -64,6 +67,7 @@ export async function resolveEntitlementUser(input: {
 
   let grantedProfileIds: string[] = [];
   let grantedEntitlements: Entitlement[] = [];
+  let founder: FounderInfo | null = null;
 
   if (input.sessionToken) {
     const session = getAccountSession(input.sessionToken, now);
@@ -103,6 +107,28 @@ export async function resolveEntitlementUser(input: {
         grantedEntitlements = [...new Set([...grantedEntitlements, ...ALL_ENTITLEMENTS])];
         revision += 8;
       }
+
+      // Founders Pack: a verified session before the deadline claims a seat (atomic, capped).
+      // Active Founders get the full Drive+ entitlement set until FOUNDER_DRIVE_PLUS_UNTIL.
+      try {
+        const { claimFounderSeat, foundersEnabled } = await import("@/lib/founders/founders.server");
+        const rec = foundersEnabled()
+          ? await claimFounderSeat(session.userId, session.email ?? null, now)
+          : null;
+        const status = rec ? founderStatusFrom(rec.founderAt) : null;
+        if (status && rec) {
+          const active = isFounderDrivePlusActive(rec.founderAt, now);
+          founder = { ...status, seat: rec.seat, drivePlusActive: active, testCrewOptIn: rec.testCrewOptIn };
+          if (active) {
+            grantedEntitlements = [
+              ...new Set([...grantedEntitlements, ...entitlementsForPlan("DRIVE_PLUS")]),
+            ];
+            revision += 16;
+          }
+        }
+      } catch (error) {
+        console.error("[founders] resolve failed", error instanceof Error ? error.message : error);
+      }
     }
   }
 
@@ -116,6 +142,7 @@ export async function resolveEntitlementUser(input: {
     grantedProfileIds,
     grantedEntitlements,
     revision,
+    founder,
   };
 }
 

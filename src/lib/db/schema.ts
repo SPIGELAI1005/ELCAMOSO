@@ -40,6 +40,12 @@ export const users = pgTable(
     email: text("email"),
     stripeCustomerId: text("stripe_customer_id"),
     role: userRoleEnum("role").notNull().default("user"),
+    /** Founders Pack: verified sign-in on/before 09.11.2026 23:59:59 Berlin. Null = not a Founder. */
+    founderAt: timestamp("founder_at", { withTimezone: true, mode: "date" }),
+    /** 1-based Founder seat number (unique; capped by FOUNDER_SEAT_LIMIT). */
+    founderSeat: integer("founder_seat"),
+    /** Founders Test Crew opt-in (early access / beta feedback). */
+    testCrewOptIn: boolean("test_crew_opt_in").notNull().default(false),
     createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" })
       .notNull()

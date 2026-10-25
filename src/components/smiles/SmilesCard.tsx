@@ -1,3 +1,5 @@
+import { useOptionalFounder } from "@/lib/entitlements/EntitlementsProvider";
+import { FounderBadge } from "@/components/FoundersBanner";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { rememberSmilesCard } from "@/lib/smiles/useSmilesCards";
@@ -74,6 +76,7 @@ export function SmilesCard(props: SmilesCardProps) {
   const [editOpen, setEditOpen] = useState(false);
   const [life, setLife] = useState<ReturnType<typeof lifetimeSmiles> | null>(null);
   const [shareNote, setShareNote] = useState<string | null>(null);
+  const founder = useOptionalFounder();
   const [shareOpen, setShareOpen] = useState(false);
   const [shareImage, setShareImage] = useState<Blob | null>(null);
 
@@ -263,6 +266,7 @@ export function SmilesCard(props: SmilesCardProps) {
         <div className="mb-5 flex items-center gap-2.5 border-b border-white/8 pb-4">
           <SmilesLogo className="h-[22px] w-auto" />
           <span className="text-[13px] font-normal tracking-[0.3em]">ELCAMOSO</span>
+          {founder ? <FounderBadge seat={founder.seat} /> : null}
           <span className="ml-auto text-[9px] tracking-[0.14em] whitespace-nowrap text-[#e53935] uppercase">
             Smiles per Mile
           </span>

@@ -1,3 +1,5 @@
+import { setFoundersEnabledForTests } from "@/lib/founders/founders.server";
+setFoundersEnabledForTests(false);
 /**
  * End-to-end Tesla purchase flow - server-side integration.
  *

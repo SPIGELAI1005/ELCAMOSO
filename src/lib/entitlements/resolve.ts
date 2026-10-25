@@ -52,6 +52,7 @@ export function buildEntitlementSnapshot(
     revision: user.revision ?? 0,
     grantedProfileIds: [...(user.grantedProfileIds ?? [])].sort(),
     offlineLeaseExpiresAt,
+    founder: user.founder ?? null,
   };
 }
 

@@ -92,6 +92,8 @@ async function persistSessionDurably(session: AccountSession): Promise<void> {
   try {
     const { persistAccountSession } = await import("@/lib/admin/admin-store.server");
     await persistAccountSession(session);
+    const { claimFounderSeat } = await import("@/lib/founders/founders.server");
+    await claimFounderSeat(session.userId, session.email, session.createdAt);
   } catch (error) {
     console.error(
       "[account] session persist failed",
