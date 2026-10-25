@@ -5,6 +5,7 @@ import { Link } from "@tanstack/react-router";
 import { rememberSmilesCard } from "@/lib/smiles/useSmilesCards";
 import { useSettings } from "@/lib/drive/useSettings";
 import { t } from "@/lib/i18n";
+import { SmilesSymbolRow } from "@/components/smiles/SmilesSymbols";
 import { isTooShortDrive, tooShortVariant } from "@/lib/smiles/smiles";
 
 import {
@@ -20,6 +21,7 @@ import {
   CURRENCY_SYMBOL,
   SMILES_CURRENCIES,
   L_PER_GAL,
+  KM_PER_MI,
   computeSmiles,
   defaultSmilesSettings,
   fmtDistance,
@@ -306,8 +308,15 @@ export function SmilesCard(props: SmilesCardProps) {
               Smile score
             </div>
             <div className="mt-1.5 text-lg font-light">{smileLabel(r.score)}</div>
-            <div className="mt-1 text-xs text-muted-foreground">
-              {fmtDistance(r.distanceKm, u)} · {r.smilesPerMile.toFixed(1)} smiles per mile
+            <SmilesSymbolRow
+              className="mt-2"
+              size="sm"
+              smiles={r.score}
+              distanceKm={r.distanceKm}
+              units={u}
+            />
+            <div className="mt-1 text-[11px] text-muted-foreground">
+              {r.smilesPerMile.toFixed(1)} smiles per mile
             </div>
           </div>
         </div>
@@ -663,11 +672,75 @@ export async function renderShareImage(
   g.fillText(smileLabel(r.score), cx, 760);
   g.fillStyle = "#9a9a9a";
   g.font = F(300, 30);
-  g.fillText(
-    `${profileName} · ${fmtDistance(r.distanceKm, s.units)} · ${r.smilesPerMile.toFixed(1)} smiles/mile`,
-    cx,
-    815,
-  );
+  {
+    // symbol row: "19 [smile]  /  2.6 [O)))]"
+    const dist =
+      s.units === "us" ? (r.distanceKm / KM_PER_MI).toFixed(1) : r.distanceKm.toFixed(1);
+    const dLabel = s.units === "us" ? "MILES" : "KM";
+    const smileSym = (x: number, y: number, sc: number) => {
+      // O))) rotated 90° clockwise: arcs below the O, red accent
+      g.save();
+      g.translate(x + 72 * sc, y);
+      g.rotate(Math.PI / 2);
+      g.scale(sc, sc);
+      g.lineCap = "round";
+      g.strokeStyle = "#f2f2f2";
+      g.lineWidth = 3.4;
+      g.beginPath();
+      g.arc(20, 36, 17, 0, Math.PI * 2);
+      g.stroke();
+      g.strokeStyle = RED;
+      for (const [d, w] of [
+        [[40, 14, 52, 24, 52, 48, 40, 58], 3.2],
+        [[54, 9, 69, 22, 69, 50, 54, 63], 3],
+        [[68, 4, 86, 20, 86, 52, 68, 68], 2.8],
+      ] as const) {
+        g.lineWidth = w;
+        g.beginPath();
+        g.moveTo(d[0], d[1]);
+        g.bezierCurveTo(d[2], d[3], d[4], d[5], d[6], d[7]);
+        g.stroke();
+      }
+      g.restore();
+    };
+    g.font = F(200, 64);
+    g.letterSpacing = "0px";
+    const a = String(r.score);
+    const b = dist;
+    const aw = g.measureText(a).width;
+    const bw = g.measureText(b).width;
+    const gap = 14;
+    const smW = 72 * 0.62;
+    const miW = 90 * 0.62;
+    const slash = 70;
+    const total = aw + gap + smW + slash + bw + gap + miW;
+    let x = cx - total / 2;
+    const base = 835;
+    g.textAlign = "left";
+    g.fillStyle = "#f2f2f2";
+    g.fillText(a, x, base);
+    const aCenter = x + (aw + gap + smW) / 2;
+    smileSym(x + aw + gap, base - 56, 0.62);
+    x += aw + gap + smW;
+    g.fillStyle = "#555";
+    g.textAlign = "center";
+    g.fillText("/", x + slash / 2, base);
+    x += slash;
+    g.textAlign = "left";
+    g.fillStyle = "#f2f2f2";
+    g.fillText(b, x, base);
+    logo(x + bw + gap, base - 44, 0.62, "#f2f2f2");
+    const bCenter = x + (bw + gap + miW) / 2;
+    g.textAlign = "center";
+    g.fillStyle = "#8a8a8a";
+    g.font = F(300, 18);
+    g.letterSpacing = "4px";
+    g.fillText("SMILES", aCenter, base + 32);
+    g.fillText(dLabel, bCenter, base + 32);
+    g.letterSpacing = "0px";
+    g.font = F(300, 22);
+    g.fillText(`${profileName} · ${r.smilesPerMile.toFixed(1)} smiles per mile`, cx, 880);
+  }
   if (r.hasFuel) {
     const cells: [string, string, boolean][] = [
       [r.fuel.name.toUpperCase(), fmtFuel(r.amount, r.fuel.unit, s.units), false],

@@ -1,3 +1,4 @@
+import { SmilesSymbolRow } from "@/components/smiles/SmilesSymbols";
 import { useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 
@@ -59,7 +60,11 @@ function MyCardsPage() {
     items.map((card) => (
       <li key={card.id} className="rounded-2xl border border-border p-4">
         <div className="flex items-baseline justify-between gap-3">
-          <span className="text-3xl font-extralight">{card.score}</span>
+          <SmilesSymbolRow
+            smiles={card.score}
+            distanceKm={card.distanceKm}
+            units={loadSmilesSettings().units}
+          />
           <span className="text-right text-xs text-muted-foreground">
             {card.profileName} · {fmtDistance(card.distanceKm, loadSmilesSettings().units)}
             <br />
