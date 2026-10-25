@@ -64,14 +64,26 @@ export function FoundersBanner({ compact = false, className }: { compact?: boole
   let message: React.ReactNode;
   let cta: React.ReactNode = null;
   if (founder) {
-    message = (
+    const seatLabel = founder.seat ? `Founder seat #${founder.seat}` : null;
+    message = compact ? (
       <>
-        <span className="text-foreground">You're a Founder</span>
-        {founder.seat ? <span className="text-muted-foreground"> · Seat #{founder.seat}</span> : null}
-        {!compact ? (
-          <span className="text-muted-foreground"> · 3 sounds free forever · 6 months Drive+ · Test Crew</span>
-        ) : null}
+        <span className="font-semibold text-foreground">Congratulations! You're a Founder! THANK YOU!</span>
+        {seatLabel ? <span className="text-[#e53935]"> · {seatLabel}</span> : null}
       </>
+    ) : (
+      <span className="flex flex-col gap-1">
+        <span>
+          <span className="font-semibold text-foreground">Congratulations! You're a Founder! THANK YOU!</span>
+          {seatLabel ? (
+            <span className="ml-2 inline-block whitespace-nowrap border border-[#e53935]/60 px-1.5 py-0.5 text-[10px] font-semibold tracking-[0.2em] text-[#e53935] uppercase">
+              {seatLabel}
+            </span>
+          ) : null}
+        </span>
+        <span className="text-muted-foreground">
+          3 sounds free forever · 6 months Drive+ free · Founders Test Crew: new features first · Exclusive Crew perks to follow
+        </span>
+      </span>
     );
   } else if (full) {
     message = (
@@ -98,7 +110,7 @@ export function FoundersBanner({ compact = false, className }: { compact?: boole
       <button
         type="button"
         onClick={() => setSignInOpen(true)}
-        className="shrink-0 border border-[#e53935] px-2.5 py-1 text-[10px] font-medium tracking-[0.2em] text-[#e53935] uppercase transition-colors hover:bg-[#e53935] hover:text-white"
+        className="order-4 shrink-0 border border-[#e53935] sm:order-none px-2.5 py-1 text-[10px] font-medium tracking-[0.2em] text-[#e53935] uppercase transition-colors hover:bg-[#e53935] hover:text-white"
       >
         Claim it
       </button>
@@ -128,18 +140,19 @@ export function FoundersBanner({ compact = false, className }: { compact?: boole
           </span>
           Founders Pack
         </span>
-        <p className={cn("min-w-0 flex-1 text-xs leading-snug", compact && "hidden truncate sm:block")}>{message}</p>
+        {!compact ? <span className="flex-1 sm:hidden" /> : null}
+        <p className={cn("min-w-0 flex-1 text-xs leading-snug", !compact && "order-3 basis-full sm:order-none sm:basis-auto", compact && "hidden truncate sm:block")}>{message}</p>
         {compact ? <span className="flex-1 sm:hidden" /> : null}
         {!founder && !full ? (
           <span
-            className="shrink-0 font-mono text-[11px] tabular-nums text-foreground"
+            className={cn("shrink-0 font-mono text-[11px] tabular-nums text-foreground", !compact && "order-4 sm:order-none")}
             aria-label="Time left to become a Founder"
           >
             {d}d {pad(h)}:{pad(m)}:{pad(s)}
           </span>
         ) : null}
         {!founder && !full && left != null ? (
-          <span className="shrink-0 text-[10px] tracking-[0.16em] text-muted-foreground uppercase">
+          <span className={cn("shrink-0 text-[10px] tracking-[0.16em] text-muted-foreground uppercase", !compact && "order-4 sm:order-none")}>
             {compact ? (
               <>
                 {left}
@@ -156,7 +169,7 @@ export function FoundersBanner({ compact = false, className }: { compact?: boole
         {!compact && !founder && !full && isAuthenticated ? (
           <Link
             to="/pricing"
-            className="shrink-0 text-[10px] tracking-[0.2em] text-muted-foreground uppercase hover:text-foreground"
+            className="order-4 shrink-0 sm:order-none text-[10px] tracking-[0.2em] text-muted-foreground uppercase hover:text-foreground"
           >
             Perks
           </Link>
@@ -165,7 +178,7 @@ export function FoundersBanner({ compact = false, className }: { compact?: boole
           type="button"
           onClick={dismiss}
           aria-label="Dismiss Founders Pack banner"
-          className="shrink-0 px-1.5 text-sm leading-none text-muted-foreground hover:text-foreground"
+          className="order-2 shrink-0 sm:order-none px-1.5 text-sm leading-none text-muted-foreground hover:text-foreground"
         >
           ×
         </button>
