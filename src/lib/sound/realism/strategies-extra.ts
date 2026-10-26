@@ -656,18 +656,31 @@ export const EXPANSION_STRATEGIES: ProfileStrategy[] = [
     id: "horse-gallop",
     build(ctx, buses) {
       return [
+        createFilteredNoiseLayer(ctx, {
+          id: "outdoor-air",
+          destination: buses.beds,
+          color: "pink",
+          filterType: "bandpass",
+          tone: 700,
+          q: 0.5,
+          level: 0.25,
+          speedWeight: 0,
+          throttleWeight: 0,
+        }),
         createHoofLayer(ctx, {
           id: "hooves",
           destination: buses.accents,
           horses: 1,
           tone: 320,
           level: 0.52,
+          restSilent: true,
         }),
         createImpactLayer(ctx, {
           id: "ground",
           destination: buses.beds,
           kind: "gravel",
           softThump: true,
+          rolling: true,
           level: 0.1,
         }),
         createFilteredNoiseLayer(ctx, {
@@ -805,7 +818,12 @@ export const EXPANSION_STRATEGIES: ProfileStrategy[] = [
     id: "synthwave-drive",
     build(ctx, buses) {
       return [
-        createSynthwaveLayer(ctx, { id: "synthwave", destination: buses.body, level: 1.22, rootHz: 90 }),
+        createSynthwaveLayer(ctx, {
+          id: "synthwave",
+          destination: buses.body,
+          level: 1.22,
+          rootHz: 90,
+        }),
         createResonantBodyLayer(ctx, {
           id: "synth-bass",
           destination: buses.body,
@@ -888,7 +906,12 @@ export const EXPANSION_STRATEGIES: ProfileStrategy[] = [
     id: "rain-drive",
     build(ctx, buses) {
       return [
-        createRainLayer(ctx, { id: "rain", destination: buses.beds, level: 1.15, idlePresence: 0.92 }),
+        createRainLayer(ctx, {
+          id: "rain",
+          destination: buses.beds,
+          level: 1.15,
+          idlePresence: 0.92,
+        }),
         createWindLayer(ctx, {
           id: "air",
           destination: buses.beds,
@@ -962,7 +985,13 @@ export const EXPANSION_STRATEGIES: ProfileStrategy[] = [
           level: 1.05,
         }),
         // Grit/stones pinging the shell on a hard launch only.
-        createDebrisLayer(ctx, { id: "rocket-debris", destination: buses.accents, level: 4.8, metal: 0.6, pitch: 0.7 }),
+        createDebrisLayer(ctx, {
+          id: "rocket-debris",
+          destination: buses.accents,
+          level: 4.8,
+          metal: 0.6,
+          pitch: 0.7,
+        }),
       ];
     },
   },
@@ -985,7 +1014,13 @@ export const EXPANSION_STRATEGIES: ProfileStrategy[] = [
           roar: 0.3,
           cruise: 0.15,
         }),
-        createDebrisLayer(ctx, { id: "chrono-debris", destination: buses.accents, level: 4.0, metal: 0.4, pitch: 1.05 }),
+        createDebrisLayer(ctx, {
+          id: "chrono-debris",
+          destination: buses.accents,
+          level: 4.0,
+          metal: 0.4,
+          pitch: 1.05,
+        }),
       ];
     },
   },

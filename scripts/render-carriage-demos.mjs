@@ -5,7 +5,7 @@ import path from "node:path";
 import { createServer } from "vite";
 
 const [outDir = "artifacts/carriage-demos", suffix = "demo"] = process.argv.slice(2);
-const profiles = ["wild-west-carriage", "romanian-85-carriage"];
+const profiles = (process.env.DEMO_PROFILES ?? "wild-west-carriage,romanian-85-carriage").split(",");
 function wav(pcm, rate) {
   const h = Buffer.alloc(44);
   h.write("RIFF", 0); h.writeUInt32LE(36 + pcm.length, 4); h.write("WAVE", 8);
@@ -30,7 +30,7 @@ try {
     }, id);
     const file = path.join(outDir, `${id}_${suffix}.wav`);
     await writeFile(file, wav(Buffer.from(r.pcmBase64, "base64"), r.sampleRate));
-    console.log(file);
+    console.log(file, r.snortLog?.join(", ") ?? "");
   }
 } finally {
   await browser?.close();
