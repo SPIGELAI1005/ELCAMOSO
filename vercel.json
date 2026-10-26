@@ -4,9 +4,41 @@
   "redirects": [
     {
       "source": "/:path*",
-      "has": [{ "type": "host", "value": "elcamoso.com" }],
+      "has": [
+        {
+          "type": "host",
+          "value": "elcamoso.com"
+        }
+      ],
       "destination": "https://www.elcamoso.com/:path*",
       "permanent": true
+    }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "SAMEORIGIN"
+        },
+        {
+          "key": "Content-Security-Policy",
+          "value": "frame-ancestors 'self'; base-uri 'self'; object-src 'none'"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        },
+        {
+          "key": "Permissions-Policy",
+          "value": "camera=(), payment=(self), usb=(), bluetooth=(), serial=(), hid=(), geolocation=(self), microphone=(self), accelerometer=(self), gyroscope=(self), magnetometer=(self)"
+        }
+      ]
     }
   ]
 }
