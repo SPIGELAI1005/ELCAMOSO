@@ -25,9 +25,7 @@ function Sub({ children }: { children: ReactNode }) {
 }
 
 function Overline({ children }: { children: ReactNode }) {
-  return (
-    <span className="underline decoration-1 underline-offset-[0.28em]">{children}</span>
-  );
+  return <span className="underline decoration-1 underline-offset-[0.28em]">{children}</span>;
 }
 
 function Section({
@@ -54,15 +52,7 @@ function Section({
   );
 }
 
-function ExperienceBlock({
-  name,
-  lead,
-  body,
-}: {
-  name: string;
-  lead: string;
-  body: string;
-}) {
+function ExperienceBlock({ name, lead, body }: { name: string; lead: string; body: string }) {
   return (
     <div className="border-t border-border/60 pt-8 first:border-t-0 first:pt-0">
       <h3 className="text-lg font-light text-foreground">{name}</h3>
@@ -157,15 +147,19 @@ function ScienceOfElcamoso() {
           </p>
         </Section>
 
-        <Section id="motion" eyebrow="01 · Motion" title="A sense of movement that opens gradually.">
+        <Section
+          id="motion"
+          eyebrow="01 · Motion"
+          title="A sense of movement that opens gradually."
+        >
           <Equation ariaLabel="V equals filtered speed over filtered speed plus v zero">
             <span>
               V = <Overline>v</Overline> / (<Overline>v</Overline> + v<Sub>0</Sub>)
             </span>
           </Equation>
           <p>
-            Here, <Overline>v</Overline> is filtered speed in metres per second, and v
-            <Sub>0</Sub> sets the sensitivity of the response.
+            Here, <Overline>v</Overline> is filtered speed in metres per second, and v<Sub>0</Sub>{" "}
+            sets the sensitivity of the response.
           </p>
           <p>
             This curve rises smoothly and gradually levels off. It lets motion influence musical
@@ -173,8 +167,8 @@ function ScienceOfElcamoso() {
             increases.
           </p>
           <p>
-            <strong className="font-medium text-foreground">Musical purpose:</strong> shape register,
-            rhythmic presence and the feeling of forward movement.
+            <strong className="font-medium text-foreground">Musical purpose:</strong> shape
+            register, rhythmic presence and the feeling of forward movement.
           </p>
         </Section>
 
@@ -203,8 +197,8 @@ function ScienceOfElcamoso() {
             limit. Larger inputs therefore have progressively less additional influence.
           </p>
           <p>
-            <strong className="font-medium text-foreground">Musical purpose:</strong> acceleration can
-            introduce an ascending phrase or clearer articulation; deceleration can soften an
+            <strong className="font-medium text-foreground">Musical purpose:</strong> acceleration
+            can introduce an ascending phrase or clearer articulation; deceleration can soften an
             attack, thin the percussion or invite a descending answer.
           </p>
           <p>
@@ -220,16 +214,17 @@ function ScienceOfElcamoso() {
         >
           <Equation ariaLabel="C equals one minus e to the power of negative T steady over tau">
             <span>
-              C = 1 − e<sup>−T<Sub>steady</Sub> / τ</sup>
+              C = 1 − e
+              <sup>
+                −T<Sub>steady</Sub> / τ
+              </sup>
             </span>
           </Equation>
           <p>
             Here, T<Sub>steady</Sub> is the duration of approximately steady moving travel, and τ
             determines how gradually the arrangement develops.
           </p>
-          <p>
-            With an initial τ of 20 seconds, the continuity signal reaches approximately:
-          </p>
+          <p>With an initial τ of 20 seconds, the continuity signal reaches approximately:</p>
           <div className="overflow-hidden border border-border/70">
             <table className="w-full text-left text-sm">
               <caption className="sr-only">
@@ -260,9 +255,7 @@ function ScienceOfElcamoso() {
               </tbody>
             </table>
           </div>
-          <p>
-            These percentages represent musical development, not a rating of the driver.
-          </p>
+          <p>These percentages represent musical development, not a rating of the driver.</p>
           <p>
             Steadiness is evaluated over a rolling window, using both speed variation and
             acceleration. Tolerance around the thresholds prevents a small sensor fluctuation from
@@ -431,8 +424,8 @@ function ScienceOfElcamoso() {
             Repeated passages can be shortened; memorable musical transitions can take centre stage.
           </p>
           <p>
-            Choose a 15-, 30- or 60-second version. Give it a title. Pair it with an animated visual.
-            Keep it for yourself, or share it after the drive.
+            Choose a 15-, 30- or 60-second version. Give it a title. Pair it with an animated
+            visual. Keep it for yourself, or share it after the drive.
           </p>
           <p>
             The edit celebrates the musical story, rather than the highest speed or strongest
@@ -452,9 +445,7 @@ function ScienceOfElcamoso() {
             When driving signals become unreliable, the music continues gently instead of turning
             sensor noise into sudden musical changes.
           </p>
-          <p>
-            There is no perfect driving pattern to perform and no intensity score to chase.
-          </p>
+          <p>There is no perfect driving pattern to perform and no intensity score to chase.</p>
           <p>Bring your journey. Let the music find its shape.</p>
           <div className="mt-10 border border-border/70 bg-surface-1/25 px-6 py-8 sm:px-8">
             <p className="text-xl font-light text-foreground">Choose your Experience.</p>
@@ -474,6 +465,72 @@ function ScienceOfElcamoso() {
               </Link>
             </div>
           </div>
+        </Section>
+
+        <Section id="safety" eyebrow="Safety & Security" title="Is ELCAMOSO safe for my car?">
+          <p>
+            Short answer: ELCAMOSO is a website. It runs in your car's browser, like any other page
+            you open there. Here is what that means, in plain words.
+          </p>
+          <h3 className="text-base font-normal text-foreground">It's just a website</h3>
+          <p>
+            There is nothing to install. ELCAMOSO puts no software on your car, and it doesn't
+            change any car settings. Close the tab and it's gone.
+          </p>
+          <h3 className="text-base font-normal text-foreground">
+            It can't reach your car's controls
+          </h3>
+          <p>
+            Your car's browser is kept separate from the systems that drive the car. A website has
+            no way to steer, brake, unlock doors, or talk to the car's internal network. ELCAMOSO
+            doesn't try to. All it does is play sound through the speakers, like a music or video
+            site.
+          </p>
+          <h3 className="text-base font-normal text-foreground">Your connection is encrypted</h3>
+          <p>
+            The whole site runs over HTTPS, and browsers are told to always use the secure version.
+            We also send standard browser safety settings: other sites can't load ELCAMOSO inside a
+            hidden frame, and features like the camera are switched off.
+          </p>
+          <h3 className="text-base font-normal text-foreground">We ask for very little</h3>
+          <ul className="list-disc space-y-2 pl-5">
+            <li>
+              <span className="text-foreground">Motion and location:</span> used to match the sound
+              to how you drive. Your browser asks you first, and you can say no. Your route isn't
+              saved to our servers unless you choose to upload a drive log yourself.
+            </li>
+            <li>
+              <span className="text-foreground">Microphone:</span> only if you choose to record your
+              own sound clip. Never in the background.
+            </li>
+            <li>
+              <span className="text-foreground">Account data:</span> your email address, plus your
+              drive cards and smiles if you save them.
+            </li>
+          </ul>
+          <h3 className="text-base font-normal text-foreground">Your account is protected</h3>
+          <p>
+            You sign in with a one-time code sent to your email or with your Google account, so we
+            never store a password that could leak. Your session is kept in a secure cookie that
+            page scripts can't read. Our database is locked: only our own server can read or write
+            it, and the server works out your smiles and rewards itself. They can't be changed from
+            the browser.
+          </p>
+          <h3 className="text-base font-normal text-foreground">Keep it fun, keep it safe</h3>
+          <p>
+            ELCAMOSO is made to sound good, not to distract you. Set it up before you drive, and
+            keep your eyes on the road.
+          </p>
+          <p>
+            Questions or found a security issue? Write to us at{" "}
+            <a
+              href="mailto:support@elcamoso.com"
+              className="text-foreground underline underline-offset-4"
+            >
+              support@elcamoso.com
+            </a>
+            . We take every report seriously.
+          </p>
         </Section>
 
         <footer className="mt-16 border-t border-border pt-10">

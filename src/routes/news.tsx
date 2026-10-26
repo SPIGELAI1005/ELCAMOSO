@@ -78,6 +78,14 @@ function NewsPage() {
                     {DATE_FMT.format(new Date(item.publishAt))}
                   </time>
                   <p className="text-sm leading-relaxed text-foreground">{item.text}</p>
+                  {item.link ? (
+                    <a
+                      href={item.link.href}
+                      className="mt-auto text-[11px] tracking-[0.2em] text-foreground uppercase underline underline-offset-4"
+                    >
+                      {item.link.label}
+                    </a>
+                  ) : null}
                 </div>
               </li>
             ))}

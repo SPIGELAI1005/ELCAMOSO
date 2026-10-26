@@ -1,5 +1,11 @@
 /** ELCAMOSO news feed. Each item becomes visible at its Berlin publish time (same slot as on X). */
-export type NewsItem = { id: string; publishAt: string; text: string; image?: string };
+export type NewsItem = {
+  id: string;
+  publishAt: string;
+  text: string;
+  image?: string;
+  link?: { href: string; label: string };
+};
 
 const DIR = "/news/week-oct26/";
 
@@ -9,6 +15,12 @@ export const NEWS_ITEMS: NewsItem[] = [
     publishAt: "2026-10-26T08:00:00+01:00",
     text: "Monday starts with a Racing V10 in Race mode. Now the default sound in ELCAMOSO. Press start.",
     image: DIR + "02_v10_race_default.jpg",
+  },
+  {
+    id: "safety-2026-10-26",
+    publishAt: "2026-10-26T10:05:00+01:00",
+    text: "Is ELCAMOSO safe for your car? It is a website in your car's browser: nothing to install, no access to the car's controls, encrypted, and it asks for very little. The full story is on our Science page.",
+    link: { href: "/science#safety", label: "Read Safety & Security" },
   },
   {
     id: "wk-oct26-02",
