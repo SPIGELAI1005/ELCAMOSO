@@ -1005,12 +1005,15 @@ export function createImpactLayer(
      * so wheels on stone stay audible without an HF tick per stone.
      */
     softOnset?: boolean;
+    /** Carriages: no stones/gravel while standing, and steadier hit level at cruise. */
+    rolling?: boolean;
   },
 ): LayerHandle {
   const bus = ctx.createGain();
   const { gain, panner, handle } = attachChain(ctx, opts, bus);
   let next = 0;
   let disposed = false;
+  const rolling = !!opts.rolling;
   const kind = opts.kind ?? "gravel";
   const jerkWeight = opts.jerkWeight ?? (kind === "stone" ? 12 : 4);
   const densityScale = opts.densityScale ?? 1;
@@ -1041,7 +1044,8 @@ export function createImpactLayer(
             m.speedSlow * 0.65 +
             Math.abs(m.accelFast) * 0.3 +
             jerk * (softThump ? 0.25 : 0.55)) *
-          (0.6 + audioRandom() * 0.5);
+          (rolling ? 0.75 + audioRandom() * 0.25 : 0.6 + audioRandom() * 0.5) *
+          (rolling ? smoothstep(0.5, 4, m.speedKmh) : 1);
         const pan = ctx.createStereoPanner();
         pan.pan.value = (audioRandom() - 0.5) * 1.6;
         pan.connect(bus);
@@ -1265,6 +1269,12 @@ export function createHoofLayer(
      * tick on stone (Romanian carriage).
      */
     softOnset?: boolean;
+    /**
+     * Carriage gait: continuous walk → trot → canter → gallop blend (no hard
+     * jumps between gaits), gallop stride rate capped at this many strides/s,
+     * gentler demand push and steadier stride level at cruise.
+     */
+    smoothGait?: { gallopMaxRate: number };
   },
 ): LayerHandle {
   const bus = ctx.createGain();
@@ -1272,6 +1282,8 @@ export function createHoofLayer(
   let next = 0;
   let disposed = false;
   const horses = opts.horses ?? 1;
+  const smooth = opts.smoothGait ?? null;
+  let kmhSmooth = -1;
   const softOnset = !!opts.softOnset;
   let demandSmooth = 0;
 
@@ -1350,9 +1362,13 @@ export function createHoofLayer(
       // Throttle/accel affects gait intensity
       const demand = clamp(m.throttleFast * 0.6 + m.accelFast * 0.8);
       demandSmooth += (demand - demandSmooth) * Math.min(1, m.dt / 0.25);
-      const gait = gaitPhase(m.speedKmh);
-      // Throttle can push gait faster
-      const demandCadenceBoost = 1 + demandSmooth * 0.3;
+      if (kmhSmooth < 0) kmhSmooth = m.speedKmh;
+      kmhSmooth += (m.speedKmh - kmhSmooth) * Math.min(1, m.dt / 0.6);
+      const gait = smooth
+        ? smoothGaitPhase(kmhSmooth, smooth.gallopMaxRate)
+        : gaitPhase(m.speedKmh);
+      // Throttle can push gait faster (only a little for carriages: no frantic sprint)
+      const demandCadenceBoost = 1 + demandSmooth * (smooth ? 0.1 : 0.3);
       const cadence =
         gait.rate * (horses === 1 ? 1 : horses === 2 ? 1.05 : 1.12) * demandCadenceBoost;
       const interval = 1 / Math.max(0.35, cadence);
@@ -1361,7 +1377,14 @@ export function createHoofLayer(
       while (next < horizon) {
         const pattern = gait.pattern;
         // One full stride of footfalls, then wait for the next stride.
-        const strideGain = (opts.level ?? 0.35) * (0.35 + m.speedSlow * 0.9 + demandSmooth * 0.25);
+        // Carriage: steady stride level from trot upward; quieter shuffling while standing.
+        const strideGain = smooth
+          ? (opts.level ?? 0.35) *
+            (0.6 + 0.4 * smoothstep(0.3, 3, kmhSmooth)) *
+            (0.55 + smoothstep(0, 40, kmhSmooth) * 0.35 + demandSmooth * 0.18)
+          : (opts.level ?? 0.35) * (0.35 + m.speedSlow * 0.9 + demandSmooth * 0.25);
+        const jitter = smooth ? 0.06 : 0.14;
+        const jitterBase = smooth ? 0.97 : 0.88;
         for (let i = 0; i < pattern.length; i += 1) {
           const offset = pattern[i]!;
           const hard = i === pattern.length - 1;
@@ -1369,7 +1392,7 @@ export function createHoofLayer(
           fireHoof(
             next + offset * interval,
             tone,
-            strideGain * (0.88 + audioRandom() * 0.14),
+            strideGain * (jitterBase + audioRandom() * jitter),
             hard,
             i,
             demandSmooth,
@@ -1405,6 +1428,44 @@ function gaitPhase(kmh: number): { rate: number; pattern: number[]; flight: numb
   // Gallop: four distinct beats; longer gathered flight after the lead fore.
   // Timing approximates transverse gallop: RH, LH, RF, LF then airborne.
   return { rate: 2.85 + (kmh - 28) * 0.055, pattern: [0, 0.16, 0.3, 0.46], flight: 1.32 };
+}
+
+const GAITS = [
+  { kmh: 0, rate: 0.95, pattern: [0, 0.25, 0.5, 0.75], flight: 1 },
+  { kmh: 7, rate: 1.4, pattern: [0, 0.25, 0.5, 0.75], flight: 1 },
+  { kmh: 10, rate: 1.75, pattern: [0, 0.06, 0.5, 0.56], flight: 1.02 },
+  { kmh: 16, rate: 2.15, pattern: [0, 0.06, 0.5, 0.56], flight: 1.02 },
+  { kmh: 20, rate: 2.3, pattern: [0, 0.22, 0.28, 0.52], flight: 1.18 },
+  { kmh: 28, rate: 2.6, pattern: [0, 0.22, 0.28, 0.52], flight: 1.18 },
+  { kmh: 33, rate: 2.75, pattern: [0, 0.16, 0.3, 0.46], flight: 1.32 },
+] as const;
+
+/**
+ * Continuous gait for carriages: anchors are blended linearly (footfall offsets,
+ * flight and stride rate), so walk → trot → canter → gallop morphs over a few
+ * km/h instead of switching. Above the last anchor the gallop only creeps up
+ * and is capped at gallopMaxRate strides/s.
+ */
+export function smoothGaitPhase(
+  kmh: number,
+  gallopMaxRate: number,
+): { rate: number; pattern: number[]; flight: number } {
+  const v = Math.max(0, kmh);
+  const last = GAITS[GAITS.length - 1]!;
+  if (v >= last.kmh) {
+    const rate = Math.min(gallopMaxRate, last.rate + (v - last.kmh) * 0.012);
+    return { rate, pattern: [...last.pattern], flight: last.flight };
+  }
+  let i = 0;
+  while (i < GAITS.length - 2 && v >= GAITS[i + 1]!.kmh) i += 1;
+  const a = GAITS[i]!;
+  const b = GAITS[i + 1]!;
+  const f = smoothstep(a.kmh, b.kmh, v);
+  return {
+    rate: Math.min(gallopMaxRate, lerp(a.rate, b.rate, f)),
+    pattern: a.pattern.map((o, k) => lerp(o, b.pattern[k]!, f)),
+    flight: lerp(a.flight, b.flight, f),
+  };
 }
 
 /* ---------------------------------------------------------- resonant body */
@@ -2806,3 +2867,215 @@ function mergeBoost(kmh: number) {
 }
 
 export { lerp };
+
+/* ------------------------------------------------------- carriage running gear */
+
+/**
+ * Carriage running gear (synthesized, no samples):
+ * - Wheel rhythm locked to road speed: one hit per wheel revolution per axle
+ *   (front and rear axle offset), a dry wood knock ("wood") or a short iron rim
+ *   ring on stone ("iron"). Above ~6.5 hits/s only the front axle sounds, so it never buzzes.
+ * - Subtle suspension creaks: the body sways on its braces/leaf springs at
+ *   ~0.6–1.1 Hz; a soft stick-slip creak at some sway extremes.
+ * - Light terrain variation: a slow seeded random walk (8–14 s per patch) that
+ *   nudges roughness (hit level/jitter, creak chance) and a faint ground bed by
+ *   only ±1 dB, so cruise stays even.
+ * Everything fades out below ~2 km/h.
+ */
+export function createCarriageRunningGearLayer(
+  ctx: BaseAudioContext,
+  opts: LayerBaseOpts & {
+    material: "wood" | "iron";
+    /** Wheel circumference in metres. */
+    wheelCircumference?: number;
+    creakLevel?: number;
+    terrainLevel?: number;
+  },
+): LayerHandle {
+  const bus = ctx.createGain();
+  const { gain, panner, handle } = attachChain(ctx, opts, bus);
+  const iron = opts.material === "iron";
+  const circ = opts.wheelCircumference ?? (iron ? 3.1 : 3.6);
+  const creakLevel = opts.creakLevel ?? 0.5;
+  const terrainLevel = opts.terrainLevel ?? 0.5;
+  let disposed = false;
+  let wheelPhase = 0;
+  let scheduledTo = 0;
+  let swayPhase = 0;
+  let lastSwaySign = 1;
+  let rough = 0.5;
+  let roughTarget = 0.5;
+  let nextPatch = 0;
+  let kmhSmooth = 0;
+
+  // Faint ground bed (dirt for wood, stone hum for iron) for terrain colour.
+  const bedSrc = createLoopingNoise(ctx, "brown", 1);
+  const bedFilter = ctx.createBiquadFilter();
+  bedFilter.type = "lowpass";
+  bedFilter.frequency.value = iron ? 700 : 450;
+  const bedGain = ctx.createGain();
+  bedGain.gain.value = 0.0001;
+  bedSrc.connect(bedFilter);
+  bedFilter.connect(bedGain);
+  bedGain.connect(bus);
+  bedSrc.start();
+
+  function knock(at: number, amp: number, pan: number) {
+    const p = ctx.createStereoPanner();
+    p.pan.value = pan;
+    p.connect(bus);
+    if (!iron) {
+      // Wood: hollow felloe knock = pitched body + short dry click.
+      const o = ctx.createOscillator();
+      const og = ctx.createGain();
+      o.type = "sine";
+      const f = 190 + audioRandom() * 40;
+      o.frequency.setValueAtTime(f, at);
+      o.frequency.exponentialRampToValueAtTime(f * 0.7, at + 0.06);
+      og.gain.setValueAtTime(0.0001, at);
+      og.gain.linearRampToValueAtTime(amp, at + 0.004);
+      og.gain.exponentialRampToValueAtTime(0.0001, at + 0.09);
+      o.connect(og);
+      og.connect(p);
+      o.start(at);
+      o.stop(at + 0.11);
+      const n = createLoopingNoise(ctx, "pink", 1);
+      const bp = ctx.createBiquadFilter();
+      bp.type = "bandpass";
+      bp.frequency.value = 900 + audioRandom() * 300;
+      bp.Q.value = 4;
+      const ng = ctx.createGain();
+      ng.gain.setValueAtTime(0.0001, at);
+      ng.gain.linearRampToValueAtTime(amp * 0.5, at + 0.003);
+      ng.gain.exponentialRampToValueAtTime(0.0001, at + 0.03);
+      n.connect(bp);
+      bp.connect(ng);
+      ng.connect(p);
+      n.start(at);
+      n.stop(at + 0.05);
+    } else {
+      // Iron rim on stone: inharmonic ring, soft attack, capped at 3.2 kHz.
+      const lp = ctx.createBiquadFilter();
+      lp.type = "lowpass";
+      lp.frequency.value = 3200;
+      lp.connect(p);
+      const base = 620 + audioRandom() * 50;
+      [1, 2.76, 4.07].forEach((r, k) => {
+        const o = ctx.createOscillator();
+        const og = ctx.createGain();
+        o.type = "sine";
+        o.frequency.value = base * r;
+        const a = amp * [0.55, 0.3, 0.16][k]!;
+        const decay = [0.32, 0.2, 0.12][k]!;
+        og.gain.setValueAtTime(0.0001, at);
+        og.gain.linearRampToValueAtTime(a, at + 0.005);
+        og.gain.exponentialRampToValueAtTime(0.0001, at + decay);
+        o.connect(og);
+        og.connect(lp);
+        o.start(at);
+        o.stop(at + decay + 0.02);
+      });
+    }
+  }
+
+  function creak(at: number, amp: number) {
+    // Stick-slip leather/spring creak: sawtooth through a narrow band, pulsed.
+    const dur = 0.25 + audioRandom() * 0.2;
+    const o = ctx.createOscillator();
+    o.type = "sawtooth";
+    const f = (iron ? 95 : 120) * (0.9 + audioRandom() * 0.2);
+    o.frequency.setValueAtTime(f, at);
+    o.frequency.linearRampToValueAtTime(f * (audioRandom() > 0.5 ? 1.25 : 0.8), at + dur);
+    const bp = ctx.createBiquadFilter();
+    bp.type = "bandpass";
+    bp.frequency.value = iron ? 520 : 680;
+    bp.Q.value = 6;
+    const lp = ctx.createBiquadFilter();
+    lp.type = "lowpass";
+    lp.frequency.value = 2200;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, at);
+    g.gain.linearRampToValueAtTime(amp, at + dur * 0.35);
+    g.gain.linearRampToValueAtTime(0.0001, at + dur);
+    o.connect(bp);
+    bp.connect(lp);
+    lp.connect(g);
+    g.connect(bus);
+    o.start(at);
+    o.stop(at + dur + 0.02);
+  }
+
+  return {
+    ...handle,
+    update(m, t) {
+      if (disposed) return;
+      const dt = Math.min(0.1, Math.max(0, m.dt));
+      kmhSmooth += (m.speedKmh - kmhSmooth) * Math.min(1, dt / 0.3);
+      const move = smoothstep(1, 5, kmhSmooth);
+
+      // Terrain patches: slow seeded random walk.
+      if (t >= nextPatch) {
+        roughTarget = 0.25 + audioRandom() * 0.75;
+        nextPatch = t + 8 + audioRandom() * 6;
+      }
+      rough += (roughTarget - rough) * Math.min(1, dt / 3);
+      const terrainDb = (rough - 0.5) * 2; // ±1 dB
+      const terrainGain = 10 ** (terrainDb / 20);
+
+      targetParam(
+        bedGain.gain,
+        Math.max(0.0001, terrainLevel * 0.08 * move * (0.6 + rough * 0.8)),
+        t,
+        0.6,
+      );
+      targetParam(bedFilter.frequency, (iron ? 600 : 380) + rough * 400 + kmhSmooth * 4, t, 1);
+
+      // Wheel rhythm: integrate wheel revolutions across the schedule horizon.
+      const revPerSec = kmhSmooth / 3.6 / circ;
+      const hitsPerRev = 2; // front + rear axle
+      const hitRate = revPerSec * hitsPerRev;
+      const thin = hitRate > 6.5 ? 6.5 / hitRate : 1;
+      const horizon = t + 0.12;
+      if (scheduledTo < t) scheduledTo = t;
+      const step = 0.01;
+      while (scheduledTo < horizon) {
+        const prev = wheelPhase;
+        wheelPhase += revPerSec * step * hitsPerRev;
+        if (Math.floor(wheelPhase) !== Math.floor(prev) && move > 0.01) {
+          const idx = Math.floor(wheelPhase);
+          const front = idx % 2 === 0;
+          // Fast: keep only the front-axle hit (deterministic, no random gaps).
+          if (thin >= 1 || front) {
+            const amp =
+              (opts.level ?? 0.2) *
+              move *
+              terrainGain *
+              (front ? 1 : 0.8) *
+              (0.9 + audioRandom() * (0.1 + rough * 0.15));
+            knock(scheduledTo + audioRandom() * 0.006, Math.max(0.0002, amp), front ? 0.15 : -0.15);
+          }
+        }
+        scheduledTo += step;
+      }
+
+      // Suspension sway → occasional creak at the sway extremes.
+      const swayHz = 0.55 + smoothstep(0, 40, kmhSmooth) * 0.55;
+      swayPhase += dt * swayHz * Math.PI * 2;
+      const sign = Math.sin(swayPhase) >= 0 ? 1 : -1;
+      if (sign !== lastSwaySign) {
+        lastSwaySign = sign;
+        const chance = (0.25 + rough * 0.35 + Math.abs(m.accelFast) * 0.3) * move;
+        if (audioRandom() < chance) {
+          creak(t + 0.02, Math.max(0.0002, creakLevel * 0.05 * move * terrainGain));
+        }
+      }
+
+      targetParam(gain.gain, softGate(1), t, 0.2);
+      targetParam(panner.pan, 0, t, 0.5);
+    },
+    dispose() {
+      disposed = true;
+      stopSafe(bedSrc);
+    },
+  };
+}
