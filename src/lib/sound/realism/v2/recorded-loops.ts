@@ -27,6 +27,29 @@ export interface RecordedSource {
   /** Optional per-source grain pitch range (defaults MIN_GRAIN_RATE / MAX_GRAIN_RATE). */
   minRate?: number;
   maxRate?: number;
+  /**
+   * Optional RPM window for this source inside a multi-source bank: gain ramps in from
+   * inFrom to inFull and out from outFull to outTo (smoothstep). Unset = full gain everywhere.
+   */
+  rpmWindow?: { inFrom?: number; inFull?: number; outFull?: number; outTo?: number };
+}
+
+/** Per-source gain (0..1) at an RPM from its optional rpmWindow. */
+export function sourceRpmGain(source: RecordedSource, rpm: number): number {
+  const win = source.rpmWindow;
+  if (!win) return 1;
+  const ss = (x: number) => {
+    const c = Math.min(1, Math.max(0, x));
+    return c * c * (3 - 2 * c);
+  };
+  let g = 1;
+  if (win.inFrom !== undefined && win.inFull !== undefined) {
+    g *= ss((rpm - win.inFrom) / Math.max(1, win.inFull - win.inFrom));
+  }
+  if (win.outFull !== undefined && win.outTo !== undefined) {
+    g *= 1 - ss((rpm - win.outFull) / Math.max(1, win.outTo - win.outFull));
+  }
+  return g;
 }
 
 export const RPM_TRACK_STEP = 0.1;
@@ -408,6 +431,22 @@ const rover = (weight: number): RecordedSource => ({
   weight,
 });
 
+/**
+ * Superbike high band: near-steady high-rev stretches (≈8,900–12,700 rpm) from two CC0
+ * Freesound trackside / road pass recordings (361403 richwise "Sportsbike Flyby", 813521
+ * danroka "sports motorcycle passing by at speed"). RPM from the inline-4 firing order
+ * (rpm / 30 Hz) per 0.1 s, Doppler included; the pass-by peak itself and the gear change
+ * are cut out. High-passed at 180 Hz (the synth keeps the body), RMS-normalised.
+ */
+const SUPERBIKE_HI_REGIONS: RecordedRegion[] = [
+  { start: 0.08, end: 0.88, rpm: [9417, 9378, 9329, 9225, 9198, 9118, 8997, 8933] },
+  { start: 0.96, end: 3.66, rpm: [8961, 9025, 9073, 9091, 9127, 9178, 9218, 9220, 9277, 9348, 9377, 9459, 9492, 9487, 9493, 9537, 9617, 9661, 9640, 9688, 9741, 9742, 9711, 9753, 9836, 9880, 9846] },
+  { start: 3.74, end: 4.64, rpm: [9170, 9278, 9356, 9208, 9378, 9693, 9672, 9846, 9783] },
+  { start: 4.72, end: 7.72, rpm: [9132, 9206, 9277, 9328, 9418, 9522, 9629, 9652, 9731, 9879, 9981, 10110, 10248, 10442, 10564, 10724, 10948, 11165, 11217, 11357, 11598, 11724, 11880, 12047, 12131, 12277, 12447, 12597, 12676, 12458] },
+  { start: 7.8, end: 11.6, rpm: [10287, 10315, 10341, 10399, 10497, 10527, 10476, 10544, 10743, 10760, 10733, 10898, 10722, 11040, 11213, 11130, 11178, 11108, 11320, 11301, 11250, 11281, 11231, 11213, 11236, 11323, 11336, 11340, 11403, 11318, 11353, 11363, 11411, 11251, 11544, 11539, 11562, 11260] },
+  { start: 11.68, end: 12.68, rpm: [11716, 11811, 11657, 11502, 11417, 11502, 11432, 11443, 11413, 11225] },
+];
+
 // Measured on real-chain renders (recording-only vs synth-only, std plan): the onboard/road
 // recordings lack sub-150 Hz weight (~-9 dB) and carry extra 180-350 Hz; meet halfway.
 const SUPERBIKE_EQ: RecordedLoopBank["eq"] = {
@@ -484,19 +523,30 @@ export const RECORDED_LOOP_BANKS: Record<string, RecordedLoopBank> = {
         regions: SUPERBIKE_REGIONS,
         weight: 1,
         minRate: 0.78,
-        maxRate: 2.4,
+        maxRate: 2.0,
+        // Street material carries idle to mid revs, then hands over to the high band.
+        rpmWindow: { outFull: 6200, outTo: 8600 },
+      },
+      {
+        id: "superbike-hi",
+        url: `${BASE}/superbike_hi_regions.m4a`,
+        regions: SUPERBIKE_HI_REGIONS,
+        weight: 1,
+        minRate: 0.66,
+        maxRate: 1.3,
+        rpmWindow: { inFrom: 5600, inFull: 8000 },
       },
     ],
-    level: 0.38,
-    // Recordings carry idle and street riding, keep 35 % texture under load and revs, and
-    // fade out toward the top so the synth's 14k scream and quickshift ladder stay in charge.
+    level: 0.42,
+    // Recordings now carry the whole rev range (street pulls low, trackside scream high);
+    // the synth keeps the low-end body, quickshift ladder, blips and overrun crackle.
     handover: {
       rpmStart: 5200,
       rpmSpan: 2800,
-      accelKeep: 0.55,
-      rpmKeep: 0.35,
-      topRpm: 10000,
-      topSpan: 2500,
+      accelKeep: 0.6,
+      rpmKeep: 0.6,
+      topRpm: 15500,
+      topSpan: 1000,
     },
     eq: SUPERBIKE_EQ,
   },
@@ -769,6 +819,26 @@ export const RECORDED_LOOP_CREDITS: RecordedCredit[] = [
     usedIn: "Superbike (idle and onboard pulls up to ~5,100 rpm)",
     attribution:
       "\u201Cmotorbike hornet 600 onboard.clip 0005.N3.F\u201D by martian (Freesound #181161), CC0 1.0, edited (trimmed, filtered, re-sequenced, granular).",
+  },
+  {
+    title: "Sportsbike Flyby (Freesound #361403)",
+    author: "richwise",
+    licence: "CC0 1.0",
+    licenceUrl: "https://creativecommons.org/publicdomain/zero/1.0/",
+    sourceUrl: "https://freesound.org/s/361403/",
+    usedIn: "Superbike (high revs, ~9,000-12,700 rpm)",
+    attribution:
+      "\u201CSportsbike Flyby\u201D by richwise (Freesound #361403), CC0 1.0, edited (trimmed, filtered, re-sequenced, granular).",
+  },
+  {
+    title: "sports motorcycle passing by at speed (Freesound #813521)",
+    author: "danroka",
+    licence: "CC0 1.0",
+    licenceUrl: "https://creativecommons.org/publicdomain/zero/1.0/",
+    sourceUrl: "https://freesound.org/s/813521/",
+    usedIn: "Superbike (high revs, ~9,200-11,800 rpm)",
+    attribution:
+      "\u201Csports motorcycle passing by at speed\u201D by danroka (Freesound #813521), CC0 1.0, edited (trimmed, filtered, re-sequenced, granular).",
   },
   {
     title: "Moto Harley Davidson Arrancando (Freesound #850565)",

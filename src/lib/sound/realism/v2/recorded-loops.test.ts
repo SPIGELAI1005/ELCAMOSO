@@ -99,13 +99,17 @@ describe("recordedLowShelfHz", () => {
 });
 
 describe("motorcycle recorded banks", () => {
-  it("superbike keeps recordings at idle and fades them out before the 14k scream", async () => {
+  it("superbike keeps recordings from idle through the 14k scream", async () => {
     const { getRecordedLoopBank, recordedSampleWeight } = await import("./recorded-loops");
     const sb = getRecordedLoopBank("motorcycle-inline-4")!;
-    expect(sb.sources[0]!.maxRate).toBeGreaterThan(2);
+    expect(sb.sources[0]!.maxRate).toBeGreaterThanOrEqual(2);
+    // High-rpm recording takes over above the low-rpm source's window.
+    const hi = sb.sources.find((s) => s.id === "superbike-hi")!;
+    expect(hi).toBeTruthy();
     expect(recordedSampleWeight(1200, 0.1, 0, sb.handover)).toBe(1);
     expect(recordedSampleWeight(9000, 0.9, 1, sb.handover)).toBeGreaterThanOrEqual(0.3);
-    expect(recordedSampleWeight(13000, 1, 1, sb.handover)).toBe(0);
+    expect(recordedSampleWeight(13000, 1, 1, sb.handover)).toBeGreaterThan(0);
+    expect(recordedSampleWeight(16600, 1, 1, sb.handover)).toBe(0);
   });
   it("big twin recording reaches down to the 900 rpm idle", async () => {
     const { getRecordedLoopBank, pickRegion } = await import("./recorded-loops");

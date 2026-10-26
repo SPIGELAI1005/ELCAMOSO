@@ -73,9 +73,11 @@ import {
   getRecordedLoopBank,
   recordedLowShelfHz,
   recordedSampleWeight,
+  sourceRpmGain,
   synthMatchAt,
   type LoadCharacter,
   type RecordedLoopBank,
+  type RecordedSource,
 } from "@/lib/sound/realism/v2/recorded-loops";
 import { GranularStream } from "@/lib/sound/realism/v2/recorded-grains";
 import {
@@ -358,6 +360,7 @@ export class HybridCombustionSynth {
   private recordedBank: RecordedLoopBank | null = null;
   private recordedBuffers = new Map<string, AudioBuffer>();
   private recordedStreams: GranularStream[] = [];
+  private recordedStreamGains: { gain: GainNode; source: RecordedSource }[] = [];
   private recordedEq: {
     low: BiquadFilterNode;
     mid: BiquadFilterNode;
@@ -2116,13 +2119,25 @@ export class HybridCombustionSynth {
           g.gain.value = source.weight / Math.SQRT2;
           g.connect(this.sampleBus!);
           this.recordedStreams.push(new GranularStream(ctx, buf, source, g, (seed += 0x9e3779b9)));
+          this.recordedStreamGains.push({ gain: g, source });
         }
       }
       const total = bank.sources.reduce((sum, src) => sum + src.weight * src.weight, 0);
-      this.recordedNorm = 1 / Math.sqrt(Math.max(1e-6, total));
+      // RPM-windowed banks cross-fade their sources, so only one carries the level at a time.
+      const windowed = bank.sources.length > 1 && bank.sources.every((src) => src.rpmWindow);
+      this.recordedNorm = windowed ? 1 : 1 / Math.sqrt(Math.max(1e-6, total));
     }
     if (w > 0.002) {
-      for (const stream of this.recordedStreams) stream.update(rpm, audioTime);
+      this.recordedStreams.forEach((stream, i) => {
+        const sg = this.recordedStreamGains[i];
+        if (sg?.source.rpmWindow) {
+          // Multi-band banks: each source only plays inside its own RPM window.
+          const g = sourceRpmGain(sg.source, rpm);
+          targetParam(sg.gain.gain, Math.max(0.0001, (sg.source.weight / Math.SQRT2) * g), audioTime, 0.12);
+          if (g < 0.01) return;
+        }
+        stream.update(rpm, audioTime);
+      });
     }
     const body = this.diagnostics.combustionGain || 0.35;
     // Load character: on-load/aggressive lift level and bite, lift-off relaxes and darkens.
@@ -2644,6 +2659,7 @@ export class HybridCombustionSynth {
     this.bassCfg = null;
     for (const stream of this.recordedStreams) stream.dispose();
     this.recordedStreams = [];
+    this.recordedStreamGains = [];
     for (const voice of this.sampleVoices.values()) {
       stopNoise(voice.src);
       voice.gain.disconnect();

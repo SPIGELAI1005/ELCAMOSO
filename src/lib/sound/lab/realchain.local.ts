@@ -15,6 +15,8 @@ import { getProfile } from "@/lib/sound/profiles";
 const SR = 48000, STEP = 1 / 60;
 // km/h targets at piecewise times (true vehicle speed); GPS samples it at 1 Hz with noise.
 const PLANS: Record<string, [number, number][]> = {
+  // demo: 30 s showcase (idle, launch through the gears, cruise, decel to a stop)
+  demo: [[0,0],[5,0],[17,130],[22,130],[24,110],[30,0],[90,0]],
   std: [[0,0],[6,0],[14,50],[30,50],[38,100],[52,100],[62,60],[72,60],[80,20],[86,0],[90,0]],
   // gentle: slow build-ups, long steady cruises
   gentle: [[0,0],[6,0],[26,30],[40,30],[60,60],[72,60],[82,40],[88,0],[90,0]],
