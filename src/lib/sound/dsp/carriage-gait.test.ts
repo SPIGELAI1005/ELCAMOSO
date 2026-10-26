@@ -3,7 +3,8 @@ import { smoothGaitPhase } from "@/lib/sound/dsp/layers";
 
 describe("carriage smooth gait", () => {
   it("caps gallop stride rate at high speed", () => {
-    for (const kmh of [40, 60, 90, 140]) expect(smoothGaitPhase(kmh, 2.9).rate).toBeLessThanOrEqual(2.9);
+    for (const kmh of [40, 60, 90, 140])
+      expect(smoothGaitPhase(kmh, 2.9).rate).toBeLessThanOrEqual(2.9);
   });
   it("has no jumps between gaits (rate and footfalls are continuous)", () => {
     let prev = smoothGaitPhase(0, 2.9);
