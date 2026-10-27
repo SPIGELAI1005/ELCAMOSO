@@ -9,7 +9,6 @@ import {
   createGearboxWhineLayer,
   createHarmonicEngineLayer,
   createHoofLayer,
-  createCarriageRunningGearLayer,
   createHotBulbTractorLayer,
   createImpactLayer,
   createIntakeRoarLayer,
@@ -527,7 +526,6 @@ const baseStrategies: ProfileStrategy[] = [
           horses: 4,
           tone: 380,
           level: 0.32,
-          smoothGait: { gallopMaxRate: 2.9 },
         }),
         createCreakLayer(ctx, {
           id: "wood-creak",
@@ -540,15 +538,6 @@ const baseStrategies: ProfileStrategy[] = [
           destination: buses.beds,
           kind: "gravel",
           level: 0.22,
-          rolling: true,
-        }),
-        createCarriageRunningGearLayer(ctx, {
-          id: "running-gear",
-          destination: buses.accents,
-          material: "wood",
-          level: 0.12,
-          creakLevel: 0.5,
-          terrainLevel: 0.5,
         }),
         createFilteredNoiseLayer(ctx, {
           id: "wheels",
@@ -587,7 +576,6 @@ const baseStrategies: ProfileStrategy[] = [
           tone: 320,
           level: 0.28,
           softOnset: true,
-          smoothGait: { gallopMaxRate: 2.7 },
         }),
         createImpactLayer(ctx, {
           id: "cobbles",
@@ -595,15 +583,6 @@ const baseStrategies: ProfileStrategy[] = [
           kind: "cobble",
           level: 0.3,
           softOnset: true,
-          rolling: true,
-        }),
-        createCarriageRunningGearLayer(ctx, {
-          id: "running-gear",
-          destination: buses.accents,
-          material: "iron",
-          level: 0.08,
-          creakLevel: 0.6,
-          terrainLevel: 0.6,
         }),
         createCreakLayer(ctx, {
           id: "heavy-creak",
