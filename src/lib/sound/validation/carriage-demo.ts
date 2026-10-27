@@ -2,14 +2,13 @@ import { computeDriveState, IDLE_STATE, type DriveState } from "@/lib/drive/mode
 import { SoundEngine } from "@/lib/sound/engine";
 import { getProfile } from "@/lib/sound/profiles";
 import { DEFAULT_CABIN_EQ } from "@/lib/drive/types-extra";
-import type { HorseSnorts } from "@/lib/sound/horse-snorts";
 
-/** 30 s demo speed curve (km/h): idle, accelerate 0→60, long steady cruise, slow to a stop. */
+/** 30 s demo speed curve (km/h): accelerate 0→60, cruise, slow to a stop. */
 export function carriageDemoKmh(t: number): number {
-  if (t < 7) return 0;
-  if (t < 12) return 60 * Math.sin(((t - 7) / 5) * (Math.PI / 2)) ** 1.3;
-  if (t < 26) return 60;
-  if (t < 29.5) return 60 * (1 - (t - 26) / 3.5);
+  if (t < 1) return 0;
+  if (t < 11) return 60 * Math.sin(((t - 1) / 10) * (Math.PI / 2)) ** 1.3;
+  if (t < 21) return 60;
+  if (t < 29) return 60 * (1 - (t - 21) / 8);
   return 0;
 }
 
@@ -20,18 +19,6 @@ export async function renderCarriageDemo(profileId: string, duration = 30) {
   engine.setRenderTime(0);
   const profile = getProfile(profileId);
   await engine.start(profile, { signature: false, context: ctx, seed: 1 });
-  // Offline render: make sure the recorded snort clips are decoded before scheduling.
-  const snorts = (engine as unknown as { snorts?: HorseSnorts | null }).snorts;
-  await snorts?.load();
-  const snortLog: string[] = [];
-  if (snorts) {
-    const step = snorts.scheduler.step.bind(snorts.scheduler);
-    snorts.scheduler.step = (t, kmh, thr) => {
-      const ev = step(t, kmh, thr);
-      if (ev) snortLog.push(`${t.toFixed(1)}s ${ev.reason}`);
-      return ev;
-    };
-  }
   engine.setCabinEq(DEFAULT_CABIN_EQ);
   engine.setVolume(0.55);
   const fps = 60;
@@ -60,5 +47,5 @@ export async function renderCarriageDemo(profileId: string, duration = 30) {
   let bin = "";
   for (let i = 0; i < bytes.length; i += 0x8000)
     bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
-  return { sampleRate, pcmBase64: btoa(bin), snortLog };
+  return { sampleRate, pcmBase64: btoa(bin) };
 }

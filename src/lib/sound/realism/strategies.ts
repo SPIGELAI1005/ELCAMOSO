@@ -33,9 +33,6 @@ import type { ProfileFamily } from "@/lib/sound/realism/families";
 import { familyForProfile } from "@/lib/sound/realism/families";
 import { EXPANSION_STRATEGIES } from "@/lib/sound/realism/strategies-extra";
 
-/** Carriage hooves above ~35-50 km/h: a faint gallop hint drifting between -24 and -18 dB. */
-const CARRIAGE_GALLOP_HINT = { fromKmh: 35, toKmh: 50, minDb: -24, maxDb: -18 } as const;
-
 /** Expose family for debug / Studio tooling. */
 export function strategyFamily(id: string): ProfileFamily {
   return familyForProfile(id);
@@ -340,8 +337,7 @@ const baseStrategies: ProfileStrategy[] = [
         createGovernedLayer(
           ctx,
           buses.body,
-          (dest) =>
-            createUfoLayer(ctx, { id: "theremin", destination: dest, baseHz: 760, level: 0.88 }),
+          (dest) => createUfoLayer(ctx, { id: "theremin", destination: dest, baseHz: 760, level: 0.88 }),
           { floor: 0.08, duck: 0.6, holdS: 0.4, decayS: 0.35 },
         ),
         // Deep hover/propulsion bass (Rocket Car thrust bed), silent at rest.
@@ -353,13 +349,7 @@ const baseStrategies: ProfileStrategy[] = [
           roar: 0.3,
           cruise: 0.24,
         }),
-        createDebrisLayer(ctx, {
-          id: "ufo-debris",
-          destination: buses.accents,
-          level: 4.6,
-          metal: 0.4,
-          pitch: 1.05,
-        }),
+        createDebrisLayer(ctx, { id: "ufo-debris", destination: buses.accents, level: 4.6, metal: 0.4, pitch: 1.05 }),
       ];
     },
   },
@@ -531,17 +521,6 @@ const baseStrategies: ProfileStrategy[] = [
     id: "wild-west-carriage",
     build(ctx, buses) {
       return [
-        createFilteredNoiseLayer(ctx, {
-          id: "outdoor-air",
-          destination: buses.beds,
-          color: "pink",
-          filterType: "bandpass",
-          tone: 700,
-          q: 0.5,
-          level: 0.25,
-          speedWeight: 0,
-          throttleWeight: 0,
-        }),
         createHoofLayer(ctx, {
           id: "hooves",
           destination: buses.accents,
@@ -549,8 +528,6 @@ const baseStrategies: ProfileStrategy[] = [
           tone: 380,
           level: 0.32,
           smoothGait: { gallopMaxRate: 2.9 },
-          restSilent: true,
-          highSpeedHint: CARRIAGE_GALLOP_HINT,
         }),
         createCreakLayer(ctx, {
           id: "wood-creak",
@@ -603,17 +580,6 @@ const baseStrategies: ProfileStrategy[] = [
     id: "romanian-85-carriage",
     build(ctx, buses) {
       return [
-        createFilteredNoiseLayer(ctx, {
-          id: "outdoor-air",
-          destination: buses.beds,
-          color: "pink",
-          filterType: "bandpass",
-          tone: 700,
-          q: 0.5,
-          level: 0.25,
-          speedWeight: 0,
-          throttleWeight: 0,
-        }),
         createHoofLayer(ctx, {
           id: "horse",
           destination: buses.accents,
@@ -622,8 +588,6 @@ const baseStrategies: ProfileStrategy[] = [
           level: 0.28,
           softOnset: true,
           smoothGait: { gallopMaxRate: 2.7 },
-          restSilent: true,
-          highSpeedHint: CARRIAGE_GALLOP_HINT,
         }),
         createImpactLayer(ctx, {
           id: "cobbles",

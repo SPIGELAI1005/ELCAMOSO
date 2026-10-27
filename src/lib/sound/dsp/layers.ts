@@ -1046,11 +1046,6 @@ export function createImpactLayer(
             jerk * (softThump ? 0.25 : 0.55)) *
           (rolling ? 0.75 + audioRandom() * 0.25 : 0.6 + audioRandom() * 0.5) *
           (rolling ? smoothstep(0.5, 4, m.speedKmh) : 1);
-        if (amp < 0.001) {
-          // Rolling layer at standstill: skip the hit (exponential ramps cannot reach 0).
-          next += interval * (0.85 + audioRandom() * 0.3);
-          continue;
-        }
         const pan = ctx.createStereoPanner();
         pan.pan.value = (audioRandom() - 0.5) * 1.6;
         pan.connect(bus);
@@ -1280,13 +1275,6 @@ export function createHoofLayer(
      * gentler demand push and steadier stride level at cruise.
      */
     smoothGait?: { gallopMaxRate: number };
-    /** No hoof steps while standing (no idle "pulse"); steps fade in from ~0.5 km/h. */
-    restSilent?: boolean;
-    /**
-     * Above fromKmh the hooves fade to a faint background hint by toKmh, a level
-     * that drifts slowly between minDb and maxDb (re. full level).
-     */
-    highSpeedHint?: { fromKmh: number; toKmh: number; minDb: number; maxDb: number };
   },
 ): LayerHandle {
   const bus = ctx.createGain();
@@ -1295,11 +1283,7 @@ export function createHoofLayer(
   let disposed = false;
   const horses = opts.horses ?? 1;
   const smooth = opts.smoothGait ?? null;
-  const hint = opts.highSpeedHint ?? null;
   let kmhSmooth = -1;
-  let hintDb = hint ? (hint.minDb + hint.maxDb) / 2 : 0;
-  let hintTargetDb = hintDb;
-  let hintNextAt = 0;
   const softOnset = !!opts.softOnset;
   let demandSmooth = 0;
 
@@ -1383,17 +1367,6 @@ export function createHoofLayer(
       const gait = smooth
         ? smoothGaitPhase(kmhSmooth, smooth.gallopMaxRate)
         : gaitPhase(m.speedKmh);
-      const restGate = opts.restSilent ? smoothstep(0.5, 3, kmhSmooth) : 1;
-      let hintGain = 1;
-      if (hint) {
-        if (t >= hintNextAt) {
-          hintTargetDb = hint.minDb + audioRandom() * (hint.maxDb - hint.minDb);
-          hintNextAt = t + 5 + audioRandom() * 5;
-        }
-        hintDb += (hintTargetDb - hintDb) * Math.min(1, m.dt / 2.5);
-        const f = smoothstep(hint.fromKmh, hint.toKmh, kmhSmooth);
-        hintGain = lerp(1, 10 ** (hintDb / 20), f);
-      }
       // Throttle can push gait faster (only a little for carriages: no frantic sprint)
       const demandCadenceBoost = 1 + demandSmooth * (smooth ? 0.1 : 0.3);
       const cadence =
@@ -1404,14 +1377,12 @@ export function createHoofLayer(
       while (next < horizon) {
         const pattern = gait.pattern;
         // One full stride of footfalls, then wait for the next stride.
-        // Carriage: steady stride level from trot upward.
-        const strideGain =
-          restGate *
-          hintGain *
-          (smooth
-            ? (opts.level ?? 0.35) *
-              (0.55 + smoothstep(0, 40, kmhSmooth) * 0.35 + demandSmooth * 0.18)
-            : (opts.level ?? 0.35) * (0.35 + m.speedSlow * 0.9 + demandSmooth * 0.25));
+        // Carriage: steady stride level from trot upward; quieter shuffling while standing.
+        const strideGain = smooth
+          ? (opts.level ?? 0.35) *
+            (0.6 + 0.4 * smoothstep(0.3, 3, kmhSmooth)) *
+            (0.55 + smoothstep(0, 40, kmhSmooth) * 0.35 + demandSmooth * 0.18)
+          : (opts.level ?? 0.35) * (0.35 + m.speedSlow * 0.9 + demandSmooth * 0.25);
         const jitter = smooth ? 0.06 : 0.14;
         const jitterBase = smooth ? 0.97 : 0.88;
         for (let i = 0; i < pattern.length; i += 1) {

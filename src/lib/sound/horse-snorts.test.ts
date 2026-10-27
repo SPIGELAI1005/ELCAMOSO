@@ -15,8 +15,7 @@ describe("horse snorts", () => {
     expect(isHorseSnortProfile("wild-west-carriage")).toBe(true);
     expect(isHorseSnortProfile("romanian-85-carriage")).toBe(true);
     expect(isHorseSnortProfile("horse-gallop")).toBe(true);
-    for (const id of ["american-muscle-v8", "gt-v8", "racing-v10", null])
-      expect(isHorseSnortProfile(id)).toBe(false);
+    for (const id of ["american-muscle-v8", "gt-v8", "racing-v10", null]) expect(isHorseSnortProfile(id)).toBe(false);
   });
 
   it("idle snorts at random 15-40 s gaps, never closer", () => {
@@ -61,34 +60,6 @@ describe("horse snorts", () => {
       s.step(0, 10, 0);
       const e = s.step(0.1, 10, 1)!;
       expect(Math.abs(e.rate - 1)).toBeLessThanOrEqual(0.05 + 1e-9);
-    }
-  });
-});
-
-describe("cruise snorts", () => {
-  it("brrr after 10-15 s of steady speed, then every 10-15 s, idle clip", () => {
-    const s = new SnortScheduler();
-    const out: { t: number; reason: string; clip: string }[] = [];
-    for (let t = 0; t < 120; t += 0.1) {
-      const e = s.step(t, 60 + Math.sin(t) * 2, 0.3);
-      if (e) out.push({ t, reason: e.reason, clip: e.clip });
-    }
-    expect(out.length).toBeGreaterThanOrEqual(7);
-    expect(out[0]!.t).toBeGreaterThanOrEqual(10 - 0.2);
-    expect(out[0]!.t).toBeLessThanOrEqual(15 + 0.2);
-    for (const e of out) expect(e).toMatchObject({ reason: "cruise", clip: "idle" });
-    for (let i = 1; i < out.length; i++) {
-      const gap = out[i]!.t - out[i - 1]!.t;
-      expect(gap).toBeGreaterThanOrEqual(10 - 0.2);
-      expect(gap).toBeLessThanOrEqual(15 + 0.2);
-    }
-  });
-
-  it("no cruise snort while speed keeps changing", () => {
-    const s = new SnortScheduler(() => 0.5);
-    for (let t = 0; t < 60; t += 0.1) {
-      const e = s.step(t, 10 + t * 1.5, 0.5);
-      expect(e?.reason).not.toBe("cruise");
     }
   });
 });

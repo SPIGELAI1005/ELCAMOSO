@@ -2,17 +2,12 @@
  * Horse snorts for horse profiles only. Two CC0 Freesound clips (trimmed, peak-normalised,
  * mixed low under the carriage). Never on a fixed loop: idle snorts at random 15-40 s gaps,
  * one snort on a hard throttle jump (cooldown 8 s), one "settling" snort when a fast
- * deceleration brings the horse to rest (cooldown 12 s), a brrr (idle clip) after 10-15 s of
- * steady speed and every 10-15 s while it stays steady, and a global 6 s minimum gap.
+ * deceleration brings the horse to rest (cooldown 12 s), and a global 6 s minimum gap.
  */
 import type { DriveState } from "@/lib/drive/model";
 import type { RecordedCredit } from "@/lib/sound/realism/v2/recorded-loops";
 
-export const HORSE_SNORT_PROFILES = new Set([
-  "wild-west-carriage",
-  "romanian-85-carriage",
-  "horse-gallop",
-]);
+export const HORSE_SNORT_PROFILES = new Set(["wild-west-carriage", "romanian-85-carriage", "horse-gallop"]);
 
 export function isHorseSnortProfile(id: string | null | undefined): boolean {
   return !!id && HORSE_SNORT_PROFILES.has(id);
@@ -21,14 +16,11 @@ export function isHorseSnortProfile(id: string | null | undefined): boolean {
 const BASE = "/sample-packs/recorded/snorts-v1";
 export const SNORT_URLS = { accel: `${BASE}/snort_4.m4a`, idle: `${BASE}/snort_6.m4a` } as const;
 export type SnortClip = keyof typeof SNORT_URLS;
-export type SnortReason = "idle" | "accel" | "settle" | "cruise";
+export type SnortReason = "idle" | "accel" | "settle";
 
 export const SNORT_TIMING = {
   idleMin: 15,
   idleMax: 40,
-  /** First brrr after coming to rest (or at start-up) comes sooner. */
-  idleFirstMin: 4,
-  idleFirstMax: 8,
   idleMaxKmh: 3,
   accelCooldown: 8,
   accelJump: 0.35,
@@ -38,10 +30,6 @@ export const SNORT_TIMING = {
   settleStopKmh: 2,
   settleWindow: 4,
   globalGap: 6,
-  /** Steady cruise: speed within ±tolerance of where it settled, above idleMaxKmh. */
-  cruiseTolKmh: 4,
-  cruiseMin: 10,
-  cruiseMax: 15,
 } as const;
 
 export interface SnortEvent {
@@ -60,17 +48,11 @@ export class SnortScheduler {
   private lastThrottle = 0;
   private fastAt = -1e9;
   private wasMoving = false;
-  private cruiseAnchor: number | null = null;
-  private nextCruiseAt: number | null = null;
 
   constructor(private readonly rand: () => number = Math.random) {}
 
   private idleGap() {
     return SNORT_TIMING.idleMin + this.rand() * (SNORT_TIMING.idleMax - SNORT_TIMING.idleMin);
-  }
-
-  private cruiseGap() {
-    return SNORT_TIMING.cruiseMin + this.rand() * (SNORT_TIMING.cruiseMax - SNORT_TIMING.cruiseMin);
   }
 
   private emit(reason: SnortReason, t: number): SnortEvent {
@@ -109,32 +91,13 @@ export class SnortScheduler {
     }
 
     if (kmh <= T.idleMaxKmh && throttle < 0.1) {
-      if (this.nextIdleAt === null)
-        this.nextIdleAt = t + T.idleFirstMin + this.rand() * (T.idleFirstMax - T.idleFirstMin);
-      else if (ev) this.nextIdleAt = t + this.idleGap();
+      if (this.nextIdleAt === null || ev) this.nextIdleAt = t + this.idleGap();
       else if (t >= this.nextIdleAt) {
         if (t - this.lastAny >= T.globalGap) ev = this.emit("idle", t);
         this.nextIdleAt = t + this.idleGap();
       }
     } else {
       this.nextIdleAt = null;
-    }
-    // Steady speed held: brrr (idle clip) after 10-15 s, then every 10-15 s while steady.
-    if (kmh > T.idleMaxKmh) {
-      if (this.cruiseAnchor === null || Math.abs(kmh - this.cruiseAnchor) > T.cruiseTolKmh) {
-        this.cruiseAnchor = kmh;
-        this.nextCruiseAt = t + this.cruiseGap();
-      } else if (!ev && this.nextCruiseAt !== null && t >= this.nextCruiseAt) {
-        if (t - this.lastAny >= T.globalGap) {
-          ev = this.emit("cruise", t);
-          this.nextCruiseAt = t + this.cruiseGap();
-        } else {
-          this.nextCruiseAt = this.lastAny + T.globalGap;
-        }
-      }
-    } else {
-      this.cruiseAnchor = null;
-      this.nextCruiseAt = null;
     }
     return ev;
   }

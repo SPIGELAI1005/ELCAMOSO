@@ -45,12 +45,6 @@ const NON_ENGINE_PROFILES = [
 // catalog target is verified on the full drive render (see loudness.ts).
 const LOUDNESS_MIN_LUFS = -24;
 const LOUDNESS_MAX_LUFS = -9;
-// Carriages deliberately dim the gallop to a -18..-24 dB background hint above
-// ~35-50 km/h, so their steady-80 level sits a little lower than other profiles.
-const LOUDNESS_MIN_OVERRIDE: Record<string, number> = {
-  "wild-west-carriage": -28,
-  "romanian-85-carriage": -28,
-};
 const LF_SHARE_MAX_PERCENT = 30;
 // Round 4: Rocket Car is deliberately bass-led (deep thrust rumble is its main effect).
 // Rocket Car and Space Ship carry an intentional deep thrust/propulsion bass bed (still HP-filtered >=32 Hz).
@@ -92,9 +86,7 @@ describe("non-engine audio bounds", () => {
       expect(metrics.nanCount).toBe(0);
       expect(metrics.infinityCount).toBe(0);
 
-      expect(metrics.approximateIntegratedLoudness).toBeGreaterThanOrEqual(
-        LOUDNESS_MIN_OVERRIDE[profileId] ?? LOUDNESS_MIN_LUFS,
-      );
+      expect(metrics.approximateIntegratedLoudness).toBeGreaterThanOrEqual(LOUDNESS_MIN_LUFS);
       expect(metrics.approximateIntegratedLoudness).toBeLessThanOrEqual(LOUDNESS_MAX_LUFS);
 
       expect(metrics.samplePeakDbfs).toBeLessThanOrEqual(PEAK_MAX_DBFS);
