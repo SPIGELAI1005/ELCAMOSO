@@ -441,7 +441,7 @@ class DriveSession {
         (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
       if (!AudioCtx) return;
       if (!this.gestureAudioContext || this.gestureAudioContext.state === "closed") {
-        this.gestureAudioContext = new AudioCtx();
+        this.gestureAudioContext = new AudioCtx({ latencyHint: "playback" });
       }
       const ctx = this.gestureAudioContext;
       if (ctx.state === "suspended") void ctx.resume();

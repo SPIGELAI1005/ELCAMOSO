@@ -21,7 +21,13 @@ interface Grain {
   end: number;
 }
 
-const LOOKAHEAD = 0.12;
+/**
+ * Grains are scheduled from the main thread (rAF). A main-thread stall longer than the look-ahead
+ * lets the running grain fade out before the next one is queued, which is heard as a dropout.
+ * Live grains keep following the RPM through playbackRate, so a longer look-ahead only delays
+ * which region the next grain picks.
+ */
+const LOOKAHEAD = 0.3;
 const EDGE = 0.04;
 
 function sineWindow(n: number): Float32Array {
@@ -35,6 +41,7 @@ export class GranularStream {
   private grains: Grain[] = [];
   private rng: number;
   private readonly win = sineWindow(64);
+  private readonly curveScratch = new Float32Array(64);
   private readonly minRate: number;
   private readonly maxRate: number;
   constructor(
@@ -107,7 +114,8 @@ export class GranularStream {
     );
     const gain = this.ctx.createGain();
     gain.gain.value = 0;
-    const curve = new Float32Array(this.win.length);
+    // setValueCurveAtTime copies the array, so one scratch buffer avoids per-grain garbage.
+    const curve = this.curveScratch;
     for (let i = 0; i < curve.length; i += 1) curve[i] = this.win[i]! * level;
     gain.gain.setValueCurveAtTime(curve, at, dur);
     src.connect(gain);

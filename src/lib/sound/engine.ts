@@ -608,7 +608,7 @@ export class SoundEngine {
       this.setProfile(profile);
       return;
     }
-    const ctx = options?.context ?? new AudioContext();
+    const ctx = options?.context ?? new AudioContext({ latencyHint: "playback" });
     if (ctx instanceof AudioContext && ctx.state !== "running") {
       await ctx.resume();
     }
