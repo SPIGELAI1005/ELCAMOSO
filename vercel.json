@@ -39,6 +39,24 @@
           "value": "camera=(), payment=(self), usb=(), bluetooth=(), serial=(), hid=(), geolocation=(self), microphone=(self), accelerometer=(self), gyroscope=(self), magnetometer=(self)"
         }
       ]
+    },
+    {
+      "source": "/sample-packs/recorded/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=86400, stale-while-revalidate=604800"
+        }
+      ]
+    },
+    {
+      "source": "/audio/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=86400, stale-while-revalidate=604800"
+        }
+      ]
     }
   ]
 }
