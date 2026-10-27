@@ -1,3 +1,4 @@
+import { fetchBytesWithRetry } from "@/lib/sound/fetch-bytes";
 import type { RecordedLoopBank } from "./recorded-loops";
 
 const cache = new Map<string, Promise<ArrayBuffer>>();
@@ -6,10 +7,7 @@ function fetchBytes(url: string): Promise<ArrayBuffer> {
   let p = cache.get(url);
   if (!p) {
     // No abort signal: the shared cache must survive a profile rebuild.
-    p = fetch(url).then((res) => {
-      if (!res.ok) throw new Error(`Recorded loop ${url} failed (${res.status})`);
-      return res.arrayBuffer();
-    });
+    p = fetchBytesWithRetry(url, "Recorded loop");
     p.catch(() => cache.delete(url));
     cache.set(url, p);
   }

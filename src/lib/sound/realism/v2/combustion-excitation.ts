@@ -56,9 +56,18 @@ export function ensureCombustionWorklet(ctx: BaseAudioContext): Promise<boolean>
       if (!ctx.audioWorklet) return false;
       console.log("[CombustionExcitation] Loading combustion-processor worklet...");
       // Versioned URL: a new deploy always fetches the new worklet (no stale HTTP/SW cache).
-      await ctx.audioWorklet.addModule(
-        `/audio/combustion-processor.js?v=${COMBUSTION_WORKLET_VERSION}`,
-      );
+      const url = `/audio/combustion-processor.js?v=${COMBUSTION_WORKLET_VERSION}`;
+      // Retry: a failed load silently drops the whole drive to the tonal fallback.
+      for (let attempt = 0; ; attempt += 1) {
+        try {
+          await ctx.audioWorklet.addModule(url);
+          break;
+        } catch (error) {
+          const delay = [400, 1200, 2800][attempt];
+          if (delay === undefined || ctx.state === "closed") throw error;
+          await new Promise((resolve) => setTimeout(resolve, delay));
+        }
+      }
       readyContexts.add(ctx);
       console.log("[CombustionExcitation] Worklet loaded successfully");
       return true;

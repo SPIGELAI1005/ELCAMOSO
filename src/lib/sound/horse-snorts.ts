@@ -4,10 +4,15 @@
  * one snort on a hard throttle jump (cooldown 8 s), one "settling" snort when a fast
  * deceleration brings the horse to rest (cooldown 12 s), and a global 6 s minimum gap.
  */
+import { fetchBytesWithRetry } from "@/lib/sound/fetch-bytes";
 import type { DriveState } from "@/lib/drive/model";
 import type { RecordedCredit } from "@/lib/sound/realism/v2/recorded-loops";
 
-export const HORSE_SNORT_PROFILES = new Set(["wild-west-carriage", "romanian-85-carriage", "horse-gallop"]);
+export const HORSE_SNORT_PROFILES = new Set([
+  "wild-west-carriage",
+  "romanian-85-carriage",
+  "horse-gallop",
+]);
 
 export function isHorseSnortProfile(id: string | null | undefined): boolean {
   return !!id && HORSE_SNORT_PROFILES.has(id);
@@ -128,10 +133,7 @@ export class HorseSnorts {
         const url = SNORT_URLS[clip];
         let p = cache.get(url);
         if (!p) {
-          p = fetch(url).then((r) => {
-            if (!r.ok) throw new Error(`snort ${url} ${r.status}`);
-            return r.arrayBuffer();
-          });
+          p = fetchBytesWithRetry(url, "snort");
           p.catch(() => cache.delete(url));
           cache.set(url, p);
         }

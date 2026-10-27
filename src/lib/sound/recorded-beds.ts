@@ -6,6 +6,7 @@
  * ducked by `duck` × bed presence so the recording leads. Licences: RECORDED_BED_CREDITS.
  */
 import type { DriveState } from "@/lib/drive/model";
+import { fetchBytesWithRetry } from "@/lib/sound/fetch-bytes";
 import type { RecordedCredit } from "@/lib/sound/realism/v2/recorded-loops";
 
 const BASE = "/sample-packs/recorded/beds-v1";
@@ -233,10 +234,7 @@ export class RecordedBed {
   async load(): Promise<void> {
     let p = bufferCache.get(this.cfg.url);
     if (!p) {
-      p = fetch(this.cfg.url).then((res) => {
-        if (!res.ok) throw new Error(`Recorded bed ${this.cfg.url} failed (${res.status})`);
-        return res.arrayBuffer();
-      });
+      p = fetchBytesWithRetry(this.cfg.url, "Recorded bed");
       p.catch(() => bufferCache.delete(this.cfg.url));
       bufferCache.set(this.cfg.url, p);
     }
