@@ -58,7 +58,41 @@ export interface RecordedBedConfig {
   oneShots?: BedOneShot[];
 }
 
+
+/**
+ * Carriage bed (beds-v2/carriage.m4a, all CC0 Freesound): idle breathing, then walk / trot /
+ * canter / gallop hoof loops crossfaded by speed, each with the wagon wheel rattle mixed in
+ * louder as speed rises. The gallop loop is mostly rattle with only a quiet hint of hooves.
+ * No pulse at idle: the procedural layers are almost fully ducked under the recording.
+ */
+function carriageBed(profileId: string, level: number): RecordedBedConfig {
+  return {
+    profileId,
+    url: "/sample-packs/recorded/beds-v2/carriage.m4a",
+    sourceSamples: 2681544,
+    driver: "kmh",
+    loops: [
+      { start: 0.1, end: 14.1, ref: 2 },
+      { start: 14.2, end: 26.2, ref: 6 },
+      { start: 26.3, end: 38.3, ref: 14 },
+      { start: 38.4, end: 43.6655, ref: 24 },
+      { start: 43.7655, end: 55.7655, ref: 38 },
+    ],
+    rateExponent: 0.3,
+    minRate: 0.85,
+    maxRate: 1.15,
+    level,
+    presence: [[0, 1]],
+    throttleLift: 0,
+    duck: 0.95,
+    highpassHz: 40,
+    lowpassHz: 13000,
+  };
+}
+
 export const RECORDED_BEDS: Record<string, RecordedBedConfig> = {
+  "wild-west-carriage": carriageBed("wild-west-carriage", HORSE_LEVEL),
+  "romanian-85-carriage": carriageBed("romanian-85-carriage", HORSE_LEVEL),
   "horse-gallop": {
     profileId: "horse-gallop",
     url: `${BASE}/horse.m4a`,
@@ -330,12 +364,75 @@ export class RecordedBed {
 
 export const RECORDED_BED_CREDITS: RecordedCredit[] = [
   {
+    title: "Horse outside eating breathing stomping quiet (Freesound #574094)",
+    author: "TRP",
+    licence: "CC0 1.0",
+    licenceUrl: "https://creativecommons.org/publicdomain/zero/1.0/",
+    sourceUrl: "https://freesound.org/s/574094/",
+    usedIn: "Carriages (idle breathing)",
+    attribution: "Horse outside eating breathing stomping quiet by TRP (Freesound #574094), CC0 1.0, edited (trimmed, filtered, looped).",
+  },
+  {
+    title: "Horse breathing (Freesound #619069)",
+    author: "mrrap4food",
+    licence: "CC0 1.0",
+    licenceUrl: "https://creativecommons.org/publicdomain/zero/1.0/",
+    sourceUrl: "https://freesound.org/s/619069/",
+    usedIn: "Carriages (idle breathing)",
+    attribution: "Horse breathing by mrrap4food (Freesound #619069), CC0 1.0, edited (trimmed, filtered, looped).",
+  },
+  {
+    title: "G38-10-Horse Walks on Pavement (Freesound #437103)",
+    author: "craigsmith",
+    licence: "CC0 1.0",
+    licenceUrl: "https://creativecommons.org/publicdomain/zero/1.0/",
+    sourceUrl: "https://freesound.org/s/437103/",
+    usedIn: "Carriages (walk)",
+    attribution: "G38-10-Horse Walks on Pavement by craigsmith (Freesound #437103), CC0 1.0, edited (trimmed, filtered, looped).",
+  },
+  {
+    title: "trotting horse in rural road (Freesound #139325)",
+    author: "Oscar de Ávila",
+    licence: "CC0 1.0",
+    licenceUrl: "https://creativecommons.org/publicdomain/zero/1.0/",
+    sourceUrl: "https://freesound.org/s/139325/",
+    usedIn: "Carriages (trot)",
+    attribution: "trotting horse in rural road by Oscar de Ávila (Freesound #139325), CC0 1.0, edited (trimmed, filtered, looped).",
+  },
+  {
+    title: "G18-16- Horse and Wagon (Freesound #438194)",
+    author: "craigsmith",
+    licence: "CC0 1.0",
+    licenceUrl: "https://creativecommons.org/publicdomain/zero/1.0/",
+    sourceUrl: "https://freesound.org/s/438194/",
+    usedIn: "Carriages (trot)",
+    attribution: "G18-16- Horse and Wagon by craigsmith (Freesound #438194), CC0 1.0, edited (trimmed, filtered, looped).",
+  },
+  {
+    title: "R14-05-Horses Gallop By (Freesound #479742)",
+    author: "craigsmith",
+    licence: "CC0 1.0",
+    licenceUrl: "https://creativecommons.org/publicdomain/zero/1.0/",
+    sourceUrl: "https://freesound.org/s/479742/",
+    usedIn: "Carriages (canter)",
+    attribution: "R14-05-Horses Gallop By by craigsmith (Freesound #479742), CC0 1.0, edited (trimmed, filtered, looped).",
+  },
+  {
+    title: "G52-06-Buckboard Wagon (Freesound #437077)",
+    author: "craigsmith",
+    licence: "CC0 1.0",
+    licenceUrl: "https://creativecommons.org/publicdomain/zero/1.0/",
+    sourceUrl: "https://freesound.org/s/437077/",
+    usedIn: "Carriages (wheel rattle)",
+    attribution: "G52-06-Buckboard Wagon by craigsmith (Freesound #437077), CC0 1.0, edited (trimmed, filtered, looped).",
+  },
+  {
     title: "Horse Galloping (Freesound #175356)",
     author: "Max_Headroom",
     licence: "CC0 1.0",
     licenceUrl: "https://creativecommons.org/publicdomain/zero/1.0/",
     sourceUrl: "https://freesound.org/s/175356/",
-    usedIn: "Horse Gallop (gallop bed)",
+    usedIn: "Horse Gallop (gallop bed), Carriages (gallop hint)",
     attribution:
       "Horse Galloping by Max_Headroom (Freesound #175356), CC0 1.0, edited (trimmed, filtered, looped).",
   },

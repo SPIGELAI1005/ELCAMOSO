@@ -21,9 +21,37 @@ export function isHorseSnortProfile(id: string | null | undefined): boolean {
 const BASE = "/sample-packs/recorded/snorts-v1";
 export const SNORT_URLS = { accel: `${BASE}/snort_4.m4a`, idle: `${BASE}/snort_6.m4a` } as const;
 export type SnortClip = keyof typeof SNORT_URLS;
-export type SnortReason = "idle" | "accel" | "settle";
+export type SnortReason = "idle" | "accel" | "settle" | "cruise";
 
-export const SNORT_TIMING = {
+const BASE_V2 = "/sample-packs/recorded/snorts-v2";
+/** Carriages: two CC0 "brrr" lip-flutter snorts, used for every carriage snort. */
+export const CARRIAGE_SNORT_URLS = {
+  accel: `${BASE_V2}/brrr_a.m4a`,
+  idle: `${BASE_V2}/brrr_b.m4a`,
+} as const;
+export const CARRIAGE_SNORT_PROFILES = new Set(["wild-west-carriage", "romanian-85-carriage"]);
+
+export interface SnortTiming {
+  idleMin: number;
+  idleMax: number;
+  idleMaxKmh: number;
+  accelCooldown: number;
+  accelJump: number;
+  accelMinThrottle: number;
+  settleCooldown: number;
+  settleFromKmh: number;
+  settleStopKmh: number;
+  settleWindow: number;
+  globalGap: number;
+  /** Steady-speed snorts: after cruiseMin..cruiseMax s holding speed (> cruiseMinKmh). */
+  cruiseMin?: number;
+  cruiseMax?: number;
+  cruiseMinKmh?: number;
+  /** Speed change (km/h) that resets the steady-speed timer. */
+  cruiseTolKmh?: number;
+}
+
+export const SNORT_TIMING: SnortTiming = {
   idleMin: 15,
   idleMax: 40,
   idleMaxKmh: 3,
@@ -35,7 +63,25 @@ export const SNORT_TIMING = {
   settleStopKmh: 2,
   settleWindow: 4,
   globalGap: 6,
-} as const;
+};
+
+/** Carriages: a brrr at idle every 10-18 s and every 10-15 s while holding a steady speed. */
+export const CARRIAGE_SNORT_TIMING: SnortTiming = {
+  ...SNORT_TIMING,
+  idleMin: 10,
+  idleMax: 18,
+  globalGap: 6,
+  cruiseMin: 10,
+  cruiseMax: 15,
+  cruiseMinKmh: 6,
+  cruiseTolKmh: 4,
+};
+
+export function snortConfigFor(profileId: string) {
+  return CARRIAGE_SNORT_PROFILES.has(profileId)
+    ? { urls: CARRIAGE_SNORT_URLS, timing: CARRIAGE_SNORT_TIMING }
+    : { urls: SNORT_URLS, timing: SNORT_TIMING };
+}
 
 export interface SnortEvent {
   reason: SnortReason;
@@ -53,11 +99,22 @@ export class SnortScheduler {
   private lastThrottle = 0;
   private fastAt = -1e9;
   private wasMoving = false;
+  private cruiseRef: number | null = null;
+  private nextCruiseAt: number | null = null;
 
-  constructor(private readonly rand: () => number = Math.random) {}
+  constructor(
+    private readonly rand: () => number = Math.random,
+    private readonly timing: SnortTiming = SNORT_TIMING,
+  ) {}
+
+  private cruiseGap() {
+    const T = this.timing;
+    const lo = T.cruiseMin ?? 10;
+    return lo + this.rand() * ((T.cruiseMax ?? lo) - lo);
+  }
 
   private idleGap() {
-    return SNORT_TIMING.idleMin + this.rand() * (SNORT_TIMING.idleMax - SNORT_TIMING.idleMin);
+    return this.timing.idleMin + this.rand() * (this.timing.idleMax - this.timing.idleMin);
   }
 
   private emit(reason: SnortReason, t: number): SnortEvent {
@@ -72,7 +129,7 @@ export class SnortScheduler {
   }
 
   step(t: number, kmh: number, throttle: number): SnortEvent | null {
-    const T = SNORT_TIMING;
+    const T = this.timing;
     const dThrottle = throttle - this.lastThrottle;
     this.lastThrottle = throttle;
     if (kmh >= T.settleFromKmh) {
@@ -104,6 +161,20 @@ export class SnortScheduler {
     } else {
       this.nextIdleAt = null;
     }
+
+    if (T.cruiseMin !== undefined && kmh >= (T.cruiseMinKmh ?? 6)) {
+      const tol = T.cruiseTolKmh ?? 4;
+      if (this.cruiseRef === null || Math.abs(kmh - this.cruiseRef) > tol || ev) {
+        this.cruiseRef = kmh;
+        this.nextCruiseAt = t + this.cruiseGap();
+      } else if (this.nextCruiseAt !== null && t >= this.nextCruiseAt) {
+        if (!ev && t - this.lastAny >= T.globalGap) ev = this.emit("cruise", t);
+        this.nextCruiseAt = t + this.cruiseGap();
+      }
+    } else {
+      this.cruiseRef = null;
+      this.nextCruiseAt = null;
+    }
     return ev;
   }
 }
@@ -116,12 +187,17 @@ export class HorseSnorts {
   private buffers: Partial<Record<SnortClip, AudioBuffer>> = {};
   private out: GainNode;
   private disposed = false;
-  readonly scheduler = new SnortScheduler();
+  readonly scheduler: SnortScheduler;
+  private readonly urls: Record<SnortClip, string>;
 
   constructor(
     private readonly ctx: BaseAudioContext,
     destination: AudioNode,
+    profileId = "horse-gallop",
   ) {
+    const cfg = snortConfigFor(profileId);
+    this.urls = cfg.urls;
+    this.scheduler = new SnortScheduler(Math.random, cfg.timing);
     this.out = ctx.createGain();
     this.out.gain.value = SNORT_LEVEL;
     this.out.connect(destination);
@@ -129,8 +205,8 @@ export class HorseSnorts {
 
   async load(): Promise<void> {
     await Promise.all(
-      (Object.keys(SNORT_URLS) as SnortClip[]).map(async (clip) => {
-        const url = SNORT_URLS[clip];
+      (Object.keys(this.urls) as SnortClip[]).map(async (clip) => {
+        const url = this.urls[clip];
         let p = cache.get(url);
         if (!p) {
           p = fetchBytesWithRetry(url, "snort");
@@ -173,6 +249,15 @@ export class HorseSnorts {
 
 export const HORSE_SNORT_CREDITS: RecordedCredit[] = [
   {
+    title: "G38-16-Four Horse Snorts (Freesound #437111)",
+    author: "craigsmith",
+    licence: "CC0 1.0",
+    licenceUrl: "https://creativecommons.org/publicdomain/zero/1.0/",
+    sourceUrl: "https://freesound.org/s/437111/",
+    usedIn: "Carriages (brrr snort)",
+    attribution: "G38-16-Four Horse Snorts by craigsmith (Freesound #437111), CC0 1.0",
+  },
+  {
     title: "Horse snort (Freesound #475483)",
     author: "o_ciz",
     licence: "CC0 1.0",
@@ -187,7 +272,7 @@ export const HORSE_SNORT_CREDITS: RecordedCredit[] = [
     licence: "CC0 1.0",
     licenceUrl: "https://creativecommons.org/publicdomain/zero/1.0/",
     sourceUrl: "https://freesound.org/s/538697/",
-    usedIn: "Horse profiles (idle and settling snort)",
+    usedIn: "Horse profiles (idle and settling snort), Carriages (brrr snort)",
     attribution: "Horse snort by bruno.auzet (Freesound #538697), CC0 1.0",
   },
 ];

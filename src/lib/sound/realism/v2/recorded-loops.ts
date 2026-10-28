@@ -126,131 +126,6 @@ const ROVER_REGIONS: RecordedRegion[] = [
   },
 ];
 
-/**
- * Superbike (motorcycle-inline-4): steady and pulling stretches from two CC0 Freesound
- * recordings, RPM measured from the firing order (rpm / 30 Hz). Real material covers idle to
- * ~5,100 rpm; grains may be pitched up to 2.4x (inline-4 harmonics stay musical) and hand over
- * to the synth's high-rev scream between ~6k and ~12.5k rpm.
- * Sources: 578059 (Joe.L85, BMW S1000R road test) and 181161 (martian, Honda Hornet 600 onboard).
- */
-const SUPERBIKE_REGIONS: RecordedRegion[] = [
-  { start: 0.08, end: 0.88, rpm: [1599, 1599, 1529, 1469, 1469, 1478, 1486, 1478] },
-  {
-    start: 0.96,
-    end: 2.06,
-    rpm: [1453, 1520, 1555, 1572, 1572, 1555, 1529, 1520, 1494, 1511, 1511],
-  },
-  {
-    start: 2.14,
-    end: 5.84,
-    rpm: [
-      1478, 1503, 1546, 1555, 1555, 1563, 1572, 1563, 1563, 1563, 1572, 1581, 1590, 1581, 1581,
-      1590, 1581, 1572, 1572, 1563, 1563, 1555, 1590, 1590, 1581, 1572, 1563, 1537, 1537, 1555,
-      1590, 1608, 1599, 1599, 1599, 1599, 1626,
-    ],
-  },
-  {
-    start: 5.92,
-    end: 7.32,
-    rpm: [1673, 1663, 1645, 1645, 1617, 1590, 1581, 1572, 1563, 1537, 1520, 1520, 1503, 1486],
-  },
-  {
-    start: 7.4,
-    end: 8.8,
-    rpm: [1626, 1654, 1692, 1692, 1711, 1721, 1721, 1711, 1663, 1617, 1636, 1692, 1760, 1760],
-  },
-  {
-    start: 8.88,
-    end: 12.88,
-    rpm: [
-      1740, 1721, 1721, 1721, 1730, 1750, 1750, 1750, 1750, 1740, 1740, 1760, 1780, 1790, 1800,
-      1800, 1810, 1810, 1810, 1810, 1821, 1821, 1831, 1821, 1821, 1821, 1831, 1831, 1831, 1831,
-      1831, 1852, 1841, 1831, 1831, 1852, 1862, 1862, 1862, 1841,
-    ],
-  },
-  {
-    start: 12.96,
-    end: 16.96,
-    rpm: [
-      1852, 1841, 1780, 1750, 1750, 1750, 1790, 1790, 1770, 1760, 1760, 1750, 1760, 1770, 1790,
-      1800, 1800, 1810, 1821, 1841, 1862, 1862, 1862, 1852, 1883, 1894, 1894, 1905, 1926, 1959,
-      1992, 2015, 2015, 2026, 2049, 2061, 2084, 2073, 2084, 2108,
-    ],
-  },
-  {
-    start: 17.04,
-    end: 20.14,
-    rpm: [
-      2193, 2181, 2156, 2156, 2168, 2132, 2156, 2156, 2181, 2156, 2168, 2168, 2168, 2181, 2193,
-      2193, 2193, 2193, 2193, 2205, 2205, 2218, 2218, 2230, 2230, 2243, 2243, 2243, 2281, 2307,
-      2333,
-    ],
-  },
-  {
-    start: 20.22,
-    end: 22.22,
-    rpm: [
-      2144, 2144, 2168, 2156, 2168, 2144, 2168, 2181, 2205, 2243, 2281, 2333, 2360, 2400, 2414,
-      2427, 2455, 2469, 2483, 2483,
-    ],
-  },
-  {
-    start: 22.3,
-    end: 23.5,
-    rpm: [2193, 2205, 2243, 2256, 2268, 2268, 2281, 2333, 2333, 2333, 2373, 2427],
-  },
-  {
-    start: 23.58,
-    end: 25.48,
-    rpm: [
-      2230, 2243, 2268, 2281, 2281, 2307, 2307, 2360, 2414, 2414, 2427, 2469, 2469, 2469, 2469,
-      2483, 2525, 2539, 2539,
-    ],
-  },
-  {
-    start: 25.56,
-    end: 28.66,
-    rpm: [
-      2268, 2256, 2256, 2268, 2294, 2294, 2307, 2307, 2307, 2307, 2320, 2307, 2307, 2346, 2386,
-      2386, 2373, 2400, 2441, 2427, 2427, 2455, 2469, 2483, 2568, 2612, 2641, 2671, 2687, 2717,
-      2748,
-    ],
-  },
-  {
-    start: 28.74,
-    end: 30.04,
-    rpm: [3182, 3164, 3128, 3076, 3059, 3059, 3007, 3007, 2990, 2957, 2940, 2891, 2891],
-  },
-  {
-    start: 30.12,
-    end: 31.22,
-    rpm: [3329, 3347, 3366, 3404, 3385, 3404, 3424, 3424, 3443, 3424, 3385],
-  },
-  {
-    start: 31.3,
-    end: 32.4,
-    rpm: [3562, 3562, 3522, 3542, 3542, 3463, 3385, 3347, 3347, 3310, 3182],
-  },
-  { start: 32.48, end: 33.28, rpm: [3705, 3705, 3663, 3663, 3622, 3582, 3582, 3602] },
-  {
-    start: 33.36,
-    end: 36.56,
-    rpm: [
-      3643, 3622, 3643, 3643, 3643, 3684, 3684, 3643, 3643, 3643, 3684, 3747, 3768, 3811, 3854,
-      3898, 3920, 3964, 4009, 4055, 4078, 4124, 4171, 4218, 4218, 4266, 4290, 4363, 4388, 4463,
-      4488, 4463,
-    ],
-  },
-  {
-    start: 36.64,
-    end: 38.64,
-    rpm: [
-      3811, 3832, 3898, 3964, 4032, 4124, 4194, 4218, 4314, 4363, 4438, 4539, 4642, 4722, 4802,
-      4884, 4939, 4995, 5109, 5109,
-    ],
-  },
-];
-
 /** Big Twin (v-twin-cruiser): warm idle of a Harley-Davidson V-twin, CC0 Freesound 850565. */
 const BIG_TWIN_REGIONS: RecordedRegion[] = [
   {
@@ -438,6 +313,25 @@ const rover = (weight: number): RecordedSource => ({
  * (rpm / 30 Hz) per 0.1 s, Doppler included; the pass-by peak itself and the gear change
  * are cut out. High-passed at 180 Hz (the synth keeps the body), RMS-normalised.
  */
+/**
+ * Superbike street layer (v4): idle, blips and revs from one CC0 Freesound recording of a
+ * V4 superbike (#584115, rsn267). RPM tracked from the exhaust pulse (scaled so the idle sits
+ * at ~1,500 rpm); covers idle to ~5,400 rpm, then hands over to the high-rev layer.
+ */
+const SUPERBIKE_STREET_REGIONS: RecordedRegion[] = [
+  { start: 0.1, end: 2.1, rpm: [1717, 1890, 2050, 2050, 2009, 1928, 1838, 1734, 1671, 1587, 1558, 1529, 1529, 1613, 1697, 1781, 1869, 2048, 2227, 2317] },
+  { start: 2.15, end: 4.15, rpm: [2154, 2049, 1964, 1874, 1756, 1674, 1642, 1639, 1639, 1639, 1639, 1639, 1639, 1639, 1639, 1635, 1627, 1620, 1584, 1521] },
+  { start: 4.2, end: 6.2, rpm: [1426, 1426, 1407, 1407, 1407, 1440, 1453, 1467, 1467, 1467, 1467, 1467, 1467, 1467, 1467, 1467, 1467, 1467, 1467, 1467] },
+  { start: 6.25, end: 8.25, rpm: [1467, 1467, 1495, 1553, 1634, 1714, 1824, 1990, 2182, 2342, 2422, 2530, 2691, 2852, 2702, 2242, 1784, 1561, 1568, 1572] },
+  { start: 8.3, end: 10.3, rpm: [1609, 1663, 1749, 1842, 1918, 2029, 2180, 2452, 2779, 3688, 4561, 5312, 5397, 5397, 5143, 4634, 3927, 3269, 2690, 2192] },
+  { start: 10.35, end: 12.35, rpm: [1835, 1768, 1760, 1737, 1697, 1640, 1584, 1547, 1571, 1713, 2076, 2565, 3047, 3486, 3847, 4115, 4205, 4074, 3717, 3222] },
+  { start: 12.4, end: 14.4, rpm: [2608, 2419, 2318, 2178, 2070, 1825, 1825, 1933, 2199, 2350, 2394, 2416, 2416, 2405, 2201, 1942, 1694, 1686, 1742, 1979] },
+  { start: 14.45, end: 16.45, rpm: [2363, 2712, 3021, 3325, 3573, 3771, 3870, 3870, 3771, 3477, 3039, 2601, 2253, 1994, 1834, 1834, 2011, 2257, 2449, 2518] },
+  { start: 16.5, end: 18.5, rpm: [2484, 2417, 2350, 2138, 1960, 1960, 2149, 2533, 2738, 2933, 2933, 2760, 2504, 2247, 2162, 2162, 2304, 2722, 3140, 3416] },
+  { start: 18.55, end: 20.55, rpm: [3363, 3155, 2844, 2581, 2450, 2364, 2243, 2185, 2226, 2272, 2241, 2168, 2132, 2132, 2132, 2168, 2252, 2466, 2763, 3013] },
+  { start: 20.6, end: 22.6, rpm: [3394, 3771, 4148, 4264, 3981, 3565, 3149, 2815, 2521, 2188, 2037, 1980, 1980, 2018, 2055, 2055, 2018, 1999, 1999, 1884] },
+];
+
 const SUPERBIKE_HI_REGIONS: RecordedRegion[] = [
   { start: 0.08, end: 0.88, rpm: [9417, 9378, 9329, 9225, 9198, 9118, 8997, 8933] },
   { start: 0.96, end: 3.66, rpm: [8961, 9025, 9073, 9091, 9127, 9178, 9218, 9220, 9277, 9348, 9377, 9459, 9492, 9487, 9493, 9537, 9617, 9661, 9640, 9688, 9741, 9742, 9711, 9753, 9836, 9880, 9846] },
@@ -519,8 +413,8 @@ export const RECORDED_LOOP_BANKS: Record<string, RecordedLoopBank> = {
     sources: [
       {
         id: "superbike",
-        url: `${BASE}/superbike_i4_regions.m4a`,
-        regions: SUPERBIKE_REGIONS,
+        url: "/sample-packs/recorded/v4/superbike_street_regions.m4a",
+        regions: SUPERBIKE_STREET_REGIONS,
         weight: 1,
         minRate: 0.78,
         maxRate: 2.0,
@@ -782,6 +676,15 @@ export interface RecordedCredit {
 
 export const RECORDED_LOOP_CREDITS: RecordedCredit[] = [
   {
+    title: "Superbike V4 idle and revs (Freesound #584115)",
+    author: "rsn267",
+    licence: "CC0 1.0",
+    licenceUrl: "https://creativecommons.org/publicdomain/zero/1.0/",
+    sourceUrl: "https://freesound.org/s/584115/",
+    usedIn: "Superbike (idle and revs)",
+    attribution: "Superbike V4 recording by rsn267 (Freesound #584115), CC0 1.0, edited (trimmed, filtered, granular).",
+  },
+  {
     title: "Maserati GranTurismo S Exhaust",
     author: "lmartins",
     licence: "CC BY 4.0",
@@ -799,26 +702,6 @@ export const RECORDED_LOOP_CREDITS: RecordedCredit[] = [
     sourceUrl: "https://commons.wikimedia.org/wiki/File:Rover-v8-rr79.ogg",
     usedIn: "American Muscle V8 (idle and low cruise)",
     attribution: "\u201CRover-v8-rr79\u201D by Collard, public domain.",
-  },
-  {
-    title: "S1000R Black Widow Exhaust Road Test (Freesound #578059)",
-    author: "Joe.L85",
-    licence: "CC0 1.0",
-    licenceUrl: "https://creativecommons.org/publicdomain/zero/1.0/",
-    sourceUrl: "https://freesound.org/s/578059/",
-    usedIn: "Superbike (idle, street riding, pulls up to ~3,400 rpm)",
-    attribution:
-      "\u201CS1000R Black Widow Exhaust Road Test\u201D by Joe.L85 (Freesound #578059), CC0 1.0, edited (trimmed, filtered, re-sequenced, granular).",
-  },
-  {
-    title: "motorbike hornet 600 onboard.clip 0005.N3.F (Freesound #181161)",
-    author: "martian",
-    licence: "CC0 1.0",
-    licenceUrl: "https://creativecommons.org/publicdomain/zero/1.0/",
-    sourceUrl: "https://freesound.org/s/181161/",
-    usedIn: "Superbike (idle and onboard pulls up to ~5,100 rpm)",
-    attribution:
-      "\u201Cmotorbike hornet 600 onboard.clip 0005.N3.F\u201D by martian (Freesound #181161), CC0 1.0, edited (trimmed, filtered, re-sequenced, granular).",
   },
   {
     title: "Sportsbike Flyby (Freesound #361403)",

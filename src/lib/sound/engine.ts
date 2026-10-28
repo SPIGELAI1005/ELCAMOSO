@@ -1540,7 +1540,7 @@ export class SoundEngine {
     this.snorts?.dispose();
     this.snorts = null;
     if (isHorseSnortProfile(profile.id) && this.ctx && this.cabinIn) {
-      const snorts = new HorseSnorts(this.ctx, this.cabinIn);
+      const snorts = new HorseSnorts(this.ctx, this.cabinIn, profile.id);
       this.snorts = snorts;
       snorts.load().catch((error) => console.warn("[elcamoso] snorts unavailable", error));
     }

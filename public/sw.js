@@ -1,4 +1,4 @@
-const CACHE = "elcamoso-shell-v13";
+const CACHE = "elcamoso-shell-v14";
 // Bump CACHE whenever a file under /sample-packs/recorded/ is replaced at the same URL.
 const WORKLET = "/audio/combustion-processor.js";
 // Keep in sync with COMBUSTION_WORKLET_VERSION (checked by src/lib/sound/sw-precache.test.ts).
@@ -11,15 +11,18 @@ const AUDIO = [
   "/sample-packs/recorded/beds-v1/horse.m4a",
   "/sample-packs/recorded/beds-v1/tractor.m4a",
   "/sample-packs/recorded/beds-v1/ufo.m4a",
+  "/sample-packs/recorded/beds-v2/carriage.m4a",
   "/sample-packs/recorded/debris-v1/grains.wav",
   "/sample-packs/recorded/snorts-v1/snort_4.m4a",
   "/sample-packs/recorded/snorts-v1/snort_6.m4a",
+  "/sample-packs/recorded/snorts-v2/brrr_a.m4a",
+  "/sample-packs/recorded/snorts-v2/brrr_b.m4a",
   "/sample-packs/recorded/v3/big_twin_regions.m4a",
   "/sample-packs/recorded/v3/f1_passby_regions.m4a",
   "/sample-packs/recorded/v3/maserati_v8_regions.m4a",
   "/sample-packs/recorded/v3/rover_v8_regions.m4a",
   "/sample-packs/recorded/v3/superbike_hi_regions.m4a",
-  "/sample-packs/recorded/v3/superbike_i4_regions.m4a",
+  "/sample-packs/recorded/v4/superbike_street_regions.m4a",
 ];
 const SHELL = [
   "/manifest.webmanifest",
