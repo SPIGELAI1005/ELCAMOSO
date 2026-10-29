@@ -362,6 +362,70 @@ function ScienceOfElcamoso() {
           </p>
         </Section>
 
+        <Section id="drive-the-music" eyebrow="Drive the Music" title="How a drive becomes music">
+          <p>
+            In Motion Orchestra, the way you drive chooses which instruments play and how strongly.
+            The tempo stays steady at about 96 bpm, so the music never stumbles when you brake or
+            speed up.
+          </p>
+          <ul className="list-disc space-y-2 pl-5">
+            <li>
+              <strong className="font-medium text-foreground">Standing still:</strong> soft piano,
+              cello and a quiet atmosphere.
+            </li>
+            <li>
+              <strong className="font-medium text-foreground">Cruising:</strong> the violins join
+              the melody.
+            </li>
+            <li>
+              <strong className="font-medium text-foreground">Building speed:</strong> the strings
+              grow and low percussion starts.
+            </li>
+            <li>
+              <strong className="font-medium text-foreground">Strong acceleration:</strong> full
+              percussion and brass for the peak.
+            </li>
+            <li>
+              <strong className="font-medium text-foreground">Slowing down and stopping:</strong>{" "}
+              the arrangement thins back to piano and cello and settles.
+            </li>
+          </ul>
+          <p>Changes land on the beat or at the next bar, so the music flows instead of jumping.</p>
+          <figure className="mt-10">
+            <p className="mb-3 text-[10px] tracking-[0.28em] text-muted-foreground uppercase">
+              Example drive
+            </p>
+            <img
+              src="/science/example-drive-telemetry.svg"
+              alt="Example drive over 110 seconds: idle, pull away, steady acceleration to about 90 km/h, cruise, a hard pull to about 128 km/h, then deceleration to a stop. Red line shows speed, white area shows throttle."
+              width={1200}
+              height={520}
+              loading="lazy"
+              className="h-auto w-full border border-border/70"
+            />
+            <figcaption className="mt-3 text-xs leading-relaxed text-muted-foreground/90">
+              The drive behind our orchestral demo. In this demo the tempo also follows speed, from
+              about 60 bpm at a standstill to about 104 bpm at 130 km/h. Throttle and speed set the
+              volume. Cello and piano play at idle, then contrabass, viola and the full strings
+              join, with a violin octave jump at high speed. The hard pull brings a timpani
+              crescendo, and the stop resolves to the home chord.
+            </figcaption>
+          </figure>
+          <div className="mt-6">
+            <p className="mb-2 text-xs text-muted-foreground">
+              Listen to the example drive (about 2 min)
+            </p>
+            <audio
+              controls
+              preload="none"
+              src="/science/drive-music-example.m4a"
+              className="w-full"
+            >
+              Your browser does not support audio playback.
+            </audio>
+          </div>
+        </Section>
+
         <Section title="Five ways to hear your journey">
           <div className="space-y-8">
             <ExperienceBlock
