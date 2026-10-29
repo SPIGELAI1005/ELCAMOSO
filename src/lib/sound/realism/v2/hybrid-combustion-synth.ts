@@ -73,6 +73,7 @@ import {
   getRecordedLoopBank,
   recordedLowShelfHz,
   recordedSampleWeight,
+  loadMixGains,
   sourceRpmGain,
   synthMatchAt,
   type LoadCharacter,
@@ -2125,12 +2126,28 @@ export class HybridCombustionSynth {
       const total = bank.sources.reduce((sum, src) => sum + src.weight * src.weight, 0);
       // RPM-windowed banks cross-fade their sources, so only one carries the level at a time.
       const windowed = bank.sources.length > 1 && bank.sources.every((src) => src.rpmWindow);
-      this.recordedNorm = windowed ? 1 : 1 / Math.sqrt(Math.max(1e-6, total));
+      // Load-mixed banks are equal-power normalised per update instead.
+      const loadMixed = bank.sources.some((src) => src.load);
+      this.recordedNorm = windowed || loadMixed ? 1 : 1 / Math.sqrt(Math.max(1e-6, total));
     }
+    const loadGains = bank.sources.some((src) => src.load)
+      ? loadMixGains(bank.sources, {
+          speedMs: this.lastSpeedMs,
+          onLoad: ac.onLoad,
+          aggression: ac.aggression,
+          overrun: ac.overrun,
+        })
+      : null;
     if (w > 0.002) {
       this.recordedStreams.forEach((stream, i) => {
         const sg = this.recordedStreamGains[i];
-        if (sg?.source.rpmWindow) {
+        if (loadGains && sg) {
+          // Load-mixed banks: idle / cruise / growl / hard pull / engine braking cross-fade.
+          const idx = bank.sources.indexOf(sg.source);
+          const lg = (loadGains[idx] ?? 0) * sourceRpmGain(sg.source, rpm);
+          targetParam(sg.gain.gain, Math.max(0.0001, (sg.source.weight / Math.SQRT2) * lg), audioTime, 0.25);
+          if (lg < 0.01) return;
+        } else if (sg?.source.rpmWindow) {
           // Multi-band banks: each source only plays inside its own RPM window.
           const g = sourceRpmGain(sg.source, rpm);
           targetParam(sg.gain.gain, Math.max(0.0001, (sg.source.weight / Math.SQRT2) * g), audioTime, 0.12);

@@ -9,6 +9,7 @@
 
 export const RECORDED_LOOPS_VERSION = "v3";
 const BASE = `/sample-packs/recorded/${RECORDED_LOOPS_VERSION}`;
+const BIG_TWIN_RIDE_BASE = "/sample-packs/recorded/v5";
 const F1_LEVEL = 0.4;
 
 /** A steady stretch inside a source file with its measured RPM track (one value per 0.1 s). */
@@ -32,6 +33,50 @@ export interface RecordedSource {
    * inFrom to inFull and out from outFull to outTo (smoothstep). Unset = full gain everywhere.
    */
   rpmWindow?: { inFrom?: number; inFull?: number; outFull?: number; outTo?: number };
+  /**
+   * Optional load role inside a load-mixed bank: the source plays when the ride matches
+   * (standstill idle, steady cruise, on-throttle growl, hard pull / shifts, engine braking).
+   * Load-mixed banks are equal-power normalised across their sources.
+   */
+  load?: SourceLoad;
+}
+
+export type SourceLoad = "idle" | "cruise" | "growl" | "hard" | "overrun";
+
+/** Load state read from AccelerationCharacter plus vehicle speed. */
+export interface LoadState {
+  speedMs: number;
+  onLoad: number;
+  aggression: number;
+  overrun: number;
+}
+
+/** Raw (un-normalised) gain of a load role. */
+export function sourceLoadGain(load: SourceLoad, st: LoadState): number {
+  const moving = smoothstep((st.speedMs - 0.6) / 2.2);
+  const on = Math.min(1, Math.max(0, st.onLoad));
+  const ag = Math.min(1, Math.max(0, st.aggression));
+  const ov = Math.min(1, Math.max(0, st.overrun));
+  switch (load) {
+    case "idle":
+      return (1 - moving) * (1 - 0.8 * on);
+    case "cruise":
+      return moving * (1 - on) * (1 - ov);
+    case "growl":
+      return on * (1 - ag);
+    case "hard":
+      return ag;
+    case "overrun":
+      return moving * ov * (1 - on);
+  }
+}
+
+/** Equal-power gains for every source of a load-mixed bank (sum of squares = 1). */
+export function loadMixGains(sources: RecordedSource[], st: LoadState): number[] {
+  const raw = sources.map((src) => (src.load ? sourceLoadGain(src.load, st) : 1));
+  const total = Math.sqrt(raw.reduce((sum, g) => sum + g * g, 0));
+  if (total < 1e-3) return sources.map((src) => (src.load === "idle" || !src.load ? 1 : 0));
+  return raw.map((g) => g / total);
 }
 
 /** Per-source gain (0..1) at an RPM from its optional rpmWindow. */
@@ -126,7 +171,7 @@ const ROVER_REGIONS: RecordedRegion[] = [
   },
 ];
 
-/** Big Twin (v-twin-cruiser): warm idle of a Harley-Davidson V-twin, CC0 Freesound 850565. */
+/** Big Twin (v-twin-cruiser): warm idle of a big V-twin, CC0 Freesound 850565. */
 const BIG_TWIN_REGIONS: RecordedRegion[] = [
   {
     start: 0.08,
@@ -139,6 +184,42 @@ const BIG_TWIN_REGIONS: RecordedRegion[] = [
       1292, 1278, 1278, 1278, 1282, 1285, 1304, 1302, 1299, 1299, 1299, 1299, 1292, 1287,
     ],
   },
+];
+
+/**
+ * Big Twin riding layers: CC0 Freesound recordings (502690 demodave, 81068 allencote,
+ * 869327 valeriocn, 657763 Tom_Kaszuba, 743981 BranCorvus, 35537 johnmcd). Trimmed, 30 Hz
+ * high-pass, +3 dB low shelf below 110 Hz, level-matched. RPM tracks are coarse ramps per
+ * region (growl blips, pulls through the gears, roll-off, steady cruise).
+ */
+const BIG_TWIN_GROWL_REGIONS: RecordedRegion[] = [
+  { start: 0.08, end: 4.58, rpm: [2300,  2313,  2327,  2340,  2354,  2368,  2381,  2395,  2409,  2422,  2436,  2450,  2463,  2477,  2490,  2504,  2518,  2531,  2545,  2559,  2572,  2586,  2600,  2613,  2627,  2640,  2654,  2668,  2681,  2695,  2709,  2722,  2736,  2750,  2763,  2777,  2790,  2804,  2818,  2831,  2845,  2859,  2872,  2886,  2900] },
+  { start: 4.66, end: 9.16, rpm: [2400,  2413,  2427,  2440,  2454,  2468,  2481,  2495,  2509,  2522,  2536,  2550,  2563,  2577,  2590,  2604,  2618,  2631,  2645,  2659,  2672,  2686,  2700,  2713,  2727,  2740,  2754,  2768,  2781,  2795,  2809,  2822,  2836,  2850,  2863,  2877,  2890,  2904,  2918,  2931,  2945,  2959,  2972,  2986,  3000] },
+  { start: 9.24, end: 14.24, rpm: [2200,  2220,  2240,  2261,  2281,  2302,  2322,  2342,  2363,  2383,  2404,  2424,  2444,  2465,  2485,  2506,  2526,  2546,  2567,  2587,  2608,  2628,  2648,  2669,  2689,  2710,  2730,  2751,  2771,  2791,  2812,  2832,  2853,  2873,  2893,  2914,  2934,  2955,  2975,  2995,  3016,  3036,  3057,  3077,  3097,  3118,  3138,  3159,  3179,  3200] },
+  { start: 14.32, end: 19.32, rpm: [2600,  2616,  2632,  2648,  2665,  2681,  2697,  2714,  2730,  2746,  2763,  2779,  2795,  2812,  2828,  2844,  2861,  2877,  2893,  2910,  2926,  2942,  2959,  2975,  2991,  3008,  3024,  3040,  3057,  3073,  3089,  3106,  3122,  3138,  3155,  3171,  3187,  3204,  3220,  3236,  3253,  3269,  3285,  3302,  3318,  3334,  3351,  3367,  3383,  3400] },
+];
+const BIG_TWIN_ACCEL_REGIONS: RecordedRegion[] = [
+  { start: 0.08, end: 5.08, rpm: [1300,  1340,  1381,  1422,  1463,  1504,  1544,  1585,  1626,  1667,  1708,  1748,  1789,  1830,  1871,  1912,  1953,  1993,  2034,  2075,  2116,  2157,  2197,  2238,  2279,  2320,  2361,  2402,  2442,  2483,  2524,  2565,  2606,  2646,  2687,  2728,  2769,  2810,  2851,  2891,  2932,  2973,  3014,  3055,  3095,  3136,  3177,  3218,  3259,  3300] },
+  { start: 5.16, end: 10.66, rpm: [2200,  2237,  2274,  2311,  2348,  2385,  2422,  2459,  2496,  2533,  2570,  2607,  2644,  2681,  2718,  2755,  2792,  2829,  2866,  2903,  2940,  2977,  3014,  3051,  3088,  3125,  3162,  3200,  3237,  3274,  3311,  3348,  3385,  3422,  3459,  3496,  3533,  3570,  3607,  3644,  3681,  3718,  3755,  3792,  3829,  3866,  3903,  3940,  3977,  4014,  4051,  4088,  4125,  4162,  4200] },
+  { start: 10.74, end: 16.24, rpm: [2600,  2637,  2674,  2711,  2748,  2785,  2822,  2859,  2896,  2933,  2970,  3007,  3044,  3081,  3118,  3155,  3192,  3229,  3266,  3303,  3340,  3377,  3414,  3451,  3488,  3525,  3562,  3600,  3637,  3674,  3711,  3748,  3785,  3822,  3859,  3896,  3933,  3970,  4007,  4044,  4081,  4118,  4155,  4192,  4229,  4266,  4303,  4340,  4377,  4414,  4451,  4488,  4525,  4562,  4600] },
+  { start: 16.32, end: 22.82, rpm: [1400,  1434,  1468,  1503,  1537,  1571,  1606,  1640,  1675,  1709,  1743,  1778,  1812,  1846,  1881,  1915,  1950,  1984,  2018,  2053,  2087,  2121,  2156,  2190,  2225,  2259,  2293,  2328,  2362,  2396,  2431,  2465,  2500,  2534,  2568,  2603,  2637,  2671,  2706,  2740,  2775,  2809,  2843,  2878,  2912,  2946,  2981,  3015,  3050,  3084,  3118,  3153,  3187,  3221,  3256,  3290,  3325,  3359,  3393,  3428,  3462,  3496,  3531,  3565,  3600] },
+  { start: 22.9, end: 29.4, rpm: [2400,  2431,  2462,  2493,  2525,  2556,  2587,  2618,  2650,  2681,  2712,  2743,  2775,  2806,  2837,  2868,  2900,  2931,  2962,  2993,  3025,  3056,  3087,  3118,  3150,  3181,  3212,  3243,  3275,  3306,  3337,  3368,  3400,  3431,  3462,  3493,  3525,  3556,  3587,  3618,  3650,  3681,  3712,  3743,  3775,  3806,  3837,  3868,  3900,  3931,  3962,  3993,  4025,  4056,  4087,  4118,  4150,  4181,  4212,  4243,  4275,  4306,  4337,  4368,  4400] },
+  { start: 29.48, end: 37.98, rpm: [2400,  2417,  2435,  2453,  2471,  2489,  2507,  2525,  2542,  2560,  2578,  2596,  2614,  2632,  2650,  2667,  2685,  2703,  2721,  2739,  2757,  2775,  2792,  2810,  2828,  2846,  2864,  2882,  2900,  2917,  2935,  2953,  2971,  2989,  3007,  3025,  3042,  3060,  3078,  3096,  3114,  3132,  3150,  3167,  3185,  3203,  3221,  3239,  3257,  3275,  3292,  3310,  3328,  3346,  3364,  3382,  3400,  3417,  3435,  3453,  3471,  3489,  3507,  3525,  3542,  3560,  3578,  3596,  3614,  3632,  3650,  3667,  3685,  3703,  3721,  3739,  3757,  3775,  3792,  3810,  3828,  3846,  3864,  3882,  3900] },
+  { start: 38.06, end: 46.56, rpm: [2300,  2317,  2335,  2353,  2371,  2389,  2407,  2425,  2442,  2460,  2478,  2496,  2514,  2532,  2550,  2567,  2585,  2603,  2621,  2639,  2657,  2675,  2692,  2710,  2728,  2746,  2764,  2782,  2800,  2817,  2835,  2853,  2871,  2889,  2907,  2925,  2942,  2960,  2978,  2996,  3014,  3032,  3050,  3067,  3085,  3103,  3121,  3139,  3157,  3175,  3192,  3210,  3228,  3246,  3264,  3282,  3300,  3317,  3335,  3353,  3371,  3389,  3407,  3425,  3442,  3460,  3478,  3496,  3514,  3532,  3550,  3567,  3585,  3603,  3621,  3639,  3657,  3675,  3692,  3710,  3728,  3746,  3764,  3782,  3800] },
+  { start: 46.64, end: 55.64, rpm: [2200,  2216,  2233,  2250,  2267,  2284,  2301,  2317,  2334,  2351,  2368,  2385,  2402,  2419,  2435,  2452,  2469,  2486,  2503,  2520,  2537,  2553,  2570,  2587,  2604,  2621,  2638,  2655,  2671,  2688,  2705,  2722,  2739,  2756,  2773,  2789,  2806,  2823,  2840,  2857,  2874,  2891,  2907,  2924,  2941,  2958,  2975,  2992,  3008,  3025,  3042,  3059,  3076,  3093,  3110,  3126,  3143,  3160,  3177,  3194,  3211,  3228,  3244,  3261,  3278,  3295,  3312,  3329,  3346,  3362,  3379,  3396,  3413,  3430,  3447,  3464,  3480,  3497,  3514,  3531,  3548,  3565,  3582,  3598,  3615,  3632,  3649,  3666,  3683,  3700] },
+];
+const BIG_TWIN_DECEL_REGIONS: RecordedRegion[] = [
+  { start: 0.08, end: 4.08, rpm: [3400,  3382,  3364,  3346,  3328,  3310,  3292,  3274,  3256,  3238,  3220,  3202,  3184,  3166,  3148,  3130,  3112,  3094,  3076,  3058,  3041,  3023,  3005,  2987,  2969,  2951,  2933,  2915,  2897,  2879,  2861,  2843,  2825,  2807,  2789,  2771,  2753,  2735,  2717,  2700] },
+  { start: 4.16, end: 8.16, rpm: [2900,  2882,  2864,  2846,  2828,  2810,  2792,  2774,  2756,  2738,  2720,  2702,  2684,  2666,  2648,  2630,  2612,  2594,  2576,  2558,  2541,  2523,  2505,  2487,  2469,  2451,  2433,  2415,  2397,  2379,  2361,  2343,  2325,  2307,  2289,  2271,  2253,  2235,  2217,  2200] },
+  { start: 8.24, end: 12.24, rpm: [2500,  2482,  2464,  2446,  2428,  2410,  2392,  2374,  2356,  2338,  2320,  2302,  2284,  2266,  2248,  2230,  2212,  2194,  2176,  2158,  2141,  2123,  2105,  2087,  2069,  2051,  2033,  2015,  1997,  1979,  1961,  1943,  1925,  1907,  1889,  1871,  1853,  1835,  1817,  1800] },
+  { start: 12.32, end: 15.82, rpm: [2800,  2773,  2747,  2720,  2694,  2667,  2641,  2614,  2588,  2561,  2535,  2508,  2482,  2455,  2429,  2402,  2376,  2350,  2323,  2297,  2270,  2244,  2217,  2191,  2164,  2138,  2111,  2085,  2058,  2032,  2005,  1979,  1952,  1926,  1900] },
+  { start: 15.9, end: 19.4, rpm: [2200,  2179,  2158,  2138,  2117,  2097,  2076,  2055,  2035,  2014,  1994,  1973,  1952,  1932,  1911,  1891,  1870,  1850,  1829,  1808,  1788,  1767,  1747,  1726,  1705,  1685,  1664,  1644,  1623,  1602,  1582,  1561,  1541,  1520,  1500] },
+];
+const BIG_TWIN_CRUISE_REGIONS: RecordedRegion[] = [
+  { start: 0.08, end: 5.08, rpm: [2200,  2201,  2202,  2203,  2204,  2205,  2206,  2207,  2208,  2209,  2210,  2211,  2212,  2213,  2214,  2215,  2216,  2217,  2218,  2219,  2220,  2221,  2222,  2223,  2224,  2225,  2226,  2227,  2228,  2229,  2230,  2231,  2232,  2233,  2234,  2235,  2236,  2237,  2238,  2239,  2240,  2241,  2242,  2243,  2244,  2245,  2246,  2247,  2248,  2250] },
+  { start: 5.16, end: 10.16, rpm: [2250,  2248,  2247,  2246,  2245,  2244,  2243,  2242,  2241,  2240,  2239,  2238,  2237,  2236,  2235,  2234,  2233,  2232,  2231,  2230,  2229,  2228,  2227,  2226,  2225,  2224,  2223,  2222,  2221,  2220,  2219,  2218,  2217,  2216,  2215,  2214,  2213,  2212,  2211,  2210,  2209,  2208,  2207,  2206,  2205,  2204,  2203,  2202,  2201,  2200] },
+  { start: 10.24, end: 15.24, rpm: [2150,  2152,  2154,  2156,  2158,  2160,  2162,  2164,  2166,  2168,  2170,  2172,  2174,  2176,  2178,  2180,  2182,  2184,  2186,  2188,  2190,  2192,  2194,  2196,  2198,  2201,  2203,  2205,  2207,  2209,  2211,  2213,  2215,  2217,  2219,  2221,  2223,  2225,  2227,  2229,  2231,  2233,  2235,  2237,  2239,  2241,  2243,  2245,  2247,  2250] },
+  { start: 15.32, end: 20.32, rpm: [2200,  2198,  2197,  2196,  2195,  2194,  2193,  2192,  2191,  2190,  2189,  2188,  2187,  2186,  2185,  2184,  2183,  2182,  2181,  2180,  2179,  2178,  2177,  2176,  2175,  2174,  2173,  2172,  2171,  2170,  2169,  2168,  2167,  2166,  2165,  2164,  2163,  2162,  2161,  2160,  2159,  2158,  2157,  2156,  2155,  2154,  2153,  2152,  2151,  2150] },
 ];
 
 /**
@@ -455,16 +536,55 @@ export const RECORDED_LOOP_BANKS: Record<string, RecordedLoopBank> = {
         // Recorded idle is ~1,300 rpm (cold); pitch down to the 900 rpm potato-potato idle.
         minRate: 0.62,
         maxRate: 1.75,
+        load: "idle",
+      },
+      {
+        id: "big-twin-cruise",
+        url: `${BIG_TWIN_RIDE_BASE}/bt_cruise_regions.m4a`,
+        regions: BIG_TWIN_CRUISE_REGIONS,
+        weight: 1,
+        minRate: 0.5,
+        maxRate: 1.9,
+        load: "cruise",
+      },
+      {
+        id: "big-twin-growl",
+        url: `${BIG_TWIN_RIDE_BASE}/bt_growl_regions.m4a`,
+        regions: BIG_TWIN_GROWL_REGIONS,
+        weight: 1,
+        minRate: 0.5,
+        maxRate: 1.8,
+        load: "growl",
+      },
+      {
+        id: "big-twin-hard",
+        url: `${BIG_TWIN_RIDE_BASE}/bt_accel_regions.m4a`,
+        regions: BIG_TWIN_ACCEL_REGIONS,
+        weight: 1,
+        minRate: 0.5,
+        maxRate: 1.7,
+        load: "hard",
+      },
+      {
+        id: "big-twin-overrun",
+        url: `${BIG_TWIN_RIDE_BASE}/bt_decel_regions.m4a`,
+        regions: BIG_TWIN_DECEL_REGIONS,
+        weight: 1,
+        minRate: 0.5,
+        maxRate: 1.9,
+        load: "overrun",
       },
     ],
-    level: 0.5,
+    level: 0.55,
+    // Recordings now carry the whole ride (idle, cruise, growl, hard pulls, engine braking);
+    // the synth keeps the low-end body, shift events and gear logic underneath.
     handover: {
-      rpmStart: 1700,
-      rpmSpan: 900,
-      accelKeep: 0.3,
-      rpmKeep: 0.2,
-      topRpm: 2300,
-      topSpan: 700,
+      rpmStart: 3800,
+      rpmSpan: 1200,
+      accelKeep: 0.7,
+      rpmKeep: 0.65,
+      topRpm: 6000,
+      topSpan: 600,
     },
     eq: BIG_TWIN_EQ,
   },
@@ -676,6 +796,66 @@ export interface RecordedCredit {
 
 export const RECORDED_LOOP_CREDITS: RecordedCredit[] = [
   {
+    title: "Big V-twin riding recording (Freesound #502690)",
+    author: "demodave",
+    licence: "CC0 1.0",
+    licenceUrl: "https://creativecommons.org/publicdomain/zero/1.0/",
+    sourceUrl: "https://freesound.org/s/502690/",
+    usedIn: "Big Twin (rev growl)",
+    attribution:
+      "Big V-twin recording by demodave (Freesound #502690), CC0 1.0, edited (trimmed, filtered, re-sequenced, granular).",
+  },
+  {
+    title: "Big V-twin riding recording (Freesound #81068)",
+    author: "allencote",
+    licence: "CC0 1.0",
+    licenceUrl: "https://creativecommons.org/publicdomain/zero/1.0/",
+    sourceUrl: "https://freesound.org/s/81068/",
+    usedIn: "Big Twin (rev growl)",
+    attribution:
+      "Big V-twin recording by allencote (Freesound #81068), CC0 1.0, edited (trimmed, filtered, re-sequenced, granular).",
+  },
+  {
+    title: "Big V-twin riding recording (Freesound #869327)",
+    author: "valeriocn",
+    licence: "CC0 1.0",
+    licenceUrl: "https://creativecommons.org/publicdomain/zero/1.0/",
+    sourceUrl: "https://freesound.org/s/869327/",
+    usedIn: "Big Twin (hard acceleration)",
+    attribution:
+      "Big V-twin recording by valeriocn (Freesound #869327), CC0 1.0, edited (trimmed, filtered, re-sequenced, granular).",
+  },
+  {
+    title: "Big V-twin riding recording (Freesound #657763)",
+    author: "Tom_Kaszuba",
+    licence: "CC0 1.0",
+    licenceUrl: "https://creativecommons.org/publicdomain/zero/1.0/",
+    sourceUrl: "https://freesound.org/s/657763/",
+    usedIn: "Big Twin (hard acceleration)",
+    attribution:
+      "Big V-twin recording by Tom_Kaszuba (Freesound #657763), CC0 1.0, edited (trimmed, filtered, re-sequenced, granular).",
+  },
+  {
+    title: "Big V-twin riding recording (Freesound #743981)",
+    author: "BranCorvus",
+    licence: "CC0 1.0",
+    licenceUrl: "https://creativecommons.org/publicdomain/zero/1.0/",
+    sourceUrl: "https://freesound.org/s/743981/",
+    usedIn: "Big Twin (gear changes, engine braking, steady cruise)",
+    attribution:
+      "Big V-twin recording by BranCorvus (Freesound #743981), CC0 1.0, edited (trimmed, filtered, re-sequenced, granular).",
+  },
+  {
+    title: "Big V-twin riding recording (Freesound #35537)",
+    author: "johnmcd",
+    licence: "CC0 1.0",
+    licenceUrl: "https://creativecommons.org/publicdomain/zero/1.0/",
+    sourceUrl: "https://freesound.org/s/35537/",
+    usedIn: "Big Twin (engine braking)",
+    attribution:
+      "Big V-twin recording by johnmcd (Freesound #35537), CC0 1.0, edited (trimmed, filtered, re-sequenced, granular).",
+  },
+  {
     title: "Superbike V4 idle and revs (Freesound #584115)",
     author: "rsn267",
     licence: "CC0 1.0",
@@ -724,14 +904,14 @@ export const RECORDED_LOOP_CREDITS: RecordedCredit[] = [
       "\u201Csports motorcycle passing by at speed\u201D by danroka (Freesound #813521), CC0 1.0, edited (trimmed, filtered, re-sequenced, granular).",
   },
   {
-    title: "Moto Harley Davidson Arrancando (Freesound #850565)",
+    title: "Big V-twin starting and idling (Freesound #850565)",
     author: "Mariayolanda511",
     licence: "CC0 1.0",
     licenceUrl: "https://creativecommons.org/publicdomain/zero/1.0/",
     sourceUrl: "https://freesound.org/s/850565/",
-    usedIn: "Big Twin (idle and low cruise)",
+    usedIn: "Big Twin (idle)",
     attribution:
-      "\u201CMoto Harley Davidson Arrancando\u201D by Mariayolanda511 (Freesound #850565), CC0 1.0, edited (trimmed, filtered, granular).",
+      "Big V-twin idle recording by Mariayolanda511 (Freesound #850565), CC0 1.0, edited (trimmed, filtered, granular).",
   },
   {
     title: "F1practice3MelbGP2012DR066 (Freesound #150337)",
