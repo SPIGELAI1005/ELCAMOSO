@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import type { ExperienceFamilyMeta, ExperienceKind } from "@/lib/experiences";
 import { cn } from "@/lib/utils";
+import { MODE_DEMO_SRC, ModeDemoButton } from "./ModeDemoButton";
 
 const KIND_ORDER: ExperienceKind[] = ["engine", "symphony", "world", "fusion"];
 
@@ -8,10 +9,12 @@ export function ExperienceFamilyGrid({
   families,
   className,
   large,
+  demos,
 }: {
   families: readonly ExperienceFamilyMeta[];
   className?: string;
   large?: boolean;
+  demos?: boolean;
 }) {
   const ordered = KIND_ORDER.map((k) => families.find((f) => f.kind === k)).filter(
     Boolean,
@@ -26,11 +29,11 @@ export function ExperienceFamilyGrid({
       )}
     >
       {ordered.map((family) => (
-        <li key={family.kind}>
+        <li key={family.kind} className="flex flex-col">
           <Link
             to={family.href}
             className={cn(
-              "group flex h-full flex-col justify-between border border-border/70 bg-surface-1/30 p-6 transition-colors hover:border-foreground/40 hover:bg-surface-1/50",
+              "group flex flex-1 flex-col justify-between border border-border/70 bg-surface-1/30 p-6 transition-colors hover:border-foreground/40 hover:bg-surface-1/50",
               large ? "min-h-[11rem] sm:p-8" : "min-h-[9rem]",
             )}
           >
@@ -52,6 +55,9 @@ export function ExperienceFamilyGrid({
               Open
             </span>
           </Link>
+          {demos && MODE_DEMO_SRC[family.kind] ? (
+            <ModeDemoButton src={MODE_DEMO_SRC[family.kind]!} className="mt-2 self-start" />
+          ) : null}
         </li>
       ))}
     </ul>

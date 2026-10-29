@@ -3,6 +3,7 @@ import { createSeoHeadFromPath } from "@/lib/seo";
 import { FoundersBanner } from "@/components/FoundersBanner";
 import { LandingHero } from "@/components/LandingHero";
 import { LandingPlansSection } from "@/components/LandingPlansSection";
+import { MODE_DEMO_SRC, ModeDemoButton } from "@/components/experiences/ModeDemoButton";
 import { ExperienceFamilyGrid } from "@/components/experiences/ExperienceFamilyGrid";
 import { ElcamosoMark } from "@/components/ElcamosoLogo";
 import { EXPERIENCE_FAMILIES, isDriveSongEnabled } from "@/lib/experiences";
@@ -29,7 +30,7 @@ function Landing() {
         <p className="mt-3 max-w-lg text-muted-foreground">
           Machine. Music. Another world. Turn motion into sound.
         </p>
-        <ExperienceFamilyGrid className="mt-12" families={families} large />
+        <ExperienceFamilyGrid className="mt-12" families={families} large demos />
         {fusion ? (
           <Link
             to={fusion.href}
@@ -42,6 +43,51 @@ function Landing() {
             <p className="mt-2 text-sm text-muted-foreground">{fusion.subcopy}</p>
           </Link>
         ) : null}
+        {fusion && MODE_DEMO_SRC.fusion ? (
+          <ModeDemoButton src={MODE_DEMO_SRC.fusion} className="mt-2" />
+        ) : null}
+        <p className="mt-6 text-[11px] leading-relaxed text-muted-foreground/80">
+          Another world demo includes sounds by{" "}
+          <a
+            className="underline hover:text-foreground"
+            href="https://freesound.org/s/392307/"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            dobroide
+          </a>{" "}
+          (
+          <a
+            className="underline hover:text-foreground"
+            href="https://freesound.org/s/330674/"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            2
+          </a>
+          ) and{" "}
+          <a
+            className="underline hover:text-foreground"
+            href="https://freesound.org/s/807858/"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            designerschoice
+          </a>{" "}
+          on Freesound,{" "}
+          <a
+            className="underline hover:text-foreground"
+            href="https://creativecommons.org/licenses/"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            CC BY
+          </a>
+          .{" "}
+          <Link to="/credits" className="underline hover:text-foreground">
+            All credits
+          </Link>
+        </p>
       </section>
 
       <section className="border-y border-border/60 bg-surface-1/15 px-6 py-20 sm:px-12">
