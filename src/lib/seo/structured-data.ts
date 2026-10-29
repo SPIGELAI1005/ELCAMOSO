@@ -114,7 +114,7 @@ export function pageStructuredData(opts: {
   extra?: Record<string, unknown>[];
 }): Record<string, unknown> | null {
   const graph: Record<string, unknown>[] = [];
-  if (opts.includeOrganization) graph.push(organizationJsonLd());
+  if (opts.includeOrganization) graph.push(organizationJsonLd(), websiteJsonLd());
   if (opts.includeSoftwareApplication) graph.push(softwareApplicationJsonLd(opts.description));
   if (opts.breadcrumbs?.length) graph.push(breadcrumbJsonLd(opts.breadcrumbs));
   if (opts.extra?.length) graph.push(...opts.extra);
