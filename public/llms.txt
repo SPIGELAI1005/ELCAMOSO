@@ -1,0 +1,20 @@
+# ELCAMOSO
+
+> ELCAMOSO (www.elcamoso.com) is a web app that turns the motion of an electric car into sound. It runs in the Tesla in-car browser and on phones, and plays engine-style, symphony, world and fusion sound experiences that follow your speed and acceleration. Early access is free. ELCAMOSO is not related to the Chevrolet El Camino.
+
+## Main pages
+- [Home](https://www.elcamoso.com/): what ELCAMOSO is and how to start
+- [Sounds](https://www.elcamoso.com/sounds): engine sound profiles for EVs
+- [Symphony](https://www.elcamoso.com/symphony): music that follows your drive
+- [Worlds](https://www.elcamoso.com/worlds): nature and city soundscapes
+- [Fusion](https://www.elcamoso.com/fusion): mixed experiences
+- [Pricing](https://www.elcamoso.com/pricing): free early access and Drive+
+- [Science](https://www.elcamoso.com/science): how motion becomes sound, plus safety and security
+- [Crew](https://www.elcamoso.com/crew): Smiles, levels and leaderboard
+- [News](https://www.elcamoso.com/news): latest updates
+- [Story](https://www.elcamoso.com/story): the idea behind ELCAMOSO
+- [Credits](https://www.elcamoso.com/credits): sound credits and licences
+
+## Contact
+- Support: support@elcamoso.com
+- X: https://x.com/CO_FE_X

@@ -25,4 +25,59 @@ Disallow: /share
 Disallow: /rewards
 Disallow: /debug
 
+# AI and search crawlers are welcome on public pages.
+User-agent: GPTBot
+Allow: /
+Disallow: /api
+Disallow: /admin
+Disallow: /debug
+
+User-agent: OAI-SearchBot
+Allow: /
+Disallow: /api
+Disallow: /admin
+Disallow: /debug
+
+User-agent: ChatGPT-User
+Allow: /
+Disallow: /api
+Disallow: /admin
+Disallow: /debug
+
+User-agent: PerplexityBot
+Allow: /
+Disallow: /api
+Disallow: /admin
+Disallow: /debug
+
+User-agent: ClaudeBot
+Allow: /
+Disallow: /api
+Disallow: /admin
+Disallow: /debug
+
+User-agent: Claude-SearchBot
+Allow: /
+Disallow: /api
+Disallow: /admin
+Disallow: /debug
+
+User-agent: Google-Extended
+Allow: /
+Disallow: /api
+Disallow: /admin
+Disallow: /debug
+
+User-agent: Bingbot
+Allow: /
+Disallow: /api
+Disallow: /admin
+Disallow: /debug
+
+User-agent: Applebot-Extended
+Allow: /
+Disallow: /api
+Disallow: /admin
+Disallow: /debug
+
 Sitemap: https://www.elcamoso.com/sitemap.xml

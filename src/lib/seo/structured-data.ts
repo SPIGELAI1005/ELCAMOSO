@@ -15,7 +15,9 @@ export function organizationJsonLd(): Record<string, unknown> {
     "@id": `${origin}/#organization`,
     name: SEO_CONFIG.siteName,
     url: origin,
+    alternateName: ["El Camoso", "ELCAMOSO EV Sound", "elcamoso.com"],
     logo: absoluteSeoUrl("/icon-512.png"),
+    sameAs: ["https://x.com/CO_FE_X"],
     brand: {
       "@type": "Brand",
       name: SEO_CONFIG.siteName,
@@ -23,11 +25,26 @@ export function organizationJsonLd(): Record<string, unknown> {
   };
 }
 
+export function websiteJsonLd(): Record<string, unknown> {
+  const origin = getSeoSiteOrigin();
+  return {
+    "@type": "WebSite",
+    "@id": `${origin}/#website`,
+    name: SEO_CONFIG.siteName,
+    alternateName: ["El Camoso", "elcamoso.com"],
+    url: `${origin}/`,
+    inLanguage: "en",
+    publisher: { "@id": `${origin}/#organization` },
+  };
+}
+
 export function softwareApplicationJsonLd(description: string): Record<string, unknown> {
   const origin = getSeoSiteOrigin();
   return {
-    "@type": "SoftwareApplication",
+    "@type": ["SoftwareApplication", "WebApplication"],
     "@id": `${origin}/#software`,
+    browserRequirements: "Modern web browser, including the Tesla in-car browser",
+    publisher: { "@id": `${origin}/#organization` },
     name: SEO_CONFIG.siteName,
     applicationCategory: "MultimediaApplication",
     operatingSystem: "Web",
@@ -86,7 +103,7 @@ export function breadcrumbJsonLd(items: SeoBreadcrumbItem[]): Record<string, unk
 }
 
 export function homepageStructuredData(description: string): Record<string, unknown> {
-  return asGraph([organizationJsonLd(), softwareApplicationJsonLd(description)]);
+  return asGraph([organizationJsonLd(), websiteJsonLd(), softwareApplicationJsonLd(description)]);
 }
 
 export function pageStructuredData(opts: {
