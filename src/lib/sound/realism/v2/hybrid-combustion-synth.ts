@@ -2461,10 +2461,11 @@ export class HybridCombustionSynth {
     chain.modes.forEach((f, i) => {
       f.frequency.setValueAtTime(chain.modeHz[i]! * detune, t);
     });
+    const rateScale = this.cfg?.liftPops?.rate ?? 1;
     const play = (buf: AudioBuffer, at: number, level: number, rate: number) => {
       const src = ctx.createBufferSource();
       src.buffer = buf;
-      src.playbackRate.value = rate;
+      src.playbackRate.value = rate * rateScale;
       const g = ctx.createGain();
       g.gain.value = level;
       src.connect(g);

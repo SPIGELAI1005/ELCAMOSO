@@ -82,7 +82,12 @@ export interface AcousticEngineConfig {
    */
   throttleGapDb?: number;
   /** Optional synth-level lift-off / downshift exhaust pops (probability per event, level). */
-  liftPops?: { probability: number; level: number };
+  liftPops?: {
+    probability: number;
+    level: number;
+    /** Optional pop / crackle playback-rate scale (<1 = lower, heavier boom). Default 1. */
+    rate?: number;
+  };
   /** ShiftCam-style cam step: brighter tilt and intake shriek above `rpm` under load. */
   camLift?: { rpm: number; widthRpm: number; intakeGain: number; tiltDb: number };
   /** Bike quickshifter + auto-blipper (sound only): upshift cut/crack, downshift rev blip. */
@@ -546,6 +551,11 @@ const V_TWIN: AcousticEngineConfig = {
   redlineRpm: 5500,
   outputTrimDb: 18.0,
   throttleGapDb: 2.8,
+  // Downshift thunder, reused from the V8 pop chain: rev-match boom + overrun crackle.
+  // The pipe modes follow the low V-twin exhaust formants, so it lands lower and punchier.
+  liftPops: { probability: 0.9, level: 0.62, rate: 0.72 },
+  // Extra low-mid growl under load (lower centres than the V8s for the twin's bark).
+  growl: { centersHz: [180, 380], q: 0.9, drive: 0.85, level: 0.05, lowpassHz: 2600 },
 };
 
 /** Sound profile id → acoustic config for Realism V2 combustion. */

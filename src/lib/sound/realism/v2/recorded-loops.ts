@@ -434,7 +434,8 @@ const SUPERBIKE_EQ: RecordedLoopBank["eq"] = {
 };
 // Measured the same way: the close-mic idle is thin at 200-800 Hz and ~7 dB hissier above 2.5 kHz.
 const BIG_TWIN_EQ: RecordedLoopBank["eq"] = {
-  lowShelfDb: 2,
+  // +4 dB more weight under ~120 Hz than before (2 -> 6 dB); peak protect keeps headroom.
+  lowShelfDb: 6,
   midDb: 5,
   midHz: 450,
   highShelfDb: -6,
@@ -551,7 +552,7 @@ export const RECORDED_LOOP_BANKS: Record<string, RecordedLoopBank> = {
         id: "big-twin-growl",
         url: `${BIG_TWIN_RIDE_BASE}/bt_growl_regions.m4a`,
         regions: BIG_TWIN_GROWL_REGIONS,
-        weight: 1,
+        weight: 1.35,
         minRate: 0.5,
         maxRate: 1.8,
         load: "growl",
@@ -560,7 +561,7 @@ export const RECORDED_LOOP_BANKS: Record<string, RecordedLoopBank> = {
         id: "big-twin-hard",
         url: `${BIG_TWIN_RIDE_BASE}/bt_accel_regions.m4a`,
         regions: BIG_TWIN_ACCEL_REGIONS,
-        weight: 1,
+        weight: 1.4,
         minRate: 0.5,
         maxRate: 1.7,
         load: "hard",
