@@ -58,6 +58,7 @@ import { getSharedSampleLoader } from "@/lib/sound/realism/samples";
 import { loadRecordedLoopBuffers } from "@/lib/sound/realism/v2/recorded-loops-loader";
 import { getRecordedBed, RecordedBed } from "@/lib/sound/recorded-beds";
 import { HorseSnorts, isHorseSnortProfile } from "@/lib/sound/horse-snorts";
+import { HorseWhinnies } from "@/lib/sound/horse-whinnies";
 import { DEFAULT_TIMELINE_GAP_FLUSH_MS } from "@/lib/sound/realism/shift-events";
 import { resolvePersonalityId } from "@/lib/drive/drivetrain-resolve";
 
@@ -1544,6 +1545,9 @@ export class SoundEngine {
       const snorts = new HorseSnorts(this.ctx, this.cabinIn, profile.id);
       this.snorts = snorts;
       snorts.load().catch((error) => console.warn("[elcamoso] snorts unavailable", error));
+      const whinnies = new HorseWhinnies(this.ctx, this.cabinIn, profile.id, snorts.scheduler ?? null);
+      this.whinnies = whinnies;
+      whinnies.load().catch((error) => console.warn("[elcamoso] whinnies unavailable", error));
     }
     const cfg = getRecordedBed(profile.id);
     const ctx = this.ctx;
@@ -1556,10 +1560,13 @@ export class SoundEngine {
   }
 
   private snorts: HorseSnorts | null = null;
+  private whinnies: HorseWhinnies | null = null;
 
   private disposeRecordedBed() {
     this.snorts?.dispose();
     this.snorts = null;
+    this.whinnies?.dispose();
+    this.whinnies = null;
     this.bed?.dispose();
     this.bed = null;
     this.bedReady = Promise.resolve();
@@ -1588,6 +1595,7 @@ export class SoundEngine {
     const t = this.now();
     this.updateRecordedBed(state, t);
     if (this.snorts && isHorseSnortProfile(profile.id)) this.snorts.update(state, t);
+    if (this.whinnies && isHorseSnortProfile(profile.id)) this.whinnies.update(state, t);
 
     if (
       this.improved ||

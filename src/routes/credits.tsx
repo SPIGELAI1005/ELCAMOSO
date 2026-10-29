@@ -5,8 +5,9 @@ import { DEBRIS_GRAIN_CREDITS } from "@/lib/sound/dsp/debris-grains";
 import { RECORDED_LOOP_CREDITS } from "@/lib/sound/realism/v2/recorded-loops";
 import { RECORDED_BED_CREDITS } from "@/lib/sound/recorded-beds";
 import { HORSE_SNORT_CREDITS } from "@/lib/sound/horse-snorts";
+import { HORSE_WHINNY_CREDITS } from "@/lib/sound/horse-whinnies";
 
-const CREDITS = [...RECORDED_LOOP_CREDITS, ...RECORDED_BED_CREDITS, ...HORSE_SNORT_CREDITS, ...DEBRIS_GRAIN_CREDITS];
+const CREDITS = [...RECORDED_LOOP_CREDITS, ...RECORDED_BED_CREDITS, ...HORSE_SNORT_CREDITS, ...HORSE_WHINNY_CREDITS, ...DEBRIS_GRAIN_CREDITS];
 
 export const Route = createFileRoute("/credits")({
   component: CreditsPage,

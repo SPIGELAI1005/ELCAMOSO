@@ -107,6 +107,16 @@ export class SnortScheduler {
     private readonly timing: SnortTiming = SNORT_TIMING,
   ) {}
 
+  /** Seconds of the last snort (or -1e9). Lets whinnies avoid overlapping a snort. */
+  get lastSnortAt() {
+    return this.lastAny;
+  }
+
+  /** A whinny is playing until `until`: no snort may start before it ends (+1 s). */
+  holdUntil(until: number) {
+    this.lastAny = Math.max(this.lastAny, until + 1 - this.timing.globalGap);
+  }
+
   private cruiseGap() {
     const T = this.timing;
     const lo = T.cruiseMin ?? 10;

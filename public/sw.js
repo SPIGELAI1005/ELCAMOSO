@@ -1,4 +1,4 @@
-const CACHE = "elcamoso-shell-v15";
+const CACHE = "elcamoso-shell-v16";
 // Bump CACHE whenever a file under /sample-packs/recorded/ is replaced at the same URL.
 const WORKLET = "/audio/combustion-processor.js";
 // Keep in sync with COMBUSTION_WORKLET_VERSION (checked by src/lib/sound/sw-precache.test.ts).
@@ -27,6 +27,10 @@ const AUDIO = [
   "/sample-packs/recorded/v5/bt_cruise_regions.m4a",
   "/sample-packs/recorded/v5/bt_decel_regions.m4a",
   "/sample-packs/recorded/v5/bt_growl_regions.m4a",
+  "/sample-packs/recorded/whinnies-v1/whinny_a.m4a",
+  "/sample-packs/recorded/whinnies-v1/whinny_b.m4a",
+  "/sample-packs/recorded/whinnies-v1/whinny_c.m4a",
+  "/sample-packs/recorded/whinnies-v1/whinny_d.m4a",
 ];
 const SHELL = [
   "/manifest.webmanifest",
