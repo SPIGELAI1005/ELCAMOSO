@@ -23,6 +23,8 @@ const PLANS: Record<string, [number, number][]> = {
   // hard: launch 0-100 in ~8 s, lift-off, hard 50-110, brake
   // idle: parked, engine idling for the whole render (idle liveliness checks)
   idle: [[0,0],[90,0]],
+  // sweep: slow smooth climb idle -> 140 km/h, steady cruise, gentle roll-off, cruise, stop
+  sweep: [[0,0],[8,0],[38,140],[50,140],[58,90],[70,90],[84,0],[90,0]],
   // wot: full-throttle launch 0-160 in 10 s, hold, lift + decel, second pull 40-150, stop
   // brake: hard pull to 150, hard stop to 30 (~5 m/s²), pull to 140, moderate stop to 40 (~3.3 m/s²)
   brake: [[0,0],[6,0],[16,150],[24,150],[30,30],[36,30],[44,140],[52,140],[62,40],[66,0],[90,0]],

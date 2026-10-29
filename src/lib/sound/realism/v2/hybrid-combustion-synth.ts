@@ -2145,7 +2145,8 @@ export class HybridCombustionSynth {
           // Load-mixed banks: idle / cruise / growl / hard pull / engine braking cross-fade.
           const idx = bank.sources.indexOf(sg.source);
           const lg = (loadGains[idx] ?? 0) * sourceRpmGain(sg.source, rpm);
-          targetParam(sg.gain.gain, Math.max(0.0001, (sg.source.weight / Math.SQRT2) * lg), audioTime, 0.25);
+          // Long (0.6 s) equal-power glide so load changes never switch layers abruptly.
+          targetParam(sg.gain.gain, Math.max(0.0001, (sg.source.weight / Math.SQRT2) * lg), audioTime, 0.6);
           if (lg < 0.01) return;
         } else if (sg?.source.rpmWindow) {
           // Multi-band banks: each source only plays inside its own RPM window.

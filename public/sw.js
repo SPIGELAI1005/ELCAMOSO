@@ -1,4 +1,4 @@
-const CACHE = "elcamoso-shell-v17";
+const CACHE = "elcamoso-shell-v18";
 // Bump CACHE whenever a file under /sample-packs/recorded/ is replaced at the same URL.
 const WORKLET = "/audio/combustion-processor.js";
 // Keep in sync with COMBUSTION_WORKLET_VERSION (checked by src/lib/sound/sw-precache.test.ts).
@@ -23,10 +23,10 @@ const AUDIO = [
   "/sample-packs/recorded/v3/rover_v8_regions.m4a",
   "/sample-packs/recorded/v3/superbike_hi_regions.m4a",
   "/sample-packs/recorded/v4/superbike_street_regions.m4a",
-  "/sample-packs/recorded/v5/bt_accel_regions.m4a",
-  "/sample-packs/recorded/v5/bt_cruise_regions.m4a",
-  "/sample-packs/recorded/v5/bt_decel_regions.m4a",
-  "/sample-packs/recorded/v5/bt_growl_regions.m4a",
+  "/sample-packs/recorded/v6/bt_accel_regions.m4a",
+  "/sample-packs/recorded/v6/bt_cruise_regions.m4a",
+  "/sample-packs/recorded/v6/bt_decel_regions.m4a",
+  "/sample-packs/recorded/v6/bt_growl_regions.m4a",
   "/sample-packs/recorded/whinnies-v1/whinny_a.m4a",
   "/sample-packs/recorded/whinnies-v1/whinny_b.m4a",
   "/sample-packs/recorded/whinnies-v1/whinny_c.m4a",
