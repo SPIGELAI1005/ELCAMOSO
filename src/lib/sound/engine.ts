@@ -1537,8 +1537,9 @@ export class SoundEngine {
 
   /** Recorded texture bed (non-hybrid profiles with a RECORDED_BEDS entry). */
   private buildRecordedBed(profile: SoundProfile) {
-    this.snorts?.dispose();
-    this.snorts = null;
+    // Stop the previous profile's bed and snorts (e.g. carriage hooves must not keep
+    // playing, or keep ducking the engine, after switching to a motorcycle).
+    this.disposeRecordedBed();
     if (isHorseSnortProfile(profile.id) && this.ctx && this.cabinIn) {
       const snorts = new HorseSnorts(this.ctx, this.cabinIn, profile.id);
       this.snorts = snorts;
