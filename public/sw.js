@@ -1,4 +1,4 @@
-const CACHE = "elcamoso-shell-v18";
+const CACHE = "elcamoso-shell-v19";
 // Bump CACHE whenever a file under /sample-packs/recorded/ is replaced at the same URL.
 const WORKLET = "/audio/combustion-processor.js";
 // Keep in sync with COMBUSTION_WORKLET_VERSION (checked by src/lib/sound/sw-precache.test.ts).

@@ -62,21 +62,22 @@ export interface RecordedBedConfig {
 /**
  * Carriage bed (beds-v2/carriage.m4a, all CC0 Freesound): idle breathing, then walk / trot /
  * canter / gallop hoof loops crossfaded by speed, each with the wagon wheel rattle mixed in
- * louder as speed rises. The gallop loop is mostly rattle with only a quiet hint of hooves.
+ * louder as speed rises. From ~30-40 km/h a seamless gallop on a hard road fades in, clearly audible
+ * about 7 dB under the wheels; its hoof rate rises gently with speed and caps near 60 km/h.
  * No pulse at idle: the procedural layers are almost fully ducked under the recording.
  */
 function carriageBed(profileId: string, level: number): RecordedBedConfig {
   return {
     profileId,
     url: "/sample-packs/recorded/beds-v2/carriage.m4a",
-    sourceSamples: 2681544,
+    sourceSamples: 2710344,
     driver: "kmh",
     loops: [
       { start: 0.1, end: 14.1, ref: 2 },
       { start: 14.2, end: 26.2, ref: 6 },
       { start: 26.3, end: 38.3, ref: 14 },
       { start: 38.4, end: 43.6655, ref: 24 },
-      { start: 43.7655, end: 55.7655, ref: 38 },
+      { start: 43.7655, end: 56.3655, ref: 40 },
     ],
     rateExponent: 0.3,
     minRate: 0.85,
@@ -432,7 +433,7 @@ export const RECORDED_BED_CREDITS: RecordedCredit[] = [
     licence: "CC0 1.0",
     licenceUrl: "https://creativecommons.org/publicdomain/zero/1.0/",
     sourceUrl: "https://freesound.org/s/175356/",
-    usedIn: "Horse Gallop (gallop bed), Carriages (gallop hint)",
+    usedIn: "Horse Gallop (gallop bed), Carriages (high-speed gallop)",
     attribution:
       "Horse Galloping by Max_Headroom (Freesound #175356), CC0 1.0, edited (trimmed, filtered, looped).",
   },

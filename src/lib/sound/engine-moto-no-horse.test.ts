@@ -63,3 +63,16 @@ describe("motorcycle profiles never carry horse or carriage layers", () => {
     }
   }
 });
+
+describe("high-speed gallop layer", () => {
+  it("is only in horse profiles, never in motorcycles", async () => {
+    const { RECORDED_BEDS } = await import("@/lib/sound/recorded-beds");
+    for (const id of ["wild-west-carriage", "romanian-85-carriage", "horse-gallop"]) {
+      const top = Math.max(...RECORDED_BEDS[id].loops.map((l) => l.ref));
+      expect(top).toBeGreaterThanOrEqual(35);
+    }
+    for (const moto of ["motorcycle-inline-4", "v-twin-cruiser"]) {
+      expect(RECORDED_BEDS[moto]?.url ?? "").not.toMatch(/carriage|horse/);
+    }
+  });
+});
