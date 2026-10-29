@@ -1,0 +1,142 @@
+import { describe, expect, it } from "vitest";
+import { createConductor, tempoForSpeed, type ConductorInput } from "./conductor";
+import { createTimeline } from "./timeline";
+import { GENRES, GENRE_IDS } from "./genres";
+import { pickSample, MUSIC_BANK } from "./sample-bank";
+import { resolveGenre } from "./genre-store";
+
+const cfg = { bpmMin: 80, bpmMax: 140 };
+function drive(c: ReturnType<typeof createConductor>, secs: number, inp: Partial<ConductorInput>) {
+  const dt = 1 / 30;
+  let s = c.snapshot();
+  for (let t = 0; t < secs; t += dt) {
+    s = c.update({ speed: 0, acceleration: 0, throttle: 0, regen: 0, gear: 0, dt, ...inp });
+  }
+  return s;
+}
+
+describe("adaptive conductor", () => {
+  it("maps speed to tempo between the genre range", () => {
+    expect(tempoForSpeed(0, cfg)).toBe(80);
+    expect(tempoForSpeed(130, cfg)).toBeCloseTo(140);
+    const c = createConductor(cfg);
+    const s = drive(c, 40, { speed: 120 / 3.6 });
+    expect(s.bpm).toBeGreaterThan(130);
+  });
+
+  it("changes tempo smoothly (rate limited)", () => {
+    const c = createConductor(cfg);
+    const s = drive(c, 1, { speed: 130 / 3.6 });
+    expect(s.bpm).toBeLessThan(86);
+  });
+
+  it("surges on hard acceleration and builds intensity", () => {
+    const c = createConductor(cfg);
+    drive(c, 10, { speed: 50 / 3.6 });
+    const before = c.snapshot().intensity;
+    const s = drive(c, 2, { speed: 55 / 3.6, acceleration: 3, throttle: 0.9 });
+    expect(s.mode).toBe("surge");
+    expect(s.intensity).toBeGreaterThan(before + 0.15);
+    expect(c.drainAccents()).toContain("surge");
+  });
+
+  it("softens and filters on hard braking", () => {
+    const c = createConductor(cfg);
+    drive(c, 15, { speed: 90 / 3.6 });
+    const before = c.snapshot();
+    const s = drive(c, 1.5, { speed: 70 / 3.6, acceleration: -4, regen: 0.8 });
+    expect(s.mode).toBe("brake");
+    expect(s.brightness).toBeLessThan(before.brightness - 0.2);
+    expect(s.intensity).toBeLessThan(before.intensity);
+  });
+
+  it("settles into cruise when speed is held", () => {
+    const c = createConductor(cfg);
+    const s = drive(c, 12, { speed: 100 / 3.6 });
+    expect(s.mode).toBe("cruise");
+  });
+
+  it("emits accents for real gear changes", () => {
+    const c = createConductor(cfg);
+    drive(c, 1, { speed: 10, gear: 2 });
+    c.drainAccents();
+    drive(c, 0.1, { speed: 10, gear: 3 });
+    drive(c, 0.1, { speed: 10, gear: 2 });
+    expect(c.drainAccents()).toEqual(["upshift", "downshift"]);
+  });
+
+  it("uses musical gears on gearless profiles", () => {
+    const c = createConductor(cfg);
+    drive(c, 10, { speed: 50 / 3.6 });
+    expect(c.drainAccents().filter((a) => a === "upshift").length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("raises the key while climbing and ignores missing altitude", () => {
+    const c = createConductor(cfg);
+    const dt = 1 / 10;
+    let alt = 100;
+    let s = c.snapshot();
+    for (let t = 0; t < 40; t += dt) {
+      alt += (60 / 3.6) * dt * 0.06; // 6 % grade
+      s = c.update({ speed: 60 / 3.6, acceleration: 0, throttle: 0.3, regen: 0, gear: 0, dt, altitude: alt, altitudeAccuracy: 5 });
+    }
+    expect(s.elevationTrend).toBe("climb");
+    expect(s.transpose).toBe(2);
+    const n = createConductor(cfg);
+    const s2 = drive(n, 30, { speed: 60 / 3.6, altitude: null });
+    expect(s2.elevationTrend).toBe("unknown");
+    expect(s2.transpose).toBe(0);
+  });
+});
+
+describe("adaptive timeline", () => {
+  it("is gapless and on the grid while tempo changes", () => {
+    const c = createConductor(cfg);
+    const tl = createTimeline("classic", 0, 3);
+    let t = 0;
+    const events = [];
+    for (let i = 0; i < 600; i++) {
+      t += 1 / 30;
+      const s = c.update({ speed: (i / 600) * 35, acceleration: 1, throttle: 0.5, regen: 0, gear: 0, dt: 1 / 30 });
+      events.push(...tl.scheduleUntil(t + 0.35, s));
+    }
+    const times = events.map((e) => e.time);
+    expect(times.length).toBeGreaterThan(100);
+    for (let i = 1; i < times.length; i++) expect(times[i]! - times[i - 1]!).toBeGreaterThan(-1);
+  });
+
+  it("every genre note maps to a rendered sample", () => {
+    for (const id of GENRE_IDS) {
+      const g = GENRES[id];
+      for (const mode of ["stopped", "flow", "cruise", "surge", "brake"] as const) {
+        for (const intensity of [0.1, 0.5, 0.9]) {
+          for (let step = 0; step < 16; step++) {
+            const notes = g.pattern({ step, bar: step, chord: [g.key, g.key + 4, g.key + 7], root: g.key, intensity, mode, variation: step, stepDur: 0.12, barDur: 1.9, rand: Math.random });
+            for (const n of notes) {
+              expect(MUSIC_BANK[n.inst], `${id} ${n.inst}`).toBeDefined();
+              expect(pickSample(n.inst, n.midi), `${id} ${n.inst} ${n.midi}`).not.toBeNull();
+            }
+          }
+        }
+      }
+      for (const [inst, note] of [g.accents.crash, ...g.accents.fill[1].map((n) => [g.accents.fill[0], n] as const), ...g.accents.low[1].map((n) => [g.accents.low[0], n] as const)]) {
+        expect(pickSample(inst as string, note as number)).not.toBeNull();
+      }
+    }
+  });
+
+  it("brake mode keeps drums out", () => {
+    const g = GENRES.house;
+    for (let step = 0; step < 16; step++) {
+      const notes = g.pattern({ step, bar: 0, chord: [45, 48, 52], root: 45, intensity: 0.12, mode: "brake", variation: 0, stepDur: 0.12, barDur: 1.9, rand: Math.random });
+      expect(notes.filter((n) => n.inst === "drums_elec" && n.midi !== 36)).toHaveLength(0);
+    }
+  });
+
+  it("resolves profile default genres", () => {
+    expect(resolveGenre("symphony-motion-orchestra", "auto")).toBe("classic");
+    expect(resolveGenre("symphony-neon-run", "auto")).toBe("house");
+    expect(resolveGenre("symphony-cinematic-rock", "auto")).toBe("rock");
+    expect(resolveGenre("symphony-motion-orchestra", "rock")).toBe("rock");
+  });
+});

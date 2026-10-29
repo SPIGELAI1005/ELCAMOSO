@@ -50,7 +50,8 @@ import {
   rawMechanicalPresetFor,
   resolveRawMechanicalQualityTier,
 } from "@/lib/sound/realism/v3";
-import { isSymphonyProfileId, SymphonySynth } from "@/lib/symphony";
+import { isSymphonyProfileId } from "@/lib/symphony";
+import { AdaptiveMusicSynth } from "@/lib/symphony/adaptive";
 import { FusionSynth, isFusionProfileId } from "@/lib/fusion";
 import { isWorldProfileId, WorldSynth } from "@/lib/worlds";
 import { fetchSoundAssetManifest } from "@/lib/sound-assets/client-loader";
@@ -223,7 +224,7 @@ export class SoundEngine {
   /** Premium transient tier for Realism V2 (demo / Drive+). Core shifts always render. */
   private advancedTransientsEnabled = true;
   private dynamicDrive: DynamicDriveSynth | null = null;
-  private symphony: SymphonySynth | null = null;
+  private symphony: AdaptiveMusicSynth | null = null;
   private fusion: FusionSynth | null = null;
   private world: WorldSynth | null = null;
   /** Dev A/B: current engine vs Realism V2. Default v2 for combustion when eligible. */
@@ -1190,9 +1191,9 @@ export class SoundEngine {
       this.fusion = null;
     }
 
-    // Drive Symphony - musical arrangement from DriveState (fixed BPM, quantized stems).
+    // Drive the Music - adaptive arrangement: tempo, layers, accents and key follow the drive.
     if (isSymphonyProfileId(profile.id) && strategyBuses) {
-      this.symphony = new SymphonySynth();
+      this.symphony = new AdaptiveMusicSynth();
       const ok = this.symphony.build(ctx, profile, strategyBuses, this.experienceSeed);
       if (ok) return;
       this.symphony.dispose();

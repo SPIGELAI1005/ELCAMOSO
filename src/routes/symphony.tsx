@@ -3,6 +3,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { createSeoHeadFromPath } from "@/lib/seo";
 import { ExperienceCardList } from "@/components/experiences/ExperienceCardList";
 import { MotionIntentDiagram } from "@/components/experiences/MotionIntentDiagram";
+import { MusicGenrePicker } from "@/components/experiences/MusicGenrePicker";
 import { listSymphonyExperiences } from "@/lib/experiences";
 import { useSettings } from "@/lib/drive/useSettings";
 import { getSession } from "@/lib/drive/session";
@@ -232,6 +233,8 @@ function SymphonyPage() {
           </div>
         )}
       </section>
+
+      <MusicGenrePicker className="mt-12" />
 
       <section className="mt-16">
         <h2 className="text-2xl font-light">Experiences</h2>

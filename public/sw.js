@@ -1,4 +1,4 @@
-const CACHE = "elcamoso-shell-v19";
+const CACHE = "elcamoso-shell-v20";
 // Bump CACHE whenever a file under /sample-packs/recorded/ is replaced at the same URL.
 const WORKLET = "/audio/combustion-processor.js";
 // Keep in sync with COMBUSTION_WORKLET_VERSION (checked by src/lib/sound/sw-precache.test.ts).
@@ -13,6 +13,22 @@ const AUDIO = [
   "/sample-packs/recorded/beds-v1/ufo.m4a",
   "/sample-packs/recorded/beds-v2/carriage.m4a",
   "/sample-packs/recorded/debris-v1/grains.wav",
+  "/sample-packs/recorded/music-v1/cello.m4a",
+  "/sample-packs/recorded/music-v1/drums_elec.m4a",
+  "/sample-packs/recorded/music-v1/drums_orch.m4a",
+  "/sample-packs/recorded/music-v1/drums_rock.m4a",
+  "/sample-packs/recorded/music-v1/ebass.m4a",
+  "/sample-packs/recorded/music-v1/guitar.m4a",
+  "/sample-packs/recorded/music-v1/horn.m4a",
+  "/sample-packs/recorded/music-v1/lead.m4a",
+  "/sample-packs/recorded/music-v1/pad.m4a",
+  "/sample-packs/recorded/music-v1/piano.m4a",
+  "/sample-packs/recorded/music-v1/pizz.m4a",
+  "/sample-packs/recorded/music-v1/stab.m4a",
+  "/sample-packs/recorded/music-v1/strings.m4a",
+  "/sample-packs/recorded/music-v1/synthbass.m4a",
+  "/sample-packs/recorded/music-v1/timpani.m4a",
+  "/sample-packs/recorded/music-v1/violin.m4a",
   "/sample-packs/recorded/snorts-v1/snort_4.m4a",
   "/sample-packs/recorded/snorts-v1/snort_6.m4a",
   "/sample-packs/recorded/snorts-v2/brrr_a.m4a",

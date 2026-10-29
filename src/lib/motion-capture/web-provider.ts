@@ -1,3 +1,4 @@
+import { reportGpsAltitude } from "@/lib/symphony/adaptive/altitude-store";
 import { resolveGpsSpeed, type GpsPoint } from "@/lib/drive/gps-speed";
 import { browserGpsMotionSample, browserImuMotionSample } from "@/lib/motion/sensor-fusion";
 import type {
@@ -43,6 +44,7 @@ export class WebMotionCaptureProvider implements MotionCaptureProvider {
       this.watchId = navigator.geolocation.watchPosition(
         (position) => {
           const receivedAt = performance.now();
+          reportGpsAltitude(position.coords.altitude, position.coords.altitudeAccuracy);
           const resolved = resolveGpsSpeed({
             reportedSpeed: position.coords.speed,
             latitude: position.coords.latitude,
