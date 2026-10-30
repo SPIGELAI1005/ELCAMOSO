@@ -753,7 +753,7 @@ export const EXPANSION_PROFILES: SoundProfile[] = [
     category: "Motorsport",
     traits: ["Screaming", "High-Rev", "Onboard"],
     description:
-      "A 2000s Formula 1 V10 heard from the cockpit: idle at 4,500 rpm, a 19,000 rpm intake howl, seven close gears and seamless 35 ms upshifts with a gearbox thump. Fully synthesised.",
+      "A 2000s Formula 1 V10 heard from the cockpit: idle at 4,500 rpm, a 19,000 rpm intake howl, seven close gears and seamless 35 ms upshifts with a gearbox thump.",
     drivetrainMode: "virtual-transmission",
     motionModel: "virtual-transmission",
     sourceMode: "procedural",
@@ -783,7 +783,7 @@ export const EXPANSION_PROFILES: SoundProfile[] = [
     category: "Heritage",
     traits: ["Two-Stroke", "Buzzy", "Charming"],
     description:
-      "A small two-cylinder two-stroke: ring-ding idle with the odd misfire, a nasal buzz that climbs through four short gears and a blue-smoke rattle on the overrun. Fully synthesised.",
+      "A small two-cylinder two-stroke: ring-ding idle with the odd misfire, a nasal buzz that climbs through four short gears and a blue-smoke rattle on the overrun.",
     drivetrainMode: "virtual-transmission",
     motionModel: "virtual-transmission",
     sourceMode: "procedural",
@@ -820,7 +820,7 @@ export const EXPANSION_PROFILES: SoundProfile[] = [
     category: "Classic",
     traits: ["Biturbo", "Off-Road", "Brutal"],
     description:
-      "A boxy 4x4 with a biturbo V8: lumpy cross-plane idle, twin turbos spooling up under load, blow-off sighs between gears and crackles when you lift. Fully synthesised.",
+      "A boxy 4x4 with a biturbo V8: lumpy cross-plane idle, twin turbos spooling up under load, blow-off sighs between gears and crackles when you lift.",
     drivetrainMode: "virtual-transmission",
     motionModel: "virtual-transmission",
     sourceMode: "procedural",
@@ -861,7 +861,7 @@ export const EXPANSION_PROFILES: SoundProfile[] = [
     category: "Motorsport",
     traits: ["V10", "Siren", "Pursuit"],
     description:
-      "A pursuit car with a high-revving V10 and a quiet siren wailing far in the background. On the Drive page, soft red and blue lights pulse faster as you speed up. Fully synthesised.",
+      "A pursuit car with a high-revving V10 and a quiet siren wailing far in the background. On the Drive page, soft red and blue lights pulse faster as you speed up.",
     drivetrainMode: "virtual-transmission",
     motionModel: "virtual-transmission",
     sourceMode: "procedural",
