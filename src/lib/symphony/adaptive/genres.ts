@@ -5,7 +5,7 @@
  */
 import type { MusicAccent, MusicMode } from "./conductor";
 
-export type GenreId = "classic" | "house" | "rock" | "pop" | "metal" | "hiphop" | "country" | "waltz";
+export type GenreId = "classic" | "house" | "rock" | "pop" | "metal" | "hiphop" | "country" | "waltz" | "electro" | "anthem" | "darkrave";
 
 export interface NoteSpec {
   inst: string;
@@ -54,6 +54,10 @@ export interface GenreDef {
   accents: AccentKit;
   /** 16ths per bar: 16 = 4/4 (default), 12 = 3/4. */
   stepsPerBar?: number;
+  /** Fixed tempo: speed/acceleration add layers instead of speeding the song up. */
+  fixedBpm?: number;
+  /** Extra energy layers stacked on top of the base pattern as intensity rises. */
+  layers?(c: StepContext): NoteSpec[];
   /** concert-hall reverb send, 0..1 (default 0.12) */
   reverb?: number;
   pattern(c: StepContext): NoteSpec[];
@@ -314,6 +318,11 @@ const metal: GenreDef = {
   },
 };
 
+// Original 2-bar piano hook: [step, semitone over chord root, len16]
+const HIPHOP_MELODY: readonly (readonly [number, number, number])[][] = [
+  [[0, 15, 3], [3, 14, 1], [4, 10, 4], [10, 7, 2], [12, 10, 4]],
+  [[0, 12, 3], [3, 10, 1], [4, 7, 3], [8, 3, 2], [11, 5, 1], [12, 7, 4]],
+];
 const hiphop: GenreDef = {
   id: "hiphop",
   name: "Hip-hop",
@@ -326,16 +335,19 @@ const hiphop: GenreDef = {
     { deg: 8, tones: [0, 4, 7, 11] },
     { deg: 7, tones: [0, 3, 7, 10] },
   ],
-  mix: { drums_elec: 0.85, synthbass: 0.6, stab: 0.38, pad: 0.26, strings: 0.26, square: 0.16 },
-  accents: { crash: ["drums_elec", 49], fill: ["drums_elec", [42, 42, 42, 42]], low: ["synthbass", [29, 29]] },
+  mix: { drums_elec: 0.85, synthbass: 0.6, piano: 0.46, scratch: 0.42, stab: 0.38, pad: 0.26, strings: 0.26, square: 0.16 },
+  accents: { crash: ["drums_elec", 49], fill: ["scratch", [60, 66]], low: ["synthbass", [29, 29]] },
   pattern(c) {
     const out: NoteSpec[] = [];
     const I = c.intensity;
     const quiet = calm(c.mode);
     if (c.step === 0) for (const t of c.chord) out.push({ inst: "pad", midi: into(t, 56, 75), vel: 0.3 + 0.15 * I, dur: c.barDur * 1.02, pan: 0.1 });
-    // keys: lazy chords
+    // moody jazzy piano: rootless 9th voicings, laid back
     const keySteps = [[0, 7, 10], [0, 3, 10, 14], [2, 7, 12]][c.variation % 3]!;
-    if (keySteps.includes(c.step) && (!quiet || c.step === 0)) for (const t of c.chord) out.push({ inst: "stab", midi: into(t, 56, 75), vel: 0.3 + 0.25 * I, dur: c.stepDur * 3, pan: -0.2, offset: 0.12 });
+    const voicing = [c.chord[1]!, c.chord[2]!, c.chord[3] ?? c.chord[0]! + 12, c.chord[0]! + 14];
+    if (keySteps.includes(c.step) && (!quiet || c.step === 0)) for (const t of voicing) out.push({ inst: "piano", midi: into(t, 55, 74), vel: 0.32 + 0.22 * I, dur: c.stepDur * 3, pan: -0.15, offset: 0.12 });
+    // original piano melody loop (2 bars), right hand
+    if (!quiet || I > 0.1) for (const [st, iv, len] of HIPHOP_MELODY[c.bar % 2]!) if (st === c.step) out.push({ inst: "piano", midi: into(c.root + iv, 70, 89), vel: 0.38 + 0.25 * I, dur: c.stepDur * len, pan: 0.2, offset: 0.08 });
     if (quiet) return out;
     if (I > 0.15) {
       const kicks = c.variation % 2 ? [0, 7, 10] : [0, 3, 10];
@@ -537,7 +549,314 @@ const waltz: GenreDef = {
   },
 };
 
-export const GENRES: Record<GenreId, GenreDef> = { classic, house, rock, pop, metal, hiphop, country, waltz };
+// ---- energy layers: tempo stays put, speed and acceleration stack genre-specific parts ----
+const push = (c: StepContext) => c.mode === "surge" || c.intensity > 0.8;
+const LAYERED: Partial<Record<GenreId, { bpm: number; mix: Record<string, number>; layers: (c: StepContext) => NoteSpec[] }>> = {
+  rock: {
+    bpm: 124,
+    mix: { dguitar: 0.34 },
+    layers(c) {
+      const o: NoteSpec[] = []; const I = c.intensity;
+      // doubled power chords (root+5th+8ve), panned wide
+      if (I > 0.45 && c.step % 2 === 0) for (const pan of [-0.7, 0.7]) for (const iv of [0, 7, 12]) o.push({ inst: "dguitar", midi: into(c.root, 40, 52) + iv, vel: 0.45 + 0.3 * I, dur: c.stepDur * 1.6, pan });
+      if (I > 0.6 && c.step === 0) o.push({ inst: "drums_rock", midi: 49, vel: 0.6 + 0.3 * I, dur: 1.2, pan: -0.3 });
+      if (push(c) && c.step >= 12) o.push({ inst: "drums_rock", midi: [50, 48, 45, 45][c.step - 12]!, vel: 0.75, dur: 0.4 });
+      if (I > 0.75 && on(c, 2, 10)) o.push({ inst: "drums_rock", midi: 36, vel: 0.7, dur: 0.4 });
+      return o;
+    },
+  },
+  pop: {
+    bpm: 116,
+    mix: { stab: 0.3, polysynth: 0.3, drums_elec: 0.6 },
+    layers(c) {
+      const o: NoteSpec[] = []; const I = c.intensity;
+      if (I > 0.4 && on(c, 4, 12)) o.push({ inst: "drums_elec", midi: 39, vel: 0.5 + 0.3 * I, dur: 0.3 });
+      if (I > 0.5 && on(c, 3, 6, 11, 14)) for (const t of c.chord) o.push({ inst: "stab", midi: into(t, 60, 76), vel: 0.4 + 0.3 * I, dur: c.stepDur * 1.2, pan: 0.3 });
+      if (I > 0.62 && c.step === 0) for (const t of c.chord) o.push({ inst: "polysynth", midi: into(t, 64, 81), vel: 0.4 + 0.3 * I, dur: c.barDur, pan: -0.3 });
+      if (push(c) && c.step >= 8 && c.step % 2 === 0) o.push({ inst: "drums_elec", midi: 39, vel: 0.3 + 0.05 * c.step, dur: 0.2 });
+      return o;
+    },
+  },
+  metal: {
+    bpm: 132,
+    mix: { dguitar: 0.36 },
+    layers(c) {
+      const o: NoteSpec[] = []; const I = c.intensity;
+      // double kick 16ths, then chug layer on low E-ish root
+      if (I > 0.55) o.push({ inst: "drums_rock", midi: 36, vel: 0.55 + 0.3 * I, dur: 0.2 });
+      if (I > 0.45 && ![3, 7, 11, 15].includes(c.step)) for (const pan of [-0.75, 0.75]) o.push({ inst: "dguitar", midi: into(c.root, 28, 40), vel: 0.5 + 0.35 * I, dur: c.stepDur * 0.6, pan });
+      if (I > 0.7 && c.step % 8 === 0) o.push({ inst: "drums_rock", midi: c.step ? 57 : 49, vel: 0.7, dur: 1 });
+      if (push(c) && c.step >= 12) o.push({ inst: "drums_rock", midi: [50, 48, 45, 45][c.step - 12]!, vel: 0.8, dur: 0.3 });
+      return o;
+    },
+  },
+  hiphop: {
+    bpm: 92,
+    mix: { synthbass: 0.62 },
+    layers(c) {
+      const o: NoteSpec[] = []; const I = c.intensity;
+      const r = into(c.root, 28, 40);
+      // 808-style bass with slides (grace notes gliding into the target)
+      if (I > 0.4 && on(c, 0, 7, 10)) o.push({ inst: "synthbass", midi: r, vel: 0.7 + 0.25 * I, dur: c.stepDur * 2.5 });
+      if (I > 0.55 && on(c, 13)) for (const [k, d] of [[0, 0], [1, 0.33], [2, 0.66]] as const) o.push({ inst: "synthbass", midi: r + 12 - k * 4, vel: 0.55, dur: c.stepDur * 0.4, offset: d });
+      // hat rolls: 32nds / triplets at high energy
+      if (I > 0.6 && on(c, 6, 14)) for (const d of [0, 0.33, 0.66]) o.push({ inst: "drums_elec", midi: 42, vel: 0.3 + 0.2 * I, dur: 0.08, offset: d, pan: 0.3 });
+      if (push(c) && c.step >= 12) for (const d of [0, 0.5]) o.push({ inst: "drums_elec", midi: 42, vel: 0.35, dur: 0.06, offset: d });
+      if (I > 0.7 && on(c, 4, 12)) o.push({ inst: "drums_elec", midi: 39, vel: 0.65, dur: 0.3 });
+      // DJ scratches: turntable fills at end of 4-bar phrases, chirps on energy layer, tear on surge
+      if (I > 0.45 && c.bar % 4 === 3 && on(c, 12)) o.push({ inst: "scratch", midi: 60, vel: 0.7, dur: c.stepDur * 4, pan: -0.25 });
+      if (I > 0.62 && c.bar % 2 === 1 && on(c, 14)) o.push({ inst: "scratch", midi: c.bar % 4 === 1 ? 63 : 66, vel: 0.6, dur: c.stepDur * 2, pan: 0.25 });
+      if (push(c) && on(c, 8)) o.push({ inst: "scratch", midi: 69, vel: 0.75, dur: c.stepDur * 6 });
+      return o;
+    },
+  },
+  country: {
+    bpm: 120,
+    mix: { banjo: 0.42, violin: 0.36 },
+    layers(c) {
+      const o: NoteSpec[] = []; const I = c.intensity;
+      // train beat: snare 16ths accenting 2 and 4
+      if (I > 0.45) o.push({ inst: "drums_std", midi: 38, vel: (c.step % 8 === 4 ? 0.55 : 0.22) + 0.2 * I, dur: 0.1 });
+      // banjo roll over the chord
+      if (I > 0.5) { const t = [...c.chord, c.chord[0]! + 12]; o.push({ inst: "banjo", midi: into(t[[0, 2, 3, 1, 2, 3, 0, 2][c.step % 8]!]!, 55, 79), vel: 0.4 + 0.3 * I, dur: c.stepDur * 1.2, pan: 0.4 }); }
+      // fiddle double-stops when pushing
+      if (I > 0.68 && c.step % 4 === 0) for (const t of c.chord.slice(0, 2)) o.push({ inst: "violin", midi: into(t + 12, 62, 84), vel: 0.4 + 0.3 * I, dur: c.stepDur * 3.5, pan: -0.4 });
+      if (push(c) && c.step === 0) o.push({ inst: "drums_std", midi: 49, vel: 0.6, dur: 1 });
+      return o;
+    },
+  },
+  house: {
+    bpm: 124,
+    mix: { piano: 0.45, drums_std: 0.5 },
+    layers(c) {
+      const o: NoteSpec[] = []; const I = c.intensity;
+      // piano chord stabs (offbeat house piano)
+      if (I > 0.5 && on(c, 2, 5, 10, 13)) for (const t of c.chord) o.push({ inst: "piano", midi: into(t, 60, 79), vel: 0.45 + 0.3 * I, dur: c.stepDur * 1.4, pan: -0.15 });
+      // percussion: shaker 16ths + conga/cowbell-ish
+      if (I > 0.4 && c.step % 2 === 1) o.push({ inst: "drums_std", midi: 54, vel: 0.2 + 0.2 * I, dur: 0.1, pan: 0.5 });
+      if (I > 0.62 && on(c, 3, 11, 14)) o.push({ inst: "drums_std", midi: 37, vel: 0.4, dur: 0.15, pan: -0.5 });
+      if (push(c) && c.step >= 8) o.push({ inst: "drums_elec", midi: 39, vel: 0.25 + 0.05 * c.step, dur: 0.15 });
+      return o;
+    },
+  },
+};
+
+const ELECTRO_RIFFS: readonly (readonly [number, number, number])[][] = [
+  [[0, 0, 2], [3, 0, 1], [4, 12, 1], [6, 0, 2], [8, 10, 1], [10, 0, 2], [12, 7, 1], [14, 12, 2]],
+  [[0, 0, 3], [3, 3, 1], [6, 0, 1], [7, 12, 1], [8, 0, 2], [11, 5, 1], [12, 3, 2], [14, 0, 1], [15, 10, 1]],
+  [[0, 0, 1], [2, 0, 1], [3, 12, 1], [6, 0, 2], [8, 7, 2], [10, 10, 1], [11, 0, 1], [13, 12, 1], [14, 0, 2]],
+];
+const ELECTRO_HOOK: readonly (readonly [number, number])[] = [[0, 12], [3, 10], [6, 7], [10, 12], [12, 15], [14, 12]];
+
+const electro: GenreDef = {
+  id: "electro",
+  name: "Electro Bass",
+  // fixed tempo: speed adds layers, never speeds the groove up
+  bpmMin: 126,
+  bpmMax: 126,
+  fixedBpm: 126,
+  key: 41, // F minor
+  progression: [
+    { deg: 0, tones: [0, 3, 7] },
+    { deg: 0, tones: [0, 3, 7] },
+    { deg: 8, tones: [0, 4, 7] },
+    { deg: 10, tones: [0, 4, 7] },
+  ],
+  mix: { drums_electro: 0.8, electrobass: 0.62, electrosub: 0.7, electrolead: 0.16, pad: 0.2 },
+  reverb: 0.05,
+  accents: { crash: ["drums_electro", 49], fill: ["drums_electro", [38]], low: ["drums_electro", [35, 45, 45]] },
+  pattern(c) {
+    const out: NoteSpec[] = [];
+    const I = c.intensity;
+    const quiet = calm(c.mode);
+    const bassRoot = into(c.root, 29, 40);
+    // breakdown (braking / stopped): pad + long sub swells + a slow distorted heartbeat
+    if (quiet) {
+      if (c.step === 0) for (const t of c.chord) out.push({ inst: "pad", midi: into(t, 53, 72), vel: 0.4, dur: c.barDur * 1.02, pan: (t % 2) * 0.4 - 0.2 });
+      if (on(c, 0, 8)) {
+        out.push({ inst: "electrosub", midi: bassRoot - 12 < 24 ? bassRoot : bassRoot - 12, vel: 0.6, dur: c.stepDur * 6 });
+        out.push({ inst: "electrobass", midi: bassRoot, vel: 0.42, dur: c.stepDur * 2 });
+      }
+      if (c.mode === "brake" && on(c, 12)) out.push({ inst: "drums_electro", midi: 39, vel: 0.35, dur: 0.3 });
+      return out;
+    }
+    // layer 1 (always while moving): kick + sub on every offbeat + the main distorted riff
+    if (c.step % 4 === 0) out.push({ inst: "drums_electro", midi: 36, vel: 0.9, dur: 0.4 });
+    if (c.step % 4 === 2) out.push({ inst: "electrosub", midi: bassRoot, vel: 0.75 + 0.2 * I, dur: c.stepDur * 1.7 });
+    const riff = ELECTRO_RIFFS[c.variation % ELECTRO_RIFFS.length]!;
+    for (const [st, iv, len] of riff) if (st === c.step) out.push({ inst: "electrobass", midi: bassRoot + iv, vel: 0.7 + 0.25 * I, dur: c.stepDur * len * 0.9 });
+    if (c.step % 4 === 2) out.push({ inst: "drums_electro", midi: 46, vel: 0.35 + 0.25 * I, dur: 0.2, pan: 0.2 });
+    // layer 2: claps + pumping pad
+    if (I > 0.3 && on(c, 4, 12)) out.push({ inst: "drums_electro", midi: 39, vel: 0.6 + 0.3 * I, dur: 0.3 });
+    if (I > 0.3 && c.step % 4 === 2) for (const t of c.chord) out.push({ inst: "pad", midi: into(t, 56, 75), vel: 0.28 + 0.2 * I, dur: c.stepDur * 1.8, pan: (t % 2) * 0.5 - 0.25 });
+    // layer 3: octave bass answering the riff + 16th hats
+    if (I > 0.45) {
+      const ans = ELECTRO_RIFFS[(c.variation + 1) % ELECTRO_RIFFS.length]!;
+      for (const [st, iv] of ans) if (st === c.step && st % 4 !== 0) out.push({ inst: "electrobass", midi: bassRoot + 12 + iv, vel: 0.45 + 0.3 * I, dur: c.stepDur * 0.8, pan: 0.2 });
+      if (c.step % 2 === 1) out.push({ inst: "drums_electro", midi: 42, vel: 0.25 + 0.2 * I, dur: 0.1, pan: -0.25 });
+    }
+    // layer 4: percussion toms + sub drop at every 4-bar phrase + hook on top
+    if (I > 0.6) {
+      if (on(c, 7, 15) && c.bar % 2 === 1) out.push({ inst: "drums_electro", midi: 45, vel: 0.5 + 0.3 * I, dur: 0.2, pan: 0.3 });
+      if (c.step === 0 && c.bar % 4 === 0) out.push({ inst: "drums_electro", midi: 35, vel: 0.8, dur: 1.2 });
+      if (c.bar % 2 === 0) for (const [st, iv] of ELECTRO_HOOK) if (st === c.step) out.push({ inst: "electrolead", midi: into(c.root + iv, 62, 82), vel: 0.4 + 0.3 * I, dur: c.stepDur * 1.6, pan: 0.15 });
+    }
+    // build-up while accelerating hard: tightening snare roll + riser, then the sub drop lands on the next bar
+    if (c.mode === "surge") {
+      const every = c.step < 8 ? 2 : 1;
+      if (c.step % every === 0) out.push({ inst: "drums_electro", midi: 38, vel: 0.35 + 0.04 * c.step, dur: 0.15 });
+      if (c.step === 0) out.push({ inst: "drums_electro", midi: 51, vel: 0.65, dur: c.barDur });
+    }
+    return out;
+  },
+};
+
+function progDeg(bar: number) {
+  return [0, 7, 9, 5][bar % 4]!;
+}
+
+const ANTHEM_THEME: readonly (readonly [number, number, number])[][] = [
+  [[0, 7, 6], [6, 9, 2], [8, 11, 4], [12, 12, 4]],
+  [[0, 14, 8], [8, 12, 4], [12, 11, 4]],
+  [[0, 9, 6], [6, 11, 2], [8, 12, 4], [12, 16, 4]],
+  [[0, 14, 12], [12, 12, 4]],
+  [[0, 7, 4], [4, 12, 4], [8, 11, 2], [10, 12, 2], [12, 14, 4]],
+  [[0, 16, 8], [8, 14, 4], [12, 12, 4]],
+  [[0, 11, 4], [4, 12, 4], [8, 14, 4], [12, 19, 4]],
+  [[0, 19, 10], [10, 16, 2], [12, 14, 4]],
+];
+
+const anthem: GenreDef = {
+  id: "anthem",
+  name: "Road Anthem",
+  bpmMin: 92,
+  bpmMax: 128,
+  fixedBpm: 110,
+  key: 50, // D major
+  progression: [
+    { deg: 0, tones: [0, 4, 7] },
+    { deg: 7, tones: [0, 4, 7] },
+    { deg: 9, tones: [0, 3, 7] },
+    { deg: 5, tones: [0, 4, 7] },
+  ],
+  mix: { drums_rock: 0.82, ebass: 0.6, dguitar: 0.38, guitar: 0.4, leadgtr: 0.34, strings: 0.32, choir: 0.3, piano: 0.42, timpani: 0.5 },
+  reverb: 0.16,
+  accents: { crash: ["drums_rock", 49], fill: ["drums_rock", [50, 48, 45]], low: ["drums_rock", [45, 45, 36]] },
+  pattern(c) {
+    const out: NoteSpec[] = [];
+    const I = c.intensity;
+    const quiet = calm(c.mode);
+    const pb = c.bar % 8;
+    const keyRoot = 62 + (c.root - progDeg(c.bar) - 50); // D4 + transposition
+    const gr = into(c.root, 38, 50);
+    // calm / idle: clean guitar arpeggio + piano, the emotional intro
+    if (quiet || I < 0.3) {
+      if (c.step % 2 === 0) { const t = [...c.chord, c.chord[0]! + 12]; out.push({ inst: "guitar", midi: into(t[(c.step / 2) % 4]!, 52, 71), vel: 0.4, dur: c.stepDur * 3, pan: -0.2 }); }
+      if (c.step === 0) for (const t of c.chord) out.push({ inst: "piano", midi: into(t, 55, 72), vel: 0.35, dur: c.barDur });
+      if (quiet) return out;
+    }
+    // layer 1 (moving): rock drums + bass guitar 8ths + palm-muted power chords
+    if (on(c, 0, 8) || (I > 0.5 && on(c, 6, 10))) out.push({ inst: "drums_rock", midi: 36, vel: 0.8 + 0.2 * I, dur: 0.5 });
+    if (on(c, 4, 12)) out.push({ inst: "drums_rock", midi: 38, vel: 0.7 + 0.3 * I, dur: 0.5 });
+    if (c.step % 2 === 0) out.push({ inst: "drums_rock", midi: I > 0.6 ? 46 : 42, vel: 0.3 + 0.25 * I, dur: 0.3, pan: 0.25 });
+    if (c.step % 2 === 0) out.push({ inst: "ebass", midi: into(c.root, 33, 45), vel: 0.6 + 0.3 * I, dur: c.stepDur * 1.8 });
+    if (I > 0.3 && I <= 0.5 && c.step % 2 === 0) for (const iv of [0, 7]) out.push({ inst: "dguitar", midi: gr + iv, vel: 0.45, dur: c.stepDur * 0.9, pan: -0.5 });
+    // layer 2: open power chords doubled left/right + lead guitar melody
+    if (I > 0.5 && (c.step === 0 || on(c, 6, 8, 14))) for (const pan of [-0.75, 0.75]) for (const iv of [0, 7, 12]) out.push({ inst: "dguitar", midi: gr + iv, vel: 0.5 + 0.3 * I, dur: c.stepDur * (c.step === 0 ? 5 : 2), pan });
+    if (I > 0.38) for (const [st, iv, len] of ANTHEM_THEME[pb]!) if (st === c.step) out.push({ inst: "leadgtr", midi: keyRoot + iv, vel: 0.5 + 0.4 * I, dur: c.stepDur * len, pan: 0.1 });
+    // layer 3: crashes, tom fills, timpani
+    if (I > 0.62 && c.step === 0 && pb % 2 === 0) out.push({ inst: "drums_rock", midi: 49, vel: 0.6 + 0.3 * I, dur: 1.5, pan: -0.3 });
+    if (I > 0.62 && pb % 4 === 3 && c.step >= 12) out.push({ inst: "drums_rock", midi: [50, 48, 45, 45][c.step - 12]!, vel: 0.75, dur: 0.4 });
+    if (I > 0.62 && c.step === 0 && pb % 4 === 0) out.push({ inst: "timpani", midi: into(c.root, 38, 50), vel: 0.7, dur: 1 });
+    // layer 4 (peak): strings + choir lift, melody doubled an octave up in strings
+    if (I > 0.74 && c.step === 0) {
+      for (const t of c.chord) out.push({ inst: "strings", midi: into(t, 62, 81), vel: 0.4 + 0.3 * I, dur: c.barDur, pan: 0.3 });
+      for (const t of c.chord) out.push({ inst: "choir", midi: into(t, 60, 76), vel: 0.4 + 0.3 * I, dur: c.barDur, pan: -0.3 });
+    }
+    if (I > 0.74) for (const [st, iv, len] of ANTHEM_THEME[pb]!) if (st === c.step) out.push({ inst: "strings", midi: keyRoot + iv + 12, vel: 0.35 + 0.3 * I, dur: c.stepDur * len, pan: -0.3 });
+    // build-up while accelerating hard: tom/snare roll into the next downbeat
+    if (c.mode === "surge") {
+      if (c.step % 2 === 0) out.push({ inst: "timpani", midi: into(c.root, 38, 50), vel: 0.35 + 0.03 * c.step, dur: 0.3 });
+      if (c.step >= 8) out.push({ inst: "drums_rock", midi: 38, vel: 0.35 + 0.04 * c.step, dur: 0.2 });
+    }
+    return out;
+  },
+};
+
+// Original dark rock-house motif (D minor, Phrygian b2 colour): [step, semitone from D, len16]
+const DARK_MOTIF: readonly (readonly [number, number, number])[][] = [
+  [[0, 0, 6], [6, 3, 2], [8, 1, 8]],
+  [[0, 0, 4], [4, -2, 4], [8, -5, 8]],
+  [[0, 7, 6], [6, 8, 2], [8, 7, 4], [12, 3, 4]],
+  [[0, 1, 8], [8, 0, 8]],
+];
+const darkrave: GenreDef = {
+  id: "darkrave",
+  name: "Midnight Dark Rave",
+  bpmMin: 120,
+  bpmMax: 130,
+  fixedBpm: 126,
+  key: 38, // D minor
+  progression: [
+    { deg: 0, tones: [0, 3, 7] },
+    { deg: 0, tones: [0, 3, 7] },
+    { deg: 8, tones: [0, 4, 7] },
+    { deg: 1, tones: [0, 4, 7] }, // Phrygian bII - the brooding turn
+  ],
+  mix: { drums_elec: 0.8, drums_rock: 0.5, synthbass: 0.7, ebass: 0.45, dguitar: 0.34, choir: 0.36, horn: 0.34, pad: 0.3, lead: 0.2, timpani: 0.55, contrabass: 0.4 },
+  reverb: 0.2,
+  accents: { crash: ["drums_rock", 49], fill: ["drums_rock", [48, 45, 45]], low: ["timpani", [38, 38]] },
+  pattern(c) {
+    const out: NoteSpec[] = [];
+    const I = c.intensity;
+    const quiet = calm(c.mode);
+    const pb = c.bar % 4;
+    const dRoot = 50; // motif anchored to key D
+    // eerie pad + low contrabass drone: always (the mystic bed)
+    if (c.step === 0) {
+      for (const t of c.chord) out.push({ inst: "pad", midi: into(t, 57, 72), vel: 0.4, dur: c.barDur * 1.02, pan: (t % 2) * 0.6 - 0.3 });
+      out.push({ inst: "contrabass", midi: into(c.root, 26, 38), vel: 0.5, dur: c.barDur });
+    }
+    if (quiet) {
+      if (on(c, 0)) out.push({ inst: "drums_elec", midi: 36, vel: 0.35, dur: 0.6 });
+      if (on(c, 0) && pb === 0) out.push({ inst: "timpani", midi: into(c.root, 38, 45), vel: 0.4, dur: 1.2 });
+      return out;
+    }
+    // layer 1: four-on-the-floor kick + sub bass offbeats
+    if (c.step % 4 === 0) out.push({ inst: "drums_elec", midi: 36, vel: 0.8 + 0.2 * I, dur: 0.5 });
+    if (I > 0.2 && c.step % 4 === 2) out.push({ inst: "synthbass", midi: into(c.root, 26, 38), vel: 0.7 + 0.3 * I, dur: c.stepDur * 1.8 });
+    if (I > 0.25 && c.step % 4 === 2) out.push({ inst: "drums_elec", midi: I > 0.55 ? 46 : 42, vel: 0.35 + 0.3 * I, dur: 0.3, pan: 0.25 });
+    // layer 2: distorted rolling bass 16ths + clap/rock snare + guitar stabs
+    if (I > 0.42 && c.step % 4 !== 0) out.push({ inst: "ebass", midi: into(c.root, 33, 45) + (c.step % 4 === 3 ? 12 : 0), vel: 0.5 + 0.3 * I, dur: c.stepDur * 0.9 });
+    if (I > 0.38 && on(c, 4, 12)) { out.push({ inst: "drums_elec", midi: 39, vel: 0.6 + 0.3 * I, dur: 0.4 }); out.push({ inst: "drums_rock", midi: 38, vel: 0.5 + 0.3 * I, dur: 0.4 }); }
+    const gr = into(c.root, 38, 50);
+    if (I > 0.48 && on(c, 0, 3, 6, 10)) for (const pan of [-0.7, 0.7]) for (const iv of [0, 7, 12]) out.push({ inst: "dguitar", midi: gr + iv, vel: 0.55 + 0.3 * I, dur: c.stepDur * 1.2, pan });
+    // layer 3: low choir + brass swells and the motif in horns, timpani on the 1
+    if (I > 0.6 && c.step === 0) {
+      for (const t of c.chord) out.push({ inst: "choir", midi: into(t, 50, 64), vel: 0.45 + 0.3 * I, dur: c.barDur, pan: -0.3 });
+      out.push({ inst: "timpani", midi: into(c.root, 38, 45), vel: 0.75, dur: 1.2 });
+    }
+    if (I > 0.6) for (const [st, iv, len] of DARK_MOTIF[pb]!) if (st === c.step) out.push({ inst: "horn", midi: into(dRoot + iv, 45, 62), vel: 0.5 + 0.4 * I, dur: c.stepDur * len, pan: 0.3 });
+    // layer 4 (peak): crash, open hats 16ths, high eerie lead doubling the motif
+    if (I > 0.74 && c.step === 0 && pb === 0) out.push({ inst: "drums_rock", midi: 49, vel: 0.7, dur: 1.5, pan: -0.3 });
+    if (I > 0.74 && c.step % 2 === 1) out.push({ inst: "drums_elec", midi: 42, vel: 0.25 + 0.2 * I, dur: 0.15, pan: -0.2 });
+    if (I > 0.74) for (const [st, iv, len] of DARK_MOTIF[pb]!) if (st === c.step) out.push({ inst: "lead", midi: into(dRoot + iv + 12, 62, 80), vel: 0.3 + 0.3 * I, dur: c.stepDur * len, pan: -0.4 });
+    // tension riser while accelerating hard: snare roll building + rising timpani
+    if (c.mode === "surge") {
+      out.push({ inst: "drums_rock", midi: 38, vel: 0.25 + 0.04 * c.step, dur: 0.15 });
+      if (c.step % 4 === 0) out.push({ inst: "timpani", midi: into(c.root, 38, 45) + (c.step >> 2), vel: 0.4 + 0.05 * c.step, dur: 0.4 });
+    }
+    return out;
+  },
+};
+
+export const GENRES: Record<GenreId, GenreDef> = { classic, house, rock, pop, metal, hiphop, country, waltz, electro, anthem, darkrave };
+for (const [id, l] of Object.entries(LAYERED)) {
+  const g = GENRES[id as GenreId];
+  g.fixedBpm = l!.bpm;
+  g.layers = l!.layers;
+  g.mix = { ...l!.mix, ...g.mix };
+}
 export const GENRE_IDS = Object.keys(GENRES) as GenreId[];
 /** Genres planned next - UI lists them as coming soon. */
 export const UPCOMING_GENRES: readonly string[] = [];

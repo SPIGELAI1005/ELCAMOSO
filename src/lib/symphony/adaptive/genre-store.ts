@@ -6,6 +6,9 @@ const listeners = new Set<(g: GenreChoice) => void>();
 
 /** Profile default when the listener leaves it on "auto". */
 export function defaultGenreForProfile(profileId: string): GenreId {
+  if (profileId === "deep-bass-pulse") return "electro";
+  if (profileId === "fusion-road-anthem") return "anthem";
+  if (profileId === "fusion-midnight-boost") return "darkrave";
   if (profileId.includes("rock")) return "rock";
   if (profileId.includes("neon")) return "house";
   if (profileId.includes("orchestra")) return "waltz";

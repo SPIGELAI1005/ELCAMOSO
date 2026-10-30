@@ -66,7 +66,7 @@ export function createTimeline(genreId: GenreId, startTime: number, seed = 1) {
             if (cruiseBars % 8 === 0) variation += 1;
           } else cruiseBars = 0;
         }
-        const bpm = Math.min(genre.bpmMax + 6, Math.max(genre.bpmMin - 2, state.bpm));
+        const bpm = genre.fixedBpm ?? Math.min(genre.bpmMax + 6, Math.max(genre.bpmMin - 2, state.bpm));
         const stepDur = 60 / bpm / 4;
         const chordDef = genre.progression[bar % genre.progression.length]!;
         const root = genre.key + chordDef.deg + transpose;
@@ -84,6 +84,7 @@ export function createTimeline(genreId: GenreId, startTime: number, seed = 1) {
           rand,
         };
         const notes = genre.pattern(ctx);
+        if (genre.layers && ctx.mode !== "brake" && ctx.mode !== "stopped") notes.push(...genre.layers(ctx));
 
         if (step === 0 && crashNextBar) {
           notes.push({ inst: genre.accents.crash[0], midi: genre.accents.crash[1], vel: 0.8, dur: 1.5 });

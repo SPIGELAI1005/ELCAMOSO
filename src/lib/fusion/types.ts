@@ -13,6 +13,8 @@ export interface FusionPreset {
   harmonicResonance: number;
   /** Soft sidechain only when true (avoid dance pumping by default). */
   softPump: boolean;
+  /** Music via the adaptive engine (genre from genre-store) instead of the Symphony pack synth. */
+  adaptiveMusic?: boolean;
 }
 
 /** User-saved Fusion blend stored in settings / Garage. */

@@ -53,6 +53,8 @@ import {
 import { isSymphonyProfileId } from "@/lib/symphony";
 import { AdaptiveMusicSynth } from "@/lib/symphony/adaptive";
 import { FusionSynth, isFusionProfileId } from "@/lib/fusion";
+/** Non-symphony profiles whose sound is the adaptive music engine (genre via genre-store). */
+const ADAPTIVE_MUSIC_PROFILE_IDS: ReadonlySet<string> = new Set(["deep-bass-pulse"]);
 import { isWorldProfileId, WorldSynth } from "@/lib/worlds";
 import { fetchSoundAssetManifest } from "@/lib/sound-assets/client-loader";
 import { getSharedSampleLoader } from "@/lib/sound/realism/samples";
@@ -1192,7 +1194,7 @@ export class SoundEngine {
     }
 
     // Drive the Music - adaptive arrangement: tempo, layers, accents and key follow the drive.
-    if (isSymphonyProfileId(profile.id) && strategyBuses) {
+    if ((isSymphonyProfileId(profile.id) || ADAPTIVE_MUSIC_PROFILE_IDS.has(profile.id)) && strategyBuses) {
       this.symphony = new AdaptiveMusicSynth();
       const ok = this.symphony.build(ctx, profile, strategyBuses, this.experienceSeed);
       if (ok) return;

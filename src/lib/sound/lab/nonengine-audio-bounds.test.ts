@@ -29,7 +29,7 @@ const NON_ENGINE_PROFILES = [
   "retro-arcade",
   "heartbeat",
   "rocket-car",
-  "deep-bass-pulse",
+  // deep-bass-pulse: now adaptive music (sample sprites, not offline-renderable here) - covered by symphony tests
   "thunder-beast",
   "laughing-machine",
   "farting-car",

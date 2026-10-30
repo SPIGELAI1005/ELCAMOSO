@@ -7,6 +7,7 @@ import { HybridCombustionSynth } from "@/lib/sound/realism/v2/hybrid-combustion-
 import { isCombustionRealismV2Profile } from "@/lib/sound/realism/v2/acoustic-engine";
 import { getProfile, type SoundProfile } from "@/lib/sound/profiles";
 import { getSymphonyPack, SymphonySynth } from "@/lib/symphony";
+import { AdaptiveMusicSynth } from "@/lib/symphony/adaptive";
 import { createHarmonicResonance, type HarmonicResonance } from "./harmonic-resonance";
 import {
   createFusionMixer,
@@ -75,7 +76,7 @@ export class FusionSynth {
   private mixer: FusionMixer | null = null;
   private resonance: HarmonicResonance | null = null;
   private machine: MachineBackend | null = null;
-  private symphony: SymphonySynth | null = null;
+  private symphony: SymphonySynth | AdaptiveMusicSynth | null = null;
   private mix = 0.6;
   private harmonicDepth = 0;
   private softPump = false;
@@ -121,9 +122,10 @@ export class FusionSynth {
       beds: this.mixer.atmosphere,
       profile: this.mixer.music,
     };
-    this.symphony = new SymphonySynth();
-    // Build against symphony profile id so pack resolves
-    const symphonyProfile = getProfile(preset.symphonyProfileId);
+    // Adaptive presets build against the fusion profile id so genre-store picks their genre
+    // (this replaces the pack music entirely - no double track).
+    this.symphony = preset.adaptiveMusic ? new AdaptiveMusicSynth() : new SymphonySynth();
+    const symphonyProfile = preset.adaptiveMusic ? profile : getProfile(preset.symphonyProfileId);
     const ok = this.symphony.build(ctx, symphonyProfile, musicBuses, seed);
     if (!ok) {
       this.dispose();
