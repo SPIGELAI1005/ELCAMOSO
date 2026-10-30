@@ -139,6 +139,11 @@ describe("adaptive timeline", () => {
     expect(resolveGenre("symphony-neon-run", "auto")).toBe("house");
     expect(resolveGenre("symphony-cinematic-rock", "auto")).toBe("rock");
     expect(resolveGenre("symphony-motion-orchestra", "rock")).toBe("rock");
+    // signature profiles ignore the global picker
+    expect(resolveGenre("deep-bass-pulse", "classic")).toBe("electro");
+    expect(resolveGenre("fusion-road-anthem", "house")).toBe("anthem");
+    expect(resolveGenre("fusion-midnight-boost", "waltz")).toBe("darkrave");
+    expect(resolveGenre("fusion-midnight-boost", "auto")).toBe("darkrave");
   });
 });
 
@@ -193,5 +198,19 @@ describe("orchestral options", () => {
     expect(GENRES.waltz.stepsPerBar).toBe(12);
     expect(resolveGenre("symphony-motion-orchestra", "auto")).toBe("waltz");
     expect(resolveGenre("symphony-motion-orchestra", "classic")).toBe("classic");
+  });
+});
+
+describe("genre choice migration", () => {
+  it("drops a stale saved genre once", async () => {
+    const { migrateGenreChoice } = await import("./genre-store");
+    const m = new Map<string, string>();
+    const st = { getItem: (k: string) => m.get(k) ?? null, setItem: (k: string, v: string) => void m.set(k, v), removeItem: (k: string) => void m.delete(k) } as unknown as Storage;
+    m.set("elcamoso.music.genre", "classic");
+    migrateGenreChoice(st);
+    expect(m.get("elcamoso.music.genre")).toBeUndefined();
+    m.set("elcamoso.music.genre", "rock");
+    migrateGenreChoice(st);
+    expect(m.get("elcamoso.music.genre")).toBe("rock");
   });
 });
