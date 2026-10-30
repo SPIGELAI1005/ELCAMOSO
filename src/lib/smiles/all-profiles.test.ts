@@ -3,7 +3,7 @@ import { computeDriveState, IDLE_STATE } from "@/lib/drive/model";
 import { resolveDrivetrain, withPersonalityTransmission } from "@/lib/drive/drivetrain-resolve";
 import type { JourneySmilesLive } from "@/lib/journey/types";
 import { SOUND_PROFILES } from "@/lib/sound/profiles";
-import { computeSmiles, defaultSmilesSettings } from "./smiles";
+import { computeSmiles, defaultSmilesSettings, enjoymentPoints, ENJOY_MAX } from "./smiles";
 
 /** Mirrors DriveSession.noteLiveSmiles over a scripted 10-minute spirited drive. */
 function simulate(profileId: string) {
@@ -51,6 +51,10 @@ function simulate(profileId: string) {
 }
 
 describe("Smiles are calculated for every sound profile", () => {
+  it("enjoyment is capped and calm long drives stay modest", () => {
+    expect(enjoymentPoints(500, 6 * 3_600_000)).toBe(ENJOY_MAX);
+    expect(enjoymentPoints(0.5, 600_000)).toBe(0);
+  });
   it("has profiles", () => expect(SOUND_PROFILES.length).toBeGreaterThan(20));
   for (const p of SOUND_PROFILES) {
     it(`${p.id} (${p.category}, ${p.drivetrainMode ?? "default"}) earns smiles`, () => {
@@ -75,21 +79,39 @@ describe("Smiles are calculated for every sound profile", () => {
       { profileId: "x", distanceM: 5000, durationMs: 500_000, trace: null, live },
       defaultSmilesSettings(),
     );
-    expect(r.score).toBe(60);
+    expect(r.score).toBe(60 + r.enjoyPts);
+    expect(r.enjoyPts).toBeGreaterThan(0);
   });
-  it("calm drive stays calm (no free smiles)", () => {
+  it("idle / GPS-jitter drive earns 0", () => {
     const live: JourneySmilesLive = {
       nearRedlineMs: 0,
       raceModeMs: 0,
       peakRpmFrac: 0,
       launches: 0,
       hardMs: 0,
-      movingMs: 400_000,
+      movingMs: 0,
     };
     const r = computeSmiles(
-      { profileId: "x", distanceM: 5000, durationMs: 500_000, trace: null, live },
+      { profileId: "x", distanceM: 3000, durationMs: 1_800_000, trace: null, live },
       defaultSmilesSettings(),
     );
     expect(r.score).toBe(0);
+    expect(enjoymentPoints(50, 60_000)).toBeLessThanOrEqual(enjoymentPoints(4.2, 60_000));
+  });
+  it("calm 20-minute drive earns a modest, non-zero score", () => {
+    const live: JourneySmilesLive = {
+      nearRedlineMs: 0,
+      raceModeMs: 0,
+      peakRpmFrac: 0,
+      launches: 0,
+      hardMs: 0,
+      movingMs: 1_150_000,
+    };
+    const r = computeSmiles(
+      { profileId: "x", distanceM: 15000, durationMs: 1_200_000, trace: null, live },
+      defaultSmilesSettings(),
+    );
+    expect(r.score).toBeGreaterThanOrEqual(10);
+    expect(r.score).toBeLessThanOrEqual(30);
   });
 });

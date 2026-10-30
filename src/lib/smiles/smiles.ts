@@ -119,6 +119,8 @@ export interface SmilesResult {
   raceModeSec: number | null;
   hardShare: number;
   score: number;
+  /** Base points for a real drive kept on this sound (0..ENJOY_MAX). */
+  enjoyPts: number;
   smilesPerMile: number;
   litres: number;
   lPer100: number;
@@ -162,7 +164,14 @@ export function computeSmiles(input: SmilesInput, settings: SmilesSettings): Smi
   const revPts =
     sm && hasRpm ? Math.max(motionPts, Math.min(30, (sm.nearRedlineMs / 60000) * 30)) : motionPts;
   const racePts = sm && hasRpm ? raceShare * 30 : Math.max(sm ? raceShare * 30 : 0, motionPts);
-  const score = Math.round(Math.min(100, launchPts + revPts + racePts));
+  // Enjoyment: keeping one sound on for a longer, real drive earns a modest base,
+  // even when calm. Grows with moving distance and moving time (diminishing
+  // returns), max ENJOY_MAX. Only counts real movement (> 4 km/h) and distance
+  // that is plausible for that moving time, so idling or GPS jitter earns 0.
+  const movingMs =
+    lv && lv.movingMs > 0 ? lv.movingMs : samples.length ? (moving / samples.length) * dur : 0;
+  const enjoyPts = enjoymentPoints(km, movingMs);
+  const score = Math.round(Math.min(100, enjoyPts + launchPts + revPts + racePts));
 
   const fuel = fuelFor(input.profileId, input.category);
   const hasFuel = true;
@@ -182,6 +191,7 @@ export function computeSmiles(input: SmilesInput, settings: SmilesSettings): Smi
     raceModeSec: sm ? sm.raceModeMs / 1000 : null,
     hardShare,
     score,
+    enjoyPts,
     smilesPerMile: km > 0.05 && Number.isFinite(score) ? score / (km / KM_PER_MI) : 0,
     litres,
     lPer100: km > 0 ? (litres / km) * 100 : 0,
@@ -288,4 +298,17 @@ export function tooShortVariant(seed: string): number {
   let h = 0;
   for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) >>> 0;
   return h % 3;
+}
+
+/** Cap for the calm-drive "enjoyment" base (out of 100). */
+export const ENJOY_MAX = 25;
+/** Fastest plausible average moving speed; distance beyond this is ignored (GPS jitter). */
+const ENJOY_MAX_KMH = 250;
+export function enjoymentPoints(km: number, movingMs: number): number {
+  const movingMin = Math.max(0, movingMs) / 60000;
+  if (movingMin < 1 || km < SMILES_MIN_DISTANCE_M / 1000) return 0;
+  const realKm = Math.min(km, (movingMin / 60) * ENJOY_MAX_KMH);
+  const d = 12 * (1 - Math.exp(-realKm / 15));
+  const t = 13 * (1 - Math.exp(-movingMin / 25));
+  return Math.round(Math.min(ENJOY_MAX, d + t));
 }
