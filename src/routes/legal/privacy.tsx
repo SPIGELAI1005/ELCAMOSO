@@ -62,6 +62,13 @@ function Privacy() {
           explicitly enable a cloud feature that requires them.
         </p>
         <p>
+          <strong className="font-normal text-foreground">Pair phone (optional).</strong> If you
+          pair a phone with the car screen, the phone sends its live location (including altitude,
+          speed and heading) and motion readings to the car through a temporary real-time channel
+          hosted by our infrastructure provider (Supabase). These readings are relayed only while
+          both pages are open and are not stored by us. The pairing code expires after inactivity.
+        </p>
+        <p>
           <strong className="font-normal text-foreground">ELCAMOSO Cloud (opt-in).</strong> If you
           enable Cloud sync, we process the Garage / settings document you choose to sync, tied to a
           local account identifier you create. Do not put secrets in free-text fields.

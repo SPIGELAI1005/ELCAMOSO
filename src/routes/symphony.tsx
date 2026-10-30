@@ -4,6 +4,7 @@ import { createSeoHeadFromPath } from "@/lib/seo";
 import { ExperienceCardList } from "@/components/experiences/ExperienceCardList";
 import { MotionIntentDiagram } from "@/components/experiences/MotionIntentDiagram";
 import { MusicGenrePicker } from "@/components/experiences/MusicGenrePicker";
+import { CarPhonePairPanel } from "@/components/phone-sync/CarPhonePairPanel";
 import { listSymphonyExperiences } from "@/lib/experiences";
 import { useSettings } from "@/lib/drive/useSettings";
 import { getSession } from "@/lib/drive/session";
@@ -235,6 +236,8 @@ function SymphonyPage() {
       </section>
 
       <MusicGenrePicker className="mt-12" />
+
+      <CarPhonePairPanel className="mt-8" />
 
       <section className="mt-16">
         <h2 className="text-2xl font-light">Experiences</h2>

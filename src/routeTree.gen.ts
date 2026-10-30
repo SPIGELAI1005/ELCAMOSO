@@ -67,6 +67,8 @@ import { Route as LegalPrivacyRouteImport } from './routes/legal/privacy'
 import { Route as LegalRewardsRouteImport } from './routes/legal/rewards'
 import { Route as LegalTermsRouteImport } from './routes/legal/terms'
 import { Route as PairTokenRouteImport } from './routes/pair_.$token'
+import { Route as SyncIndexRouteImport } from './routes/sync.index'
+import { Route as SyncCodeRouteImport } from './routes/sync.$code'
 import { Route as UpgradeTokenRouteImport } from './routes/upgrade.$token'
 import { Route as ApiAccountLinkDeviceRouteImport } from './routes/api/account/link-device'
 import { Route as ApiAccountPromoRouteImport } from './routes/api/account/promo'
@@ -376,6 +378,16 @@ const PairTokenRoute = PairTokenRouteImport.update({
   path: '/pair/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SyncIndexRoute = SyncIndexRouteImport.update({
+  id: '/sync/',
+  path: '/sync/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SyncCodeRoute = SyncCodeRouteImport.update({
+  id: '/sync/$code',
+  path: '/sync/$code',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const UpgradeTokenRoute = UpgradeTokenRouteImport.update({
   id: '/upgrade/$token',
   path: '/upgrade/$token',
@@ -526,8 +538,10 @@ export interface FileRoutesByFullPath {
   '/legal/rewards': typeof LegalRewardsRoute
   '/legal/terms': typeof LegalTermsRoute
   '/pair/$token': typeof PairTokenRoute
+  '/sync/$code': typeof SyncCodeRoute
   '/upgrade/$token': typeof UpgradeTokenRoute
   '/legal/': typeof LegalIndexRoute
+  '/sync/': typeof SyncIndexRoute
   '/api/account/link-device': typeof ApiAccountLinkDeviceRoute
   '/api/account/promo': typeof ApiAccountPromoRoute
   '/api/admin/analytics': typeof ApiAdminAnalyticsRoute
@@ -603,8 +617,10 @@ export interface FileRoutesByTo {
   '/legal/rewards': typeof LegalRewardsRoute
   '/legal/terms': typeof LegalTermsRoute
   '/pair/$token': typeof PairTokenRoute
+  '/sync/$code': typeof SyncCodeRoute
   '/upgrade/$token': typeof UpgradeTokenRoute
   '/legal': typeof LegalIndexRoute
+  '/sync': typeof SyncIndexRoute
   '/api/account/link-device': typeof ApiAccountLinkDeviceRoute
   '/api/account/promo': typeof ApiAccountPromoRoute
   '/api/admin/analytics': typeof ApiAdminAnalyticsRoute
@@ -682,8 +698,10 @@ export interface FileRoutesById {
   '/legal/rewards': typeof LegalRewardsRoute
   '/legal/terms': typeof LegalTermsRoute
   '/pair_/$token': typeof PairTokenRoute
+  '/sync/$code': typeof SyncCodeRoute
   '/upgrade/$token': typeof UpgradeTokenRoute
   '/legal/': typeof LegalIndexRoute
+  '/sync/': typeof SyncIndexRoute
   '/api/account/link-device': typeof ApiAccountLinkDeviceRoute
   '/api/account/promo': typeof ApiAccountPromoRoute
   '/api/admin/analytics': typeof ApiAdminAnalyticsRoute
@@ -762,8 +780,10 @@ export interface FileRouteTypes {
     | '/legal/rewards'
     | '/legal/terms'
     | '/pair/$token'
+    | '/sync/$code'
     | '/upgrade/$token'
     | '/legal/'
+    | '/sync/'
     | '/api/account/link-device'
     | '/api/account/promo'
     | '/api/admin/analytics'
@@ -839,8 +859,10 @@ export interface FileRouteTypes {
     | '/legal/rewards'
     | '/legal/terms'
     | '/pair/$token'
+    | '/sync/$code'
     | '/upgrade/$token'
     | '/legal'
+    | '/sync'
     | '/api/account/link-device'
     | '/api/account/promo'
     | '/api/admin/analytics'
@@ -917,8 +939,10 @@ export interface FileRouteTypes {
     | '/legal/rewards'
     | '/legal/terms'
     | '/pair_/$token'
+    | '/sync/$code'
     | '/upgrade/$token'
     | '/legal/'
+    | '/sync/'
     | '/api/account/link-device'
     | '/api/account/promo'
     | '/api/admin/analytics'
@@ -982,7 +1006,9 @@ export interface RootRouteChildren {
   DebugTachoRoute: typeof DebugTachoRoute
   JourneysJourneyIdRoute: typeof JourneysJourneyIdRoute
   PairTokenRoute: typeof PairTokenRoute
+  SyncCodeRoute: typeof SyncCodeRoute
   UpgradeTokenRoute: typeof UpgradeTokenRoute
+  SyncIndexRoute: typeof SyncIndexRoute
   ApiAccountLinkDeviceRoute: typeof ApiAccountLinkDeviceRoute
   ApiAccountPromoRoute: typeof ApiAccountPromoRoute
   ApiAdminAnalyticsRoute: typeof ApiAdminAnalyticsRoute
@@ -1408,6 +1434,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PairTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/sync/': {
+      id: '/sync/'
+      path: '/sync'
+      fullPath: '/sync/'
+      preLoaderRoute: typeof SyncIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sync/$code': {
+      id: '/sync/$code'
+      path: '/sync/$code'
+      fullPath: '/sync/$code'
+      preLoaderRoute: typeof SyncCodeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/upgrade/$token': {
       id: '/upgrade/$token'
       path: '/upgrade/$token'
@@ -1649,7 +1689,9 @@ const rootRouteChildren: RootRouteChildren = {
   DebugTachoRoute: DebugTachoRoute,
   JourneysJourneyIdRoute: JourneysJourneyIdRoute,
   PairTokenRoute: PairTokenRoute,
+  SyncCodeRoute: SyncCodeRoute,
   UpgradeTokenRoute: UpgradeTokenRoute,
+  SyncIndexRoute: SyncIndexRoute,
   ApiAccountLinkDeviceRoute: ApiAccountLinkDeviceRoute,
   ApiAccountPromoRoute: ApiAccountPromoRoute,
   ApiAdminAnalyticsRoute: ApiAdminAnalyticsRoute,

@@ -11,6 +11,7 @@ import type { DriveEnergyState, MovementState, SymphonyDiagnostics } from "../ty
 import { createConductor, cutoffForBrightness, type Conductor, type MusicMode } from "./conductor";
 import { GENRES, type GenreId } from "./genres";
 import { readGpsAltitude } from "./altitude-store";
+import { chooseAltitude, fuseAcceleration, readPhoneSample } from "@/lib/phone-sync/fusion";
 import { resolveGenre, subscribeGenreChoice } from "./genre-store";
 import { MUSIC_BANK, musicBankUrl, pickSample } from "./sample-bank";
 import { createTimeline, type NoteEvent, type Timeline } from "./timeline";
@@ -99,7 +100,12 @@ export class AdaptiveMusicSynth {
   private late = 0;
   private genreId: GenreId = "classic";
 
-  build(ctx: BaseAudioContext, profile: SoundProfile, buses: StrategyBuses, seed?: number): boolean {
+  build(
+    ctx: BaseAudioContext,
+    profile: SoundProfile,
+    buses: StrategyBuses,
+    seed?: number,
+  ): boolean {
     this.dispose();
     this.ctx = ctx;
     this.seed = seed ?? 1;
@@ -145,13 +151,22 @@ export class AdaptiveMusicSynth {
   update(state: DriveState, audioTime: number) {
     if (!this.ctx || !this.conductor || !this.timeline || !this.bus || !this.filter) return;
     const dt =
-      this.lastTs > 0 ? Math.min(0.25, Math.max(0.001, (state.timestamp - this.lastTs) / 1000)) : 1 / 60;
+      this.lastTs > 0
+        ? Math.min(0.25, Math.max(0.001, (state.timestamp - this.lastTs) / 1000))
+        : 1 / 60;
     this.lastTs = state.timestamp || this.lastTs;
     this.lastEnergy = this.energy?.update(state, dt) ?? null;
-    const alt = readGpsAltitude();
+    const phone = readPhoneSample();
+    const alt = chooseAltitude(
+      readGpsAltitude(),
+      phone ? { altitude: phone.altitude, accuracy: phone.altitudeAccuracy } : null,
+    );
     const cs = this.conductor.update({
       speed: state.speed,
-      acceleration: state.accelerationEstimated ?? state.acceleration,
+      acceleration: fuseAcceleration(
+        state.accelerationEstimated ?? state.acceleration,
+        phone?.longAccel,
+      ),
       throttle: state.throttle,
       regen: state.regen,
       gear: state.powertrain?.gear ?? state.gear,
@@ -222,7 +237,9 @@ export class AdaptiveMusicSynth {
     if (!this.lastEnergy && !this.energy) return null;
     const base = this.lastEnergy ?? this.energy!.snapshot();
     const cs = this.conductor?.snapshot();
-    return cs ? { ...base, energy: cs.intensity, movementState: movementFor(cs.mode, cs.intensity) } : base;
+    return cs
+      ? { ...base, energy: cs.intensity, movementState: movementFor(cs.mode, cs.intensity) }
+      : base;
   }
 
   getDiagnosticsAt(_audioTime: number): SymphonyDiagnostics {
