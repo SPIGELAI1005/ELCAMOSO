@@ -10,6 +10,7 @@ import {
 import { useSettings } from "@/lib/drive/useSettings";
 import { getProfile } from "@/lib/sound/profiles";
 import { cn } from "@/lib/utils";
+import { LockGlyph } from "@/components/premium/PremiumBadge";
 
 /** Explains that a picked Drive+ sound is replaced by the free V10 for now. */
 export function LockedSoundNotice({ className }: { className?: string }) {
@@ -30,7 +31,7 @@ export function LockedSoundNotice({ className }: { className?: string }) {
       )}
     >
       <p>
-        <span aria-hidden>🔒 </span>
+        <LockGlyph className="mr-1.5 inline-block align-[-1px]" />
         <strong className="font-medium">{name}</strong> is part of Drive+. You&apos;re hearing the
         free V10 for now.
       </p>
