@@ -11,7 +11,17 @@ import {
 import { cn } from "@/lib/utils";
 
 /** Genre selector for Drive the Music. Switches on the next bar, mid-drive. */
-export function MusicGenrePicker({ className }: { className?: string }) {
+export function MusicGenrePicker({
+  className,
+  onPick,
+  onStart,
+}: {
+  className?: string;
+  /** Called after a genre is chosen (e.g. to open the Drive page with it). */
+  onPick?: (choice: GenreChoice) => void;
+  /** Shows a "Drive with this music" button when provided. */
+  onStart?: () => void;
+}) {
   const [choice, setChoice] = useState<GenreChoice>("auto");
   useEffect(() => {
     setChoice(getGenreChoice());
@@ -31,7 +41,10 @@ export function MusicGenrePicker({ className }: { className?: string }) {
             type="button"
             role="radio"
             aria-checked={choice === o.id}
-            onClick={() => setGenreChoice(o.id)}
+            onClick={() => {
+              setGenreChoice(o.id);
+              onPick?.(o.id);
+            }}
             className={cn(
               "h-11 rounded-full border px-5 text-[11px] tracking-[0.18em] uppercase",
               choice === o.id ? "border-foreground bg-foreground text-background" : "border-border",
@@ -49,6 +62,15 @@ export function MusicGenrePicker({ className }: { className?: string }) {
           </span>
         ))}
       </div>
+      {onStart ? (
+        <button
+          type="button"
+          onClick={onStart}
+          className="mt-4 h-11 rounded-full bg-foreground px-6 text-[11px] tracking-[0.18em] text-background uppercase"
+        >
+          Drive with this music
+        </button>
+      ) : null}
       <p className="mt-3 text-xs text-muted-foreground">
         Tempo follows your speed. Accelerate hard for a build, brake for a softer passage, hold a
         steady speed for the groove. Climbs lift the key when your browser shares altitude.

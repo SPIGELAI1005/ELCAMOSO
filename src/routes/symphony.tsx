@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { createSeoHeadFromPath } from "@/lib/seo";
 import { ExperienceCardList } from "@/components/experiences/ExperienceCardList";
 import { MotionIntentDiagram } from "@/components/experiences/MotionIntentDiagram";
@@ -32,6 +32,14 @@ export const Route = createFileRoute("/symphony")({
 function SymphonyPage() {
   const { settings, update } = useSettings();
   const items = listSymphonyExperiences();
+  const navigate = useNavigate();
+  const driveWithMusic = (profileId?: string) => {
+    const current = settings.profileId ?? "";
+    const next =
+      profileId ?? (current.startsWith("symphony-") ? current : "symphony-motion-orchestra");
+    update({ profileId: next });
+    void navigate({ to: "/drive" });
+  };
   const [listening, setListening] = useState(false);
   const [energy, setEnergy] = useState(0);
   const [movement, setMovement] = useState("stopped");
@@ -235,7 +243,11 @@ function SymphonyPage() {
         )}
       </section>
 
-      <MusicGenrePicker className="mt-12" />
+      <MusicGenrePicker
+        className="mt-12"
+        onPick={() => driveWithMusic()}
+        onStart={() => driveWithMusic()}
+      />
 
       <CarPhonePairPanel className="mt-8" />
 
@@ -249,7 +261,7 @@ function SymphonyPage() {
           className="mt-8"
           items={items}
           onSelect={(item) => {
-            if (item.capabilities.profileId) update({ profileId: item.capabilities.profileId });
+            if (item.capabilities.profileId) driveWithMusic(item.capabilities.profileId);
           }}
         />
       </section>
