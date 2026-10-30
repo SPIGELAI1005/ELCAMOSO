@@ -152,8 +152,16 @@ export function computeSmiles(input: SmilesInput, settings: SmilesSettings): Smi
   const raceShare = sm ? Math.min(1, sm.raceModeMs / dur) : 0;
 
   const launchPts = Math.min(40, launches * 6);
-  const revPts = sm ? Math.min(30, (sm.nearRedlineMs / 60000) * 30) : Math.min(30, hardShare * 200);
-  const racePts = sm ? raceShare * 30 : 0;
+  const motionPts = Math.min(30, hardShare * 200);
+  // Sounds without a rev counter (music, horses, carriages, spaceships, other
+  // "continuous" profiles) never report rpm, so rpm/race metrics stay 0 for them.
+  // Score those drives from motion instead, so every sound earns smiles alike.
+  const hasRpm = Boolean(sm && (sm.peakRpmFrac ?? 0) > 0);
+  // Some rpm profiles (e.g. high-revving EV hypercars) rarely reach 85 % of redline,
+  // so spirited motion always counts as a floor.
+  const revPts =
+    sm && hasRpm ? Math.max(motionPts, Math.min(30, (sm.nearRedlineMs / 60000) * 30)) : motionPts;
+  const racePts = sm && hasRpm ? raceShare * 30 : Math.max(sm ? raceShare * 30 : 0, motionPts);
   const score = Math.round(Math.min(100, launchPts + revPts + racePts));
 
   const fuel = fuelFor(input.profileId, input.category);
@@ -174,7 +182,7 @@ export function computeSmiles(input: SmilesInput, settings: SmilesSettings): Smi
     raceModeSec: sm ? sm.raceModeMs / 1000 : null,
     hardShare,
     score,
-    smilesPerMile: km > 0.05 ? score / (km / KM_PER_MI) : 0,
+    smilesPerMile: km > 0.05 && Number.isFinite(score) ? score / (km / KM_PER_MI) : 0,
     litres,
     lPer100: km > 0 ? (litres / km) * 100 : 0,
     fuelCost,
