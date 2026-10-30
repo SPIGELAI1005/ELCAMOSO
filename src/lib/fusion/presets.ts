@@ -43,8 +43,8 @@ export const FUSION_PRESETS: readonly FusionPreset[] = [
   {
     id: "fusion-future-pulse",
     name: "Future Pulse",
-    tagline: "Synthetic Hyper EV · Neon Run",
-    description: "Synthetic drivetrain and neon arrangement as one future voice.",
+    tagline: "Electric Hyperdrive · Neon Run",
+    description: "Electric hyperdrive and neon arrangement as one future voice.",
     machineProfileId: "electric-hypercar",
     symphonyProfileId: "symphony-neon-run",
     defaultMix: 0.65,

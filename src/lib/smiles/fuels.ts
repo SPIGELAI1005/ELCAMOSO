@@ -48,7 +48,7 @@ export const FUELS: Record<string, FuelSpec> = {
   "american-muscle-v8": petrol(15, "That V8 would have gulped {a}. Murica."),
   "gt-v8": petrol(13, "The GT would have sipped — well, gulped — {a}."),
   "racing-v10": petrol(18, "{a} of high-octane screaming."),
-  "f1-v10": petrol(40, "An F1 V10 drinks {a} for breakfast."),
+  "f1-v10": petrol(40, "A Grand Prix V10 drinks {a} for breakfast."),
   "race-car": petrol(25, "{a} gone, plus a fresh set of tyres."),
   "rally-car": petrol(14, "{a} — and half a gravel road on the windscreen."),
   "flat-six-sport": petrol(12, "{a} for the boxer. Worth every drop."),

@@ -872,7 +872,7 @@ export const RECORDED_LOOP_CREDITS: RecordedCredit[] = [
     licence: "CC0 1.0",
     licenceUrl: "https://creativecommons.org/publicdomain/zero/1.0/",
     sourceUrl: "https://freesound.org/s/150337/",
-    usedIn: "F1 (high-rpm pass-by texture)",
+    usedIn: "Grand Prix Mood (high-rpm pass-by texture)",
     attribution:
       "F1practice3MelbGP2012DR066 by Ears68 (Freesound #150337), CC0 1.0, edited (short pass-by clips, filtered, granular).",
   },

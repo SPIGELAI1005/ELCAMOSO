@@ -125,11 +125,11 @@ export const EXPANSION_PROFILES: SoundProfile[] = [
   },
   {
     id: "electric-hypercar",
-    name: "Synthetic Hyper EV",
+    name: "Electric Hyperdrive",
     category: "Future",
-    traits: ["Instant", "Intense", "Synthetic"],
+    traits: ["Instant", "Intense", "Electric"],
     description:
-      "Multi-speed synthetic hyper EV: instant torque, fast shifts and high-RPM motor whine.",
+      "Multi-speed electric hyperdrive: instant torque, fast shifts and high-RPM motor whine.",
     drivetrainMode: "virtual-transmission",
     motionModel: "virtual-transmission",
     sourceMode: "procedural",
@@ -749,11 +749,11 @@ export const EXPANSION_PROFILES: SoundProfile[] = [
   },
   {
     id: "f1-v10",
-    name: "F1 V10",
+    name: "Grand Prix Mood",
     category: "Motorsport",
     traits: ["Screaming", "High-Rev", "Onboard"],
     description:
-      "A 2000s Formula 1 V10 heard from the cockpit: idle at 4,500 rpm, a 19,000 rpm intake howl, seven close gears and seamless 35 ms upshifts with a gearbox thump.",
+      "A 2000s-style open-wheel V10 heard from the cockpit: idle at 4,500 rpm, a 19,000 rpm intake howl, seven close gears and seamless 35 ms upshifts with a gearbox thump.",
     drivetrainMode: "virtual-transmission",
     motionModel: "virtual-transmission",
     sourceMode: "procedural",

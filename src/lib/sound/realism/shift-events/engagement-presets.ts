@@ -85,7 +85,7 @@ const BY_PROFILE: Record<string, ShiftEngagementPreset> = {
     shiftDecayMs: 45,
     torqueCutEnvelope: 0.2,
     allowLiftOffPop: false,
-    notes: "Seamless-shift F1 gearbox: short, firm thump; no long cut.",
+    notes: "Seamless-shift Grand Prix gearbox: short, firm thump; no long cut.",
   },
   "motorcycle-superbike": {
     ...SPORTS,

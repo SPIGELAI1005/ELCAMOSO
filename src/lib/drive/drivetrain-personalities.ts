@@ -736,7 +736,7 @@ const BASE_DRIVETRAIN_PERSONALITIES: DrivetrainPersonalityConfig[] = [
   },
   {
     id: "synthetic-ev",
-    name: "Synthetic Hyper EV",
+    name: "Electric Hyperdrive",
     engine: { idleRpm: 0, redlineRpm: 12000 },
     transmission: {
       gearRatios: [4.2, 2.8, 1.9, 1.35, 1.0, 0.82],
@@ -1215,7 +1215,7 @@ const HIGH_REV_V10_PERSONALITY: DrivetrainPersonalityConfig = {
 const F1_V10_PERSONALITY: DrivetrainPersonalityConfig = {
   ...HIGH_REV_V10_PERSONALITY,
   id: "f1-v10",
-  name: "F1 V10",
+  name: "Grand Prix Mood",
   engine: {
     idleRpm: 4500,
     redlineRpm: 19000,

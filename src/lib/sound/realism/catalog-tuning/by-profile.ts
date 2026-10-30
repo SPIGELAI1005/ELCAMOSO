@@ -258,7 +258,7 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
   "f1-v10": {
     profileId: "f1-v10",
     family: familyForProfile("f1-v10"),
-    intendedIdentity: "2000s F1 V10 onboard — 2.5-order intake howl over the firing order, 19k rpm",
+    intendedIdentity: "Grand Prix Mood onboard V10 — 2.5-order intake howl over the firing order, 19k rpm",
     previousSource: "New profile (V2 hybrid + F1_V10 archetype)",
     diagnosedProblem: "New profile",
     chosenRenderer: "realism-v2-hybrid",
@@ -275,7 +275,7 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
     humanListeningStatus: "unverified",
     deviceStatus: "unverified",
     outcome: "combustion-tuned",
-    audibleRationale: "Onboard F1 howl (2.5 order) vs the road Racing V10's firing-order scream",
+    audibleRationale: "Onboard Grand Prix howl (2.5 order) vs the road Racing V10's firing-order scream",
     designFamilyHint: "high-rev-race",
     acousticOverlay: {
       bodyBrightness: 0.72,

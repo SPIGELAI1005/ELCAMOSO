@@ -92,7 +92,7 @@ describe("drivetrain personalities", () => {
     expect(resolved.powertrain.transmission.gears).toBe(7);
   });
 
-  it("maps Synthetic Hyper EV sound profile to synthetic-ev personality", () => {
+  it("maps Electric Hyperdrive sound profile to synthetic-ev personality", () => {
     const resolved = resolveDrivetrain(getProfile("electric-hypercar"));
     expect(resolved.personalityId).toBe("synthetic-ev");
     expect(getProfile("electric-hypercar").drivetrainMode).toBe("virtual-transmission");
