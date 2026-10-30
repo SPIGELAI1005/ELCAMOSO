@@ -134,9 +134,51 @@ describe("adaptive timeline", () => {
   });
 
   it("resolves profile default genres", () => {
-    expect(resolveGenre("symphony-motion-orchestra", "auto")).toBe("classic");
+    expect(resolveGenre("symphony-motion-orchestra", "auto")).toBe("waltz");
+    expect(resolveGenre("symphony-neon-run", "auto")).toBe("house");
     expect(resolveGenre("symphony-neon-run", "auto")).toBe("house");
     expect(resolveGenre("symphony-cinematic-rock", "auto")).toBe("rock");
     expect(resolveGenre("symphony-motion-orchestra", "rock")).toBe("rock");
+  });
+});
+
+describe("all genres", () => {
+  it("only use instruments in the sample bank and mix, and react to intensity", async () => {
+    const { GENRES, GENRE_IDS } = await import("./genres");
+    const { MUSIC_BANK } = await import("./sample-bank-data");
+    expect(GENRE_IDS).toEqual(expect.arrayContaining(["pop", "metal", "hiphop", "country"]));
+    for (const id of GENRE_IDS) {
+      const g = GENRES[id];
+      const count = (I: number, mode: "cruise" | "brake") => {
+        let n = 0;
+        for (let bar = 0; bar < 4; bar++)
+          for (let step = 0; step < 16; step++) {
+            const p = g.progression[bar % 4]!;
+            const root = g.key + p.deg;
+            const notes = g.pattern({ step, bar, chord: p.tones.map((t) => root + t), root, intensity: I, mode, variation: bar, stepDur: 0.12, barDur: 1.9, rand: Math.random });
+            for (const x of notes) {
+              expect(MUSIC_BANK[x.inst], `${id}:${x.inst}`).toBeDefined();
+              expect(g.mix[x.inst], `${id} mix ${x.inst}`).toBeDefined();
+            }
+            n += notes.length;
+          }
+        return n;
+      };
+      expect(count(0.9, "cruise")).toBeGreaterThan(count(0.15, "brake"));
+      for (const inst of [g.accents.crash[0], g.accents.fill[0], g.accents.low[0]]) expect(MUSIC_BANK[inst]).toBeDefined();
+    }
+  });
+});
+
+describe("waltz meter", () => {
+  it("runs 12 sixteenths per bar (3/4) with oom on 1 and pah-pah on 2 and 3", async () => {
+    const { createTimeline } = await import("./timeline");
+    const tl = createTimeline("waltz", 0, 1);
+    const st = { bpm: 120, intensity: 0.6, brightness: 0.6, mode: "cruise", transpose: 0 } as never;
+    const ev = tl.scheduleUntil(12 * (60 / 120 / 4) * 2 - 0.001, st);
+    expect(tl.bar).toBe(1);
+    const bass = ev.filter((e) => e.inst === "contrabass").map((e) => Math.round(e.time / (60 / 120 / 4)));
+    expect(bass).toEqual([0, 12]);
+    expect(ev.some((e) => e.inst === "viola")).toBe(true);
   });
 });

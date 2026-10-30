@@ -1,4 +1,4 @@
-const CACHE = "elcamoso-shell-v20";
+const CACHE = "elcamoso-shell-v21";
 // Bump CACHE whenever a file under /sample-packs/recorded/ is replaced at the same URL.
 const WORKLET = "/audio/combustion-processor.js";
 // Keep in sync with COMBUSTION_WORKLET_VERSION (checked by src/lib/sound/sw-precache.test.ts).
@@ -13,6 +13,21 @@ const AUDIO = [
   "/sample-packs/recorded/beds-v1/ufo.m4a",
   "/sample-packs/recorded/beds-v2/carriage.m4a",
   "/sample-packs/recorded/debris-v1/grains.wav",
+  "/sample-packs/recorded/music-v1/agtr.m4a",
+  "/sample-packs/recorded/music-v1/banjo.m4a",
+  "/sample-packs/recorded/music-v1/choir.m4a",
+  "/sample-packs/recorded/music-v1/dguitar.m4a",
+  "/sample-packs/recorded/music-v1/drums_std.m4a",
+  "/sample-packs/recorded/music-v1/pbass.m4a",
+  "/sample-packs/recorded/music-v1/square.m4a",
+  "/sample-packs/recorded/music-v1/viola.m4a",
+  "/sample-packs/recorded/music-v1/contrabass.m4a",
+  "/sample-packs/recorded/music-v1/flute.m4a",
+  "/sample-packs/recorded/music-v1/oboe.m4a",
+  "/sample-packs/recorded/music-v1/clarinet.m4a",
+  "/sample-packs/recorded/music-v1/harp.m4a",
+  "/sample-packs/recorded/music-v1/glock.m4a",
+  "/sample-packs/recorded/music-v1/polysynth.m4a",
   "/sample-packs/recorded/music-v1/cello.m4a",
   "/sample-packs/recorded/music-v1/drums_elec.m4a",
   "/sample-packs/recorded/music-v1/drums_orch.m4a",

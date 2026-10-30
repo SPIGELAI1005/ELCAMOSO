@@ -10,6 +10,7 @@ import { createDriveEnergyTracker, type DriveEnergyTracker } from "../drive-ener
 import type { DriveEnergyState, MovementState, SymphonyDiagnostics } from "../types";
 import { createConductor, cutoffForBrightness, type Conductor, type MusicMode } from "./conductor";
 import { GENRES, type GenreId } from "./genres";
+import { hallImpulseData } from "./hall-impulse";
 import { readGpsAltitude } from "./altitude-store";
 import { chooseAltitude, fuseAcceleration, readPhoneSample } from "@/lib/phone-sync/fusion";
 import { resolveGenre, subscribeGenreChoice } from "./genre-store";
@@ -93,6 +94,8 @@ export class AdaptiveMusicSynth {
   private bus: GainNode | null = null;
   private filter: BiquadFilterNode | null = null;
   private shelf: BiquadFilterNode | null = null;
+  private verbSend: GainNode | null = null;
+  private verb: ConvolverNode | null = null;
   private voices: { src: AudioBufferSourceNode; end: number }[] = [];
   private unsub: (() => void) | null = null;
   private lastTs = 0;
@@ -129,6 +132,19 @@ export class AdaptiveMusicSynth {
     this.bus.connect(this.filter);
     this.filter.connect(this.shelf);
     this.shelf.connect(buses.body);
+    // concert-hall reverb send: impulse generated on the device (decaying filtered noise)
+    try {
+      this.verb = ctx.createConvolver();
+      this.verb.buffer = hallImpulse(ctx, 2.8);
+      this.verbSend = ctx.createGain();
+      this.verbSend.gain.value = g.reverb ?? 0.12;
+      this.shelf.connect(this.verbSend);
+      this.verbSend.connect(this.verb);
+      this.verb.connect(buses.body);
+    } catch {
+      this.verb = null;
+      this.verbSend = null;
+    }
 
     this.unsub = subscribeGenreChoice(() => {
       const next = resolveGenre(profile.id);
@@ -137,6 +153,7 @@ export class AdaptiveMusicSynth {
       this.timeline?.setGenre(next);
       const nd = GENRES[next];
       this.conductor?.setRange({ bpmMin: nd.bpmMin, bpmMax: nd.bpmMax });
+      this.setReverb(nd.reverb);
     });
     void preloadMusicBank(ctx);
     return true;
@@ -146,6 +163,16 @@ export class AdaptiveMusicSynth {
     this.genreId = id;
     this.timeline?.setGenre(id);
     this.conductor?.setRange({ bpmMin: GENRES[id].bpmMin, bpmMax: GENRES[id].bpmMax });
+    this.setReverb(GENRES[id].reverb);
+  }
+
+  private setReverb(amount = 0.12) {
+    if (!this.ctx || !this.verbSend) return;
+    try {
+      this.verbSend.gain.setTargetAtTime(amount, this.ctx.currentTime, 0.8);
+    } catch {
+      /* */
+    }
   }
 
   update(state: DriveState, audioTime: number) {
@@ -248,8 +275,8 @@ export class AdaptiveMusicSynth {
     return {
       packId: `adaptive-${this.genreId}`,
       bpm: cs?.bpm ?? 0,
-      bar: Math.floor(steps / 16),
-      beat: Math.floor((steps % 16) / 4),
+      bar: this.timeline?.bar ?? Math.floor(steps / 16),
+      beat: Math.floor((steps % (GENRES[this.genreId].stepsPerBar ?? 16)) / 4),
       energy: cs?.intensity ?? 0,
       movementState: cs ? movementFor(cs.mode, cs.intensity) : "stopped",
       activeStems: [],
@@ -281,7 +308,7 @@ export class AdaptiveMusicSynth {
       }
     }
     this.voices = [];
-    for (const n of [this.bus, this.filter, this.shelf]) {
+    for (const n of [this.bus, this.filter, this.shelf, this.verbSend, this.verb]) {
       try {
         n?.disconnect();
       } catch {
@@ -289,6 +316,8 @@ export class AdaptiveMusicSynth {
       }
     }
     this.bus = this.filter = this.shelf = null;
+    this.verbSend = null;
+    this.verb = null;
     this.conductor = null;
     this.timeline = null;
     this.energy = null;
@@ -296,4 +325,12 @@ export class AdaptiveMusicSynth {
     this.ctx = null;
     this.lastTs = 0;
   }
+}
+
+function hallImpulse(ctx: BaseAudioContext, seconds: number): AudioBuffer {
+  const [l, r] = hallImpulseData(ctx.sampleRate, seconds);
+  const buf = ctx.createBuffer(2, l.length, ctx.sampleRate);
+  buf.getChannelData(0).set(l);
+  buf.getChannelData(1).set(r);
+  return buf;
 }

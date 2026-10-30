@@ -8,6 +8,7 @@ const listeners = new Set<(g: GenreChoice) => void>();
 export function defaultGenreForProfile(profileId: string): GenreId {
   if (profileId.includes("rock")) return "rock";
   if (profileId.includes("neon")) return "house";
+  if (profileId.includes("orchestra")) return "waltz";
   return "classic";
 }
 

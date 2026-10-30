@@ -24,6 +24,8 @@ export function createTimeline(genreId: GenreId, startTime: number, seed = 1) {
   let pendingGenre: GenreDef | null = null;
   let nextStepTime = startTime;
   let stepCount = 0;
+  let stepInBar = 0;
+  let barCount = 0;
   let transpose = 0;
   let variation = 0;
   let cruiseBars = 0;
@@ -46,8 +48,13 @@ export function createTimeline(genreId: GenreId, startTime: number, seed = 1) {
       const out: NoteEvent[] = [];
       // never schedule in the past after a stall: skip ahead on the grid
       while (nextStepTime < until) {
-        const step = stepCount % 16;
-        const bar = Math.floor(stepCount / 16);
+        const spb = genre.stepsPerBar ?? 16;
+        if (stepInBar >= spb) {
+          stepInBar = 0;
+          barCount += 1;
+        }
+        const step = stepInBar;
+        const bar = barCount;
         if (step === 0) {
           if (pendingGenre) {
             genre = pendingGenre;
@@ -73,7 +80,7 @@ export function createTimeline(genreId: GenreId, startTime: number, seed = 1) {
           mode: state.mode,
           variation,
           stepDur,
-          barDur: stepDur * 16,
+          barDur: stepDur * (genre.stepsPerBar ?? 16),
           rand,
         };
         const notes = genre.pattern(ctx);
@@ -101,6 +108,7 @@ export function createTimeline(genreId: GenreId, startTime: number, seed = 1) {
         }
         nextStepTime += stepDur;
         stepCount += 1;
+        stepInBar += 1;
       }
       return out;
     },
@@ -109,6 +117,9 @@ export function createTimeline(genreId: GenreId, startTime: number, seed = 1) {
     },
     get stepCount() {
       return stepCount;
+    },
+    get bar() {
+      return barCount;
     },
   };
 }
