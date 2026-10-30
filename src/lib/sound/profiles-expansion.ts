@@ -777,4 +777,116 @@ export const EXPANSION_PROFILES: SoundProfile[] = [
       shiftSmoothing: 0.04,
     },
   },
+  {
+    id: "traby",
+    name: "Traby",
+    category: "Heritage",
+    traits: ["Two-Stroke", "Buzzy", "Charming"],
+    description:
+      "A small two-cylinder two-stroke: ring-ding idle with the odd misfire, a nasal buzz that climbs through four short gears and a blue-smoke rattle on the overrun. Fully synthesised.",
+    drivetrainMode: "virtual-transmission",
+    motionModel: "virtual-transmission",
+    sourceMode: "procedural",
+    drivetrainPersonalityId: "v-twin-cruiser",
+    voice: {
+      baseFrequency: 30,
+      // two pulses per revolution, uneven so the pair never sounds perfectly even
+      harmonics: [1, 2, 2.97, 4.05, 6.1],
+      waveResponse: 1.05,
+      filterBase: 520,
+      filterRange: 3400,
+      filterQ: 1.6,
+      noise: 0.16,
+      detune: 9,
+      wave: "square",
+      coreLevel: 0.82,
+      rhythm: { kind: "putt", baseRate: 6, rateScale: 16, level: 0.22, tone: 210 },
+      textures: [
+        { kind: "sizzle", level: 0.12, tone: 3000, speedScale: 0.8 },
+        { kind: "rumble", level: 0.12, tone: 110, speedScale: 0.4 },
+      ],
+    },
+    transmission: {
+      // four short gears, 4,200 rpm ≈ 35/60/87/110 km/h
+      gearRatios: [120, 70, 48, 38],
+      idleRpm: 800,
+      redlineRpm: 4200,
+      shiftSmoothing: 0.3,
+    },
+  },
+  {
+    id: "ge-squared",
+    name: "Ge-Squared",
+    category: "Classic",
+    traits: ["Biturbo", "Off-Road", "Brutal"],
+    description:
+      "A boxy 4x4 with a biturbo V8: lumpy cross-plane idle, twin turbos spooling up under load, blow-off sighs between gears and crackles when you lift. Fully synthesised.",
+    drivetrainMode: "virtual-transmission",
+    motionModel: "virtual-transmission",
+    sourceMode: "procedural",
+    drivetrainPersonalityId: "turbo-inline-6",
+    voice: {
+      baseFrequency: 23,
+      // cross-plane V8: uneven pulse pattern gives the burble
+      harmonics: [1, 1.5, 2, 2.98, 4, 5.02],
+      waveResponse: 0.85,
+      filterBase: 200,
+      filterRange: 2600,
+      noise: 0.15,
+      detune: 13,
+      wave: "sawtooth",
+      lfoRate: 3.4,
+      lfoDepth: 6,
+      lfoTarget: "amp",
+      textures: [
+        { kind: "rumble", level: 0.34, tone: 90, speedScale: 0.55, surge: 0.5 },
+        // turbo whine sits high and follows the load
+        { kind: "sizzle", level: 0.09, tone: 5200, speedScale: 1 },
+        { kind: "wind", level: 0.14, tone: 1500, speedScale: 1 },
+      ],
+      signals: [
+        { kind: "whistle", everySeconds: 9, jitter: 4, level: 0.07, tone: 3200, speedLinked: true },
+      ],
+    },
+    transmission: {
+      gearRatios: [13.8, 8.6, 6.2, 4.8, 3.9, 3.3, 2.9],
+      idleRpm: 700,
+      redlineRpm: 6200,
+      shiftSmoothing: 0.18,
+    },
+  },
+  {
+    id: "police-patrol",
+    name: "Police Patrol",
+    category: "Motorsport",
+    traits: ["V10", "Siren", "Pursuit"],
+    description:
+      "A pursuit car with a high-revving V10 and a quiet siren wailing far in the background. On the Drive page, soft red and blue lights pulse faster as you speed up. Fully synthesised.",
+    drivetrainMode: "virtual-transmission",
+    motionModel: "virtual-transmission",
+    sourceMode: "procedural",
+    drivetrainPersonalityId: "high-rev-v10",
+    voice: {
+      baseFrequency: 33,
+      harmonics: [1, 2, 2.5, 3.01, 5, 7.03],
+      waveResponse: 1.12,
+      filterBase: 400,
+      filterRange: 4300,
+      noise: 0.1,
+      detune: 5,
+      wave: "sawtooth",
+      textures: [
+        { kind: "sizzle", level: 0.12, tone: 4000, speedScale: 1 },
+        { kind: "wind", level: 0.18, tone: 1700, speedScale: 1 },
+        // quiet two-tone wail, kept well under the engine
+        { kind: "siren", level: 0.05, tone: 950, speedScale: 0 },
+      ],
+    },
+    transmission: {
+      gearRatios: [101, 68, 50, 38, 31, 25],
+      idleRpm: 1000,
+      redlineRpm: 8500,
+      shiftSmoothing: 0.08,
+    },
+  },
 ];

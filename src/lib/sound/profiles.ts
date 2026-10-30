@@ -41,7 +41,7 @@ export type RhythmKind =
   "clack" | "bell" | "blat" | "chug" | "gallop" | "splash" | "creak" | "laugh" | "rotor" | "putt";
 
 /** Continuous atmospheric beds layered under the main voice. */
-export type TextureKind = "water" | "wind" | "gravel" | "steam" | "crowd" | "rumble" | "sizzle";
+export type TextureKind = "water" | "wind" | "gravel" | "steam" | "crowd" | "rumble" | "sizzle" | "siren";
 
 /** Occasional signature one-shots that give a profile personality. */
 export type SignalKind =

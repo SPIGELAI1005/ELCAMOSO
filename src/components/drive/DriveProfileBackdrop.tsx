@@ -4,7 +4,7 @@ import {
   profileHeroImageAlt,
   profileHeroImageSrc,
 } from "@/lib/sound/profile-hero-image";
-import { getGenreChoice, subscribeGenreChoice, type GenreChoice } from "@/lib/symphony/adaptive/genre-store";
+import { getGenreChoice, hasSignatureGenre, subscribeGenreChoice, type GenreChoice } from "@/lib/symphony/adaptive/genre-store";
 import { cn } from "@/lib/utils";
 
 interface DriveProfileBackdropProps {
@@ -23,7 +23,7 @@ export function DriveProfileBackdrop({ profileId, className }: DriveProfileBackd
   }, []);
   // Drive the Music profiles show the car of the genre picked on /symphony.
   const genreSrc =
-    profileId?.startsWith("symphony-") && choice !== "auto" ? genreHeroImageSrc(choice) : null;
+    profileId?.startsWith("symphony-") && !hasSignatureGenre(profileId) && choice !== "auto" ? genreHeroImageSrc(choice) : null;
   const src = genreSrc ?? profileHeroImageSrc(profileId);
   if (!src || !profileId) return null;
 

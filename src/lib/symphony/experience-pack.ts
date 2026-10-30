@@ -1,12 +1,14 @@
 import { CINEMATIC_ROCK_PACK } from "./packs/cinematic-rock";
 import { MOTION_ORCHESTRA_PACK } from "./packs/motion-orchestra";
 import { NEON_RUN_PACK } from "./packs/neon-run";
+import { LATINO_FIESTA_PACK } from "./packs/latino-fiesta";
 import type { SymphonyPack } from "./types";
 
 const PACKS: Record<string, SymphonyPack> = {
   [CINEMATIC_ROCK_PACK.id]: CINEMATIC_ROCK_PACK,
   [MOTION_ORCHESTRA_PACK.id]: MOTION_ORCHESTRA_PACK,
   [NEON_RUN_PACK.id]: NEON_RUN_PACK,
+  [LATINO_FIESTA_PACK.id]: LATINO_FIESTA_PACK,
   // Aliases for shorter ids
   "cinematic-rock": CINEMATIC_ROCK_PACK,
   "motion-orchestra": MOTION_ORCHESTRA_PACK,
@@ -18,7 +20,7 @@ export function getSymphonyPack(id: string): SymphonyPack | null {
 }
 
 export function listSymphonyPacks(): SymphonyPack[] {
-  return [CINEMATIC_ROCK_PACK, MOTION_ORCHESTRA_PACK, NEON_RUN_PACK];
+  return [CINEMATIC_ROCK_PACK, MOTION_ORCHESTRA_PACK, NEON_RUN_PACK, LATINO_FIESTA_PACK];
 }
 
 export function isSymphonyProfileId(id: string): boolean {

@@ -113,6 +113,8 @@ interface TextureNode {
   /** stereo placement phase so beds drift independently */
   phase: number;
   lfo?: { osc: OscillatorNode; gain: GainNode };
+  /** extra sources to stop on teardown (siren oscillator) */
+  extra?: AudioScheduledSourceNode[];
 }
 
 interface RhythmClock {
@@ -1385,13 +1387,35 @@ export class SoundEngine {
     const panner = ctx.createStereoPanner();
     const phase = this.textures.length * 1.7;
 
-    src.connect(filter);
+    const extra: AudioScheduledSourceNode[] = [];
+    if (spec.kind === "siren") {
+      // Quiet two-tone wail: a triangle tone swept slowly by a sine LFO (no noise).
+      filter.type = "lowpass";
+      filter.Q.value = 0.5;
+      filter.frequency.value = spec.tone * 3;
+      const tone = ctx.createOscillator();
+      tone.type = "triangle";
+      tone.frequency.value = spec.tone;
+      const sweep = ctx.createOscillator();
+      sweep.type = "sine";
+      sweep.frequency.value = 0.17;
+      const sweepDepth = ctx.createGain();
+      sweepDepth.gain.value = spec.tone * 0.36;
+      sweep.connect(sweepDepth);
+      sweepDepth.connect(tone.frequency);
+      tone.connect(filter);
+      tone.start();
+      sweep.start();
+      extra.push(tone, sweep);
+    } else {
+      src.connect(filter);
+    }
     filter.connect(gain);
     gain.connect(panner);
     panner.connect(beds);
     src.start();
 
-    const node: TextureNode = { spec, gain, filter, src, panner, phase };
+    const node: TextureNode = { spec, gain, filter, src, panner, phase, extra };
 
     // Slow surge so water and wind breathe instead of sitting flat.
     if (spec.surge) {
@@ -1692,6 +1716,7 @@ export class SoundEngine {
           ? state.regen * 0.2 * texture
           : 0;
       gain.gain.setTargetAtTime(Math.max(0.0001, amount + regenLift), t, 0.35);
+      if (spec.kind === "siren") return;
       filter.frequency.setTargetAtTime(spec.tone * (0.8 + motion * 0.6), t, 0.4);
       // Beds drift wider and faster with speed: motion you can hear moving.
       const sway = Math.sin(t * (0.18 + motion * 0.5) + phase) * spread;
@@ -2415,7 +2440,14 @@ export class SoundEngine {
       }
       this.lfo = null;
     }
-    this.textures.forEach(({ src, lfo }) => {
+    this.textures.forEach(({ src, lfo, extra }) => {
+      for (const x of extra ?? []) {
+        try {
+          x.stop();
+        } catch {
+          /* already stopped */
+        }
+      }
       try {
         src.stop();
       } catch {

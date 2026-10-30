@@ -68,4 +68,27 @@ export const SYMPHONY_SOUND_PROFILES: SoundProfile[] = [
       coreLevel: 0.5,
     },
   },
+  {
+    id: "symphony-latino-fiesta",
+    name: "Latino Fiesta",
+    category: "Musical",
+    traits: ["Reggaeton", "Percussive", "Warm"],
+    description:
+      "A 96 bpm reggaeton groove that never speeds up: pulling away brings in bass and dembow, cruising adds congas, guiro and nylon guitar, and real pace brings piano montuno, timbales and brass.",
+    drivetrainMode: "continuous",
+    motionModel: "ambient",
+    sourceMode: "hybrid",
+    access: "drive_plus",
+    voice: {
+      baseFrequency: 110,
+      harmonics: [1],
+      waveResponse: 0.65,
+      filterBase: 450,
+      filterRange: 1200,
+      noise: 0,
+      wave: "sine",
+      detune: 0,
+      coreLevel: 0.5,
+    },
+  },
 ];

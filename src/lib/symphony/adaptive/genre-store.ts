@@ -10,7 +10,13 @@ const SIGNATURE_GENRES: Readonly<Record<string, GenreId>> = {
   "deep-bass-pulse": "electro",
   "fusion-road-anthem": "anthem",
   "fusion-midnight-boost": "darkrave",
+  "symphony-latino-fiesta": "latino",
 };
+
+/** True when the profile always plays its own genre (picker ignored). */
+export function hasSignatureGenre(profileId: string): boolean {
+  return profileId in SIGNATURE_GENRES;
+}
 
 /** One-time: clear genre choices saved before music v2 so new defaults apply. */
 export function migrateGenreChoice(storage: Storage | undefined = globalThis.localStorage) {

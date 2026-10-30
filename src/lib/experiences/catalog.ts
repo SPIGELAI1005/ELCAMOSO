@@ -147,6 +147,22 @@ const SYMPHONY_SHELLS: readonly ExperienceDescriptor[] = [
     },
   },
   {
+    id: "symphony-latino-fiesta",
+    kind: "symphony",
+    name: "Latino Fiesta",
+    tagline: "Dembow · Congas · Nylon guitar · Brass",
+    description: "A 96 bpm reggaeton groove that adds layers as you speed up.",
+    artworkStyle: "score",
+    entitlement: "drive_plus",
+    previewMode: "playable",
+    capabilities: {
+      profileId: "symphony-latino-fiesta",
+      stems: ["Dembow", "Congas", "Nylon guitar", "Brass"],
+      selectableInDrive: true,
+      requiredEntitlement: "symphony_all",
+    },
+  },
+  {
     id: "symphony-piano-flow",
     kind: "symphony",
     name: "Piano Flow",

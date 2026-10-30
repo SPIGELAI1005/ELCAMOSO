@@ -37,6 +37,8 @@ import { useReducedMotion } from "@/lib/drive/useReducedMotion";
 import { resolveDrivetrain } from "@/lib/drive/drivetrain-resolve";
 import { useFeatureAccess } from "@/lib/entitlements/selectors";
 import { DriveProfileBackdrop } from "@/components/drive/DriveProfileBackdrop";
+import { PoliceLightShow } from "@/components/drive/PoliceLightShow";
+import { POLICE_LIGHT_PROFILE_ID } from "@/lib/drive/police-lights";
 import {
   getProfile,
   PROFILE_CATEGORIES,
@@ -485,6 +487,9 @@ export function DriveCockpit({
       data-testid="drive-cockpit"
     >
       <DriveProfileBackdrop profileId={profile.id} className="z-0" />
+      {profile.id === POLICE_LIGHT_PROFILE_ID ? (
+        <PoliceLightShow speed={driveState.speed} reducedMotion={reducedMotion} className="z-0" />
+      ) : null}
 
       <header className="drive-cockpit__header relative z-[1] grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 sm:gap-3">
         <ElcamosoLogo

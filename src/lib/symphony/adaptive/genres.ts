@@ -5,7 +5,7 @@
  */
 import type { MusicAccent, MusicMode } from "./conductor";
 
-export type GenreId = "classic" | "house" | "rock" | "pop" | "metal" | "hiphop" | "country" | "waltz" | "electro" | "anthem" | "darkrave";
+export type GenreId = "classic" | "house" | "rock" | "pop" | "metal" | "hiphop" | "country" | "waltz" | "electro" | "anthem" | "darkrave" | "latino";
 
 export interface NoteSpec {
   inst: string;
@@ -850,7 +850,81 @@ const darkrave: GenreDef = {
   },
 };
 
-export const GENRES: Record<GenreId, GenreDef> = { classic, house, rock, pop, metal, hiphop, country, waltz, electro, anthem, darkrave };
+// ---- Latino Fiesta: fixed 96 bpm reggaeton, speed stacks percussion, guitar, montuno and brass ----
+const LATINO_BRASS: readonly (readonly [number, number, number])[][] = [
+  [[0, 7, 2], [3, 7, 1], [6, 10, 2], [10, 12, 3]],
+  [[0, 12, 2], [4, 10, 1], [6, 7, 2], [12, 3, 3]],
+];
+/** Piano montuno (2-bar guajeo): [step, chord-tone index, octave up]. */
+const LATINO_MONTUNO: readonly (readonly [number, number, number])[][] = [
+  [[0, 0, 0], [2, 2, 0], [3, 1, 1], [5, 0, 1], [6, 2, 0], [8, 1, 0], [10, 2, 0], [11, 0, 1], [13, 1, 0], [14, 2, 0]],
+  [[0, 2, 0], [1, 0, 1], [3, 1, 0], [4, 2, 0], [6, 0, 1], [8, 2, 0], [9, 1, 1], [11, 2, 0], [12, 0, 1], [14, 1, 0]],
+];
+
+const latino: GenreDef = {
+  id: "latino",
+  name: "Latino Fiesta",
+  bpmMin: 96,
+  bpmMax: 96,
+  fixedBpm: 96,
+  key: 45, // A minor: Am - F - C - G
+  progression: [
+    { deg: 0, tones: [0, 3, 7] },
+    { deg: 8, tones: [0, 4, 7] },
+    { deg: 3, tones: [0, 4, 7] },
+    { deg: 10, tones: [0, 4, 7] },
+  ],
+  mix: { drums_latin: 0.85, synthbass: 0.55, pad: 0.24, nylon: 0.5, piano: 0.42, brass: 0.36 },
+  reverb: 0.1,
+  accents: { crash: ["drums_latin", 49], fill: ["drums_latin", [65, 65, 66, 66]], low: ["drums_latin", [64, 64, 36]] },
+  pattern(c) {
+    const out: NoteSpec[] = [];
+    const I = c.intensity;
+    const quiet = calm(c.mode);
+    // warm pad from the very start
+    if (c.step === 0) for (const t of c.chord) out.push({ inst: "pad", midi: into(t, 57, 76), vel: 0.3 + 0.15 * I, dur: c.barDur * 1.02, pan: (t % 2) * 0.4 - 0.2 });
+    if (quiet) {
+      // stopped / braking: soft nylon arpeggio on the beats only
+      if (c.step % 4 === 0) out.push({ inst: "nylon", midi: into(c.chord[(c.step / 4) % 3]!, 52, 71), vel: 0.35, dur: c.stepDur * 4, pan: 0.25 });
+      return out;
+    }
+    // shaker 16ths
+    if (I > 0.1) out.push({ inst: "drums_latin", midi: 70, vel: (c.step % 2 ? 0.18 : 0.28) + 0.15 * I, dur: 0.1, pan: 0.45 });
+    // dembow: kick on the beats, snare on 3, 6, 11, 14 + bass with the kick
+    if (I > 0.13) {
+      if (c.step % 4 === 0) out.push({ inst: "drums_latin", midi: 36, vel: 0.8 + 0.15 * I, dur: 0.4 });
+      if (on(c, 3, 6, 11, 14)) out.push({ inst: "drums_latin", midi: 38, vel: 0.5 + 0.3 * I, dur: 0.3, pan: -0.1 });
+      if (on(c, 0, 3, 8, 11)) out.push({ inst: "synthbass", midi: into(c.root, 33, 45), vel: 0.6 + 0.3 * I, dur: c.stepDur * (on(c, 0, 8) ? 2.6 : 1.4) });
+    }
+    // congas (tumbao), guiro, nylon guitar strum
+    if (I > 0.32) {
+      if (on(c, 6, 14)) out.push({ inst: "drums_latin", midi: 63, vel: 0.45 + 0.3 * I, dur: 0.3, pan: -0.4 });
+      if (on(c, 7, 15)) out.push({ inst: "drums_latin", midi: 64, vel: 0.4 + 0.3 * I, dur: 0.3, pan: -0.45 });
+      if (on(c, 2, 10)) out.push({ inst: "drums_latin", midi: 62, vel: 0.35 + 0.2 * I, dur: 0.2, pan: -0.35 });
+      if (on(c, 0, 8)) out.push({ inst: "drums_latin", midi: 74, vel: 0.3 + 0.2 * I, dur: 0.3, pan: 0.5 });
+      if (on(c, 4, 6, 12, 14)) out.push({ inst: "drums_latin", midi: 73, vel: 0.28 + 0.2 * I, dur: 0.15, pan: 0.5 });
+      if (on(c, 0, 3, 6, 8, 11, 14)) c.chord.forEach((t, i) => out.push({ inst: "nylon", midi: into(t, 52, 71), vel: 0.35 + 0.25 * I, dur: c.stepDur * 2.5, pan: 0.3, offset: i * 0.06 }));
+    }
+    // piano montuno + timbales
+    if (I > 0.57) {
+      for (const [st, ix, up] of LATINO_MONTUNO[c.bar % 2]!) if (st === c.step) out.push({ inst: "piano", midi: into(c.chord[ix]!, 64, 79) + up * 12, vel: 0.35 + 0.25 * I, dur: c.stepDur * 1.6, pan: -0.25 });
+      if (on(c, 0, 3, 6, 10, 12)) out.push({ inst: "drums_latin", midi: 75, vel: 0.35 + 0.2 * I, dur: 0.15, pan: 0.35 });
+      if (c.bar % 2 === 1 && on(c, 12, 13, 14, 15)) out.push({ inst: "drums_latin", midi: c.step < 14 ? 65 : 66, vel: 0.5 + 0.3 * I, dur: 0.25, pan: 0.2 });
+    }
+    // brass hits + cowbell at full pace
+    if (I > 0.77) {
+      if (c.step % 4 === 0) out.push({ inst: "drums_latin", midi: 56, vel: 0.38 + 0.2 * I, dur: 0.2, pan: 0.15 });
+      for (const [st, iv, len] of LATINO_BRASS[c.variation % 2]!) if (st === c.step) {
+        out.push({ inst: "brass", midi: into(c.root + iv, 60, 76), vel: 0.5 + 0.35 * I, dur: c.stepDur * len, pan: -0.1 });
+        out.push({ inst: "brass", midi: into(c.root + iv, 60, 76) - 5, vel: 0.4 + 0.3 * I, dur: c.stepDur * len, pan: 0.1 });
+      }
+      if (c.step === 0 && c.bar % 4 === 0) out.push({ inst: "drums_latin", midi: 49, vel: 0.55, dur: 1.4, pan: -0.3 });
+    }
+    return out;
+  },
+};
+
+export const GENRES: Record<GenreId, GenreDef> = { classic, house, rock, pop, metal, hiphop, country, waltz, electro, anthem, darkrave, latino };
 for (const [id, l] of Object.entries(LAYERED)) {
   const g = GENRES[id as GenreId];
   g.fixedBpm = l!.bpm;

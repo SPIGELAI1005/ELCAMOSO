@@ -185,7 +185,7 @@ function buildForProfile(id: string, ctx: BaseAudioContext, profile: ReturnType<
 
 describe("Prompt 07 all-profile finite / lifecycle", () => {
   it("builds, regime-updates, and disposes every public profile with finite params", () => {
-    expect(PUBLIC_PROFILE_IDS).toHaveLength(60);
+    expect(PUBLIC_PROFILE_IDS).toHaveLength(64);
     const failures: string[] = [];
 
     for (const id of PUBLIC_PROFILE_IDS) {
