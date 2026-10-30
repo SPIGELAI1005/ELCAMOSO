@@ -182,3 +182,16 @@ describe("waltz meter", () => {
     expect(ev.some((e) => e.inst === "viola")).toBe(true);
   });
 });
+
+describe("orchestral options", () => {
+  it("keeps the 4/4 Cinematic Orchestra selectable next to the Vienna Waltz", async () => {
+    const { GENRES, GENRE_IDS } = await import("./genres");
+    const { resolveGenre } = await import("./genre-store");
+    expect(GENRE_IDS).toEqual(expect.arrayContaining(["classic", "waltz"]));
+    expect(GENRES.classic.name).toBe("Cinematic Orchestra");
+    expect(GENRES.classic.stepsPerBar ?? 16).toBe(16);
+    expect(GENRES.waltz.stepsPerBar).toBe(12);
+    expect(resolveGenre("symphony-motion-orchestra", "auto")).toBe("waltz");
+    expect(resolveGenre("symphony-motion-orchestra", "classic")).toBe("classic");
+  });
+});

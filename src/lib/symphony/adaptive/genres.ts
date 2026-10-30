@@ -82,7 +82,7 @@ function motif(c: StepContext, lo: number, hi: number, density: number): number 
 
 const classic: GenreDef = {
   id: "classic",
-  name: "Classic",
+  name: "Cinematic Orchestra",
   bpmMin: 78,
   bpmMax: 132,
   key: 48, // C
