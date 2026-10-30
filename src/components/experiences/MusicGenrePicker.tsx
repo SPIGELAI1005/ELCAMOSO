@@ -10,6 +10,7 @@ import {
 } from "@/lib/symphony/adaptive";
 import { useFeatureAccess } from "@/lib/entitlements/selectors";
 import { cn } from "@/lib/utils";
+import { genreHeroImageSrc } from "@/lib/sound/profile-hero-image";
 
 /** Genre selector for Drive the Music. Switches on the next bar, mid-drive. */
 export function MusicGenrePicker({
@@ -53,6 +54,17 @@ export function MusicGenrePicker({
               choice === o.id ? "border-foreground bg-foreground text-background" : "border-border",
             )}
           >
+            {genreHeroImageSrc(o.id) ? (
+              <img
+                src={genreHeroImageSrc(o.id)!}
+                alt=""
+                aria-hidden="true"
+                loading="lazy"
+                decoding="async"
+                data-testid={`genre-image-${o.id}`}
+                className="-ml-3 mr-2 inline-block h-8 w-14 rounded-full object-cover align-middle"
+              />
+            ) : null}
             {o.label}
             {locked ? (
               <span aria-label="Drive+" className="ml-2 opacity-70">

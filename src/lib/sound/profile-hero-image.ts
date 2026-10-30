@@ -116,3 +116,23 @@ export const HERO_SOUND_SLIDESHOW_IDS = [
   "farting-car",
   "big-twin",
 ] as const;
+
+/** Music genres with a curated car still at `/hero/genres/{genre}.png`. */
+export const GENRE_IDS_WITH_HERO = [
+  "classic",
+  "house",
+  "rock",
+  "pop",
+  "metal",
+  "hiphop",
+  "country",
+  "waltz",
+] as const;
+
+const GENRE_HERO_SET = new Set<string>(GENRE_IDS_WITH_HERO);
+
+/** Resolve the car still for a music genre, or null when none is curated. */
+export function genreHeroImageSrc(genre: string | null | undefined): string | null {
+  if (!genre || !GENRE_HERO_SET.has(genre)) return null;
+  return `/hero/genres/${genre}.png`;
+}
