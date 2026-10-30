@@ -4,6 +4,7 @@ import { createSeoHeadFromPath } from "@/lib/seo";
 import { ExperienceCardList } from "@/components/experiences/ExperienceCardList";
 import { MotionIntentDiagram } from "@/components/experiences/MotionIntentDiagram";
 import { MusicGenrePicker } from "@/components/experiences/MusicGenrePicker";
+import { LockedSoundNotice } from "@/components/premium/LockedSoundNotice";
 import { CarPhonePairPanel } from "@/components/phone-sync/CarPhonePairPanel";
 import { listSymphonyExperiences } from "@/lib/experiences";
 import { useSettings } from "@/lib/drive/useSettings";
@@ -243,6 +244,7 @@ function SymphonyPage() {
         )}
       </section>
 
+      <LockedSoundNotice className="mt-12" />
       <MusicGenrePicker
         className="mt-12"
         onPick={() => driveWithMusic()}

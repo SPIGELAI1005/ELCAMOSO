@@ -7,6 +7,7 @@ import {
   resolveOfflineLeaseExpiryAction,
 } from "@/lib/entitlements/offline-lease";
 import { useFeatureAccess } from "@/lib/entitlements/selectors";
+import { noteLockedFallback } from "@/lib/entitlements/locked-fallback-notice";
 import { useSettings } from "@/lib/drive/useSettings";
 import { DEFAULT_SHIFT_FEEL } from "@/lib/drive/types-extra";
 import { useSessionStore } from "@/lib/store/session-store";
@@ -42,6 +43,7 @@ export function EntitlementEnforcer() {
 
     // Mid-drive fade_to_free applies immediately (quiet profile crossfade). Never defer.
     if (mustFadeToFree && settings.profileId !== FALLBACK_SOUND_PROFILE_ID) {
+      if (!access.canDriveWithProfile(settings.profileId)) noteLockedFallback(settings.profileId);
       update({ profileId: leaseAction.fallbackProfileId, shiftMapPreset: "race" });
     }
 
@@ -70,6 +72,7 @@ export function EntitlementEnforcer() {
       !access.canDriveWithProfile(settings.profileId) &&
       settings.profileId !== FALLBACK_SOUND_PROFILE_ID
     ) {
+      noteLockedFallback(settings.profileId);
       patch.profileId = FALLBACK_SOUND_PROFILE_ID;
       patch.shiftMapPreset = "race";
     }

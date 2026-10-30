@@ -8,6 +8,7 @@ import {
   subscribeGenreChoice,
   type GenreChoice,
 } from "@/lib/symphony/adaptive";
+import { useFeatureAccess } from "@/lib/entitlements/selectors";
 import { cn } from "@/lib/utils";
 
 /** Genre selector for Drive the Music. Switches on the next bar, mid-drive. */
@@ -23,6 +24,8 @@ export function MusicGenrePicker({
   onStart?: () => void;
 }) {
   const [choice, setChoice] = useState<GenreChoice>("auto");
+  const access = useFeatureAccess();
+  const locked = !access.canDriveWithProfile("symphony-motion-orchestra");
   useEffect(() => {
     setChoice(getGenreChoice());
     return subscribeGenreChoice(setChoice);
@@ -51,6 +54,11 @@ export function MusicGenrePicker({
             )}
           >
             {o.label}
+            {locked ? (
+              <span aria-label="Drive+" className="ml-2 opacity-70">
+                🔒 Drive+
+              </span>
+            ) : null}
           </button>
         ))}
         {UPCOMING_GENRES.map((g) => (
@@ -70,6 +78,12 @@ export function MusicGenrePicker({
         >
           Drive with this music
         </button>
+      ) : null}
+      {locked ? (
+        <p className="mt-3 text-xs text-muted-foreground" data-testid="genre-locked-note">
+          Music genres are part of Drive+. Without Drive+ you&apos;ll hear the free V10 on the Drive
+          page.
+        </p>
       ) : null}
       <p className="mt-3 text-xs text-muted-foreground">
         Tempo follows your speed. Accelerate hard for a build, brake for a softer passage, hold a

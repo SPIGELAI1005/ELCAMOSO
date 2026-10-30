@@ -34,6 +34,7 @@ import { getProfile, type SoundProfile } from "@/lib/sound/profiles";
 import { PostDriveExperience } from "@/components/journey/PostDriveExperience";
 import { track } from "@/lib/analytics/track";
 import { SmilesModal } from "@/components/smiles/SmilesModal";
+import { LockedSoundNotice } from "@/components/premium/LockedSoundNotice";
 import { addDriveMessage, deliverPendingDrive } from "@/lib/inbox/inbox";
 import type { JourneySummary } from "@/lib/journey/types";
 import { DriveModePicker } from "@/components/drive/DriveModePicker";
@@ -324,6 +325,7 @@ function DriveScreen() {
       {status === "idle" && !sessionSnap.nativeCapture.active ? (
         <IncompleteJourneyRecovery />
       ) : null}
+      {status === "idle" ? <LockedSoundNotice className="mb-4" /> : null}
       {status === "idle" && sessionSnap.journeyRecovered ? (
         <p className="mx-auto mb-4 w-full max-w-md border border-foreground/20 px-4 py-3 text-center text-sm">
           Journey recovered.

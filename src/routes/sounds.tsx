@@ -61,7 +61,18 @@ function Sounds() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional content gate
     [query, mood, settings.customSounds.length],
   );
-  const sections = useMemo(() => groupProfilesBySection(profiles), [profiles]);
+  // Free users: everything they can drive first ("Free"), Drive+ sounds below with a lock.
+  const canDrive = access.canDriveWithProfile;
+  const sections = useMemo(() => {
+    const free = profiles.filter((p) => canDrive(p.id));
+    if (free.length === profiles.length) return groupProfilesBySection(profiles);
+    const locked = profiles.filter((p) => !canDrive(p.id));
+    const rest = groupProfilesBySection(locked).map((g) => ({
+      ...g,
+      section: `Drive+ · ${g.section}`,
+    }));
+    return free.length ? [{ section: "Free", items: free }, ...rest] : rest;
+  }, [profiles, canDrive]);
 
   /** True when Sounds Listen / audition audio is already live. */
   const listeningLive =
