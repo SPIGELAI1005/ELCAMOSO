@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { existsSync } from "node:fs";
-import { floorHeading, groundYAt, GALLOP_VIDEO, gallopPlaybackRate, CAR_FX, carFxFor, floorScrollPxPerSecond, headlightsOn, resetDriveFxSpeed, sampleDriveFxSpeed, wheelBlur, wheelTurnsPerSecond, FLOOR_MAX_PX_S, WHEEL_MAX_TURNS } from "./car-fx";
+import { wheelMatrix, WHEEL_SPIN_SIGN, floorHeading, groundYAt, GALLOP_VIDEO, gallopPlaybackRate, CAR_FX, carFxFor, floorScrollPxPerSecond, headlightsOn, resetDriveFxSpeed, sampleDriveFxSpeed, wheelBlur, wheelTurnsPerSecond, FLOOR_MAX_PX_S, WHEEL_MAX_TURNS } from "./car-fx";
 
 describe("drive car fx", () => {
   it("police patrol has config inside the image", () => {
@@ -65,5 +65,14 @@ describe("drive car fx", () => {
   });
   it("non-car images get no car fx", () => {
     for (const id of ["horse-gallop", "wild-west-carriage", "romanian-85-carriage", "dragon", "cruise-ship", "helicopter", "tank"]) expect(carFxFor(id)).toBeNull();
+  });
+  it("wheels spin counter-clockwise on screen (top of tyre moves left, same way the floor flows)", () => {
+    const e = { cx: 0, cy: 0, rx: 50, ry: 100 };
+    const m = wheelMatrix(e, WHEEL_SPIN_SIGN * 0.1).match(/-?[\d.]+/g)!.map(Number);
+    // top point (0, -ry) -> x' = c * y
+    const xTop = m[2]! * -100;
+    expect(xTop).toBeLessThan(0);
+    // floor scrolls toward the rear (right) = ground moves backward under a car driving left
+    expect(floorHeading(carFxFor("police-patrol")!).ux).toBeGreaterThan(0);
   });
 });

@@ -150,6 +150,12 @@ export function headlightsOn(engineRunning: boolean, kmh: number): boolean {
  * or looks cartoonish at motorway speed; 0 at standstill.
  */
 export const WHEEL_MAX_TURNS = 2.2;
+/**
+ * Cars face and drive left, so on screen the wheels turn counter-clockwise (top of the tyre moves
+ * left, toward the front). SVG y points down, so a positive angle in wheelMatrix is clockwise:
+ * the spin angle must decrease over time.
+ */
+export const WHEEL_SPIN_SIGN = -1;
 export function wheelTurnsPerSecond(kmh: number): number {
   const v = Number.isFinite(kmh) ? Math.max(0, kmh) : 0;
   if (v < 0.5) return 0;

@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { carFxFor, floorHeading, groundYAt, floorScrollPxPerSecond, floorStreakOpacity, sampleDriveFxSpeed, headlightsOn, wheelBlur, wheelMatrix, wheelTurnsPerSecond, type CarFxConfig } from "@/lib/drive/car-fx";
+import { carFxFor, floorHeading, groundYAt, floorScrollPxPerSecond, floorStreakOpacity, sampleDriveFxSpeed, headlightsOn, wheelBlur, wheelMatrix, wheelTurnsPerSecond, WHEEL_SPIN_SIGN, type CarFxConfig } from "@/lib/drive/car-fx";
 import { profileHeroImageSrc } from "@/lib/sound/profile-hero-image";
 import { cn } from "@/lib/utils";
 
@@ -128,7 +128,7 @@ export function DriveCarFx({ profileId, speed, engineRunning, reducedMotion, cla
       // Streaks lie along the tyre contact line and scroll front -> rear (the car's real heading).
       rootRef.current?.querySelectorAll<SVGElement>(".carfx-floor-pat").forEach((p) => p.setAttribute("patternTransform", `rotate(${heading.toFixed(2)}) translate(${floorX.toFixed(1)} 0)`));
       rootRef.current?.querySelectorAll<SVGElement>(".carfx-floor").forEach((f) => f.setAttribute("opacity", String(floorStreakOpacity(kmh))));
-      angle = (angle + wheelTurnsPerSecond(kmh) * 2 * Math.PI * dt) % (2 * Math.PI);
+      angle = (angle + WHEEL_SPIN_SIGN * wheelTurnsPerSecond(kmh) * 2 * Math.PI * dt) % (2 * Math.PI);
       const blur = wheelBlur(kmh);
       rootRef.current?.querySelectorAll<SVGGElement>(".carfx-wheel").forEach((g) => {
         const w = cfg.wheels[Number(g.dataset["wheel"])]!;
