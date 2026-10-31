@@ -1,6 +1,9 @@
 import type { DriveState } from "@/lib/drive/model";
+import { fireSpooky, isSpookyKind } from "@/lib/sound/dsp/spooky";
+import { createSirenOverlay, type SirenOverlay } from "@/lib/sound/dsp/siren-overlay";
 import { DEFAULT_CABIN_EQ, type CabinEq } from "@/lib/drive/types-extra";
 import type { RhythmSpec, SignalSpec, SoundProfile, TextureSpec } from "@/lib/sound/profiles";
+import { getProfile } from "@/lib/sound/profiles";
 import {
   DEFAULT_LAYER_MIX,
   getEnvironment,
@@ -55,6 +58,18 @@ import { AdaptiveMusicSynth } from "@/lib/symphony/adaptive";
 import { FusionSynth, isFusionProfileId } from "@/lib/fusion";
 /** Non-symphony profiles whose sound is the adaptive music engine (genre via genre-store). */
 const ADAPTIVE_MUSIC_PROFILE_IDS: ReadonlySet<string> = new Set(["deep-bass-pulse"]);
+/** Profiles that keep their own sound and add an adaptive music bed underneath (level = bus gain). */
+/**
+ * Profiles that reuse another profile's sound unchanged and add an overlay
+ * (Police Patrol = American Muscle V8 + siren).
+ */
+export const SOUND_ALIASES: Readonly<Record<string, { base: string; overlay: "siren" }>> = {
+  "police-patrol": { base: "american-muscle-v8", overlay: "siren" },
+};
+
+export const BACKGROUND_MUSIC_LEVELS: Readonly<Record<string, number>> = {
+  "dracula-carriage": 0.32,
+};
 import { isWorldProfileId, WorldSynth } from "@/lib/worlds";
 import { fetchSoundAssetManifest } from "@/lib/sound-assets/client-loader";
 import { getSharedSampleLoader } from "@/lib/sound/realism/samples";
@@ -229,6 +244,9 @@ export class SoundEngine {
   private advancedTransientsEnabled = true;
   private dynamicDrive: DynamicDriveSynth | null = null;
   private symphony: AdaptiveMusicSynth | null = null;
+  private backgroundMusic: AdaptiveMusicSynth | null = null;
+  private overlayKind: "siren" | null = null;
+  private siren: SirenOverlay | null = null;
   private fusion: FusionSynth | null = null;
   private world: WorldSynth | null = null;
   /** Dev A/B: current engine vs Realism V2. Default v2 for combustion when eligible. */
@@ -1071,14 +1089,18 @@ export class SoundEngine {
    * dual-source gain spikes). Total crossfade stays in the 300–600 ms band.
    * Latest selection wins; failed builds leave the previous sound usable.
    */
-  setProfile(profile: SoundProfile, force = false) {
+  setProfile(requested: SoundProfile, force = false) {
+    const alias = SOUND_ALIASES[requested.id];
+    const profile = alias ? getProfile(alias.base) : requested;
+    const overlayChanged = (alias?.overlay ?? null) !== this.overlayKind;
+    this.overlayKind = alias?.overlay ?? null;
     const ctx = this.ctx;
     const body = this.body;
     if (!ctx || !this.filter) {
       this.profile = profile;
       return;
     }
-    if (!force && this.profile?.id === profile.id && this.voices.length) return;
+    if (!force && !overlayChanged && this.profile?.id === profile.id && this.voices.length) return;
     const generation = ++this.swapGeneration;
     if (force || !this.voices.length || !body) {
       if (this.swapTimer) clearTimeout(this.swapTimer);
@@ -1185,6 +1207,23 @@ export class SoundEngine {
           profile: this.profileBus?.input ?? this.body!,
         }
       : null;
+
+    // Overlay on an aliased sound (Police Patrol siren over the V8).
+    if (this.overlayKind === "siren" && this.accents) {
+      this.siren = createSirenOverlay(ctx, this.accents);
+    }
+
+    // Background music bed under the profile's own sound (e.g. Dracula Carriage).
+    const bgLevel = BACKGROUND_MUSIC_LEVELS[profile.id];
+    if (bgLevel !== undefined && strategyBuses) {
+      this.backgroundMusic = new AdaptiveMusicSynth();
+      if (this.backgroundMusic.build(ctx, profile, strategyBuses, this.experienceSeed)) {
+        this.backgroundMusic.setLevel(bgLevel);
+      } else {
+        this.backgroundMusic.dispose();
+        this.backgroundMusic = null;
+      }
+    }
 
     // Fusion - Engine + Symphony through FusionMixer.
     if (isFusionProfileId(profile.id) && strategyBuses) {
@@ -1623,6 +1662,8 @@ export class SoundEngine {
     this.updateRecordedBed(state, t);
     if (this.snorts && isHorseSnortProfile(profile.id)) this.snorts.update(state, t);
     if (this.whinnies && isHorseSnortProfile(profile.id)) this.whinnies.update(state, t);
+    if (this.backgroundMusic) this.backgroundMusic.update(state, t);
+    if (this.siren) this.siren.update(state, t);
 
     if (
       this.improved ||
@@ -2211,6 +2252,11 @@ export class SoundEngine {
     if (!ctx || !out) return;
     const { kind, tone, level } = spec;
 
+    if (isSpookyKind(kind)) {
+      fireSpooky(ctx, out, kind, at, tone, level);
+      return;
+    }
+
     if (kind === "laugh") {
       this.fireLaugh(at, tone, level, state);
       return;
@@ -2410,6 +2456,10 @@ export class SoundEngine {
     this.dynamicDrive = null;
     this.symphony?.dispose();
     this.symphony = null;
+    this.backgroundMusic?.dispose();
+    this.backgroundMusic = null;
+    this.siren?.dispose();
+    this.siren = null;
     this.fusion?.dispose();
     this.fusion = null;
     this.world?.dispose();

@@ -10,7 +10,7 @@ import { applyExperienceCatalogTuning } from "@/lib/sound/realism/catalog-tuning
 
 export const PUBLIC_PROFILE_IDS = [
   "gt-v8", "racing-v10", "cyber-pulse", "race-car", "rally-car", "space-ship", "ufo",
-  "speed-boat", "cruise-ship", "santa-sleigh", "wild-west-carriage", "romanian-85-carriage",
+  "speed-boat", "cruise-ship", "santa-sleigh", "wild-west-carriage", "dracula-carriage", "romanian-85-carriage",
   "laughing-machine", "farting-car", "steam-train", "kazoo-kart", "turbine-jet", "helicopter",
   "private-jet", "wiesn-tractor", "open-wind", "storm-glider", "flat-six-sport",
   "american-muscle-v8", "turbo-inline-6", "electric-hypercar", "formula-electric", "neon-drive",
@@ -145,6 +145,7 @@ export const PROFILE_EXPERIENCE_CONFIG = {
   "cruise-ship": motion({ pitchDriver: "engine-rpm", aspiration: "unknown", availableRoles: ["core", "mechanical", "environment", "event"], transitionTauSeconds: 0.4, phases: { accelerationTexture: 1.04, cruiseIntrusiveScale: 0.76, releaseCharacter: 0.78, stopTail: 0.9 }, variation: { depth: 0.01, minEventCooldownSeconds: 28, maxEventVoices: 1 } }),
   "santa-sleigh": designed({ pitchDriver: "cadence", aspiration: "not-applicable", availableRoles: ["core", "mechanical", "environment", "event"], transitionTauSeconds: 0.18, phases: { accelerationTexture: 1.08, cruiseIntrusiveScale: 0.58, releaseCharacter: 0.66 }, variation: { depth: 0.022, minEventCooldownSeconds: 12, maxEventVoices: 1 } }),
   "wild-west-carriage": motion({ physics: "physical-inspired", pitchDriver: "cadence", aspiration: "not-applicable", availableRoles: ["core", "mechanical", "environment", "event"], transitionTauSeconds: 0.16, phases: { accelerationTexture: 1.12, cruiseIntrusiveScale: 0.64, releaseCharacter: 0.62 }, variation: { minEventCooldownSeconds: 14, maxEventVoices: 1 } }),
+  "dracula-carriage": motion({ physics: "physical-inspired", pitchDriver: "cadence", aspiration: "not-applicable", availableRoles: ["core", "mechanical", "environment", "event", "music"], transitionTauSeconds: 0.16, phases: { accelerationTexture: 1.12, cruiseIntrusiveScale: 0.7, releaseCharacter: 0.62 }, variation: { minEventCooldownSeconds: 5, maxEventVoices: 2 } }),
   "romanian-85-carriage": motion({ physics: "physical-inspired", pitchDriver: "cadence", aspiration: "not-applicable", availableRoles: ["core", "mechanical", "environment"], transitionTauSeconds: 0.22, phases: { accelerationTexture: 1.06, cruiseIntrusiveScale: 0.72, releaseCharacter: 0.7 } }),
   "laughing-machine": designed({ pitchDriver: "cadence", aspiration: "not-applicable", availableRoles: ["core", "environment", "event"], transitionTauSeconds: 0.14, phases: { accelerationTexture: 1.12, cruiseIntrusiveScale: 0.5, releaseCharacter: 0.58 }, variation: { minEventCooldownSeconds: 5, maxEventVoices: 1 } }),
   "farting-car": designed({ pitchDriver: "engine-rpm", aspiration: "not-applicable", availableRoles: ["core", "mechanical", "event"], transitionTauSeconds: 0.12, phases: { accelerationTexture: 1.14, cruiseIntrusiveScale: 0.48, releaseCharacter: 0.9 }, variation: { minEventCooldownSeconds: 2.2, maxEventVoices: 1 } }),

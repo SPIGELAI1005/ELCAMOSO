@@ -11,6 +11,7 @@ const SIGNATURE_GENRES: Readonly<Record<string, GenreId>> = {
   "fusion-road-anthem": "anthem",
   "fusion-midnight-boost": "darkrave",
   "symphony-latino-fiesta": "latino",
+  "dracula-carriage": "gothic",
 };
 
 /** True when the profile always plays its own genre (picker ignored). */

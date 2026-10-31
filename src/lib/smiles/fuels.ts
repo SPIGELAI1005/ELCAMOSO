@@ -190,6 +190,15 @@ export const FUELS: Record<string, FuelSpec> = {
     co2: 0.05,
     quip: "Two horses, {a} of hay and oats. Yee-haw.",
   },
+  "dracula-carriage": {
+    name: "Moonlit hay",
+    emoji: "🦇",
+    unit: "kg",
+    perKm: 0.5,
+    priceEur: 0.35,
+    co2: 0.05,
+    quip: "Four ghost horses, {a} of moonlit hay. Mwahaha.",
+  },
   "romanian-85-carriage": {
     name: "Hay & carrots",
     emoji: "🥕",

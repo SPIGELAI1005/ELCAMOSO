@@ -35,6 +35,12 @@ export const FREE_SOUND_PROFILE_SET: readonly FreeSoundProfileSlot[] = [
     rationale:
       "High-rev racing V10 character; proves free tier includes a motorsport profile alongside muscle and GT.",
   },
+  {
+    id: "dracula-carriage",
+    role: "future",
+    rationale:
+      "Gothic ghost coach with a minor-key orchestra; a playful free profile that shows the music layer without Drive+.",
+  },
 ] as const;
 
 /** Ordered free profile ids derived from FREE_SOUND_PROFILE_SET. */

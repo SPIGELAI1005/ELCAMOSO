@@ -5,6 +5,7 @@
  */
 
 import { clamp, lerp, softGate, smoothstep } from "@/lib/sound/dsp/math";
+import { fireSpooky, isSpookyKind, type SpookyKind } from "@/lib/sound/dsp/spooky";
 import { createLoopingNoise, getNoiseBuffer, type NoiseColor } from "@/lib/sound/dsp/noise";
 import { targetParam } from "@/lib/sound/dsp/smoother";
 import { createDriveShaper } from "@/lib/sound/dsp/waveshaper";
@@ -1743,7 +1744,8 @@ export interface OneShotSpec {
     | "beam"
     | "sonar"
     | "antilag"
-    | "wastegate";
+    | "wastegate"
+    | SpookyKind;
   everySeconds: number;
   jitter?: number;
   level: number;
@@ -1834,6 +1836,10 @@ function fireOneShot(
   m: MotionFrame,
 ) {
   const { kind, tone, level } = spec;
+  if (isSpookyKind(kind)) {
+    fireSpooky(ctx, out, kind, at, tone, level);
+    return;
+  }
   if (kind === "horn") {
     [1, 1.5, 2.02].forEach((ratio, i) => {
       const osc = ctx.createOscillator();

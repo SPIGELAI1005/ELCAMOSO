@@ -20,6 +20,7 @@ const AMBIENT_IDS = new Set([
 const CADENCE_IDS = new Set([
   "horse-gallop",
   "wild-west-carriage",
+  "dracula-carriage",
   "romanian-85-carriage",
   "steam-train",
   "laughing-machine",

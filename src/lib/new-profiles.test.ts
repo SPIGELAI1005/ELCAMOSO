@@ -31,7 +31,8 @@ describe("new Drive+ profiles", () => {
     expect(getProfile("traby").transmission?.gearRatios).toHaveLength(4);
     expect(getProfile("traby").transmission?.redlineRpm).toBe(4200);
     expect(getProfile("ge-squared").transmission?.redlineRpm).toBe(6200);
-    expect(getProfile("police-patrol").voice.textures?.some((t) => t.kind === "siren" && t.level <= 0.08)).toBe(true);
+    expect(getProfile("police-patrol").voice.textures?.some((t) => t.kind === "siren" && t.level <= 0.12)).toBe(true);
+    expect(getProfile("police-patrol").drivetrainPersonalityId).toBe("american-v8");
     expect(getProfile("racing-v10").voice.textures?.some((t) => t.kind === "siren")).toBe(false);
   });
 
