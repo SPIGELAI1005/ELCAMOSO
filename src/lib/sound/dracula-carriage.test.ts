@@ -16,9 +16,10 @@ describe("Dracula Carriage", () => {
     expect(p?.voice.textures?.some((t) => t.kind === "wind")).toBe(true);
   });
 
-  it("keeps screams rare", () => {
+  it("keeps screams occasional (random every ~15-40 s)", () => {
     const scream = p?.voice.signals?.find((s) => s.kind === "scream");
-    expect(scream!.everySeconds).toBeGreaterThanOrEqual(40);
+    expect(scream!.everySeconds - (scream!.jitter ?? 0)).toBeGreaterThanOrEqual(15);
+    expect(scream!.everySeconds + (scream!.jitter ?? 0)).toBeLessThanOrEqual(40);
   });
 
   it("is a free profile", () => {

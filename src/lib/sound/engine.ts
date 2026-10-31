@@ -67,8 +67,15 @@ export const SOUND_ALIASES: Readonly<Record<string, { base: string; overlay: "si
   "police-patrol": { base: "american-muscle-v8", overlay: "siren" },
 };
 
+/**
+ * Profiles whose own atmosphere (wind beds + random voice events) must play on
+ * every synthesis path. The Improved/Hybrid strategies only render the core
+ * sound, so without this the extra layers were silently skipped in the app.
+ */
+export const ALWAYS_LAYERED_PROFILE_IDS: ReadonlySet<string> = new Set(["dracula-carriage"]);
+
 export const BACKGROUND_MUSIC_LEVELS: Readonly<Record<string, number>> = {
-  "dracula-carriage": 0.32,
+  "dracula-carriage": 0.45,
 };
 import { isWorldProfileId, WorldSynth } from "@/lib/worlds";
 import { fetchSoundAssetManifest } from "@/lib/sound-assets/client-loader";
@@ -1239,6 +1246,9 @@ export class SoundEngine {
       }
     }
 
+    // Atmosphere layers that must survive strategy early-returns below.
+    if (ALWAYS_LAYERED_PROFILE_IDS.has(profile.id)) this.buildAtmosphere(profile, ctx.currentTime);
+
     // Fusion - Engine + Symphony through FusionMixer.
     if (isFusionProfileId(profile.id) && strategyBuses) {
       this.fusion = new FusionSynth();
@@ -1392,17 +1402,36 @@ export class SoundEngine {
       this.lfo = { osc, gain };
     }
 
-    (profile.voice.textures ?? []).forEach((spec) => this.buildTexture(spec));
+    if (!ALWAYS_LAYERED_PROFILE_IDS.has(profile.id)) (profile.voice.textures ?? []).forEach((spec) => this.buildTexture(spec));
 
     const now = ctx.currentTime;
     this.rhythms = [profile.voice.rhythm, profile.voice.rhythmB]
       .filter((r): r is RhythmSpec => Boolean(r))
       .map((spec) => ({ spec, next: now + 0.2, step: 0 }));
+    if (!ALWAYS_LAYERED_PROFILE_IDS.has(profile.id)) {
+      this.signals = (profile.voice.signals ?? []).map((spec) => ({
+        spec,
+        // stagger the first event so nothing fires the instant a drive starts
+        next: now + 4 + audioRandom() * spec.everySeconds,
+      }));
+    }
+  }
+
+  private buildAtmosphere(profile: SoundProfile, now: number) {
+    (profile.voice.textures ?? []).forEach((spec) => this.buildTexture(spec));
     this.signals = (profile.voice.signals ?? []).map((spec) => ({
       spec,
-      // stagger the first event so nothing fires the instant a drive starts
-      next: now + 4 + audioRandom() * spec.everySeconds,
+      next: now + 4 + audioRandom() * Math.min(12, spec.everySeconds),
     }));
+  }
+
+  /** Diagnostics/tests: atmosphere layers (textures + scheduled events + music). */
+  atmosphereDiagnostics() {
+    return {
+      textures: this.textures.map((x) => ({ kind: x.spec.kind, gain: x.gain.gain.value })),
+      signals: this.signals.map((c) => ({ kind: c.spec.kind, next: c.next, everySeconds: c.spec.everySeconds, jitter: c.spec.jitter ?? 0 })),
+      music: !!this.backgroundMusic,
+    };
   }
 
   /** Continuous atmospheric bed: water wash, wind, gravel, steam, crowd, rumble. */
@@ -1693,6 +1722,10 @@ export class SoundEngine {
       if (this.hybrid) this.hybrid.update(state, t);
       if (this.improved) this.improved.update(state, t);
       if (this.dynamicDrive) this.dynamicDrive.update(state, t);
+      if (ALWAYS_LAYERED_PROFILE_IDS.has(profile.id)) {
+        this.updateTextures(state, t);
+        this.signals.forEach((clock) => this.scheduleSignal(clock, state));
+      }
       this.updateSpace(state, t);
       if (state.throttle > 0.72 && this.lastThrottle <= 0.72) this.fireSnippets("throttle", t);
       if (state.regen > 0.5 && this.lastRegen <= 0.5) this.fireSnippets("regen", t);

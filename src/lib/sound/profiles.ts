@@ -515,14 +515,14 @@ const BUILT_IN_SOUND_PROFILES: SoundProfile[] = [
       rhythmB: { kind: "creak", baseRate: 0.5, rateScale: 1.3, level: 0.13, tone: 160 },
       textures: [
         { kind: "gravel", level: 0.24, tone: 1900, speedScale: 1, surge: 2.2 },
-        { kind: "wind", level: 0.24, tone: 700, speedScale: 0.8, surge: 0.6 },
+        { kind: "wind", level: 0.24, tone: 700, speedScale: 0.25, surge: 0.6 },
       ],
       signals: [
-        { kind: "cackle", everySeconds: 24, jitter: 8, level: 0.26, tone: 130 },
+        { kind: "cackle", everySeconds: 26, jitter: 10, level: 0.26, tone: 130 },
         { kind: "howl", everySeconds: 14, jitter: 6, level: 0.12, tone: 420 },
         { kind: "gust", everySeconds: 11, jitter: 5, level: 0.12, tone: 700, speedLinked: true },
-        { kind: "eerie", everySeconds: 21, jitter: 9, level: 0.06, tone: 1150 },
-        { kind: "scream", everySeconds: 55, jitter: 15, level: 0.05, tone: 880 },
+        { kind: "eerie", everySeconds: 26, jitter: 10, level: 0.09, tone: 1150 },
+        { kind: "scream", everySeconds: 30, jitter: 10, level: 0.08, tone: 880 },
       ],
     },
   },
