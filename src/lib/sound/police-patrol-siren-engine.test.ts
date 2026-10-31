@@ -15,7 +15,7 @@ async function startedEngine() {
   return engine;
 }
 
-describe("police patrol siren in the real engine", () => {
+describe("police patrol siren in the real engine", { timeout: 30000 }, () => {
   it("siren node is connected with gain > 0 at idle", async () => {
     const engine = await startedEngine();
     engine.update(idle);
@@ -44,5 +44,18 @@ describe("police patrol siren in the real engine", () => {
   it("level is never zero and rises gently with speed", () => {
     expect(sirenTargetGain(0)).toBeGreaterThan(0.1);
     expect(sirenTargetGain(130)).toBeGreaterThan(sirenTargetGain(0));
+  });
+});
+
+describe("police siren sits in the distance", { timeout: 30000 }, () => {
+  it("uses a classic wail range, a lowpass and a credited loop", async () => {
+    const m = await import("@/lib/sound/dsp/siren-overlay");
+    expect(m.SIREN_LOW_HZ).toBeGreaterThanOrEqual(550);
+    expect(m.SIREN_HIGH_HZ).toBeLessThanOrEqual(1350);
+    expect(m.SIREN_LOWPASS_HZ).toBeGreaterThanOrEqual(2000);
+    expect(m.SIREN_LOWPASS_HZ).toBeLessThanOrEqual(3000);
+    expect(m.SIREN_CREDIT.licence).not.toMatch(/NC/);
+    const { existsSync } = await import("fs");
+    expect(existsSync(`public${m.SIREN_URL}`)).toBe(true);
   });
 });

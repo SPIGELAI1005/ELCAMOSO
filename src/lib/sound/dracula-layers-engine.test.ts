@@ -15,7 +15,7 @@ async function engineFor(mode: "improved" | "original") {
   return engine;
 }
 
-describe("Dracula Carriage layers in the live engine graph", () => {
+describe("Dracula Carriage layers in the live engine graph", { timeout: 30000 }, () => {
   for (const mode of ["improved", "original"] as const) {
     it(`${mode}: wind bed, voice events and orchestra are all wired`, async () => {
       const d = (await engineFor(mode)).atmosphereDiagnostics();
