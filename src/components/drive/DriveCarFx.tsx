@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { carFxFor, floorScrollPxPerSecond, floorStreakOpacity, sampleDriveFxSpeed, headlightsOn, wheelBlur, wheelMatrix, wheelTurnsPerSecond, type CarFxConfig } from "@/lib/drive/car-fx";
+import { carFxFor, floorHeading, groundYAt, floorScrollPxPerSecond, floorStreakOpacity, sampleDriveFxSpeed, headlightsOn, wheelBlur, wheelMatrix, wheelTurnsPerSecond, type CarFxConfig } from "@/lib/drive/car-fx";
 import { profileHeroImageSrc } from "@/lib/sound/profile-hero-image";
 import { cn } from "@/lib/utils";
 
@@ -13,6 +13,14 @@ interface DriveCarFxProps {
 }
 
 const GHOSTS = [-1, 1];
+
+/** Floor area: everything below the tyre contact line (extended across the image), in perspective. */
+function floorPolygon(cfg: CarFxConfig): string {
+  const { w, h } = cfg.image;
+  const y0 = Math.min(h, groundYAt(cfg, 0) - 18);
+  const y1 = Math.min(h, groundYAt(cfg, w) - 18);
+  return `0,${y0.toFixed(1)} ${w},${y1.toFixed(1)} ${w},${h} 0,${h}`;
+}
 
 function CarFxSvg({ cfg, src, aspect, uid, lit, still }: { cfg: CarFxConfig; src: string; aspect: string; uid: string; lit: boolean; still: boolean }) {
   return (
@@ -43,13 +51,13 @@ function CarFxSvg({ cfg, src, aspect, uid, lit, still }: { cfg: CarFxConfig; src
           <rect x="35" y="243" width="200" height="3" rx="1.5" fill="#dfe6ff" opacity="0.55" />
           <rect x="520" y="276" width="260" height="3" rx="1.5" fill="#ffffff" opacity="0.45" />
         </pattern>
-        <linearGradient id={`flm-g-${uid}`} x1="0" y1="0" x2="0" y2="1">
+        <linearGradient id={`flm-g-${uid}`} gradientUnits="userSpaceOnUse" x1="0" y1={cfg.floorTop} x2="0" y2={cfg.image.h}>
           <stop offset="0%" stopColor="#fff" stopOpacity="0" />
           <stop offset="35%" stopColor="#fff" stopOpacity="1" />
           <stop offset="100%" stopColor="#fff" stopOpacity="0.6" />
         </linearGradient>
         <mask id={`flm-${uid}`}>
-          <rect x="0" y={cfg.floorTop} width={cfg.image.w} height={cfg.image.h - cfg.floorTop} fill={`url(#flm-g-${uid})`} />
+          <polygon points={floorPolygon(cfg)} fill={`url(#flm-g-${uid})`} />
         </mask>
         <filter id={`flb-${uid}`} x="-10%" y="-50%" width="120%" height="200%"><feGaussianBlur stdDeviation="6 1.2" /></filter>
         {cfg.wheels.map((w, i) => (
@@ -60,7 +68,7 @@ function CarFxSvg({ cfg, src, aspect, uid, lit, still }: { cfg: CarFxConfig; src
       </defs>
       {!still && (
         <g className="carfx-floor" opacity={0} mask={`url(#flm-${uid})`} style={{ mixBlendMode: "screen" }}>
-          <rect x="0" y={cfg.floorTop} width={cfg.image.w} height={cfg.image.h - cfg.floorTop} fill={`url(#fl-${uid})`} filter={`url(#flb-${uid})`} />
+          <rect x="0" y={Math.min(cfg.floorTop, groundYAt(cfg, 0), groundYAt(cfg, cfg.image.w)) - 40} width={cfg.image.w} height={cfg.image.h} fill={`url(#fl-${uid})`} filter={`url(#flb-${uid})`} />
         </g>
       )}
       {!still &&
@@ -111,12 +119,14 @@ export function DriveCarFx({ profileId, speed, engineRunning, reducedMotion, cla
     let last = 0;
     let angle = 0;
     let floorX = 0;
+    const heading = floorHeading(cfg).deg;
     const tick = (now: number) => {
       const dt = last ? Math.min(0.1, (now - last) / 1000) : 0;
       last = now;
       const kmh = sampleDriveFxSpeed(now, kmhRef.current);
       floorX = (floorX + floorScrollPxPerSecond(kmh) * dt) % 900;
-      rootRef.current?.querySelectorAll<SVGElement>(".carfx-floor-pat").forEach((p) => p.setAttribute("patternTransform", `translate(${floorX.toFixed(1)} 0)`));
+      // Streaks lie along the tyre contact line and scroll front -> rear (the car's real heading).
+      rootRef.current?.querySelectorAll<SVGElement>(".carfx-floor-pat").forEach((p) => p.setAttribute("patternTransform", `rotate(${heading.toFixed(2)}) translate(${floorX.toFixed(1)} 0)`));
       rootRef.current?.querySelectorAll<SVGElement>(".carfx-floor").forEach((f) => f.setAttribute("opacity", String(floorStreakOpacity(kmh))));
       angle = (angle + wheelTurnsPerSecond(kmh) * 2 * Math.PI * dt) % (2 * Math.PI);
       const blur = wheelBlur(kmh);
