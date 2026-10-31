@@ -16,6 +16,7 @@ export interface SirenOverlay {
   dispose(): void;
   /** current mode, for tests/diagnostics */
   mode(): "wail" | "yelp";
+  diagnostics(): { gain: number; connected: boolean };
 }
 
 /** Yelp when pushing hard or above 90 km/h, otherwise wail. */
@@ -24,9 +25,19 @@ export function sirenModeFor(state: Pick<DriveState, "speed" | "throttle" | "acc
   return kmh > 90 || (state.throttle > 0.7 && state.acceleration > 2.2) ? "yelp" : "wail";
 }
 
-export function createSirenOverlay(ctx: BaseAudioContext, destination: AudioNode, level = 0.11): SirenOverlay {
+/** Idle siren level; rises ~+2.6 dB by 130 km/h. Tuned to sit ~4–6 dB under the V8. */
+export const SIREN_LEVEL = 0.24;
+
+export function sirenTargetGain(kmh: number, level = SIREN_LEVEL): number {
+  const k = Math.min(130, Math.max(0, kmh));
+  return level * (1 + 0.35 * (k / 130));
+}
+
+export function createSirenOverlay(ctx: BaseAudioContext, destination: AudioNode, level = SIREN_LEVEL): SirenOverlay {
   const out = ctx.createGain();
-  out.gain.value = 0;
+  // Audible from the first sample - never wait for a drive update to lift it.
+  out.gain.value = sirenTargetGain(0, level);
+  let connected = false;
   const hp = ctx.createBiquadFilter();
   hp.type = "highpass";
   hp.frequency.value = 450;
@@ -42,6 +53,7 @@ export function createSirenOverlay(ctx: BaseAudioContext, destination: AudioNode
   presence.connect(lp);
   lp.connect(out);
   out.connect(destination);
+  connected = true;
 
   // pitch sweep = centre + depth * lfo
   const centre = (SIREN_LOW_HZ + SIREN_HIGH_HZ) / 2;
@@ -86,11 +98,11 @@ export function createSirenOverlay(ctx: BaseAudioContext, destination: AudioNode
         lfo.type = mode === "yelp" ? "sawtooth" : "triangle";
       }
       // a touch louder with speed so wind/road noise doesn't bury it
-      const kmh = Math.min(130, Math.max(0, state.speed * 3.6));
-      const target = level * (0.8 + 0.35 * (kmh / 130));
+      const target = sirenTargetGain(state.speed * 3.6, level);
       out.gain.setTargetAtTime(target, t, 0.3);
     },
     mode: () => current,
+    diagnostics: () => ({ gain: disposed ? 0 : out.gain.value, connected: connected && !disposed }),
     dispose() {
       if (disposed) return;
       disposed = true;
@@ -103,6 +115,7 @@ export function createSirenOverlay(ctx: BaseAudioContext, destination: AudioNode
         /* closed context */
       }
       setTimeout(() => out.disconnect(), 400);
+      connected = false;
     },
   };
 }

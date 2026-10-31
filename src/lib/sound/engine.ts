@@ -246,6 +246,8 @@ export class SoundEngine {
   private symphony: AdaptiveMusicSynth | null = null;
   private backgroundMusic: AdaptiveMusicSynth | null = null;
   private overlayKind: "siren" | null = null;
+  /** Profile as the user picked it (keeps aliases like police-patrol so rebuilds keep the overlay). */
+  private requestedProfile: SoundProfile | null = null;
   private siren: SirenOverlay | null = null;
   private fusion: FusionSynth | null = null;
   private world: WorldSynth | null = null;
@@ -259,7 +261,7 @@ export class SoundEngine {
   setSynthesisMode(mode: SynthesisMode) {
     if (this.synthesisMode === mode) return;
     this.synthesisMode = mode;
-    if (this.profile) this.setProfile(this.profile, true);
+    if (this.profile) this.setProfile(this.requestedProfile ?? this.profile, true);
   }
 
   getSynthesisMode() {
@@ -276,7 +278,7 @@ export class SoundEngine {
   setRealismEngine(mode: RealismEngineMode) {
     if (this.realismEngine === mode) return;
     this.realismEngine = mode;
-    if (this.profile) this.setProfile(this.profile, true);
+    if (this.profile) this.setProfile(this.requestedProfile ?? this.profile, true);
   }
 
   getRealismEngine(): RealismEngineMode {
@@ -290,7 +292,7 @@ export class SoundEngine {
   setDynamicDriveEnabled(enabled: boolean) {
     if (this.dynamicDriveEnabled === enabled) return;
     this.dynamicDriveEnabled = enabled;
-    if (this.profile) this.setProfile(this.profile, true);
+    if (this.profile) this.setProfile(this.requestedProfile ?? this.profile, true);
   }
 
   getDynamicDriveEnabled() {
@@ -1081,6 +1083,12 @@ export class SoundEngine {
     return this.pinkBuffer;
   }
 
+  /** Diagnostics/tests: siren overlay state for aliased profiles. */
+  sirenDiagnostics(): { active: boolean; gain: number; connected: boolean; mode: "wail" | "yelp" | null } {
+    const d = this.siren?.diagnostics?.();
+    return { active: !!this.siren, gain: d?.gain ?? 0, connected: d?.connected ?? false, mode: this.siren?.mode() ?? null };
+  }
+
   /* -------------------------------------------------------- profile switch */
 
   /**
@@ -1090,6 +1098,11 @@ export class SoundEngine {
    * Latest selection wins; failed builds leave the previous sound usable.
    */
   setProfile(requested: SoundProfile, force = false) {
+    // Internal rebuilds may pass the resolved base back in - keep the alias then.
+    if (this.requestedProfile && SOUND_ALIASES[this.requestedProfile.id]?.base === requested.id) {
+      requested = this.requestedProfile;
+    }
+    this.requestedProfile = requested;
     const alias = SOUND_ALIASES[requested.id];
     const profile = alias ? getProfile(alias.base) : requested;
     const overlayChanged = (alias?.overlay ?? null) !== this.overlayKind;
@@ -1210,7 +1223,8 @@ export class SoundEngine {
 
     // Overlay on an aliased sound (Police Patrol siren over the V8).
     if (this.overlayKind === "siren" && this.accents) {
-      this.siren = createSirenOverlay(ctx, this.accents);
+      // Straight into the cabin bus (stable level, not tied to throttle or the user accents mix).
+      this.siren = createSirenOverlay(ctx, this.cabinIn ?? this.accents);
     }
 
     // Background music bed under the profile's own sound (e.g. Dracula Carriage).
