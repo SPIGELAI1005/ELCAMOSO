@@ -1,3 +1,4 @@
+import { sampleDriveFxSpeed } from "@/lib/drive/car-fx";
 import { useEffect, useRef, useState } from "react";
 import {
   getPoliceLightLevel,
@@ -35,7 +36,7 @@ export function PoliceLightShow({ speed, reducedMotion, className }: PoliceLight
     if (peak <= 0 || typeof requestAnimationFrame === "undefined") return;
     let raf = 0;
     const tick = (now: number) => {
-      const phase = advancePolicePhase(now, speedRef.current * 3.6);
+      const phase = advancePolicePhase(now, sampleDriveFxSpeed(now, speedRef.current * 3.6), 0);
       const { red, blue } = policeLightPair(phase);
       if (redRef.current) redRef.current.style.opacity = String(red * peak);
       if (blueRef.current) blueRef.current.style.opacity = String(blue * peak);

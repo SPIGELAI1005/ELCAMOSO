@@ -63,12 +63,12 @@ export const POLICE_ROOF_BAR = {
  * timestamp: every caller in the same animation frame gets the same phase.
  */
 const clock = { last: -1, phase: 0, rate: POLICE_LIGHT_MIN_RATE };
-export function advancePolicePhase(now: number, kmh: number): number {
+export function advancePolicePhase(now: number, kmh: number, tauS = 0.8): number {
   if (now === clock.last) return clock.phase;
   const dt = clock.last < 0 ? 0 : Math.min(0.1, Math.max(0, (now - clock.last) / 1000));
   clock.last = now;
   // smooth rate changes (tau 0.8 s) so speed jumps never jolt the rhythm
-  clock.rate += (policeFlashRate(kmh) - clock.rate) * (1 - Math.exp(-dt / 0.8));
+  clock.rate = tauS <= 0 ? policeFlashRate(kmh) : clock.rate + (policeFlashRate(kmh) - clock.rate) * (1 - Math.exp(-dt / tauS));
   clock.phase = (clock.phase + clock.rate * dt) % 1;
   return clock.phase;
 }
