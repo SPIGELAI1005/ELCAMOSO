@@ -33,11 +33,15 @@ function CarFxSvg({ cfg, src, aspect, uid, lit, still }: { cfg: CarFxConfig; src
           <stop offset="55%" stopColor="#111" stopOpacity="0.5" />
           <stop offset="100%" stopColor="#000" stopOpacity="0.2" />
         </radialGradient>
-        <pattern id={`fl-${uid}`} className="carfx-floor-pat" width="600" height="240" patternUnits="userSpaceOnUse">
-          <rect x="20" y="30" width="260" height="3" rx="1.5" fill="#cfd8ff" opacity="0.5" />
-          <rect x="340" y="85" width="180" height="2" rx="1" fill="#ffffff" opacity="0.35" />
-          <rect x="120" y="140" width="320" height="4" rx="2" fill="#b9c6ff" opacity="0.3" />
-          <rect x="470" y="200" width="110" height="2" rx="1" fill="#ffffff" opacity="0.4" />
+        <pattern id={`fl-${uid}`} className="carfx-floor-pat" width="900" height="300" patternUnits="userSpaceOnUse">
+          <rect x="20" y="22" width="300" height="3" rx="1.5" fill="#d6deff" opacity="0.75" />
+          <rect x="430" y="58" width="140" height="2" rx="1" fill="#ffffff" opacity="0.55" />
+          <rect x="650" y="96" width="230" height="4" rx="2" fill="#c4d0ff" opacity="0.5" />
+          <rect x="90" y="131" width="90" height="2" rx="1" fill="#ffffff" opacity="0.6" />
+          <rect x="260" y="168" width="380" height="5" rx="2.5" fill="#b9c6ff" opacity="0.4" />
+          <rect x="720" y="205" width="70" height="2" rx="1" fill="#ffffff" opacity="0.65" />
+          <rect x="35" y="243" width="200" height="3" rx="1.5" fill="#dfe6ff" opacity="0.55" />
+          <rect x="520" y="276" width="260" height="3" rx="1.5" fill="#ffffff" opacity="0.45" />
         </pattern>
         <linearGradient id={`flm-g-${uid}`} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor="#fff" stopOpacity="0" />
@@ -111,7 +115,7 @@ export function DriveCarFx({ profileId, speed, engineRunning, reducedMotion, cla
       const dt = last ? Math.min(0.1, (now - last) / 1000) : 0;
       last = now;
       const kmh = sampleDriveFxSpeed(now, kmhRef.current);
-      floorX = (floorX + floorScrollPxPerSecond(kmh) * dt) % 600;
+      floorX = (floorX + floorScrollPxPerSecond(kmh) * dt) % 900;
       rootRef.current?.querySelectorAll<SVGElement>(".carfx-floor-pat").forEach((p) => p.setAttribute("patternTransform", `translate(${floorX.toFixed(1)} 0)`));
       rootRef.current?.querySelectorAll<SVGElement>(".carfx-floor").forEach((f) => f.setAttribute("opacity", String(floorStreakOpacity(kmh))));
       angle = (angle + wheelTurnsPerSecond(kmh) * 2 * Math.PI * dt) % (2 * Math.PI);

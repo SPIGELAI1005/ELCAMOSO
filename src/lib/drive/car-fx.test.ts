@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { CAR_FX, carFxFor, floorScrollPxPerSecond, headlightsOn, resetDriveFxSpeed, sampleDriveFxSpeed, wheelBlur, wheelTurnsPerSecond, FLOOR_MAX_PX_S, WHEEL_MAX_TURNS } from "./car-fx";
+import { existsSync } from "node:fs";
+import { GALLOP_VIDEO, gallopPlaybackRate, CAR_FX, carFxFor, floorScrollPxPerSecond, headlightsOn, resetDriveFxSpeed, sampleDriveFxSpeed, wheelBlur, wheelTurnsPerSecond, FLOOR_MAX_PX_S, WHEEL_MAX_TURNS } from "./car-fx";
 
 describe("drive car fx", () => {
   it("police patrol has config inside the image", () => {
@@ -35,5 +36,13 @@ describe("drive car fx", () => {
     expect(mid).toBeLessThan(100);
     for (let i = 0; i < 400; i++) sampleDriveFxSpeed((t += 16), 0);
     expect(sampleDriveFxSpeed(t, 0)).toBe(0);
+  });
+  it("dracula gallop loop: paused at 0, 0.25-1.6x, file exists", () => {
+    expect(gallopPlaybackRate(0)).toBe(0);
+    expect(gallopPlaybackRate(3)).toBe(0.25);
+    expect(gallopPlaybackRate(500)).toBe(1.6);
+    const src = GALLOP_VIDEO["dracula-carriage"]!;
+    expect(existsSync(`public${src}`)).toBe(true);
+    expect(carFxFor("dracula-carriage")).toBeNull();
   });
 });

@@ -34,16 +34,20 @@ export const CAR_FX: Readonly<Record<string, CarFxConfig>> = {
     ],
     floorTop: 640,
   },
-  "dracula-carriage": {
-    image: { w: 1672, h: 941 },
-    headlights: [],
-    wheels: [
-      { cx: 1076, cy: 594, rx: 50, ry: 104 },
-      { cx: 1260, cy: 540, rx: 40, ry: 96 },
-    ],
-    floorTop: 700,
-  },
 };
+
+/** Profiles whose still is replaced by a looping motion clip while driving. */
+export const GALLOP_VIDEO: Readonly<Record<string, string>> = {
+  "dracula-carriage": "/hero/video/dracula-gallop-loop.mp4",
+};
+export const GALLOP_MIN_RATE = 0.25;
+export const GALLOP_MAX_RATE = 1.6;
+/** Playback rate for the gallop loop, or 0 (paused on the still frame) when stopped. */
+export function gallopPlaybackRate(kmh: number): number {
+  const v = Number.isFinite(kmh) ? Math.max(0, kmh) : 0;
+  if (v < 1) return 0;
+  return Math.min(GALLOP_MAX_RATE, Math.max(GALLOP_MIN_RATE, v / 25));
+}
 
 export function carFxFor(profileId: string | null | undefined): CarFxConfig | null {
   return (profileId && CAR_FX[profileId]) || null;
