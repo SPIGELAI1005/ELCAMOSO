@@ -170,7 +170,7 @@ export const FUELS: Record<string, FuelSpec> = {
     perKm: 0.3,
     priceEur: "user-kwh",
     co2: 0.38,
-    quip: "Formula E: {a} and a fan boost.",
+    quip: "Open-wheel electric: {a} and a cheeky power boost.",
   },
   "horse-gallop": {
     name: "Hay",
