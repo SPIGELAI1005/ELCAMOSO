@@ -1,3 +1,4 @@
+import { sampleDriveFxSpeed } from "@/lib/drive/car-fx";
 import { useEffect, useRef } from "react";
 import { advancePolicePhase, policeLightPair, POLICE_HERO_SIZE, POLICE_ROOF_BAR } from "@/lib/drive/police-lights";
 import { cn } from "@/lib/utils";
@@ -23,7 +24,7 @@ export function PoliceRoofLights({ speed, reducedMotion, className }: PoliceRoof
     if (reducedMotion || typeof requestAnimationFrame === "undefined") return;
     let raf = 0;
     const tick = (now: number) => {
-      const { red, blue } = policeLightPair(advancePolicePhase(now, speedRef.current * 3.6));
+      const { red, blue } = policeLightPair(advancePolicePhase(now, sampleDriveFxSpeed(now, speedRef.current * 3.6), 0));
       rootRef.current?.querySelectorAll<SVGGElement>(".police-roof-red").forEach((g) => (g.style.opacity = String(red)));
       rootRef.current?.querySelectorAll<SVGGElement>(".police-roof-blue").forEach((g) => (g.style.opacity = String(blue)));
       raf = requestAnimationFrame(tick);
