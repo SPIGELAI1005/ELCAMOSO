@@ -336,6 +336,17 @@ const BY_PROFILE: Record<string, DriveShiftPersona> = {
       { id: "sunset-dust", label: "Sunset Dust" },
     ],
   }),
+  "dracula-carriage": persona({
+    ladderCount: 4,
+    ladderNoun: "Night",
+    simulatedCaption: "Simulated midnight band",
+    stageNames: ["Creep", "Haunt", "Chase", "Midnight"],
+    modes: [
+      { id: "full-moon", label: "Full Moon" },
+      { id: "castle-run", label: "Castle Run" },
+      { id: "bat-escort", label: "Bat Escort" },
+    ],
+  }),
   "romanian-85-carriage": persona({
     ladderCount: 4,
     ladderNoun: "Drum",

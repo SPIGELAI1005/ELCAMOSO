@@ -38,6 +38,7 @@ import { resolveDrivetrain } from "@/lib/drive/drivetrain-resolve";
 import { useFeatureAccess } from "@/lib/entitlements/selectors";
 import { DriveProfileBackdrop } from "@/components/drive/DriveProfileBackdrop";
 import { PoliceLightShow } from "@/components/drive/PoliceLightShow";
+import { PoliceRoofLights } from "@/components/drive/PoliceRoofLights";
 import { POLICE_LIGHT_PROFILE_ID } from "@/lib/drive/police-lights";
 import {
   getProfile,
@@ -487,6 +488,9 @@ export function DriveCockpit({
       data-testid="drive-cockpit"
     >
       <DriveProfileBackdrop profileId={profile.id} className="z-0" />
+      {profile.id === POLICE_LIGHT_PROFILE_ID ? (
+        <PoliceRoofLights speed={driveState.speed} reducedMotion={reducedMotion} className="z-0" />
+      ) : null}
       {profile.id === POLICE_LIGHT_PROFILE_ID ? (
         <PoliceLightShow speed={driveState.speed} reducedMotion={reducedMotion} className="z-0" />
       ) : null}

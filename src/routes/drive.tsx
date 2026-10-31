@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { FoundersBanner } from "@/components/FoundersBanner";
+import { HalloweenBanner } from "@/components/HalloweenBanner";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { createSeoHeadFromPath } from "@/lib/seo";
 import { ElcamosoMark } from "@/components/ElcamosoLogo";
@@ -321,6 +322,9 @@ function DriveScreen() {
     <main className="relative flex min-h-screen flex-col px-6 pt-6 pb-10 sm:px-10">
       {status === "idle" ? (
         <FoundersBanner compact className="fixed inset-x-0 bottom-0 z-30 hidden border-t border-b-0 sm:block" />
+      ) : null}
+      {status === "idle" ? (
+        <HalloweenBanner className="fixed inset-x-0 bottom-[29px] z-30 border-t sm:bottom-[29px]" />
       ) : null}
       {status === "idle" && !sessionSnap.nativeCapture.active ? (
         <IncompleteJourneyRecovery />

@@ -5,7 +5,7 @@
  */
 import type { MusicAccent, MusicMode } from "./conductor";
 
-export type GenreId = "classic" | "house" | "rock" | "pop" | "metal" | "hiphop" | "country" | "waltz" | "electro" | "anthem" | "darkrave" | "latino";
+export type GenreId = "classic" | "house" | "rock" | "pop" | "metal" | "hiphop" | "country" | "waltz" | "electro" | "anthem" | "darkrave" | "latino" | "gothic";
 
 export interface NoteSpec {
   inst: string;
@@ -924,7 +924,62 @@ const latino: GenreDef = {
   },
 };
 
-export const GENRES: Record<GenreId, GenreDef> = { classic, house, rock, pop, metal, hiphop, country, waltz, electro, anthem, darkrave, latino };
+/**
+ * Gothic Night: original minor-key orchestral piece for the Dracula Carriage
+ * (D minor, i - VI - iv - V). Organ and low strings from the start; choir,
+ * cello ostinato, timpani and a high string line join as the drive builds.
+ */
+const gothic: GenreDef = {
+  id: "gothic",
+  name: "Gothic Night",
+  bpmMin: 68,
+  bpmMax: 104,
+  key: 50, // D minor
+  progression: [
+    { deg: 0, tones: [0, 3, 7] },
+    { deg: 8, tones: [0, 4, 7] },
+    { deg: 5, tones: [0, 3, 7] },
+    { deg: 7, tones: [0, 4, 7, 10] },
+  ],
+  mix: { organ: 0.42, strings: 0.45, choir: 0.4, cello: 0.5, contrabass: 0.5, timpani: 0.6, violin: 0.34, drums_orch: 0.45 },
+  reverb: 0.3,
+  accents: { crash: ["timpani", 38], fill: ["timpani", [45, 45, 38]], low: ["timpani", [38, 36, 33]] },
+  pattern(c) {
+    const out: NoteSpec[] = [];
+    const I = c.intensity;
+    const quiet = calm(c.mode);
+    // held organ chord on every bar, low and soft
+    if (c.step === 0) for (const t of c.chord.slice(0, 3)) out.push({ inst: "organ", midi: into(t, 48, 67), vel: 0.28 + 0.22 * I, dur: c.barDur * 1.02, pan: (t % 2) * 0.3 - 0.15 });
+    if (c.step === 0) out.push({ inst: "contrabass", midi: into(c.root, 28, 40), vel: 0.4 + 0.3 * I, dur: c.barDur, pan: -0.1 });
+    if (quiet) {
+      // stopped / braking: a lonely string note on beat 3
+      if (c.step === 8) out.push({ inst: "strings", midi: into(c.chord[2]!, 62, 74), vel: 0.25, dur: c.barDur * 0.6, pan: 0.3 });
+      return out;
+    }
+    // low strings swell
+    if (I > 0.15 && c.step === 0) for (const t of c.chord.slice(0, 3)) out.push({ inst: "strings", midi: into(t, 50, 66), vel: 0.3 + 0.3 * I, dur: c.barDur * 1.02, pan: -0.25 });
+    // cello ostinato: root-fifth-minor third in 8ths
+    if (I > 0.28 && c.step % 2 === 0) {
+      const seq = [0, 7, 3, 7, 0, 7, 3, 8];
+      out.push({ inst: "cello", midi: into(c.root + seq[(c.step / 2) % 8]!, 38, 57), vel: 0.35 + 0.35 * I, dur: c.stepDur * 1.8, pan: -0.15 });
+    }
+    // choir "aah" on the bar
+    if (I > 0.38 && c.step === 0) for (const t of c.chord.slice(0, 3)) out.push({ inst: "choir", midi: into(t, 57, 74), vel: 0.3 + 0.35 * I, dur: c.barDur * 1.02, pan: 0.2 });
+    // timpani heartbeat
+    if (I > 0.45 && on(c, 0, 3)) out.push({ inst: "timpani", midi: into(c.root, 36, 48), vel: (c.step === 0 ? 0.55 : 0.35) + 0.3 * I, dur: 0.9 });
+    // high string melody
+    if (I > 0.58 && c.step % 4 === 0) {
+      const m = motif(c, 69, 86, 0.45 + 0.35 * I);
+      if (m) out.push({ inst: "violin", midi: m, vel: 0.35 + 0.35 * I, dur: c.stepDur * 4, pan: 0.35 });
+    }
+    // full pace: bass drum and cymbal swell every 4 bars
+    if (I > 0.75 && on(c, 0, 8)) out.push({ inst: "drums_orch", midi: 36, vel: 0.45 + 0.3 * I, dur: 0.6 });
+    if (I > 0.75 && c.step === 0 && c.bar % 4 === 0) out.push({ inst: "drums_orch", midi: 49, vel: 0.4, dur: 1.6, pan: -0.3 });
+    return out;
+  },
+};
+
+export const GENRES: Record<GenreId, GenreDef> = { classic, house, rock, pop, metal, hiphop, country, waltz, electro, anthem, darkrave, latino, gothic };
 for (const [id, l] of Object.entries(LAYERED)) {
   const g = GENRES[id as GenreId];
   g.fixedBpm = l!.bpm;

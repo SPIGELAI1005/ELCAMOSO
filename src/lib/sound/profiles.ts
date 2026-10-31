@@ -54,7 +54,12 @@ export type SignalKind =
   | "whip"
   | "neigh"
   | "beam"
-  | "sonar";
+  | "sonar"
+  | "cackle"
+  | "eerie"
+  | "scream"
+  | "gust"
+  | "howl";
 
 export interface RhythmSpec {
   kind: RhythmKind;
@@ -486,6 +491,38 @@ const BUILT_IN_SOUND_PROFILES: SoundProfile[] = [
       signals: [
         { kind: "whip", everySeconds: 13, jitter: 7, level: 0.16, tone: 2600, speedLinked: true },
         { kind: "neigh", everySeconds: 24, jitter: 12, level: 0.12, tone: 420 },
+      ],
+    },
+  },
+  {
+    id: "dracula-carriage",
+    name: "Dracula Carriage",
+    category: "Heritage",
+    traits: ["Hooves", "Haunted", "Gothic"],
+    description:
+      "A ghostly coach at midnight: galloping hooves, howling wind, an evil laugh in the dark and a gothic orchestra rising with your speed.",
+    drivetrainMode: "continuous",
+    voice: {
+      baseFrequency: 52,
+      harmonics: [1, 2.03, 3.1],
+      waveResponse: 0.9,
+      filterBase: 220,
+      filterRange: 1300,
+      noise: 0.08,
+      detune: 18,
+      wave: "triangle",
+      rhythm: { kind: "gallop", baseRate: 0.9, rateScale: 2.6, level: 0.28, tone: 360 },
+      rhythmB: { kind: "creak", baseRate: 0.5, rateScale: 1.3, level: 0.13, tone: 160 },
+      textures: [
+        { kind: "gravel", level: 0.24, tone: 1900, speedScale: 1, surge: 2.2 },
+        { kind: "wind", level: 0.24, tone: 700, speedScale: 0.8, surge: 0.6 },
+      ],
+      signals: [
+        { kind: "cackle", everySeconds: 24, jitter: 8, level: 0.26, tone: 130 },
+        { kind: "howl", everySeconds: 14, jitter: 6, level: 0.12, tone: 420 },
+        { kind: "gust", everySeconds: 11, jitter: 5, level: 0.12, tone: 700, speedLinked: true },
+        { kind: "eerie", everySeconds: 21, jitter: 9, level: 0.06, tone: 1150 },
+        { kind: "scream", everySeconds: 55, jitter: 15, level: 0.05, tone: 880 },
       ],
     },
   },

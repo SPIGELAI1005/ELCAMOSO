@@ -19,13 +19,13 @@ import {
 import { LISTENING_RUBRIC_DIMENSIONS } from "@/lib/sound/realism/catalog-tuning/listening-rubric";
 
 describe("Prompt 07 catalog tuning", () => {
-  it("covers the live public catalog (64) with one distinct row per ID", () => {
-    expect(PUBLIC_PROFILE_IDS).toHaveLength(64);
+  it("covers the live public catalog (65) with one distinct row per ID", () => {
+    expect(PUBLIC_PROFILE_IDS).toHaveLength(65);
     const entries = allCatalogTuningEntries();
-    expect(entries).toHaveLength(64);
+    expect(entries).toHaveLength(65);
     expect(Object.keys(CATALOG_TUNING_BY_PROFILE).sort()).toEqual([...PUBLIC_PROFILE_IDS].sort());
     const ids = new Set(entries.map((e) => e.profileId));
-    expect(ids.size).toBe(64);
+    expect(ids.size).toBe(65);
   });
 
   it("gives every row a concrete outcome or explicit blocker", () => {

@@ -35,6 +35,12 @@ export const FREE_SOUND_PROFILE_SET: readonly FreeSoundProfileSlot[] = [
     rationale:
       "High-rev racing V10 character; proves free tier includes a motorsport profile alongside muscle and GT.",
   },
+  {
+    id: "dracula-carriage",
+    role: "future",
+    rationale:
+      "Gothic ghost coach with a minor-key orchestra; a playful free profile that shows the music layer without Drive+.",
+  },
 ] as const;
 
 /** Ordered free profile ids derived from FREE_SOUND_PROFILE_SET. */
@@ -83,4 +89,27 @@ export function soundGateNow(): number {
 /** True once the Drive+ sound gate is in force. */
 export function isSoundTierGateActive(now: number = soundGateNow()): boolean {
   return now >= SOUND_TIER_GATE_STARTS_AT_UTC_MS;
+}
+
+/**
+ * Halloween window (George, 31 Oct 2026): Police Patrol is free from 31 Oct 16:00 to 2 Nov 00:00
+ * (Europe/Berlin), then automatically back to Drive+. Dracula Carriage is
+ * permanently free via FREE_SOUND_PROFILE_SET. Same date switch drives the Halloween row.
+ */
+export const HALLOWEEN_WINDOW_START_ISO = "2026-10-31T16:00:00+01:00";
+/** Exclusive end: 2 Nov 00:00 Berlin (1 Nov 23:00 UTC). */
+export const HALLOWEEN_WINDOW_END_ISO = "2026-11-02T00:00:00+01:00";
+export const HALLOWEEN_WINDOW_START_UTC_MS: number = Date.parse(HALLOWEEN_WINDOW_START_ISO);
+export const HALLOWEEN_WINDOW_END_UTC_MS: number = Date.parse(HALLOWEEN_WINDOW_END_ISO);
+export const HALLOWEEN_PROFILE_IDS: readonly string[] = ["dracula-carriage", "police-patrol"];
+/** Drive+ profiles that are free only inside the Halloween window. */
+export const HALLOWEEN_FREE_PROFILE_IDS: readonly string[] = ["police-patrol"];
+
+export function isHalloweenWindow(now: number = soundGateNow()): boolean {
+  return now >= HALLOWEEN_WINDOW_START_UTC_MS && now < HALLOWEEN_WINDOW_END_UTC_MS;
+}
+
+/** True when `profileId` is free right now only because of the Halloween window. */
+export function isSeasonalFreeProfile(profileId: string, now: number = soundGateNow()): boolean {
+  return HALLOWEEN_FREE_PROFILE_IDS.includes(profileId) && isHalloweenWindow(now);
 }

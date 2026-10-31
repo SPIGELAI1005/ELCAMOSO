@@ -50,3 +50,25 @@ export function setPoliceLightLevel(level: PoliceLightLevel, storage: Storage | 
     /* private mode */
   }
 }
+
+/** Roof light bar of public/hero/sound-profiles/police-patrol.png in image pixels (1672x941). */
+export const POLICE_HERO_SIZE = { w: 1672, h: 941 } as const;
+export const POLICE_ROOF_BAR = {
+  red: { cx: 885, cy: 194, rx: 82, ry: 13 },
+  blue: { cx: 1066, cy: 189, rx: 104, ry: 13 },
+} as const;
+
+/**
+ * Shared flash clock so the screen-edge glow and the roof bar stay in phase. Idempotent per
+ * timestamp: every caller in the same animation frame gets the same phase.
+ */
+const clock = { last: -1, phase: 0, rate: POLICE_LIGHT_MIN_RATE };
+export function advancePolicePhase(now: number, kmh: number): number {
+  if (now === clock.last) return clock.phase;
+  const dt = clock.last < 0 ? 0 : Math.min(0.1, Math.max(0, (now - clock.last) / 1000));
+  clock.last = now;
+  // smooth rate changes (tau 0.8 s) so speed jumps never jolt the rhythm
+  clock.rate += (policeFlashRate(kmh) - clock.rate) * (1 - Math.exp(-dt / 0.8));
+  clock.phase = (clock.phase + clock.rate * dt) % 1;
+  return clock.phase;
+}

@@ -80,6 +80,7 @@ const AMBIENT_IDS = new Set([
   "ocean-drive",
   "zen-drive",
   "wild-west-carriage",
+  "dracula-carriage",
   "romanian-85-carriage",
 ]);
 

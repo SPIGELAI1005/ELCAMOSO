@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   getPoliceLightLevel,
   nextPoliceLightLevel,
-  policeFlashRate,
+  advancePolicePhase,
   policeLightOpacity,
   policeLightPair,
   setPoliceLightLevel,
@@ -34,16 +34,8 @@ export function PoliceLightShow({ speed, reducedMotion, className }: PoliceLight
   useEffect(() => {
     if (peak <= 0 || typeof requestAnimationFrame === "undefined") return;
     let raf = 0;
-    let last = performance.now();
-    let phase = 0;
-    let rate = policeFlashRate(speedRef.current * 3.6);
     const tick = (now: number) => {
-      const dt = Math.min(0.1, (now - last) / 1000);
-      last = now;
-      // smooth rate changes (tau 0.8 s) so speed jumps never jolt the rhythm
-      const target = policeFlashRate(speedRef.current * 3.6);
-      rate += (target - rate) * (1 - Math.exp(-dt / 0.8));
-      phase = (phase + rate * dt) % 1;
+      const phase = advancePolicePhase(now, speedRef.current * 3.6);
       const { red, blue } = policeLightPair(phase);
       if (redRef.current) redRef.current.style.opacity = String(red * peak);
       if (blueRef.current) blueRef.current.style.opacity = String(blue * peak);

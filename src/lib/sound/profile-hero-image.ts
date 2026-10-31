@@ -53,6 +53,7 @@ const PROFILE_IDS_WITH_HERO = [
   "rain-drive",
   "ocean-drive",
   "wild-west-carriage",
+  "dracula-carriage",
   "jet-ski",
   "synthwave-drive",
   "world-cyber-city",
@@ -132,6 +133,7 @@ export const GENRE_IDS_WITH_HERO = [
   "country",
   "waltz",
   "latino",
+  "gothic",
 ] as const;
 
 const GENRE_HERO_SET = new Set<string>(GENRE_IDS_WITH_HERO);

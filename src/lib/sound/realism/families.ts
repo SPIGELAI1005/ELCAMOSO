@@ -52,6 +52,7 @@ const FAMILY_BY_ID: Record<string, ProfileFamily> = {
   "thunder-beast": "designed",
 
   "wild-west-carriage": "environmental",
+  "dracula-carriage": "environmental",
   "romanian-85-carriage": "environmental",
   "open-wind": "environmental",
   "storm-glider": "environmental",

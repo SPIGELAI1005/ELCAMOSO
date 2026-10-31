@@ -159,6 +159,11 @@ export class AdaptiveMusicSynth {
     return true;
   }
 
+  /** Scale the music bus (default 0.55), e.g. for a background bed under a profile. */
+  setLevel(level: number) {
+    if (this.bus) this.bus.gain.value = Math.max(0, level);
+  }
+
   setGenre(id: GenreId) {
     this.genreId = id;
     this.timeline?.setGenre(id);

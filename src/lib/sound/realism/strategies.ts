@@ -600,6 +600,46 @@ const baseStrategies: ProfileStrategy[] = [
     },
   },
   {
+    id: "dracula-carriage",
+    build(ctx, buses) {
+      return [
+        createHoofLayer(ctx, {
+          id: "hooves",
+          destination: buses.accents,
+          horses: 4,
+          tone: 360,
+          level: 0.3,
+        }),
+        createCreakLayer(ctx, {
+          id: "wood-creak",
+          destination: buses.accents,
+          tone: 160,
+          level: 0.13,
+        }),
+        createImpactLayer(ctx, {
+          id: "gravel",
+          destination: buses.beds,
+          kind: "gravel",
+          level: 0.18,
+        }),
+        createWindLayer(ctx, { id: "night-wind", destination: buses.beds, level: 0.3 }),
+        createOneShotEventLayer(ctx, {
+          id: "haunting",
+          destination: buses.accents,
+          level: 1,
+          events: [
+            { kind: "cackle", everySeconds: 24, jitter: 8, level: 0.26, tone: 130 },
+            { kind: "howl", everySeconds: 14, jitter: 6, level: 0.12, tone: 420 },
+            { kind: "gust", everySeconds: 11, jitter: 5, level: 0.12, tone: 700, speedLinked: true },
+            { kind: "eerie", everySeconds: 21, jitter: 9, level: 0.06, tone: 1150 },
+            { kind: "scream", everySeconds: 55, jitter: 15, level: 0.05, tone: 880 },
+            { kind: "whip", everySeconds: 20, jitter: 10, level: 0.12, tone: 2600, onlyOnHardAccel: true },
+          ],
+        }),
+      ];
+    },
+  },
+  {
     id: "romanian-85-carriage",
     build(ctx, buses) {
       return [
