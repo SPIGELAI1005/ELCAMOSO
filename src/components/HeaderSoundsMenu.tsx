@@ -24,12 +24,18 @@ import {
 } from "@/lib/sound/profiles";
 import { useSessionSelector } from "@/lib/store/session-store";
 import { cn } from "@/lib/utils";
+import { HALLOWEEN_ORANGE, HALLOWEEN_TAG, halloweenPinned } from "@/lib/halloween/halloween";
 
-function profilesByCategory(): { category: ProfileCategory; profiles: SoundProfile[] }[] {
-  return PROFILE_CATEGORIES.map((category) => ({
+type MenuGroup = { category: ProfileCategory | typeof HALLOWEEN_TAG; profiles: SoundProfile[]; halloween?: boolean };
+
+/** Halloween profiles pinned first (only inside the window), then the normal categories. */
+export function profilesByCategory(now?: number): MenuGroup[] {
+  const { pinned, rest } = halloweenPinned(SOUND_PROFILES, now);
+  const groups: MenuGroup[] = PROFILE_CATEGORIES.map((category) => ({
     category,
-    profiles: SOUND_PROFILES.filter((p) => p.category === category),
+    profiles: rest.filter((p) => p.category === category),
   })).filter((group) => group.profiles.length > 0);
+  return pinned.length ? [{ category: HALLOWEEN_TAG, profiles: pinned, halloween: true }, ...groups] : groups;
 }
 
 function closeOtherNavGroups(except?: Element | null) {
@@ -149,9 +155,20 @@ export function HeaderSoundsMenu({
         </p>
       ) : null}
       {upsellPanel}
-      {groups.map(({ category, profiles }) => (
-        <div key={category} className="mb-1">
-          <p className="px-3 py-1.5 text-[9px] tracking-[0.22em] text-muted-foreground/70 uppercase">
+      {groups.map(({ category, profiles, halloween }) => (
+        <div
+          key={category}
+          className={cn("mb-1", halloween && "mb-2 rounded-sm border pb-1")}
+          style={halloween ? { borderColor: `${HALLOWEEN_ORANGE}66`, background: `${HALLOWEEN_ORANGE}12` } : undefined}
+          data-testid={halloween ? "sounds-halloween-group" : undefined}
+        >
+          <p
+            className={cn(
+              "px-3 py-1.5 text-[9px] tracking-[0.22em] uppercase",
+              halloween ? "font-semibold" : "text-muted-foreground/70",
+            )}
+            style={halloween ? { color: HALLOWEEN_ORANGE } : undefined}
+          >
             {category}
           </p>
           {profiles.map((profile) => {
@@ -176,6 +193,14 @@ export function HeaderSoundsMenu({
                 )}
               >
                 <span className="min-w-0 truncate normal-case tracking-normal">{profile.name}</span>
+                {halloween && !locked ? (
+                  <span
+                    className="shrink-0 rounded-full px-1.5 py-0.5 text-[8px] font-semibold tracking-[0.12em] text-black uppercase"
+                    style={{ background: HALLOWEEN_ORANGE }}
+                  >
+                    🎃 Special
+                  </span>
+                ) : null}
                 {locked ? <PremiumBadge className="shrink-0" /> : null}
               </button>
             );

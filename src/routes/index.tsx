@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { createSeoHeadFromPath } from "@/lib/seo";
 import { FoundersBanner } from "@/components/FoundersBanner";
+import { HalloweenBanner } from "@/components/HalloweenBanner";
 import { LandingHero } from "@/components/LandingHero";
 import { LandingPlansSection } from "@/components/LandingPlansSection";
 import { MODE_DEMO_SRC, ModeDemoButton } from "@/components/experiences/ModeDemoButton";
@@ -22,7 +23,10 @@ function Landing() {
 
   return (
     <main className="min-h-screen">
-      <FoundersBanner className="sticky top-0 z-40" />
+      <div className="sticky top-0 z-40">
+        <FoundersBanner />
+        <HalloweenBanner />
+      </div>
       <LandingHero />
 
       <section className="mx-auto w-full max-w-5xl px-6 py-20 sm:px-12">

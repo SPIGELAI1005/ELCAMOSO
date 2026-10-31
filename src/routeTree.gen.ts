@@ -66,6 +66,7 @@ import { Route as LegalImpressumRouteImport } from './routes/legal/impressum'
 import { Route as LegalPrivacyRouteImport } from './routes/legal/privacy'
 import { Route as LegalRewardsRouteImport } from './routes/legal/rewards'
 import { Route as LegalTermsRouteImport } from './routes/legal/terms'
+import { Route as NewsHalloweenRouteImport } from './routes/news_.halloween'
 import { Route as PairTokenRouteImport } from './routes/pair_.$token'
 import { Route as SyncIndexRouteImport } from './routes/sync.index'
 import { Route as SyncCodeRouteImport } from './routes/sync.$code'
@@ -373,6 +374,11 @@ const LegalTermsRoute = LegalTermsRouteImport.update({
   path: '/terms',
   getParentRoute: () => LegalRouteRoute,
 } as any)
+const NewsHalloweenRoute = NewsHalloweenRouteImport.update({
+  id: '/news_/halloween',
+  path: '/news/halloween',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PairTokenRoute = PairTokenRouteImport.update({
   id: '/pair_/$token',
   path: '/pair/$token',
@@ -537,6 +543,7 @@ export interface FileRoutesByFullPath {
   '/legal/privacy': typeof LegalPrivacyRoute
   '/legal/rewards': typeof LegalRewardsRoute
   '/legal/terms': typeof LegalTermsRoute
+  '/news/halloween': typeof NewsHalloweenRoute
   '/pair/$token': typeof PairTokenRoute
   '/sync/$code': typeof SyncCodeRoute
   '/upgrade/$token': typeof UpgradeTokenRoute
@@ -616,6 +623,7 @@ export interface FileRoutesByTo {
   '/legal/privacy': typeof LegalPrivacyRoute
   '/legal/rewards': typeof LegalRewardsRoute
   '/legal/terms': typeof LegalTermsRoute
+  '/news/halloween': typeof NewsHalloweenRoute
   '/pair/$token': typeof PairTokenRoute
   '/sync/$code': typeof SyncCodeRoute
   '/upgrade/$token': typeof UpgradeTokenRoute
@@ -697,6 +705,7 @@ export interface FileRoutesById {
   '/legal/privacy': typeof LegalPrivacyRoute
   '/legal/rewards': typeof LegalRewardsRoute
   '/legal/terms': typeof LegalTermsRoute
+  '/news_/halloween': typeof NewsHalloweenRoute
   '/pair_/$token': typeof PairTokenRoute
   '/sync/$code': typeof SyncCodeRoute
   '/upgrade/$token': typeof UpgradeTokenRoute
@@ -779,6 +788,7 @@ export interface FileRouteTypes {
     | '/legal/privacy'
     | '/legal/rewards'
     | '/legal/terms'
+    | '/news/halloween'
     | '/pair/$token'
     | '/sync/$code'
     | '/upgrade/$token'
@@ -858,6 +868,7 @@ export interface FileRouteTypes {
     | '/legal/privacy'
     | '/legal/rewards'
     | '/legal/terms'
+    | '/news/halloween'
     | '/pair/$token'
     | '/sync/$code'
     | '/upgrade/$token'
@@ -938,6 +949,7 @@ export interface FileRouteTypes {
     | '/legal/privacy'
     | '/legal/rewards'
     | '/legal/terms'
+    | '/news_/halloween'
     | '/pair_/$token'
     | '/sync/$code'
     | '/upgrade/$token'
@@ -1005,6 +1017,7 @@ export interface RootRouteChildren {
   DebugCockpitRoute: typeof DebugCockpitRoute
   DebugTachoRoute: typeof DebugTachoRoute
   JourneysJourneyIdRoute: typeof JourneysJourneyIdRoute
+  NewsHalloweenRoute: typeof NewsHalloweenRoute
   PairTokenRoute: typeof PairTokenRoute
   SyncCodeRoute: typeof SyncCodeRoute
   UpgradeTokenRoute: typeof UpgradeTokenRoute
@@ -1427,6 +1440,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LegalTermsRouteImport
       parentRoute: typeof LegalRouteRoute
     }
+    '/news_/halloween': {
+      id: '/news_/halloween'
+      path: '/news/halloween'
+      fullPath: '/news/halloween'
+      preLoaderRoute: typeof NewsHalloweenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/pair_/$token': {
       id: '/pair_/$token'
       path: '/pair/$token'
@@ -1688,6 +1708,7 @@ const rootRouteChildren: RootRouteChildren = {
   DebugCockpitRoute: DebugCockpitRoute,
   DebugTachoRoute: DebugTachoRoute,
   JourneysJourneyIdRoute: JourneysJourneyIdRoute,
+  NewsHalloweenRoute: NewsHalloweenRoute,
   PairTokenRoute: PairTokenRoute,
   SyncCodeRoute: SyncCodeRoute,
   UpgradeTokenRoute: UpgradeTokenRoute,

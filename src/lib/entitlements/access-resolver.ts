@@ -28,6 +28,8 @@ import { experienceForProfileId } from "@/lib/experiences/catalog";
 import {
   FALLBACK_SOUND_PROFILE_ID,
   FREE_SOUND_PROFILE_IDS,
+  HALLOWEEN_WINDOW_END_UTC_MS,
+  isSeasonalFreeProfile,
   resolveProfileAccess,
   type ProfileAccessFields,
 } from "@/lib/sound/profile-access";
@@ -145,9 +147,12 @@ export function resolveProfileDriveAccess(
     }
   })();
 
+  if (isSeasonalFreeProfile(profileId, now) && !FREE_SET.has(profileId) && !allSoundsFreeAt(input.now)) {
+    return { allowed: true, source: "permanent_free", expiresAtUtc: HALLOWEEN_WINDOW_END_UTC_MS, fallbackProfileId };
+  }
   if (
     FREE_SET.has(profileId) ||
-    resolveProfileAccess(profile) === "free" ||
+    resolveProfileAccess(profile, undefined, now) === "free" ||
     allSoundsFreeAt(input.now)
   ) {
     return {
