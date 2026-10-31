@@ -159,7 +159,7 @@ export const EXPANSION_PROFILES: SoundProfile[] = [
   },
   {
     id: "formula-electric",
-    name: "Formula Electric",
+    name: "Electric Grand Prix",
     category: "Motorsport",
     traits: ["Whining", "Technical", "Fast"],
     description: "Technical motorsport EV: motor whine, inverter cluster and reduction-gear mesh.",

@@ -46,7 +46,7 @@ const ALIASES: Record<string, string[]> = {
   "american-muscle-v8": ["muscle", "american v8", "camaro"],
   "turbo-inline-6": ["turbo", "spool", "wastegate", "blowoff"],
   "electric-hypercar": ["hypercar", "inverter", "electric race"],
-  "formula-electric": ["formula", "fe", "open wheel electric"],
+  "formula-electric": ["formula", "fe", "open wheel electric", "electric grand prix", "grand prix"],
   "f1-v10": ["f1", "formula 1", "formula one", "v10 scream", "onboard", "grand prix", "grand prix mood", "2004"],
   "motorcycle-superbike": ["bike", "superbike", "motorcycle"],
   "big-twin": ["twin", "harley", "v-twin"],

@@ -40,7 +40,7 @@ export const STAGING_SOUND_SPIN_CAMPAIGN: SoundSpinCampaignConfig = {
           weight: 25,
           label: "Sport pack for 7 days",
           termsSummary:
-            "Unlocks Racing V10, Turbo Inline-6, and Formula Electric from claim time (UTC) for 7 days.",
+            "Unlocks Racing V10, Turbo Inline-6, and Electric Grand Prix from claim time (UTC) for 7 days.",
           packProfileIds: ["racing-v10", "turbo-inline-6", "formula-electric"],
         },
         {
