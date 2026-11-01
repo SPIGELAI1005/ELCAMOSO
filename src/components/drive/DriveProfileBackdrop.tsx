@@ -45,7 +45,7 @@ export function DriveProfileBackdrop({ profileId, className }: DriveProfileBackd
         className={cn(
           "absolute inset-0 h-full w-full object-center transition-opacity duration-700 ease-in-out",
           "object-contain px-2 sm:px-4 md:px-8 lg:px-10",
-          "xl:object-cover xl:px-0",
+          "[@media(min-aspect-ratio:4/3)]:object-cover [@media(min-aspect-ratio:4/3)]:px-0",
           "opacity-100",
         )}
       />
