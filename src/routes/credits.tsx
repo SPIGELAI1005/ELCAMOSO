@@ -7,8 +7,9 @@ import { RECORDED_BED_CREDITS } from "@/lib/sound/recorded-beds";
 import { SIREN_CREDIT } from "@/lib/sound/dsp/siren-overlay";
 import { HORSE_SNORT_CREDITS } from "@/lib/sound/horse-snorts";
 import { HORSE_WHINNY_CREDITS } from "@/lib/sound/horse-whinnies";
+import { SCARE_CREDITS } from "@/lib/sound/dsp/jump-scares";
 
-const CREDITS = [...RECORDED_LOOP_CREDITS, ...RECORDED_BED_CREDITS, ...HORSE_SNORT_CREDITS, ...HORSE_WHINNY_CREDITS, ...DEBRIS_GRAIN_CREDITS, SIREN_CREDIT];
+const CREDITS = [...RECORDED_LOOP_CREDITS, ...RECORDED_BED_CREDITS, ...HORSE_SNORT_CREDITS, ...HORSE_WHINNY_CREDITS, ...DEBRIS_GRAIN_CREDITS, ...SCARE_CREDITS, SIREN_CREDIT];
 
 export const Route = createFileRoute("/credits")({
   component: CreditsPage,

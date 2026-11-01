@@ -1269,6 +1269,7 @@ export class SoundEngine {
     if (ALWAYS_LAYERED_PROFILE_IDS.has(profile.id)) this.buildAtmosphere(profile, ctx.currentTime);
     if (JUMP_SCARE_PROFILE_IDS.has(profile.id) && this.profileBus) {
       this.scares = createJumpScares(ctx, this.profileBus.input, this.scareDuck);
+      this.scaresReady = this.scares.ready;
     }
 
     // Fusion - Engine + Symphony through FusionMixer.
@@ -1659,12 +1660,13 @@ export class SoundEngine {
   }
 
   private samplesReady: Promise<void> = Promise.resolve();
+  private scaresReady: Promise<void> = Promise.resolve();
   private bed: RecordedBed | null = null;
   private bedReady: Promise<void> = Promise.resolve();
 
   /** Resolves once the active profile's recorded loops are decoded (or failed). */
   whenSamplesReady(): Promise<void> {
-    return Promise.all([this.samplesReady, this.bedReady]).then(() => undefined);
+    return Promise.all([this.samplesReady, this.bedReady, this.scaresReady]).then(() => undefined);
   }
 
   /** Recorded texture bed (non-hybrid profiles with a RECORDED_BEDS entry). */

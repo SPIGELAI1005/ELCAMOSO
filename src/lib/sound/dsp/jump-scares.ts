@@ -1,8 +1,10 @@
 /**
  * Dracula Carriage jump scares: evil laughter, scream, wind whistle, crows,
- * owl and wolf howl. All six voices are SELF-MADE procedural syntheses
- * (no third-party recordings, no licence/credit needed), rendered once into
- * mono AudioBuffers (one per frame while warming up, ~2-3 s each).
+ * owl and wolf howl. Since v37 all six voices are real CC0 recordings from
+ * Freesound (trimmed, loudness-matched mono AAC, ~140 KB total in
+ * /sample-packs/recorded/scares-v1/), fetched lazily only when the Dracula
+ * profile starts and decoded by the browser off the main thread. The
+ * procedural voices below are only a fallback if a clip fails to load.
  *
  * Each scare = 1 AudioBufferSourceNode + 1 GainNode + 1 StereoPannerNode,
  * all disconnected on `ended` (no node leaks). Timing, voice and loudness are
@@ -11,19 +13,45 @@
  * the sum below clipping.
  */
 import { audioRandom } from "@/lib/sound/rng";
+import { fetchBytesWithRetry } from "@/lib/sound/fetch-bytes";
+import type { RecordedCredit } from "@/lib/sound/realism/v2/recorded-loops";
 
 export const SCARE_KINDS = ["laugh", "scream", "whistle", "crows", "owl", "wolf"] as const;
 export type ScareKind = (typeof SCARE_KINDS)[number];
 
-/** Source / licence of every scare voice (all original, synthesized in code). */
-export const SCARE_SOURCES: Readonly<Record<ScareKind, string>> = {
-  laugh: "self-made: formant-filtered glottal pulses, descending 'ha-ha-ha' (procedural, this file)",
-  scream: "self-made: vibrato saw + vowel formants + breath noise (procedural, this file)",
-  whistle: "self-made: narrow resonant noise sweep (procedural, this file)",
-  crows: "self-made: harsh nasal 'caw' x3 (procedural, this file)",
-  owl: "self-made: soft sine 'hoo, hoo-hoo, hoooo' (procedural, this file)",
-  wolf: "self-made: gliding harmonic howl with vibrato (procedural, this file)",
+const SCARE_BASE = "/sample-packs/recorded/scares-v1";
+export const SCARE_URLS: Readonly<Record<ScareKind, string>> = {
+  laugh: `${SCARE_BASE}/laugh.m4a`,
+  scream: `${SCARE_BASE}/scream.m4a`,
+  whistle: `${SCARE_BASE}/whistle.m4a`,
+  crows: `${SCARE_BASE}/crows.m4a`,
+  owl: `${SCARE_BASE}/owl.m4a`,
+  wolf: `${SCARE_BASE}/wolf.m4a`,
 };
+
+const CC0 = { licence: "CC0 1.0", licenceUrl: "https://creativecommons.org/publicdomain/zero/1.0/" };
+const RAW: (Omit<RecordedCredit, "licence" | "licenceUrl" | "usedIn" | "attribution"> & { kind: ScareKind })[] = [
+  { kind: "laugh", title: "Evil Laugh MUAHAHA (Freesound #626796)", author: "WannyManny", sourceUrl: "https://freesound.org/s/626796/" },
+  { kind: "scream", title: "woman scream (Freesound #220814)", author: "EricSueiro", sourceUrl: "https://freesound.org/s/220814/" },
+  { kind: "whistle", title: "wind howl window, slow 08 (Freesound #575243)", author: "TRP", sourceUrl: "https://freesound.org/s/575243/" },
+  { kind: "crows", title: "Crow Caw (Freesound #361470)", author: "Jofae", sourceUrl: "https://freesound.org/s/361470/" },
+  { kind: "crows", title: "Unusual Crow Caw Call 1 (Freesound #855095)", author: "qubodup", sourceUrl: "https://freesound.org/s/855095/" },
+  { kind: "owl", title: "Owl hoots (Freesound #277323)", author: "Extx", sourceUrl: "https://freesound.org/s/277323/" },
+  { kind: "wolf", title: "Solitary wolf howl very clear (Freesound #500646)", author: "betchkal", sourceUrl: "https://freesound.org/s/500646/" },
+];
+export const SCARE_CREDITS: RecordedCredit[] = RAW.map(({ kind: _k, ...c }) => ({
+  ...c,
+  ...CC0,
+  usedIn: "Dracula Carriage (night ambience)",
+  attribution: `${c.title.replace(/ \(Freesound.*/, "")} by ${c.author} (${c.title.match(/#\d+/)![0].replace("#", "Freesound #")}), CC0 1.0`,
+}));
+
+/** Source / licence of every scare voice. */
+export const SCARE_SOURCES: Readonly<Record<ScareKind, string>> = Object.fromEntries(
+  SCARE_KINDS.map((k) => [k, RAW.filter((r) => r.kind === k).map((r) => `${r.title}, ${r.author}, CC0 1.0`).join(" + ")]),
+) as Record<ScareKind, string>;
+
+const bytesCache = new Map<string, Promise<ArrayBuffer>>();
 
 /** Loud scares duck the bed to this gain; quiet ones barely touch it. */
 export const SCARE_DUCK_LOUD = 0.32;
@@ -150,6 +178,8 @@ export function renderScare(kind: ScareKind, sr: number, seed = 7): Float32Array
 }
 
 export interface JumpScares {
+  /** resolves once every recorded voice is decoded (or fell back) */
+  ready: Promise<void>;
   /** call once per engine update */
   update(intensity: number, t: number): void;
   dispose(): void;
@@ -169,9 +199,30 @@ export function createJumpScares(ctx: BaseAudioContext, out: AudioNode, duck: Ga
   const [a, b] = opts.firstAfter ?? [4, 8];
   let plan: ScarePlan | null = null;
   let disposed = false;
+  const failed = new Set<ScareKind>();
 
+  const ready = Promise.all(
+    SCARE_KINDS.map(async (k) => {
+      const url = SCARE_URLS[k];
+      try {
+        let p = bytesCache.get(url);
+        if (!p) {
+          p = fetchBytesWithRetry(url, "scare");
+          p.catch(() => bytesCache.delete(url));
+          bytesCache.set(url, p);
+        }
+        const bytes = await p;
+        if (disposed) return;
+        buffers.set(k, await ctx.decodeAudioData(bytes.slice(0)));
+      } catch {
+        if (!disposed) failed.add(k);
+      }
+    }),
+  ).then(() => undefined);
+
+  /** Fallback only: synthesize one voice whose recording failed to load. */
   function warmOne() {
-    for (const k of SCARE_KINDS) if (!buffers.has(k)) {
+    for (const k of failed) if (!buffers.has(k)) {
       const data = renderScare(k, ctx.sampleRate);
       const buf = ctx.createBuffer(1, data.length, ctx.sampleRate);
       buf.getChannelData(0).set(data);
@@ -185,7 +236,7 @@ export function createJumpScares(ctx: BaseAudioContext, out: AudioNode, duck: Ga
     if (!buf) return false;
     const src = ctx.createBufferSource();
     src.buffer = buf;
-    src.playbackRate.value = 0.94 + audioRandom() * 0.12;
+    src.playbackRate.value = 0.96 + audioRandom() * 0.06; // never pitched up much: keep voices deep/natural
     const g = ctx.createGain();
     g.gain.value = p.level * masterGain;
     const pan = ctx.createStereoPanner();
@@ -209,7 +260,7 @@ export function createJumpScares(ctx: BaseAudioContext, out: AudioNode, duck: Ga
   return {
     update(intensity, t) {
       if (disposed) return;
-      if (buffers.size < SCARE_KINDS.length) warmOne();
+      if (failed.size) warmOne();
       if (!plan) plan = { ...planNextScare(t, null), at: t + a + audioRandom() * (b - a), loud: true, level: 1 };
       if (t + 0.1 >= plan.at) {
         if (!buffers.has(plan.kind)) return; // still warming; play it as soon as it exists
@@ -225,6 +276,7 @@ export function createJumpScares(ctx: BaseAudioContext, out: AudioNode, duck: Ga
       duck?.gain.cancelScheduledValues(0);
       if (duck) duck.gain.value = 1;
     },
+    ready,
     diagnostics: () => ({ ready: buffers.size, active: live.size, fired, next: plan }),
   };
 }

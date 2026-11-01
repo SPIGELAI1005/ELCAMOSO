@@ -1,12 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { SCARE_KINDS, SCARE_SOURCES, planNextScare, renderScare } from "./jump-scares";
+import { SCARE_CREDITS, SCARE_KINDS, SCARE_SOURCES, SCARE_URLS, planNextScare, renderScare } from "./jump-scares";
 
 function lcg(seed: number) { let s = seed; return () => ((s = (s * 1664525 + 1013904223) >>> 0) / 2 ** 32); }
 
 describe("jump scares", () => {
-  it("covers laugh, scream, whistle, crows, owl, wolf with self-made sources", () => {
+  it("covers laugh, scream, whistle, crows, owl, wolf with CC0 recordings", () => {
     expect([...SCARE_KINDS].sort()).toEqual(["crows", "laugh", "owl", "scream", "whistle", "wolf"]);
-    for (const k of SCARE_KINDS) expect(SCARE_SOURCES[k]).toBeTruthy();
+    for (const k of SCARE_KINDS) {
+      expect(SCARE_SOURCES[k]).toMatch(/CC0/);
+      expect(SCARE_URLS[k]).toMatch(/^\/sample-packs\/recorded\/scares-v1\/.+\.m4a$/);
+    }
+    for (const c of SCARE_CREDITS) expect(c.licence).toBe("CC0 1.0");
   });
   it("plans random, non-repeating scares with a quiet/loud mix and bounded gaps", () => {
     const rnd = lcg(7);
