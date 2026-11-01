@@ -518,11 +518,7 @@ const BUILT_IN_SOUND_PROFILES: SoundProfile[] = [
         { kind: "wind", level: 0.24, tone: 700, speedScale: 0.25, surge: 0.6 },
       ],
       signals: [
-        { kind: "cackle", everySeconds: 26, jitter: 10, level: 0.26, tone: 130 },
-        { kind: "howl", everySeconds: 14, jitter: 6, level: 0.12, tone: 420 },
         { kind: "gust", everySeconds: 11, jitter: 5, level: 0.12, tone: 700, speedLinked: true },
-        { kind: "eerie", everySeconds: 26, jitter: 10, level: 0.09, tone: 1150 },
-        { kind: "scream", everySeconds: 30, jitter: 10, level: 0.08, tone: 880 },
       ],
     },
   },

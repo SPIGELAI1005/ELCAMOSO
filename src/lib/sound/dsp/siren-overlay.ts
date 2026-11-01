@@ -43,8 +43,8 @@ export function sirenModeFor(state: Pick<DriveState, "speed" | "throttle" | "acc
   return kmh > 90 || (state.throttle > 0.7 && state.acceleration > 2.2) ? "yelp" : "wail";
 }
 
-/** Idle level; rises ~+1.6 dB by 130 km/h. Tuned ~9-10 dB under the V8. */
-export const SIREN_LEVEL = 1.0;
+/** Idle level; rises ~+1.6 dB by 130 km/h. Tuned to ~5-10 % of the mix power under the (+2.5 dB) Police V8. */
+export const SIREN_LEVEL = 0.35;
 
 export function sirenTargetGain(kmh: number, level = SIREN_LEVEL): number {
   const k = Math.min(130, Math.max(0, kmh));
