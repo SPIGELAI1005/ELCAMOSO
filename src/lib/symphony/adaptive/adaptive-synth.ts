@@ -35,6 +35,8 @@ interface Deck {
   gain: GainNode;
   hp: BiquadFilterNode;
   lp: BiquadFilterNode;
+  /** trumpet FX send tap (post-fader twin of `gain`, so the wet tail crossfades with the deck); null when unused */
+  send: GainNode | null;
   /** stop scheduling notes at this audio time (outgoing deck) */
   until: number;
   /** disconnect the deck nodes after this audio time */
@@ -117,6 +119,8 @@ export class AdaptiveMusicSynth {
   private shelf: BiquadFilterNode | null = null;
   private verbSend: GainNode | null = null;
   private verb: ConvolverNode | null = null;
+  /** trumpet-only FX bus (warm hall + tempo-synced dotted-8th echo); built once per profile start, on first need */
+  private tfx: TrumpetFx | null = null;
   private voices: { src: AudioBufferSourceNode; end: number }[] = [];
   private deck: Deck | null = null;
   private outgoing: Deck[] = [];
@@ -207,7 +211,16 @@ export class AdaptiveMusicSynth {
     this.pendingSwitch = null;
     this.timeline?.releaseTempo();
     this.timeline?.setGenre(id);
-    if (this.deck) this.deck.genreId = id;
+    if (this.deck) {
+      this.deck.genreId = id;
+      if (GENRES[id].mix["trumpet"] && !this.deck.send && this.ctx) {
+        const fx = this.ensureTrumpetFx(this.ctx);
+        if (fx) {
+          this.deck.send = this.ctx.createGain();
+          this.deck.send.connect(fx.input);
+        }
+      }
+    }
     publishActiveGenre(id);
     this.conductor?.setRange({ bpmMin: GENRES[id].bpmMin, bpmMax: GENRES[id].bpmMax });
     this.setReverb(GENRES[id].reverb);
@@ -262,6 +275,7 @@ export class AdaptiveMusicSynth {
     const deck = this.deck!;
     for (const ev of this.timeline.scheduleUntil(until, cs)) this.play(ev, audioTime, deck);
     this.autoDjTick(audioTime, cs.bpm);
+    if (this.tfx) syncEcho(this.tfx, this.timeline.bpm, audioTime);
     this.reapDecks(audioTime);
   }
 
@@ -279,7 +293,26 @@ export class AdaptiveMusicSynth {
     gain.connect(hp);
     hp.connect(lp);
     lp.connect(this.bus!);
-    return { timeline, genreId, gain, hp, lp, until: Infinity, disposeAt: Infinity };
+    let send: GainNode | null = null;
+    if (GENRES[genreId].mix["trumpet"]) {
+      const fx = this.ensureTrumpetFx(ctx);
+      if (fx) {
+        send = ctx.createGain();
+        send.gain.value = 1;
+        send.connect(fx.input);
+      }
+    }
+    return { timeline, genreId, gain, send, hp, lp, until: Infinity, disposeAt: Infinity };
+  }
+
+  private ensureTrumpetFx(ctx: BaseAudioContext): TrumpetFx | null {
+    if (this.tfx || !this.bus) return this.tfx;
+    try {
+      this.tfx = buildTrumpetFx(ctx, this.bus, this.timeline?.bpm ?? 120);
+    } catch {
+      this.tfx = null;
+    }
+    return this.tfx;
   }
 
   /** Auto DJ: pick, beat-match, then crossfade on the bar line. Only schedules AudioParam ramps. */
@@ -327,6 +360,15 @@ export class AdaptiveMusicSynth {
       old.gain.gain.setValueCurveAtTime(curves.out, t0, D);
       inc.gain.gain.setValueAtTime(0, 0);
       inc.gain.gain.setValueCurveAtTime(curves.in, t0, D);
+      if (old.send) {
+        old.send.gain.cancelScheduledValues(t0);
+        old.send.gain.setValueAtTime(1, t0);
+        old.send.gain.setValueCurveAtTime(curves.out, t0, D);
+      }
+      if (inc.send) {
+        inc.send.gain.setValueAtTime(0, 0);
+        inc.send.gain.setValueCurveAtTime(curves.in, t0, D);
+      }
       // outgoing: high-pass sweep pulls the bass out (classic DJ bass swap) with a resonant edge
       old.hp.Q.setValueAtTime(0.7, t0);
       old.hp.Q.linearRampToValueAtTime(4, t0 + D * 0.8);
@@ -363,6 +405,7 @@ export class AdaptiveMusicSynth {
       if (now < d.disposeAt) return true;
       try {
         d.gain.disconnect();
+        d.send?.disconnect();
         d.hp.disconnect();
         d.lp.disconnect();
       } catch {
@@ -401,6 +444,7 @@ export class AdaptiveMusicSynth {
     }
     src.connect(g);
     tail.connect(deck.gain);
+    if (deck.send && ev.inst === "trumpet") tail.connect(deck.send);
     try {
       src.start(t, offset);
       src.stop(t + dur + 0.35);
@@ -471,6 +515,7 @@ export class AdaptiveMusicSynth {
     for (const d of [this.deck, ...this.outgoing]) {
       try {
         d?.gain.disconnect();
+        d?.send?.disconnect();
         d?.hp.disconnect();
         d?.lp.disconnect();
       } catch {
@@ -491,6 +536,14 @@ export class AdaptiveMusicSynth {
     this.bus = this.filter = this.shelf = null;
     this.verbSend = null;
     this.verb = null;
+    for (const n of this.tfx?.nodes ?? []) {
+      try {
+        n.disconnect();
+      } catch {
+        /* */
+      }
+    }
+    this.tfx = null;
     this.conductor = null;
     this.timeline = null;
     this.energy = null;
@@ -506,4 +559,64 @@ function hallImpulse(ctx: BaseAudioContext, seconds: number): AudioBuffer {
   buf.getChannelData(0).set(l);
   buf.getChannelData(1).set(r);
   return buf;
+}
+
+/** Trumpet send: 300 Hz high-pass (no mud) feeding a 2.3 s warm hall (~33 % wet) and a dotted-8th
+ *  echo (fb 0.3, 3.5 kHz low-passed in the loop, ~22 % wet). Mono delay + decorrelated hall = mono-safe. */
+interface TrumpetFx {
+  input: GainNode;
+  delay: DelayNode;
+  nodes: AudioNode[];
+}
+export const TRUMPET_FX = { reverbSec: 2.3, reverbWet: 0.33, echoWet: 0.22, feedback: 0.3, echoLp: 3500, hp: 300, beats: 0.75 } as const;
+export function echoSeconds(bpm: number) {
+  return (TRUMPET_FX.beats * 60) / Math.max(40, bpm);
+}
+function buildTrumpetFx(ctx: BaseAudioContext, out: AudioNode, bpm: number): TrumpetFx {
+  const input = ctx.createGain();
+  const hp = ctx.createBiquadFilter();
+  hp.type = "highpass";
+  hp.frequency.value = TRUMPET_FX.hp;
+  hp.Q.value = 0.6;
+  input.connect(hp);
+  // warm hall
+  const verbIn = ctx.createGain();
+  verbIn.gain.value = TRUMPET_FX.reverbWet;
+  const verb = ctx.createConvolver();
+  verb.buffer = hallImpulse(ctx, TRUMPET_FX.reverbSec);
+  const warm = ctx.createBiquadFilter();
+  warm.type = "lowpass";
+  warm.frequency.value = 5200;
+  warm.Q.value = 0.5;
+  hp.connect(verbIn);
+  verbIn.connect(verb);
+  verb.connect(warm);
+  warm.connect(out);
+  // tempo-synced echo
+  const echoIn = ctx.createGain();
+  echoIn.gain.value = TRUMPET_FX.echoWet;
+  const delay = ctx.createDelay(2);
+  delay.delayTime.value = echoSeconds(bpm);
+  const loopLp = ctx.createBiquadFilter();
+  loopLp.type = "lowpass";
+  loopLp.frequency.value = TRUMPET_FX.echoLp;
+  loopLp.Q.value = 0.5;
+  const fb = ctx.createGain();
+  fb.gain.value = TRUMPET_FX.feedback;
+  hp.connect(echoIn);
+  echoIn.connect(delay);
+  delay.connect(loopLp);
+  loopLp.connect(fb);
+  fb.connect(delay);
+  loopLp.connect(out);
+  // echoes bloom into the hall a little, so repeats sit in the same room
+  const echoToVerb = ctx.createGain();
+  echoToVerb.gain.value = 0.35;
+  loopLp.connect(echoToVerb);
+  echoToVerb.connect(verb);
+  return { input, delay, nodes: [input, hp, verbIn, verb, warm, echoIn, delay, loopLp, fb, echoToVerb] };
+}
+function syncEcho(fx: TrumpetFx, bpm: number, now: number) {
+  const want = echoSeconds(bpm);
+  if (Math.abs(fx.delay.delayTime.value - want) > 0.004) fx.delay.delayTime.setTargetAtTime(want, now, 0.3);
 }

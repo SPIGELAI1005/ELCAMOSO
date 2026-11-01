@@ -229,7 +229,7 @@ describe("road anthem real band", () => {
           // one power-chord sample per side per hit (the sprite already holds root-5th-octave)
           expect(notes.filter((n) => n.inst === "rockgtr").length).toBeLessThanOrEqual(2);
         }
-    for (const inst of ["drums_room", "ebass", "rockgtr", "rocklead", "cleangtr", "rockorgan", "piano"]) expect(used.has(inst), inst).toBe(true);
+    for (const inst of ["drums_room", "ebass", "rockgtr", "rocklead", "cleangtr", "rockorgan", "piano", "trumpet"]) expect(used.has(inst), inst).toBe(true);
     for (const inst of ["pad", "choir", "strings", "lead", "synthbass", "timpani", "dguitar", "leadgtr", "drums_elec"]) expect(used.has(inst), inst).toBe(false);
   });
 });

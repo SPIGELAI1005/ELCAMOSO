@@ -84,3 +84,13 @@ describe("latino trumpet section", () => {
     expect(g.mix.nylon).toBeLessThan(g.mix.trumpet! + 0.01);
   });
 });
+
+import { echoSeconds, TRUMPET_FX } from "./adaptive-synth";
+describe("trumpet FX bus", () => {
+  it("echo is a dotted 8th at the current tempo, with modest wet/feedback", () => {
+    expect(echoSeconds(120)).toBeCloseTo(0.375, 5);
+    expect(TRUMPET_FX.feedback).toBeLessThanOrEqual(0.35);
+    expect(TRUMPET_FX.reverbWet).toBeGreaterThanOrEqual(0.3);
+    expect(TRUMPET_FX.echoWet).toBeLessThanOrEqual(0.25);
+  });
+});
