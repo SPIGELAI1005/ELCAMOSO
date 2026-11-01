@@ -48,13 +48,13 @@ describe("getAcousticProfileSpec", () => {
     }
   });
 
-  it("covers all 65 catalog IDs with unique recipe mappings", () => {
-    expect(PUBLIC_PROFILE_IDS).toHaveLength(65);
+  it("covers all 67 catalog IDs with unique recipe mappings", () => {
+    expect(PUBLIC_PROFILE_IDS).toHaveLength(67);
     clearAcousticProfileSpecCache();
     const specs = allCatalogAcousticProfileSpecs();
-    expect(specs).toHaveLength(65);
+    expect(specs).toHaveLength(67);
     const ids = specs.map((s) => s.id);
-    expect(new Set(ids).size).toBe(65);
+    expect(new Set(ids).size).toBe(67);
     for (const spec of specs) {
       expect(spec.recipe.inheritance.overrides.some((o) => o === `identity:${spec.id}`)).toBe(
         true,

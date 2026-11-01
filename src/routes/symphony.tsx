@@ -3,6 +3,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { createSeoHeadFromPath } from "@/lib/seo";
 import { ExperienceCardList } from "@/components/experiences/ExperienceCardList";
 import { MotionIntentDiagram } from "@/components/experiences/MotionIntentDiagram";
+import { SymphonyHeroBackdrop } from "@/components/SymphonyHeroBackdrop";
 import { MusicGenrePicker } from "@/components/experiences/MusicGenrePicker";
 import { LockedSoundNotice } from "@/components/premium/LockedSoundNotice";
 import { CarPhonePairPanel } from "@/components/phone-sync/CarPhonePairPanel";
@@ -134,15 +135,18 @@ function SymphonyPage() {
 
   return (
     <main className="mx-auto min-h-screen w-full max-w-3xl px-6 pt-8 pb-24 sm:px-10">
-      <p className="text-[10px] tracking-[0.32em] text-muted-foreground uppercase">
-        Drive Symphony
-      </p>
-      <h1 className="mt-4 text-4xl font-light tracking-tight sm:text-5xl">
-        Your driving becomes the arrangement.
-      </h1>
-      <p className="mt-4 max-w-xl text-lg text-muted-foreground">
-        Not music playing over the drive. Music shaped by the drive.
-      </p>
+      <div className="relative isolate -mx-6 overflow-hidden px-6 pt-10 pb-16 sm:-mx-10 sm:px-10 sm:pt-16 sm:pb-24">
+        <SymphonyHeroBackdrop />
+        <p className="text-[10px] tracking-[0.32em] text-muted-foreground uppercase">
+          Drive Symphony
+        </p>
+        <h1 className="mt-4 text-4xl font-light tracking-tight sm:text-5xl">
+          Your driving becomes the arrangement.
+        </h1>
+        <p className="mt-4 max-w-xl text-lg text-muted-foreground">
+          Not music playing over the drive. Music shaped by the drive.
+        </p>
+      </div>
 
       <section className="mt-14 border border-border/70 bg-surface-1/20 px-6 py-10">
         <p className="text-center text-sm text-muted-foreground">
@@ -166,6 +170,17 @@ function SymphonyPage() {
               Stop
             </button>
           )}
+          <button
+            type="button"
+            onClick={() =>
+              document
+                .getElementById("music-genre-picker")
+                ?.scrollIntoView({ behavior: "smooth", block: "start" })
+            }
+            className="h-12 rounded-full border border-border px-8 text-[10px] tracking-[0.22em] uppercase hover:border-foreground"
+          >
+            Select Music Genre
+          </button>
         </div>
 
         {loadProgress?.phase === "loading" ? (
@@ -245,11 +260,13 @@ function SymphonyPage() {
       </section>
 
       <LockedSoundNotice className="mt-12" />
-      <MusicGenrePicker
-        className="mt-12"
-        onPick={() => driveWithMusic()}
-        onStart={() => driveWithMusic()}
-      />
+      <div id="music-genre-picker" className="scroll-mt-20">
+        <MusicGenrePicker
+          className="mt-12"
+          onPick={() => driveWithMusic()}
+          onStart={() => driveWithMusic()}
+        />
+      </div>
 
       <CarPhonePairPanel className="mt-8" />
 

@@ -5,7 +5,7 @@
  */
 import type { MusicAccent, MusicMode } from "./conductor";
 
-export type GenreId = "classic" | "house" | "rock" | "pop" | "metal" | "hiphop" | "country" | "waltz" | "electro" | "anthem" | "darkrave" | "latino" | "gothic";
+export type GenreId = "classic" | "house" | "rock" | "pop" | "metal" | "hiphop" | "country" | "waltz" | "electro" | "anthem" | "darkrave" | "latino" | "gothic" | "pianoflow" | "jazz";
 
 export interface NoteSpec {
   inst: string;
@@ -1080,7 +1080,150 @@ const gothic: GenreDef = {
   },
 };
 
-export const GENRES: Record<GenreId, GenreDef> = { classic, house, rock, pop, metal, hiphop, country, waltz, electro, anthem, darkrave, latino, gothic };
+// ---- Piano Flow: fixed 84 bpm, original flowing piano over soft pads (D major: Dmaj7 - Bm9 - Gmaj7 - A6/9) ----
+/** Original 2-bar piano phrases: [step, semitones above key root, length in steps]. */
+export const PIANO_FLOW_THEME: readonly (readonly [number, number, number])[][] = [
+  [[0, 16, 4], [4, 14, 2], [6, 11, 2], [8, 9, 6], [14, 11, 2]],
+  [[0, 14, 3], [3, 11, 1], [4, 9, 4], [8, 7, 4], [12, 9, 4]],
+  [[0, 19, 4], [4, 18, 2], [6, 16, 2], [8, 14, 4], [12, 16, 2], [14, 18, 2]],
+  [[0, 21, 6], [6, 19, 2], [8, 16, 4], [12, 14, 4]],
+];
+export function pianoFlowMelody(c: StepContext): NoteSpec[] {
+  const ph = PIANO_FLOW_THEME[(c.bar + (c.variation % 2) * 2) % 4]!;
+  const out: NoteSpec[] = [];
+  for (const [st, iv, len] of ph) if (st === c.step) out.push({ inst: "piano", midi: 62 + iv, vel: 0.42 + 0.3 * c.intensity, dur: c.stepDur * len * 1.4, pan: 0.15 });
+  return out;
+}
+const pianoflow: GenreDef = {
+  id: "pianoflow",
+  name: "Piano Flow",
+  bpmMin: 84,
+  bpmMax: 84,
+  fixedBpm: 84,
+  key: 50, // D
+  progression: [
+    { deg: 0, tones: [0, 4, 7, 11] },
+    { deg: 9, tones: [0, 3, 7, 14] },
+    { deg: 5, tones: [0, 4, 7, 11] },
+    { deg: 7, tones: [0, 4, 9, 14] },
+  ],
+  mix: { piano: 0.62, pad: 0.22, strings: 0.3, contrabass: 0.34, drums_std: 0.4, harp: 0.22 },
+  reverb: 0.26,
+  accents: { crash: ["drums_std", 49], fill: ["drums_std", [37, 37, 38, 38]], low: ["contrabass", [38, 33, 31]] },
+  pattern(c) {
+    const out: NoteSpec[] = [];
+    const I = c.intensity;
+    const quiet = calm(c.mode);
+    // soft pad bed + low piano root, always
+    if (c.step === 0) {
+      for (const t of c.chord.slice(0, 3)) out.push({ inst: "pad", midi: into(t, 55, 74), vel: 0.26 + 0.1 * I, dur: c.barDur * 1.02, pan: (t % 2) * 0.4 - 0.2 });
+      out.push({ inst: "piano", midi: into(c.root, 38, 50), vel: 0.4 + 0.15 * I, dur: c.barDur, pan: -0.2 });
+    }
+    // flowing left-hand arpeggio: quarters when stopped, 8ths cruising, 16ths with pace
+    const every = quiet ? 4 : I > 0.6 ? 1 : 2;
+    if (c.step % every === 0) {
+      const tones = [c.chord[0]!, c.chord[2]!, c.chord[3]!, c.chord[1]! + 12, c.chord[2]! + 12, c.chord[3]!];
+      const n = tones[(c.step / every) % tones.length]!;
+      out.push({ inst: "piano", midi: into(n, 50, 72), vel: (every === 1 ? 0.24 : 0.3) + 0.2 * I, dur: c.stepDur * every * 2.2, pan: -0.15 });
+    }
+    if (quiet) return out;
+    // the right-hand melody joins once rolling
+    if (I > 0.2) out.push(...pianoFlowMelody(c));
+    // upright bass on 1 and 3
+    if (I > 0.3 && on(c, 0, 8)) out.push({ inst: "contrabass", midi: into(c.root + (c.step === 8 ? 7 : 0), 31, 45), vel: 0.4 + 0.3 * I, dur: c.stepDur * 7 });
+    // gentle drums: rim click + soft kick, then hats
+    if (I > 0.38) {
+      if (on(c, 0, 10)) out.push({ inst: "drums_std", midi: 36, vel: 0.35 + 0.25 * I, dur: 0.4 });
+      if (on(c, 4, 12)) out.push({ inst: "drums_std", midi: 37, vel: 0.3 + 0.2 * I, dur: 0.3, pan: 0.1 });
+      if (c.step % 2 === 0) out.push({ inst: "drums_std", midi: 42, vel: (c.step % 4 ? 0.12 : 0.2) + 0.15 * I, dur: 0.15, pan: 0.35 });
+    }
+    // strings swell + harp sparkle answering the melody at pace
+    if (I > 0.6 && c.step === 0) for (const t of c.chord.slice(0, 3)) out.push({ inst: "strings", midi: into(t, 57, 76), vel: 0.25 + 0.3 * I, dur: c.barDur * 1.02, pan: 0.25 });
+    if (I > 0.75 && on(c, 2, 6, 10, 14)) out.push({ inst: "harp", midi: into(c.chord[(c.step >> 2) % 4]!, 74, 90), vel: 0.25 + 0.2 * I, dur: c.stepDur * 3, pan: 0.45 });
+    if (I > 0.75 && on(c, 0, 8)) out.push({ inst: "drums_std", midi: 38, vel: 0.25 + 0.2 * I, dur: 0.3 });
+    if (I > 0.8 && c.step === 0 && c.bar % 4 === 0) out.push({ inst: "drums_std", midi: 49, vel: 0.32, dur: 1.6, pan: -0.3 });
+    return out;
+  },
+};
+
+// ---- Jazz Cruise: fixed 112 bpm swing, ii-V-I-VI in F (Gm9 - C13 - Fmaj9 - D7b9) ----
+const swing = (c: StepContext) => (c.step % 4 === 2 ? 0.34 : 0);
+/** Original sax-like lead, 2-bar phrases: [step, semitones above F4, length in steps]. */
+export const JAZZ_LEAD: readonly (readonly [number, number, number])[][] = [
+  [[2, 2, 2], [4, 5, 2], [6, 9, 2], [8, 10, 4], [14, 9, 2]],
+  [[0, 7, 3], [4, 4, 2], [6, 2, 2], [8, 0, 6]],
+  [[0, 12, 2], [2, 14, 2], [4, 12, 2], [6, 9, 2], [8, 7, 4], [12, 5, 2], [14, 4, 2]],
+  [[0, 6, 4], [6, 9, 2], [8, 3, 6]],
+];
+export function jazzLead(c: StepContext): NoteSpec[] {
+  const out: NoteSpec[] = [];
+  for (const [st, iv, len] of JAZZ_LEAD[(c.bar + c.variation) % 4]!) if (st === c.step) out.push({ inst: "sax", midi: 65 + iv, vel: 0.45 + 0.35 * c.intensity, dur: c.stepDur * len * 1.1, pan: 0.2, offset: swing(c) });
+  return out;
+}
+/** Walking bass: root, chord tone, chord tone, chromatic approach to the next root. */
+const JAZZ_ROOTS = [7, 0, 5, 2] as const;
+export function jazzWalk(c: StepContext): NoteSpec[] {
+  if (c.step % 4) return [];
+  const beat = c.step / 4;
+  const root = into(c.root, 31, 43);
+  const next = into(53 - 12 + JAZZ_ROOTS[(c.bar + 1) % 4]!, 31, 43);
+  const midi = beat === 0 ? root : beat === 1 ? root + (c.chord[1]! - c.chord[0]!) : beat === 2 ? root + 7 : next + (next > root ? -1 : 1);
+  return [{ inst: "contrabass", midi, vel: 0.55 + 0.3 * c.intensity, dur: c.stepDur * 3.6, pan: -0.1 }];
+}
+const jazz: GenreDef = {
+  id: "jazz",
+  name: "Jazz Cruise",
+  bpmMin: 112,
+  bpmMax: 112,
+  fixedBpm: 112,
+  key: 41, // F
+  progression: [
+    { deg: 2, tones: [0, 3, 10, 14] },
+    { deg: 7, tones: [0, 4, 10, 21] },
+    { deg: 0, tones: [0, 4, 11, 14] },
+    { deg: 9, tones: [0, 4, 10, 13] },
+  ],
+  mix: { contrabass: 0.6, drums_jazz: 0.7, epiano: 0.4, piano: 0.36, sax: 0.42, pad: 0.14 },
+  reverb: 0.16,
+  accents: { crash: ["drums_jazz", 49], fill: ["drums_jazz", [38, 38, 38, 36]], low: ["contrabass", [41, 36, 29]] },
+  pattern(c) {
+    const out: NoteSpec[] = [];
+    const I = c.intensity;
+    const quiet = calm(c.mode);
+    const voicing = (lo: number, hi: number) => c.chord.slice(1).map((t) => into(t, lo, hi));
+    // Rhodes holds the chord softly from the start
+    if (c.step === 0) voicing(55, 72).forEach((m, i) => out.push({ inst: "epiano", midi: m, vel: 0.3 + 0.1 * I, dur: c.barDur * (quiet ? 1.02 : 0.45), pan: -0.25, offset: i * 0.05 }));
+    if (quiet) {
+      if (c.step === 0) out.push({ inst: "contrabass", midi: into(c.root, 31, 43), vel: 0.45, dur: c.barDur });
+      if (c.step % 4 === 0) out.push({ inst: "drums_jazz", midi: 51, vel: 0.18, dur: 0.6, pan: 0.3 });
+      return out;
+    }
+    // ride cymbal swing pattern + hi-hat foot on 2 and 4
+    if (I > 0.12) {
+      if (c.step % 4 === 0 || on(c, 6, 14)) out.push({ inst: "drums_jazz", midi: 51, vel: (on(c, 4, 12) ? 0.38 : 0.28) + 0.2 * I, dur: 0.6, pan: 0.3, offset: swing(c) });
+      if (on(c, 4, 12)) out.push({ inst: "drums_jazz", midi: 44, vel: 0.3 + 0.15 * I, dur: 0.2, pan: 0.2 });
+    }
+    // walking upright bass
+    if (I > 0.18) out.push(...jazzWalk(c));
+    // Rhodes comping: Charleston on 1 and the and-of-2
+    if (I > 0.3 && on(c, 6)) voicing(55, 72).forEach((m, i) => out.push({ inst: "epiano", midi: m, vel: 0.28 + 0.2 * I, dur: c.stepDur * 3, pan: -0.25, offset: swing(c) + i * 0.04 }));
+    // brushed snare comping + feathered kick
+    if (I > 0.35) {
+      if (on(c, 0, 4, 8, 12)) out.push({ inst: "drums_jazz", midi: 36, vel: 0.2 + 0.15 * I, dur: 0.3 });
+      if (on(c, 4, 12) || (c.variation % 2 && on(c, 10))) out.push({ inst: "drums_jazz", midi: 38, vel: 0.22 + 0.2 * I, dur: 0.3, pan: -0.1, offset: swing(c) });
+    }
+    // sax-like lead melody
+    if (I > 0.45) out.push(...jazzLead(c));
+    // piano fills answer the sax at pace
+    if (I > 0.68 && c.bar % 2 === 1 && on(c, 10, 12, 14)) out.push({ inst: "piano", midi: into(c.chord[(c.step - 10) / 2 + 1]! + 12, 70, 86), vel: 0.3 + 0.2 * I, dur: c.stepDur * 2, pan: 0.35, offset: swing(c) });
+    // full pace: shout chord, crash every 4 bars
+    if (I > 0.8 && c.step === 14 && c.bar % 2 === 1) voicing(62, 79).forEach((m) => out.push({ inst: "sax", midi: m, vel: 0.35 + 0.2 * I, dur: c.stepDur * 2, pan: -0.2, offset: swing(c) }));
+    if (I > 0.8 && c.step === 0 && c.bar % 4 === 0) out.push({ inst: "drums_jazz", midi: 49, vel: 0.4, dur: 1.6, pan: -0.3 });
+    return out;
+  },
+};
+
+export const GENRES: Record<GenreId, GenreDef> = { classic, house, rock, pop, metal, hiphop, country, waltz, electro, anthem, darkrave, latino, gothic, pianoflow, jazz };
 for (const [id, l] of Object.entries(LAYERED)) {
   const g = GENRES[id as GenreId];
   g.fixedBpm = l!.bpm;

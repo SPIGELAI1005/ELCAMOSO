@@ -119,6 +119,8 @@ export const PROFILE_MAKEUP_DB: Record<string, number> = {
   "symphony-motion-orchestra": 10.4,
   "symphony-neon-run": 9.0,
   "symphony-latino-fiesta": 9.0,
+  "symphony-piano-flow": 9.6,
+  "symphony-jazz-cruise": 9.2,
   "world-space-drive": 0.9,
   "world-cyber-city": 2.0,
   "world-storm-run": 4.1,

@@ -66,6 +66,8 @@ const PROFILE_IDS_WITH_HERO = [
   "fusion-midnight-boost",
   "fusion-future-pulse",
   "symphony-latino-fiesta",
+  "symphony-piano-flow",
+  "symphony-jazz-cruise",
   "traby",
   "ge-squared",
   "police-patrol",
@@ -137,6 +139,8 @@ export const GENRE_IDS_WITH_HERO = [
   "electro",
   "anthem",
   "darkrave",
+  "pianoflow",
+  "jazz",
 ] as const;
 
 const GENRE_HERO_SET = new Set<string>(GENRE_IDS_WITH_HERO);

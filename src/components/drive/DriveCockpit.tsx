@@ -39,6 +39,7 @@ import { useFeatureAccess } from "@/lib/entitlements/selectors";
 import { DriveProfileBackdrop } from "@/components/drive/DriveProfileBackdrop";
 import { PoliceLightShow } from "@/components/drive/PoliceLightShow";
 import { PoliceRoofLights } from "@/components/drive/PoliceRoofLights";
+import { DriveGenreSubtitle } from "@/components/drive/DriveGenreSubtitle";
 import { DriveCarFx } from "@/components/drive/DriveCarFx";
 import { DriveGallopVideo } from "@/components/drive/DriveGallopVideo";
 import { POLICE_LIGHT_PROFILE_ID } from "@/lib/drive/police-lights";
@@ -511,6 +512,7 @@ export function DriveCockpit({
           <p className="truncate text-sm font-light tracking-[0.04em] sm:text-base">
             {profile.name}
           </p>
+          <DriveGenreSubtitle profileId={profile.id} />
           {switchStatus ? (
             <p
               className="mt-0.5 truncate text-[11px] tracking-[0.12em] text-muted-foreground uppercase"
