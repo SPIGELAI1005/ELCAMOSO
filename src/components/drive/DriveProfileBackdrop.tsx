@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import {
-  genreHeroImageSrc,
+  driveGenreBackdropSrc,
   profileHeroImageAlt,
   profileHeroImageSrc,
 } from "@/lib/sound/profile-hero-image";
@@ -22,8 +22,7 @@ export function DriveProfileBackdrop({ profileId, className }: DriveProfileBackd
     return subscribeGenreChoice(setChoice);
   }, []);
   // Drive the Music profiles show the car of the genre picked on /symphony.
-  const genreSrc =
-    profileId?.startsWith("symphony-") && !hasSignatureGenre(profileId) && choice !== "auto" ? genreHeroImageSrc(choice) : null;
+  const genreSrc = driveGenreBackdropSrc(profileId, choice, hasSignatureGenre);
   const src = genreSrc ?? profileHeroImageSrc(profileId);
   if (!src || !profileId) return null;
 

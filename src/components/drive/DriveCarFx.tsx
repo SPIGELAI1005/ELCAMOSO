@@ -1,6 +1,7 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { carFxFor, floorHeading, groundYAt, floorScrollPxPerSecond, floorStreakOpacity, sampleDriveFxSpeed, headlightsOn, wheelBlur, wheelMatrix, wheelTurnsPerSecond, WHEEL_SPIN_SIGN, DRIVE_MOTION_FX_ENABLED, type CarFxConfig } from "@/lib/drive/car-fx";
-import { profileHeroImageSrc } from "@/lib/sound/profile-hero-image";
+import { driveGenreBackdropSrc, profileHeroImageSrc } from "@/lib/sound/profile-hero-image";
+import { getGenreChoice, hasSignatureGenre, subscribeGenreChoice, type GenreChoice } from "@/lib/symphony/adaptive/genre-store";
 import { cn } from "@/lib/utils";
 
 interface DriveCarFxProps {
@@ -107,7 +108,14 @@ function CarFxSvg({ cfg, src, aspect, uid, lit, still }: { cfg: CarFxConfig; src
  * lights switch without a fade.
  */
 export function DriveCarFx({ profileId, speed, engineRunning, reducedMotion, className }: DriveCarFxProps) {
-  const cfg = carFxFor(profileId);
+  const [choice, setChoice] = useState<GenreChoice>("auto");
+  useEffect(() => {
+    setChoice(getGenreChoice());
+    return subscribeGenreChoice(setChoice);
+  }, []);
+  // A genre still replaces the profile's car: its lamps are elsewhere, so no overlay then.
+  const genreShown = driveGenreBackdropSrc(profileId, choice, hasSignatureGenre) !== null;
+  const cfg = genreShown ? null : carFxFor(profileId);
   const src = profileHeroImageSrc(profileId);
   const rootRef = useRef<HTMLDivElement>(null);
   const kmhRef = useRef(speed * 3.6);
