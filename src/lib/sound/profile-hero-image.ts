@@ -6,7 +6,6 @@
 const PROFILE_IDS_WITH_HERO = [
   "gt-v8",
   "racing-v10",
-  // Reuses the unbranded open-wheeler still (formula-electric) until a dedicated F1 V10 shot exists.
   "f1-v10",
   "cyber-pulse",
   "race-car",
@@ -65,6 +64,7 @@ const PROFILE_IDS_WITH_HERO = [
   "fusion-road-anthem",
   "fusion-mechanical-symphony",
   "fusion-midnight-boost",
+  "fusion-future-pulse",
   "symphony-latino-fiesta",
   "traby",
   "ge-squared",
@@ -134,6 +134,9 @@ export const GENRE_IDS_WITH_HERO = [
   "waltz",
   "latino",
   "gothic",
+  "electro",
+  "anthem",
+  "darkrave",
 ] as const;
 
 const GENRE_HERO_SET = new Set<string>(GENRE_IDS_WITH_HERO);
