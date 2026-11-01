@@ -81,6 +81,16 @@ export const BACKGROUND_MUSIC_LEVELS: Readonly<Record<string, number>> = {
   // v38b: Gothic Night ~65% vs carriage ~45% (music +3.2 dB over carriage stem)
   "dracula-carriage": 6.5,
 };
+/**
+ * Speed boost for the background music: above `onKmh` the music bus ramps to
+ * `level` (smooth setTargetAtTime, tau 0.5 s = ~1.5 s to 95 %); it drops back
+ * below `offKmh` (hysteresis, no flutter around the threshold). State changes
+ * only; nothing is scheduled per frame.
+ */
+export const BACKGROUND_MUSIC_SPEED_BOOST: Readonly<Record<string, { onKmh: number; offKmh: number; level: number; tau: number }>> = {
+  // v41: above 18 km/h Gothic Night ~82 % vs carriage ~18 % (music ~+13 dB over carriage stem)
+  "dracula-carriage": { onKmh: 19, offKmh: 17, level: 20, tau: 0.5 },
+};
 import { isWorldProfileId, WorldSynth } from "@/lib/worlds";
 import { fetchSoundAssetManifest } from "@/lib/sound-assets/client-loader";
 import { getSharedSampleLoader } from "@/lib/sound/realism/samples";
@@ -220,6 +230,7 @@ export class SoundEngine {
   private rhythms: RhythmClock[] = [];
   private signals: SignalClock[] = [];
   private profile: SoundProfile | null = null;
+  private musicBoosted = false;
   /** Stable per-interpretation seed (Journey Replay passes its saved seed). */
   private experienceSeed = 1;
   /** UI master volume 0..1 (perceptual curve applied in computeUserStageLinearGain). */
@@ -1244,6 +1255,7 @@ export class SoundEngine {
     const bgLevel = BACKGROUND_MUSIC_LEVELS[profile.id];
     if (bgLevel !== undefined && strategyBuses) {
       this.backgroundMusic = new AdaptiveMusicSynth();
+      this.musicBoosted = false;
       if (this.backgroundMusic.build(ctx, profile, strategyBuses, this.experienceSeed)) {
         this.backgroundMusic.setLevel(bgLevel);
       } else {
@@ -1711,7 +1723,18 @@ export class SoundEngine {
     this.updateRecordedBed(state, t);
     if (this.snorts && isHorseSnortProfile(profile.id)) this.snorts.update(state, t);
     if (this.whinnies && isHorseSnortProfile(profile.id)) this.whinnies.update(state, t);
-    if (this.backgroundMusic) this.backgroundMusic.update(state, t);
+    if (this.backgroundMusic) {
+      this.backgroundMusic.update(state, t);
+      const boost = BACKGROUND_MUSIC_SPEED_BOOST[profile.id];
+      if (boost) {
+        const kmh = Math.max(0, state.speed || 0) * 3.6;
+        const on = this.musicBoosted ? kmh > boost.offKmh : kmh >= boost.onKmh;
+        if (on !== this.musicBoosted) {
+          this.musicBoosted = on;
+          this.backgroundMusic.rampLevel(on ? boost.level : (BACKGROUND_MUSIC_LEVELS[profile.id] ?? 1), t, boost.tau);
+        }
+      }
+    }
     if (this.siren) this.siren.update(state, t);
 
     if (

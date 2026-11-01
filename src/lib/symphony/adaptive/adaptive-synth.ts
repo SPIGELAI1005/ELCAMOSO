@@ -164,6 +164,15 @@ export class AdaptiveMusicSynth {
     if (this.bus) this.bus.gain.value = Math.max(0, level);
   }
 
+  /** Smoothly move the music bus level (state changes only, not per frame). */
+  rampLevel(level: number, at: number, tau = 0.5) {
+    if (!this.bus) return;
+    const g = this.bus.gain;
+    g.cancelScheduledValues(at);
+    g.setValueAtTime(g.value, at);
+    g.setTargetAtTime(Math.max(0, level), at, tau);
+  }
+
   setGenre(id: GenreId) {
     this.genreId = id;
     this.timeline?.setGenre(id);
