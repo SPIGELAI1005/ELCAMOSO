@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { carFxFor, floorHeading, groundYAt, floorScrollPxPerSecond, floorStreakOpacity, sampleDriveFxSpeed, headlightsOn, wheelBlur, wheelMatrix, wheelTurnsPerSecond, WHEEL_SPIN_SIGN, type CarFxConfig } from "@/lib/drive/car-fx";
+import { carFxFor, floorHeading, groundYAt, floorScrollPxPerSecond, floorStreakOpacity, sampleDriveFxSpeed, headlightsOn, wheelBlur, wheelMatrix, wheelTurnsPerSecond, WHEEL_SPIN_SIGN, DRIVE_MOTION_FX_ENABLED, type CarFxConfig } from "@/lib/drive/car-fx";
 import { profileHeroImageSrc } from "@/lib/sound/profile-hero-image";
 import { cn } from "@/lib/utils";
 
@@ -81,7 +81,7 @@ function CarFxSvg({ cfg, src, aspect, uid, lit, still }: { cfg: CarFxConfig; src
             <ellipse cx={w.cx} cy={w.cy} rx={w.rx} ry={w.ry} fill={`url(#disc-${uid})`} className="carfx-disc" opacity={0} />
           </g>
         ))}
-      <g style={{ opacity: lit ? 1 : 0, transition: "opacity 700ms ease-in-out", mixBlendMode: "screen" }} className="carfx-lights">
+      <g style={{ opacity: lit ? 1 : 0, transition: "opacity 700ms ease-in-out" }} className="carfx-lights">
         {cfg.beam ? <ellipse
           cx={cfg.beam.cx}
           cy={cfg.beam.cy}
@@ -114,7 +114,7 @@ export function DriveCarFx({ profileId, speed, engineRunning, reducedMotion, cla
   kmhRef.current = speed * 3.6;
 
   useEffect(() => {
-    if (!cfg || reducedMotion || typeof requestAnimationFrame === "undefined") return;
+    if (!DRIVE_MOTION_FX_ENABLED || !cfg || reducedMotion || typeof requestAnimationFrame === "undefined") return;
     let raf = 0;
     let last = 0;
     let angle = 0;
@@ -152,11 +152,11 @@ export function DriveCarFx({ profileId, speed, engineRunning, reducedMotion, cla
     <div ref={rootRef} className={cn("pointer-events-none fixed inset-0 overflow-hidden", className)} aria-hidden="true" data-testid="drive-car-fx" data-lit={lit}>
       <div className="absolute inset-0 px-2 sm:px-4 md:px-8 lg:px-10 xl:hidden">
         <div className="relative h-full w-full">
-          <CarFxSvg cfg={cfg} src={src} aspect="xMidYMid meet" uid="m" lit={lit} still={reducedMotion} />
+          <CarFxSvg cfg={cfg} src={src} aspect="xMidYMid meet" uid="m" lit={lit} still={reducedMotion || !DRIVE_MOTION_FX_ENABLED} />
         </div>
       </div>
       <div className="absolute inset-0 hidden xl:block">
-        <CarFxSvg cfg={cfg} src={src} aspect="xMidYMid slice" uid="s" lit={lit} still={reducedMotion} />
+        <CarFxSvg cfg={cfg} src={src} aspect="xMidYMid slice" uid="s" lit={lit} still={reducedMotion || !DRIVE_MOTION_FX_ENABLED} />
       </div>
     </div>
   );

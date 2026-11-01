@@ -72,11 +72,20 @@ function loadSiren(ctx: BaseAudioContext): Promise<AudioBuffer | null> {
   return pending;
 }
 
-function roomImpulse(ctx: BaseAudioContext, seconds = 1.1): AudioBuffer {
+/**
+ * Room IR for the distant siren. Kept short and MONO on purpose: the old 1.1 s
+ * stereo IR meant two long FFT convolutions on the audio thread, which made the
+ * Police profile crackle on weak in-car CPUs (Tesla). 0.55 s mono halves the
+ * length and the channel count (~4x less convolver work); wet gain is raised a
+ * touch to keep the same perceived room.
+ */
+export const SIREN_IR_SECONDS = 0.55;
+export const SIREN_IR_CHANNELS = 1;
+export function roomImpulse(ctx: BaseAudioContext, seconds = SIREN_IR_SECONDS): AudioBuffer {
   const len = Math.max(1, Math.floor(ctx.sampleRate * seconds));
-  const ir = ctx.createBuffer(2, len, ctx.sampleRate);
+  const ir = ctx.createBuffer(SIREN_IR_CHANNELS, len, ctx.sampleRate);
   let seed = 12345;
-  for (let c = 0; c < 2; c++) {
+  for (let c = 0; c < SIREN_IR_CHANNELS; c++) {
     const d = ir.getChannelData(c);
     for (let i = 0; i < len; i++) {
       seed = (seed * 1103515245 + 12345) & 0x7fffffff;
@@ -102,7 +111,7 @@ export function createSirenOverlay(ctx: BaseAudioContext, destination: AudioNode
   const dry = ctx.createGain();
   dry.gain.value = 0.7;
   const wet = ctx.createGain();
-  wet.gain.value = 0.45;
+  wet.gain.value = 0.6;
   let verb: ConvolverNode | null = null;
   try {
     verb = ctx.createConvolver();

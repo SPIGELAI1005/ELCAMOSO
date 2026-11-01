@@ -75,7 +75,7 @@ export const SOUND_ALIASES: Readonly<Record<string, { base: string; overlay: "si
 export const ALWAYS_LAYERED_PROFILE_IDS: ReadonlySet<string> = new Set(["dracula-carriage"]);
 
 export const BACKGROUND_MUSIC_LEVELS: Readonly<Record<string, number>> = {
-  "dracula-carriage": 0.45,
+  "dracula-carriage": 0.6,
 };
 import { isWorldProfileId, WorldSynth } from "@/lib/worlds";
 import { fetchSoundAssetManifest } from "@/lib/sound-assets/client-loader";

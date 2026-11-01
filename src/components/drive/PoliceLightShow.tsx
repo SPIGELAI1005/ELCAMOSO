@@ -53,12 +53,12 @@ export function PoliceLightShow({ speed, reducedMotion, className }: PoliceLight
           <div
             ref={redRef}
             className="absolute inset-y-0 left-0 w-1/2 bg-[radial-gradient(ellipse_at_left,oklch(0.6_0.24_27_/_55%)_0%,transparent_70%)]"
-            style={{ opacity: 0 }}
+            style={{ opacity: 0, willChange: "opacity" }}
           />
           <div
             ref={blueRef}
             className="absolute inset-y-0 right-0 w-1/2 bg-[radial-gradient(ellipse_at_right,oklch(0.55_0.22_262_/_55%)_0%,transparent_70%)]"
-            style={{ opacity: 0 }}
+            style={{ opacity: 0, willChange: "opacity" }}
           />
         </div>
       ) : null}

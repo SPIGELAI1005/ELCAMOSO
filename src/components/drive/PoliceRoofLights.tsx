@@ -25,8 +25,8 @@ export function PoliceRoofLights({ speed, reducedMotion, className }: PoliceRoof
     let raf = 0;
     const tick = (now: number) => {
       const { red, blue } = policeLightPair(advancePolicePhase(now, sampleDriveFxSpeed(now, speedRef.current * 3.6), 0));
-      rootRef.current?.querySelectorAll<SVGGElement>(".police-roof-red").forEach((g) => (g.style.opacity = String(red)));
-      rootRef.current?.querySelectorAll<SVGGElement>(".police-roof-blue").forEach((g) => (g.style.opacity = String(blue)));
+      rootRef.current?.querySelectorAll<SVGSVGElement>(".police-roof-red").forEach((g) => (g.style.opacity = String(red)));
+      rootRef.current?.querySelectorAll<SVGSVGElement>(".police-roof-blue").forEach((g) => (g.style.opacity = String(blue)));
       raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
@@ -35,33 +35,36 @@ export function PoliceRoofLights({ speed, reducedMotion, className }: PoliceRoof
 
   if (reducedMotion) return null;
   const { red, blue } = POLICE_ROOF_BAR;
+  // One composited layer per colour: the flash only changes element opacity (no SVG repaint),
+  // which keeps the main thread free on weak in-car CPUs.
+  const layer = (color: "red" | "blue", aspect: string) => {
+    const e = color === "red" ? red : blue;
+    const id = `pr-${color}-${aspect.replace(" ", "-")}`;
+    const [hot, mid, edge] = color === "red" ? ["#fff2f2", "#ff2a2a", "#ff0000"] : ["#f2f6ff", "#2a5bff", "#0030ff"];
+    return (
+      <svg
+        viewBox={`0 0 ${POLICE_HERO_SIZE.w} ${POLICE_HERO_SIZE.h}`}
+        preserveAspectRatio={aspect}
+        className={`police-roof-${color} absolute inset-0 h-full w-full`}
+        style={{ opacity: 0, willChange: "opacity" }}
+      >
+        <defs>
+          <radialGradient id={id}>
+            <stop offset="0%" stopColor={hot} stopOpacity="0.95" />
+            <stop offset="35%" stopColor={mid} stopOpacity="0.85" />
+            <stop offset="100%" stopColor={edge} stopOpacity="0" />
+          </radialGradient>
+        </defs>
+        <ellipse cx={e.cx} cy={e.cy} rx={e.rx * 2.2} ry={e.ry * 5} fill={`url(#${id})`} opacity={0.45} />
+        <ellipse cx={e.cx} cy={e.cy} rx={e.rx} ry={e.ry} fill={`url(#${id})`} />
+      </svg>
+    );
+  };
   const svg = (aspect: string, extra: string) => (
-    <svg
-      viewBox={`0 0 ${POLICE_HERO_SIZE.w} ${POLICE_HERO_SIZE.h}`}
-      preserveAspectRatio={aspect}
-      className={cn("absolute inset-0 h-full w-full mix-blend-screen", extra)}
-    >
-      <defs>
-        <radialGradient id={`pr-red-${aspect.replace(" ", "-")}`}>
-          <stop offset="0%" stopColor="#fff2f2" stopOpacity="0.95" />
-          <stop offset="35%" stopColor="#ff2a2a" stopOpacity="0.85" />
-          <stop offset="100%" stopColor="#ff0000" stopOpacity="0" />
-        </radialGradient>
-        <radialGradient id={`pr-blue-${aspect.replace(" ", "-")}`}>
-          <stop offset="0%" stopColor="#f2f6ff" stopOpacity="0.95" />
-          <stop offset="35%" stopColor="#2a5bff" stopOpacity="0.85" />
-          <stop offset="100%" stopColor="#0030ff" stopOpacity="0" />
-        </radialGradient>
-      </defs>
-      <g className="police-roof-red" style={{ opacity: 0 }}>
-        <ellipse cx={red.cx} cy={red.cy} rx={red.rx * 2.2} ry={red.ry * 5} fill={`url(#pr-red-${aspect.replace(" ", "-")})`} opacity={0.45} />
-        <ellipse cx={red.cx} cy={red.cy} rx={red.rx} ry={red.ry} fill={`url(#pr-red-${aspect.replace(" ", "-")})`} />
-      </g>
-      <g className="police-roof-blue" style={{ opacity: 0 }}>
-        <ellipse cx={blue.cx} cy={blue.cy} rx={blue.rx * 2.2} ry={blue.ry * 5} fill={`url(#pr-blue-${aspect.replace(" ", "-")})`} opacity={0.45} />
-        <ellipse cx={blue.cx} cy={blue.cy} rx={blue.rx} ry={blue.ry} fill={`url(#pr-blue-${aspect.replace(" ", "-")})`} />
-      </g>
-    </svg>
+    <div className={cn("absolute inset-0", extra)}>
+      {layer("red", aspect)}
+      {layer("blue", aspect)}
+    </div>
   );
   return (
     <div ref={rootRef} className={cn("pointer-events-none fixed inset-0 overflow-hidden", className)} aria-hidden="true" data-testid="police-roof-lights">
