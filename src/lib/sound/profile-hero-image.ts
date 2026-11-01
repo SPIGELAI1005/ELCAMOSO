@@ -146,3 +146,16 @@ export function genreHeroImageSrc(genre: string | null | undefined): string | nu
   if (!genre || !GENRE_HERO_SET.has(genre)) return null;
   return `/hero/genres/${genre}.png`;
 }
+
+/**
+ * Genre still shown behind a Drive music profile instead of its own still, or null.
+ * Signature-genre profiles and the "auto" choice keep their own still.
+ */
+export function driveGenreBackdropSrc(
+  profileId: string | null | undefined,
+  choice: string,
+  hasSignature: (id: string) => boolean,
+): string | null {
+  if (!profileId?.startsWith("symphony-") || hasSignature(profileId) || choice === "auto") return null;
+  return genreHeroImageSrc(choice);
+}
