@@ -65,7 +65,8 @@ describe("latino genre", () => {
     expect(mid).toContain("nylon");
     expect(mid).not.toContain("brass");
     const high = [...insts(0.95)].join(" ");
-    expect(high).toContain("brass");
+    expect(high).toContain("trumpet");
+    expect(high).not.toContain("brass");
     expect(high).toContain("piano");
     expect(high).toContain("drums_latin:56");
   });

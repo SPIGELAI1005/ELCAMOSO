@@ -32,6 +32,14 @@ export function createTimeline(genreId: GenreId, startTime: number, seed = 1) {
   const rand = mulberry32(seed);
   const queuedAccents: MusicAccent[] = [];
   let crashNextBar = false;
+  // Auto DJ tempo control: glide toward a forced tempo (or back to the natural one)
+  let forceTarget: number | "natural" | null = null;
+  let forced: number | null = null;
+  let lastBpm = 0;
+  let lastStepDur = 0;
+  const GLIDE_PER_STEP = 0.4; // bpm per 16th, about 6 bpm per bar: a smooth DJ pitch ride
+  let handoffBar: number | null = null;
+  let handoff: { time: number; barDur: number; bpm: number } | null = null;
 
   return {
     get genre() {
@@ -39,6 +47,32 @@ export function createTimeline(genreId: GenreId, startTime: number, seed = 1) {
     },
     setGenre(id: GenreId) {
       if (id !== genre.id) pendingGenre = GENRES[id];
+    },
+    /** Glide the tempo toward `bpm` (Auto DJ beat-matching). */
+    rampTempo(bpm: number) {
+      forceTarget = bpm;
+    },
+    /** Start already locked at `bpm` (incoming deck), see releaseTempo. */
+    lockTempo(bpm: number) {
+      forceTarget = bpm;
+      forced = bpm;
+    },
+    /** Glide back to the genre's own tempo, then follow it again. */
+    releaseTempo() {
+      if (forceTarget !== null) forceTarget = "natural";
+    },
+    /** Report the start time of the bar `bars` from now (the crossfade hand-off point). */
+    requestHandoff(bars: number) {
+      handoffBar = barCount + Math.max(1, bars);
+      handoff = null;
+    },
+    takeHandoff() {
+      const h = handoff;
+      handoff = null;
+      return h;
+    },
+    get bpm() {
+      return lastBpm;
     },
     pushAccents(a: MusicAccent[]) {
       for (const x of a) if (!queuedAccents.includes(x)) queuedAccents.push(x);
@@ -66,8 +100,26 @@ export function createTimeline(genreId: GenreId, startTime: number, seed = 1) {
             if (cruiseBars % 8 === 0) variation += 1;
           } else cruiseBars = 0;
         }
-        const bpm = genre.fixedBpm ?? Math.min(genre.bpmMax + 6, Math.max(genre.bpmMin - 2, state.bpm));
+        const natural = genre.fixedBpm ?? Math.min(genre.bpmMax + 6, Math.max(genre.bpmMin - 2, state.bpm));
+        let bpm = natural;
+        if (forceTarget !== null) {
+          const tgt = forceTarget === "natural" ? natural : forceTarget;
+          const cur = forced ?? (lastBpm || natural);
+          forced = cur + Math.max(-GLIDE_PER_STEP, Math.min(GLIDE_PER_STEP, tgt - cur));
+          bpm = forced;
+          if (forceTarget === "natural" && Math.abs(natural - forced) <= GLIDE_PER_STEP) {
+            forceTarget = null;
+            forced = null;
+            bpm = natural;
+          }
+        }
+        lastBpm = bpm;
         const stepDur = 60 / bpm / 4;
+        lastStepDur = stepDur;
+        if (step === 0 && handoffBar !== null && bar >= handoffBar) {
+          handoff = { time: nextStepTime, barDur: stepDur * (genre.stepsPerBar ?? 16), bpm };
+          handoffBar = null;
+        }
         const chordDef = genre.progression[bar % genre.progression.length]!;
         const root = genre.key + chordDef.deg + transpose;
         const chord = chordDef.tones.map((t) => root + t);
@@ -118,6 +170,9 @@ export function createTimeline(genreId: GenreId, startTime: number, seed = 1) {
     },
     get stepCount() {
       return stepCount;
+    },
+    get barDur() {
+      return lastStepDur * (genre.stepsPerBar ?? 16);
     },
     get bar() {
       return barCount;

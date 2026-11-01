@@ -13,7 +13,8 @@ import { GENRES, type GenreId } from "./genres";
 import { hallImpulseData } from "./hall-impulse";
 import { readGpsAltitude } from "./altitude-store";
 import { chooseAltitude, fuseAcceleration, readPhoneSample } from "@/lib/phone-sync/fusion";
-import { resolveGenre, subscribeGenreChoice } from "./genre-store";
+import { isAutoDj, publishActiveGenre, resolveGenre, subscribeGenreChoice } from "./genre-store";
+import { crossfadeBars, equalPowerCurves, genreTempo, nextAutoDjDelay, pickNextGenre, AUTO_DJ_INTERVAL_SEC } from "./auto-dj";
 import { MUSIC_BANK, musicBankUrl, pickSample } from "./sample-bank";
 import { createTimeline, type NoteEvent, type Timeline } from "./timeline";
 
@@ -24,6 +25,26 @@ interface LoadedSprite {
   buffer: AudioBuffer;
   /** onset (s) inside each slot */
   onsets: number[];
+}
+
+/** One playing arrangement. Auto DJ runs two of them during a crossfade. */
+interface Deck {
+  timeline: Timeline;
+  genreId: GenreId;
+  /** crossfade gain -> high-pass -> low-pass -> music bus (both filters parked wide open) */
+  gain: GainNode;
+  hp: BiquadFilterNode;
+  lp: BiquadFilterNode;
+  /** stop scheduling notes at this audio time (outgoing deck) */
+  until: number;
+  /** disconnect the deck nodes after this audio time */
+  disposeAt: number;
+}
+
+let autoDjRange: readonly [number, number] = AUTO_DJ_INTERVAL_SEC;
+/** Demo/QA hook: shorten the Auto DJ interval (seconds). Pass null to restore 2-3 min. */
+export function setAutoDjIntervalForDemo(range: readonly [number, number] | null) {
+  autoDjRange = range ?? AUTO_DJ_INTERVAL_SEC;
 }
 
 const bank = new Map<string, LoadedSprite>();
@@ -97,6 +118,16 @@ export class AdaptiveMusicSynth {
   private verbSend: GainNode | null = null;
   private verb: ConvolverNode | null = null;
   private voices: { src: AudioBufferSourceNode; end: number }[] = [];
+  private deck: Deck | null = null;
+  private outgoing: Deck[] = [];
+  private profileId = "";
+  private autoDj = false;
+  private nextSwitchAt = 0;
+  private pendingSwitch: { target: GenreId; bpm: number } | null = null;
+  private publishAt = 0;
+  private publishGenre: GenreId | null = null;
+  private recent: GenreId[] = [];
+  private rand: () => number = Math.random;
   private unsub: (() => void) | null = null;
   private lastTs = 0;
   private seed = 1;
@@ -117,6 +148,9 @@ export class AdaptiveMusicSynth {
     this.conductor = createConductor({ bpmMin: g.bpmMin, bpmMax: g.bpmMax });
     const start = ("currentTime" in ctx ? ctx.currentTime : 0) + 0.1;
     this.timeline = createTimeline(this.genreId, start, this.seed);
+    this.profileId = profile.id;
+    let r = (this.seed * 2654435761) >>> 0 || 1;
+    this.rand = () => ((r = (Math.imul(r, 1664525) + 1013904223) >>> 0) / 4294967296);
     this.energy = createDriveEnergyTracker();
 
     this.bus = ctx.createGain();
@@ -130,6 +164,11 @@ export class AdaptiveMusicSynth {
     this.shelf.frequency.value = 70;
     this.shelf.gain.value = -6;
     this.bus.connect(this.filter);
+    this.deck = this.makeDeck(ctx, this.timeline, this.genreId);
+    this.recent = [this.genreId];
+    this.autoDj = isAutoDj(profile.id);
+    this.nextSwitchAt = start + nextAutoDjDelay(this.rand, autoDjRange);
+    publishActiveGenre(this.genreId);
     this.filter.connect(this.shelf);
     this.shelf.connect(buses.body);
     // concert-hall reverb send: impulse generated on the device (decaying filtered noise)
@@ -147,13 +186,11 @@ export class AdaptiveMusicSynth {
     }
 
     this.unsub = subscribeGenreChoice(() => {
+      this.autoDj = isAutoDj(profile.id);
+      if (this.autoDj && this.ctx) this.nextSwitchAt = this.ctx.currentTime + nextAutoDjDelay(this.rand, autoDjRange);
       const next = resolveGenre(profile.id);
       if (next === this.genreId) return;
-      this.genreId = next;
-      this.timeline?.setGenre(next);
-      const nd = GENRES[next];
-      this.conductor?.setRange({ bpmMin: nd.bpmMin, bpmMax: nd.bpmMax });
-      this.setReverb(nd.reverb);
+      this.setGenre(next);
     });
     void preloadMusicBank(ctx);
     return true;
@@ -164,9 +201,14 @@ export class AdaptiveMusicSynth {
     if (this.bus) this.bus.gain.value = Math.max(0, level);
   }
 
+  /** Manual pick: switch on the next bar line (no crossfade) and cancel any Auto DJ mix. */
   setGenre(id: GenreId) {
     this.genreId = id;
+    this.pendingSwitch = null;
+    this.timeline?.releaseTempo();
     this.timeline?.setGenre(id);
+    if (this.deck) this.deck.genreId = id;
+    publishActiveGenre(id);
     this.conductor?.setRange({ bpmMin: GENRES[id].bpmMin, bpmMax: GENRES[id].bpmMax });
     this.setReverb(GENRES[id].reverb);
   }
@@ -213,11 +255,124 @@ export class AdaptiveMusicSynth {
     } catch {
       this.late += 1;
     }
-    const events = this.timeline.scheduleUntil(audioTime + LOOKAHEAD_SEC, cs);
-    for (const ev of events) this.play(ev, audioTime);
+    const until = audioTime + LOOKAHEAD_SEC;
+    for (const d of this.outgoing) {
+      if (until <= d.until) for (const ev of d.timeline.scheduleUntil(Math.min(until, d.until), cs)) this.play(ev, audioTime, d);
+    }
+    const deck = this.deck!;
+    for (const ev of this.timeline.scheduleUntil(until, cs)) this.play(ev, audioTime, deck);
+    this.autoDjTick(audioTime, cs.bpm);
+    this.reapDecks(audioTime);
   }
 
-  private play(ev: NoteEvent, now: number) {
+  private makeDeck(ctx: BaseAudioContext, timeline: Timeline, genreId: GenreId): Deck {
+    const gain = ctx.createGain();
+    gain.gain.value = 1;
+    const hp = ctx.createBiquadFilter();
+    hp.type = "highpass";
+    hp.frequency.value = 20;
+    hp.Q.value = 0.7;
+    const lp = ctx.createBiquadFilter();
+    lp.type = "lowpass";
+    lp.frequency.value = 20000;
+    lp.Q.value = 0.7;
+    gain.connect(hp);
+    hp.connect(lp);
+    lp.connect(this.bus!);
+    return { timeline, genreId, gain, hp, lp, until: Infinity, disposeAt: Infinity };
+  }
+
+  /** Auto DJ: pick, beat-match, then crossfade on the bar line. Only schedules AudioParam ramps. */
+  private autoDjTick(now: number, bpm: number) {
+    if (this.publishGenre && now >= this.publishAt) {
+      publishActiveGenre(this.publishGenre);
+      this.publishGenre = null;
+    }
+    if (!this.autoDj || !this.deck || !this.ctx || this.outgoing.length) return;
+    if (!this.pendingSwitch) {
+      if (now < this.nextSwitchAt) return;
+      const cur = this.deck.timeline.bpm || bpm;
+      const target = pickNextGenre(this.deck.genreId, cur, this.recent, this.rand);
+      if (target === this.deck.genreId) {
+        this.nextSwitchAt = now + nextAutoDjDelay(this.rand, autoDjRange);
+        return;
+      }
+      const tBpm = genreTempo(target, cur);
+      this.pendingSwitch = { target, bpm: tBpm };
+      this.deck.timeline.rampTempo(tBpm);
+      // give the pitch ride ~2 bars (longer for big tempo gaps) before the mix starts
+      this.deck.timeline.requestHandoff(Math.min(4, 2 + Math.floor(Math.abs(tBpm - cur) / 13)));
+      return;
+    }
+    const h = this.deck.timeline.takeHandoff();
+    if (!h) return;
+    this.startCrossfade(this.pendingSwitch.target, h);
+    this.pendingSwitch = null;
+  }
+
+  private startCrossfade(target: GenreId, h: { time: number; barDur: number; bpm: number }) {
+    const ctx = this.ctx!;
+    const old = this.deck!;
+    const tl = createTimeline(target, h.time, this.seed + this.recent.length);
+    tl.lockTempo(h.bpm);
+    tl.releaseTempo(); // glide on to the new genre's own tempo
+    const inc = this.makeDeck(ctx, tl, target);
+    const D = crossfadeBars(h.barDur) * h.barDur;
+    const t0 = h.time;
+    const curves = equalPowerCurves();
+    try {
+      // equal-power crossfade
+      old.gain.gain.cancelScheduledValues(t0);
+      old.gain.gain.setValueAtTime(1, t0);
+      old.gain.gain.setValueCurveAtTime(curves.out, t0, D);
+      inc.gain.gain.setValueAtTime(0, 0);
+      inc.gain.gain.setValueCurveAtTime(curves.in, t0, D);
+      // outgoing: high-pass sweep pulls the bass out (classic DJ bass swap) with a resonant edge
+      old.hp.Q.setValueAtTime(0.7, t0);
+      old.hp.Q.linearRampToValueAtTime(4, t0 + D * 0.8);
+      old.hp.frequency.setValueAtTime(20, t0);
+      old.hp.frequency.exponentialRampToValueAtTime(1400, t0 + D);
+      // incoming: opens from a low-pass, ends fully open
+      inc.lp.Q.setValueAtTime(3, 0);
+      inc.lp.Q.setValueAtTime(3, t0);
+      inc.lp.Q.linearRampToValueAtTime(0.7, t0 + D * 0.6);
+      inc.lp.frequency.setValueAtTime(320, 0);
+      inc.lp.frequency.setValueAtTime(320, t0);
+      inc.lp.frequency.exponentialRampToValueAtTime(20000, t0 + D * 0.6);
+    } catch {
+      this.late += 1;
+    }
+    old.until = t0 + D;
+    old.disposeAt = t0 + D + 3; // let the last notes and their releases finish
+    this.outgoing.push(old);
+    this.deck = inc;
+    this.timeline = tl;
+    this.genreId = target;
+    this.recent = [...this.recent, target].slice(-4);
+    const nd = GENRES[target];
+    this.conductor?.setRange({ bpmMin: nd.bpmMin, bpmMax: nd.bpmMax });
+    this.setReverb(nd.reverb);
+    this.publishGenre = target;
+    this.publishAt = t0 + D / 2;
+    this.nextSwitchAt = t0 + D + nextAutoDjDelay(this.rand, autoDjRange);
+  }
+
+  private reapDecks(now: number) {
+    if (!this.outgoing.length) return;
+    this.outgoing = this.outgoing.filter((d) => {
+      if (now < d.disposeAt) return true;
+      try {
+        d.gain.disconnect();
+        d.hp.disconnect();
+        d.lp.disconnect();
+      } catch {
+        /* */
+      }
+      return false;
+    });
+  }
+
+  private play(ev: NoteEvent, now: number, deck: Deck) {
     const ctx = this.ctx!;
     const sprite = bank.get(ev.inst);
     const ref = pickSample(ev.inst, ev.midi);
@@ -229,11 +384,11 @@ export class AdaptiveMusicSynth {
     const offset = ref.slotStart + (sprite.onsets[slotIdx] ?? 0);
     const playable = (ref.slotLen - (sprite.onsets[slotIdx] ?? 0) - 0.02) / ref.rate;
     const dur = Math.min(ev.dur + 0.25, playable);
-    const mix = GENRES[this.genreId].mix[ev.inst] ?? 0.4;
+    const mix = GENRES[deck.genreId].mix[ev.inst] ?? 0.4;
     const gain = ev.vel * ev.vel * mix * ref.norm;
     const src = ctx.createBufferSource();
     src.buffer = sprite.buffer;
-    src.playbackRate.value = ref.rate;
+    src.playbackRate.value = ref.rate * (ev.detune ? Math.pow(2, ev.detune / 1200) : 1);
     const g = ctx.createGain();
     g.gain.setValueAtTime(gain, t);
     g.gain.setTargetAtTime(0, t + Math.min(ev.dur, dur), 0.08);
@@ -245,7 +400,7 @@ export class AdaptiveMusicSynth {
       tail = p;
     }
     src.connect(g);
-    tail.connect(this.bus!);
+    tail.connect(deck.gain);
     try {
       src.start(t, offset);
       src.stop(t + dur + 0.35);
@@ -313,6 +468,19 @@ export class AdaptiveMusicSynth {
       }
     }
     this.voices = [];
+    for (const d of [this.deck, ...this.outgoing]) {
+      try {
+        d?.gain.disconnect();
+        d?.hp.disconnect();
+        d?.lp.disconnect();
+      } catch {
+        /* */
+      }
+    }
+    this.deck = null;
+    this.outgoing = [];
+    this.pendingSwitch = null;
+    this.publishGenre = null;
     for (const n of [this.bus, this.filter, this.shelf, this.verbSend, this.verb]) {
       try {
         n?.disconnect();

@@ -41,6 +41,7 @@ const AUDIO = [
   "/sample-packs/recorded/music-v1/rocklead.m4a",
   "/sample-packs/recorded/music-v1/cleangtr.m4a",
   "/sample-packs/recorded/music-v1/rockorgan.m4a",
+  "/sample-packs/recorded/music-v1/trumpet.m4a",
   "/sample-packs/recorded/music-v1/ebass.m4a",
   "/sample-packs/recorded/music-v1/guitar.m4a",
   "/sample-packs/recorded/music-v1/horn.m4a",

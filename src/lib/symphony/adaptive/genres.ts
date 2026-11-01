@@ -18,6 +18,8 @@ export interface NoteSpec {
   pan?: number;
   /** offset inside the step, in steps (e.g. 0.5 = a 32nd later) */
   offset?: number;
+  /** fine pitch offset in cents (section players are never perfectly in tune) */
+  detune?: number;
 }
 
 export interface StepContext {
@@ -883,11 +885,7 @@ const darkrave: GenreDef = {
   },
 };
 
-// ---- Latino Fiesta: fixed 96 bpm reggaeton, speed stacks percussion, guitar, montuno and brass ----
-const LATINO_BRASS: readonly (readonly [number, number, number])[][] = [
-  [[0, 7, 2], [3, 7, 1], [6, 10, 2], [10, 12, 3]],
-  [[0, 12, 2], [4, 10, 1], [6, 7, 2], [12, 3, 3]],
-];
+// ---- Latino Fiesta: fixed 96 bpm reggaeton, speed stacks percussion, nylon guitar, montuno and a trumpet section ----
 /** Piano montuno (2-bar guajeo): [step, chord-tone index, octave up]. */
 const LATINO_MONTUNO: readonly (readonly [number, number, number])[][] = [
   [[0, 0, 0], [2, 2, 0], [3, 1, 1], [5, 0, 1], [6, 2, 0], [8, 1, 0], [10, 2, 0], [11, 0, 1], [13, 1, 0], [14, 2, 0]],
@@ -942,9 +940,55 @@ export function latinoSolo(c: StepContext): NoteSpec[] {
     // sparse at low speed: skip the passing 16ths, keep the phrase skeleton
     if (I < 0.4 && len === 1) continue;
     const midi = keyA + iv;
-    const vel = (st % 4 === 0 ? 0.62 : 0.52) + 0.3 * I;
-    out.push({ inst: "nylon", midi, vel, dur: c.stepDur * (len + 1.5), pan: 0.08 });
-    if (I > 0.72 && st % 4 === 0 && len >= 2) out.push({ inst: "nylon", midi: harmonyBelow(c.chord, midi), vel: vel * 0.6, dur: c.stepDur * (len + 1), pan: -0.08, offset: 0.012 });
+    const vel = (st % 4 === 0 ? 0.62 : 0.54) + 0.3 * I;
+    const dur = c.stepDur * (len === 1 ? 0.9 : len - 0.3); // tongued, slightly detached like a horn line
+    // trumpet 1 carries the melody; 2 plays a diatonic 3rd below, 3 a 6th below (salsa / mariachi voicing)
+    out.push({ inst: "trumpet", midi, vel, dur, pan: 0.05 });
+    if (I > 0.45) out.push({ inst: "trumpet", midi: diatonic(keyA, midi, -2), vel: vel * 0.8, dur, pan: -0.28, offset: 0.05, detune: -7 });
+    if (I > 0.62 && len >= 2) out.push({ inst: "trumpet", midi: diatonic(keyA, midi, -5), vel: vel * 0.72, dur, pan: 0.3, offset: 0.09, detune: 6 });
+  }
+  return out;
+}
+/** A natural minor scale (from A) - the Latino tune is diatonic. */
+const A_MINOR = [0, 2, 3, 5, 7, 8, 10] as const;
+/** Move `midi` by `steps` scale degrees in A minor anchored at `keyA` (follows the key lift). */
+export function diatonic(keyA: number, midi: number, steps: number): number {
+  const rel = midi - keyA;
+  const oct = Math.floor(rel / 12);
+  const pc = rel - oct * 12;
+  let idx = A_MINOR.findIndex((d) => d >= pc);
+  if (idx < 0) idx = 0;
+  const deg = oct * 7 + idx + steps;
+  const o2 = Math.floor(deg / 7);
+  return keyA + o2 * 12 + A_MINOR[deg - o2 * 7]!;
+}
+/** Horn stab rhythms (salsa "mambo" hits) [step, len16] and a pickup fill into the next phrase. */
+const LATINO_STABS: readonly (readonly [number, number])[][] = [
+  [[0, 1], [3, 1], [6, 2], [10, 1], [12, 2]],
+  [[2, 1], [4, 1], [7, 2], [11, 1], [14, 1]],
+];
+const LATINO_FILL: readonly (readonly [number, number])[] = [[12, 0], [13, 2], [14, 4], [15, 7]];
+function latinoHorns(c: StepContext): NoteSpec[] {
+  const I = c.intensity;
+  const out: NoteSpec[] = [];
+  const keyA = c.root - LATINO_DEGS[c.bar % 4]! + 24;
+  const cyc = c.bar % 8;
+  const soloRest = cyc < 2 || (cyc < 4 && I <= 0.45);
+  // stabs: chord voiced across the 3 trumpets, short and punchy, when the melody rests or at full pace
+  if (I > 0.55 && (soloRest || I > 0.8)) {
+    for (const [st, len] of LATINO_STABS[c.variation % 2]!) {
+      if (st !== c.step) continue;
+      const top = into(c.chord[2]!, 69, 80);
+      const voices = [top, harmonyBelow(c.chord, top), harmonyBelow(c.chord, harmonyBelow(c.chord, top))];
+      voices.forEach((m, i) => out.push({ inst: "trumpet", midi: m, vel: (soloRest ? 0.7 : 0.5) + 0.25 * I, dur: c.stepDur * (len === 1 ? 0.55 : 1.2), pan: [-0.25, 0.05, 0.3][i]!, offset: i * 0.04, detune: [0, -6, 5][i]! }));
+    }
+  }
+  // rising pickup fill (A minor run) into each new 4-bar phrase
+  if (I > 0.5 && c.bar % 4 === 3 && soloRest) {
+    for (const [st, iv] of LATINO_FILL) if (st === c.step) {
+      out.push({ inst: "trumpet", midi: keyA + iv, vel: 0.55 + 0.3 * I, dur: c.stepDur * 0.85, pan: 0.05 });
+      out.push({ inst: "trumpet", midi: diatonic(keyA, keyA + iv, -2), vel: 0.45 + 0.25 * I, dur: c.stepDur * 0.85, pan: -0.28, offset: 0.05, detune: -6 });
+    }
   }
   return out;
 }
@@ -971,7 +1015,7 @@ const latino: GenreDef = {
     { deg: 3, tones: [0, 4, 7] },
     { deg: 10, tones: [0, 4, 7] },
   ],
-  mix: { drums_latin: 0.85, synthbass: 0.55, pad: 0.24, nylon: 0.5, piano: 0.42, brass: 0.36 },
+  mix: { drums_latin: 0.85, synthbass: 0.55, pad: 0.24, nylon: 0.36, piano: 0.4, trumpet: 0.42 },
   reverb: 0.1,
   accents: { crash: ["drums_latin", 49], fill: ["drums_latin", [65, 65, 66, 66]], low: ["drums_latin", [64, 64, 36]] },
   pattern(c) {
@@ -1002,11 +1046,11 @@ const latino: GenreDef = {
       if (on(c, 4, 6, 12, 14)) out.push({ inst: "drums_latin", midi: 73, vel: 0.28 + 0.2 * I, dur: 0.15, pan: 0.5 });
       if (on(c, 0, 3, 6, 8, 11, 14)) c.chord.forEach((t, i) => out.push({ inst: "nylon", midi: into(t, 52, 71), vel: 0.35 + 0.25 * I, dur: c.stepDur * 2.5, pan: 0.3, offset: i * 0.06 }));
     }
-    // Spanish nylon-guitar solo lead, phrases come and go with speed;
-    // fingerpicked arpeggios fill the bars between phrases
+    // Latin trumpet section carries the melody in 3rds/6ths; phrases come and go with speed.
+    // The nylon guitar stays underneath: strum (above) and fingerpicked arpeggios between phrases.
     const solo = latinoSolo(c);
     const resting = c.bar % 8 < 2 || (c.bar % 8 < 4 && I <= 0.45);
-    out.push(...solo);
+    out.push(...solo, ...latinoHorns(c));
     if (I > 0.32 && resting) out.push(...latinoArpeggio(c));
     // piano montuno + timbales
     if (I > 0.57) {
@@ -1014,13 +1058,9 @@ const latino: GenreDef = {
       if (on(c, 0, 3, 6, 10, 12)) out.push({ inst: "drums_latin", midi: 75, vel: 0.35 + 0.2 * I, dur: 0.15, pan: 0.35 });
       if (c.bar % 2 === 1 && on(c, 12, 13, 14, 15)) out.push({ inst: "drums_latin", midi: c.step < 14 ? 65 : 66, vel: 0.5 + 0.3 * I, dur: 0.25, pan: 0.2 });
     }
-    // brass hits + cowbell at full pace
+    // cowbell + crash at full pace (the horn stabs come from latinoHorns)
     if (I > 0.77) {
       if (c.step % 4 === 0) out.push({ inst: "drums_latin", midi: 56, vel: 0.38 + 0.2 * I, dur: 0.2, pan: 0.15 });
-      for (const [st, iv, len] of LATINO_BRASS[c.variation % 2]!) if (st === c.step) {
-        out.push({ inst: "brass", midi: into(c.root + iv, 60, 76), vel: 0.5 + 0.35 * I, dur: c.stepDur * len, pan: -0.1 });
-        out.push({ inst: "brass", midi: into(c.root + iv, 60, 76) - 5, vel: 0.4 + 0.3 * I, dur: c.stepDur * len, pan: 0.1 });
-      }
       if (c.step === 0 && c.bar % 4 === 0) out.push({ inst: "drums_latin", midi: 49, vel: 0.55, dur: 1.4, pan: -0.3 });
     }
     return out;

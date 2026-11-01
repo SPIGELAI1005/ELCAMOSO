@@ -7,6 +7,7 @@ import {
   setGenreChoice,
   subscribeGenreChoice,
   type GenreChoice,
+  AUTO_DJ_LABEL,
 } from "@/lib/symphony/adaptive";
 import { useFeatureAccess } from "@/lib/entitlements/selectors";
 import { cn } from "@/lib/utils";
@@ -32,7 +33,7 @@ export function MusicGenrePicker({
     return subscribeGenreChoice(setChoice);
   }, []);
   const options: { id: GenreChoice; label: string }[] = [
-    { id: "auto", label: "Auto" },
+    { id: "auto", label: AUTO_DJ_LABEL },
     ...GENRE_IDS.map((id) => ({ id, label: GENRES[id].name })),
   ];
   return (
@@ -85,7 +86,7 @@ export function MusicGenrePicker({
         </p>
       ) : null}
       <p className="mt-3 text-xs text-muted-foreground">
-        Tempo follows your speed. Accelerate hard for a build, brake for a softer passage, hold a
+        Auto DJ mixes into a new genre every 2-3 minutes, beat-matched on the bar. Tempo follows your speed. Accelerate hard for a build, brake for a softer passage, hold a
         steady speed for the groove. Climbs lift the key when your browser shares altitude.
       </p>
     </div>
