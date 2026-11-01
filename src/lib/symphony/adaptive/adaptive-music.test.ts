@@ -214,3 +214,22 @@ describe("genre choice migration", () => {
     expect(m.get("elcamoso.music.genre")).toBe("rock");
   });
 });
+
+describe("road anthem real band", () => {
+  it("uses acoustic kit, bass, re-amped guitars and organ, with no synth pads and no stacked power chords", () => {
+    const g = GENRES.anthem;
+    const used = new Set<string>();
+    for (const I of [0.2, 0.45, 0.7, 0.95])
+      for (let bar = 0; bar < 8; bar++)
+        for (let step = 0; step < 16; step++) {
+          const p = g.progression[bar % 4]!;
+          const root = g.key + p.deg;
+          const notes = g.pattern({ step, bar, chord: p.tones.map((t) => root + t), root, intensity: I, mode: "cruise", variation: bar, stepDur: 0.136, barDur: 2.18, rand: () => 0.5 });
+          for (const n of notes) used.add(n.inst);
+          // one power-chord sample per side per hit (the sprite already holds root-5th-octave)
+          expect(notes.filter((n) => n.inst === "rockgtr").length).toBeLessThanOrEqual(2);
+        }
+    for (const inst of ["drums_room", "ebass", "rockgtr", "rocklead", "cleangtr", "rockorgan", "piano"]) expect(used.has(inst), inst).toBe(true);
+    for (const inst of ["pad", "choir", "strings", "lead", "synthbass", "timpani", "dguitar", "leadgtr", "drums_elec"]) expect(used.has(inst), inst).toBe(false);
+  });
+});

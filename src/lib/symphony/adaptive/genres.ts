@@ -770,45 +770,47 @@ const anthem: GenreDef = {
     { deg: 9, tones: [0, 3, 7] },
     { deg: 5, tones: [0, 4, 7] },
   ],
-  mix: { drums_rock: 0.82, ebass: 0.6, dguitar: 0.38, guitar: 0.4, leadgtr: 0.34, strings: 0.32, choir: 0.3, piano: 0.42, timpani: 0.5 },
-  reverb: 0.16,
-  accents: { crash: ["drums_rock", 49], fill: ["drums_rock", [50, 48, 45]], low: ["drums_rock", [45, 45, 36]] },
+  // Real band: room-miked acoustic kit, finger bass, re-amped electric guitars, Hammond-style rock organ, piano.
+  mix: { drums_room: 0.85, ebass: 0.62, rockgtr: 0.42, cleangtr: 0.4, rocklead: 0.36, rockorgan: 0.26, piano: 0.4 },
+  reverb: 0.14,
+  accents: { crash: ["drums_room", 49], fill: ["drums_room", [50, 48, 45]], low: ["drums_room", [45, 45, 36]] },
   pattern(c) {
     const out: NoteSpec[] = [];
     const I = c.intensity;
     const quiet = calm(c.mode);
     const pb = c.bar % 8;
     const keyRoot = 62 + (c.root - progDeg(c.bar) - 50); // D4 + transposition
-    const gr = into(c.root, 38, 50);
-    // calm / idle: clean guitar arpeggio + piano, the emotional intro
+    const gr = into(c.root, 38, 50); // one rockgtr sample = a whole re-amped power chord (root-5th-octave)
+    // calm / idle: clean electric guitar arpeggio + piano, the emotional intro
     if (quiet || I < 0.3) {
-      if (c.step % 2 === 0) { const t = [...c.chord, c.chord[0]! + 12]; out.push({ inst: "guitar", midi: into(t[(c.step / 2) % 4]!, 52, 71), vel: 0.4, dur: c.stepDur * 3, pan: -0.2 }); }
+      if (c.step % 2 === 0) { const t = [...c.chord, c.chord[0]! + 12]; out.push({ inst: "cleangtr", midi: into(t[(c.step / 2) % 4]!, 52, 71), vel: 0.45, dur: c.stepDur * 3, pan: -0.2 }); }
       if (c.step === 0) for (const t of c.chord) out.push({ inst: "piano", midi: into(t, 55, 72), vel: 0.35, dur: c.barDur });
       if (quiet) return out;
     }
-    // layer 1 (moving): rock drums + bass guitar 8ths + palm-muted power chords
-    if (on(c, 0, 8) || (I > 0.5 && on(c, 6, 10))) out.push({ inst: "drums_rock", midi: 36, vel: 0.8 + 0.2 * I, dur: 0.5 });
-    if (on(c, 4, 12)) out.push({ inst: "drums_rock", midi: 38, vel: 0.7 + 0.3 * I, dur: 0.5 });
-    if (c.step % 2 === 0) out.push({ inst: "drums_rock", midi: I > 0.6 ? 46 : 42, vel: 0.3 + 0.25 * I, dur: 0.3, pan: 0.25 });
-    if (c.step % 2 === 0) out.push({ inst: "ebass", midi: into(c.root, 33, 45), vel: 0.6 + 0.3 * I, dur: c.stepDur * 1.8 });
-    if (I > 0.3 && I <= 0.5 && c.step % 2 === 0) for (const iv of [0, 7]) out.push({ inst: "dguitar", midi: gr + iv, vel: 0.45, dur: c.stepDur * 0.9, pan: -0.5 });
-    // layer 2: open power chords doubled left/right + lead guitar melody
-    if (I > 0.5 && (c.step === 0 || on(c, 6, 8, 14))) for (const pan of [-0.75, 0.75]) for (const iv of [0, 7, 12]) out.push({ inst: "dguitar", midi: gr + iv, vel: 0.5 + 0.3 * I, dur: c.stepDur * (c.step === 0 ? 5 : 2), pan });
-    if (I > 0.38) for (const [st, iv, len] of ANTHEM_THEME[pb]!) if (st === c.step) out.push({ inst: "leadgtr", midi: keyRoot + iv, vel: 0.5 + 0.4 * I, dur: c.stepDur * len, pan: 0.1 });
-    // layer 3: crashes, tom fills, timpani
-    if (I > 0.62 && c.step === 0 && pb % 2 === 0) out.push({ inst: "drums_rock", midi: 49, vel: 0.6 + 0.3 * I, dur: 1.5, pan: -0.3 });
-    if (I > 0.62 && pb % 4 === 3 && c.step >= 12) out.push({ inst: "drums_rock", midi: [50, 48, 45, 45][c.step - 12]!, vel: 0.75, dur: 0.4 });
-    if (I > 0.62 && c.step === 0 && pb % 4 === 0) out.push({ inst: "timpani", midi: into(c.root, 38, 50), vel: 0.7, dur: 1 });
-    // layer 4 (peak): strings + choir lift, melody doubled an octave up in strings
-    if (I > 0.74 && c.step === 0) {
-      for (const t of c.chord) out.push({ inst: "strings", midi: into(t, 62, 81), vel: 0.4 + 0.3 * I, dur: c.barDur, pan: 0.3 });
-      for (const t of c.chord) out.push({ inst: "choir", midi: into(t, 60, 76), vel: 0.4 + 0.3 * I, dur: c.barDur, pan: -0.3 });
+    // layer 1 (moving): acoustic kit + bass guitar 8ths + palm-muted power chord chugs
+    if (on(c, 0, 8) || (I > 0.5 && on(c, 6, 10))) out.push({ inst: "drums_room", midi: 36, vel: 0.8 + 0.2 * I, dur: 0.5 });
+    if (on(c, 4, 12)) out.push({ inst: "drums_room", midi: 38, vel: 0.7 + 0.3 * I, dur: 0.5 });
+    if (c.step % 2 === 0) out.push({ inst: "drums_room", midi: I > 0.62 ? 51 : 42, vel: (c.step % 4 === 0 ? 0.42 : 0.3) + 0.2 * I, dur: 0.3, pan: 0.25 });
+    if (c.step % 2 === 0) out.push({ inst: "ebass", midi: into(c.root, 33, 45), vel: (c.step % 4 === 0 ? 0.68 : 0.58) + 0.25 * I, dur: c.stepDur * 1.7 });
+    if (I > 0.3 && I <= 0.5 && c.step % 2 === 0) out.push({ inst: "rockgtr", midi: gr, vel: 0.42, dur: c.stepDur * 0.8, pan: -0.45 });
+    // layer 2: open power chords, one take per side (slightly late on the right = double-tracked feel)
+    if (I > 0.5 && (c.step === 0 || on(c, 6, 8, 14))) {
+      const dur = c.stepDur * (c.step === 0 ? 5 : 2);
+      out.push({ inst: "rockgtr", midi: gr, vel: 0.5 + 0.3 * I, dur, pan: -0.7 });
+      out.push({ inst: "rockgtr", midi: gr, vel: 0.48 + 0.3 * I, dur, pan: 0.7, offset: 0.1 });
     }
-    if (I > 0.74) for (const [st, iv, len] of ANTHEM_THEME[pb]!) if (st === c.step) out.push({ inst: "strings", midi: keyRoot + iv + 12, vel: 0.35 + 0.3 * I, dur: c.stepDur * len, pan: -0.3 });
-    // build-up while accelerating hard: tom/snare roll into the next downbeat
+    if (I > 0.38) for (const [st, iv, len] of ANTHEM_THEME[pb]!) if (st === c.step) out.push({ inst: "rocklead", midi: keyRoot + iv, vel: 0.5 + 0.4 * I, dur: c.stepDur * len, pan: 0.1 });
+    // layer 3: crashes, tom fills, organ chords underneath
+    if (I > 0.62 && c.step === 0 && pb % 2 === 0) out.push({ inst: "drums_room", midi: 49, vel: 0.6 + 0.3 * I, dur: 1.5, pan: -0.3 });
+    if (I > 0.62 && pb % 4 === 3 && c.step >= 12) out.push({ inst: "drums_room", midi: [50, 48, 45, 45][c.step - 12]!, vel: 0.75, dur: 0.4 });
+    if (I > 0.62 && c.step === 0) for (const t of c.chord) out.push({ inst: "rockorgan", midi: into(t, 55, 70), vel: 0.35 + 0.2 * I, dur: c.barDur, pan: 0.35 });
+    // layer 4 (peak): piano stabs + lead doubled an octave below (second guitarist)
+    if (I > 0.74 && on(c, 0, 6, 8)) for (const t of c.chord) out.push({ inst: "piano", midi: into(t, 60, 76), vel: 0.4 + 0.2 * I, dur: c.stepDur * 2, pan: -0.25 });
+    if (I > 0.74) for (const [st, iv, len] of ANTHEM_THEME[pb]!) if (st === c.step) out.push({ inst: "rocklead", midi: keyRoot + iv - 12, vel: 0.32 + 0.25 * I, dur: c.stepDur * len, pan: -0.35 });
+    // build-up while accelerating hard: floor-tom + snare roll into the next downbeat
     if (c.mode === "surge") {
-      if (c.step % 2 === 0) out.push({ inst: "timpani", midi: into(c.root, 38, 50), vel: 0.35 + 0.03 * c.step, dur: 0.3 });
-      if (c.step >= 8) out.push({ inst: "drums_rock", midi: 38, vel: 0.35 + 0.04 * c.step, dur: 0.2 });
+      if (c.step % 4 === 0) out.push({ inst: "drums_room", midi: 45, vel: 0.35 + 0.03 * c.step, dur: 0.3 });
+      if (c.step >= 8) out.push({ inst: "drums_room", midi: 38, vel: 0.35 + 0.04 * c.step, dur: 0.2 });
     }
     return out;
   },
