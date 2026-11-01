@@ -62,7 +62,7 @@ export function DriveGallopVideo({ profileId, speed, reducedMotion, className }:
         className={cn(
           "absolute inset-0 h-full w-full object-center transition-opacity duration-500",
           "object-contain px-2 sm:px-4 md:px-8 lg:px-10",
-          "xl:object-cover xl:px-0",
+          "[@media(min-aspect-ratio:4/3)]:object-cover [@media(min-aspect-ratio:4/3)]:px-0",
           ready ? "opacity-100" : "opacity-0",
         )}
       />

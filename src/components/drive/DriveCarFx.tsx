@@ -158,12 +158,12 @@ export function DriveCarFx({ profileId, speed, engineRunning, reducedMotion, cla
   const lit = headlightsOn(engineRunning, speed * 3.6);
   return (
     <div ref={rootRef} className={cn("pointer-events-none fixed inset-0 overflow-hidden", className)} aria-hidden="true" data-testid="drive-car-fx" data-lit={lit}>
-      <div className="absolute inset-0 px-2 sm:px-4 md:px-8 lg:px-10 xl:hidden">
+      <div className="absolute inset-0 px-2 sm:px-4 md:px-8 lg:px-10 [@media(min-aspect-ratio:4/3)]:hidden">
         <div className="relative h-full w-full">
           <CarFxSvg cfg={cfg} src={src} aspect="xMidYMid meet" uid="m" lit={lit} still={reducedMotion || !DRIVE_MOTION_FX_ENABLED} />
         </div>
       </div>
-      <div className="absolute inset-0 hidden xl:block">
+      <div className="absolute inset-0 hidden [@media(min-aspect-ratio:4/3)]:block">
         <CarFxSvg cfg={cfg} src={src} aspect="xMidYMid slice" uid="s" lit={lit} still={reducedMotion || !DRIVE_MOTION_FX_ENABLED} />
       </div>
     </div>
