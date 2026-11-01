@@ -621,6 +621,9 @@ const baseStrategies: ProfileStrategy[] = [
           destination: buses.beds,
           kind: "gravel",
           level: 0.18,
+          // Fewer, slightly louder grains: gravel was the 2nd biggest node
+          // churn after the hooves on weak in-car CPUs.
+          densityScale: 0.65,
         }),
         createWindLayer(ctx, { id: "night-wind", destination: buses.beds, level: 0.3 }),
         createOneShotEventLayer(ctx, {
@@ -628,12 +631,15 @@ const baseStrategies: ProfileStrategy[] = [
           destination: buses.accents,
           level: 1,
           events: [
-            { kind: "cackle", everySeconds: 24, jitter: 8, level: 0.26, tone: 130 },
-            { kind: "howl", everySeconds: 14, jitter: 6, level: 0.12, tone: 420 },
-            { kind: "gust", everySeconds: 11, jitter: 5, level: 0.12, tone: 700, speedLinked: true },
-            { kind: "eerie", everySeconds: 21, jitter: 9, level: 0.06, tone: 1150 },
-            { kind: "scream", everySeconds: 55, jitter: 15, level: 0.05, tone: 880 },
-            { kind: "whip", everySeconds: 20, jitter: 10, level: 0.12, tone: 2600, onlyOnHardAccel: true },
+            // Brought forward (owner, Oct 2026): events should sit ~60–75% of
+            // the carriage bed and step in front of it at times. The master
+            // limiter + DRACULA_EVENT_* tests keep this from clipping.
+            { kind: "cackle", everySeconds: 18, jitter: 6, level: 0.32, tone: 130 },
+            { kind: "howl", everySeconds: 12, jitter: 5, level: 0.16, tone: 420 },
+            { kind: "gust", everySeconds: 10, jitter: 4, level: 0.15, tone: 700, speedLinked: true },
+            { kind: "eerie", everySeconds: 16, jitter: 6, level: 0.1, tone: 1150 },
+            { kind: "scream", everySeconds: 30, jitter: 10, level: 0.1, tone: 880 },
+            { kind: "whip", everySeconds: 16, jitter: 8, level: 0.13, tone: 2600, onlyOnHardAccel: true },
           ],
         }),
       ];

@@ -1015,6 +1015,18 @@ export function createImpactLayer(
   const kind = opts.kind ?? "gravel";
   const jerkWeight = opts.jerkWeight ?? (kind === "stone" ? 12 : 4);
   const densityScale = opts.densityScale ?? 1;
+  const impactPanners = new Map<number, StereoPannerNode>();
+  function impactPanner(v: number): StereoPannerNode {
+    const slot = Math.max(-4, Math.min(4, Math.round(v / 0.2)));
+    let p = impactPanners.get(slot);
+    if (!p) {
+      p = ctx.createStereoPanner();
+      p.pan.value = slot * 0.2;
+      p.connect(bus);
+      impactPanners.set(slot, p);
+    }
+    return p;
+  }
   const softThump = !!opts.softThump;
   const softCobble = kind === "cobble" && !!opts.softOnset;
   return {
@@ -1043,9 +1055,9 @@ export function createImpactLayer(
             Math.abs(m.accelFast) * 0.3 +
             jerk * (softThump ? 0.25 : 0.55)) *
           (0.6 + audioRandom() * 0.5);
-        const pan = ctx.createStereoPanner();
-        pan.pan.value = (audioRandom() - 0.5) * 1.6;
-        pan.connect(bus);
+        // Random spread snapped to a small pool of shared panners (9 slots
+        // across ±0.8) rather than a fresh StereoPanner per impact.
+        const pan = impactPanner((audioRandom() - 0.5) * 1.6);
 
         const src = createLoopingNoise(
           ctx,
@@ -1098,6 +1110,7 @@ export function createImpactLayer(
         g.connect(pan);
         src.start(at);
         src.stop(at + dur + 0.03);
+        src.onended = () => g.disconnect();
 
         if (!softThump && (kind === "cobble" || audioRandom() > 0.7)) {
           const osc = ctx.createOscillator();
@@ -1275,6 +1288,18 @@ export function createHoofLayer(
   const horses = opts.horses ?? 1;
   const softOnset = !!opts.softOnset;
   let demandSmooth = 0;
+  const limbPanners = new Map<number, StereoPannerNode>();
+  function limbPanner(limb: number): StereoPannerNode {
+    let p = limbPanners.get(limb);
+    if (!p) {
+      p = ctx.createStereoPanner();
+      // Hind leftish, fore rightish for a readable stride stereo image.
+      p.pan.value = limb < 2 ? -0.28 + limb * 0.12 : 0.18 + (limb - 2) * 0.1;
+      p.connect(bus);
+      limbPanners.set(limb, p);
+    }
+    return p;
+  }
 
   function fireHoof(
     at: number,
@@ -1303,9 +1328,9 @@ export function createHoofLayer(
       g.gain.exponentialRampToValueAtTime(gritPeak, at + 0.002);
     }
     g.gain.exponentialRampToValueAtTime(0.0001, at + 0.045);
-    const pan = ctx.createStereoPanner();
-    // Hind leftish, fore rightish for a readable stride stereo image.
-    pan.pan.value = limb < 2 ? -0.28 + limb * 0.12 : 0.18 + (limb - 2) * 0.1;
+    // Pooled per-limb panner (pan is fixed per limb), instead of a new
+    // StereoPanner per strike: fewer live nodes on the audio thread.
+    const pan = limbPanner(limb);
     if (softOnset) {
       const lp = ctx.createBiquadFilter();
       lp.type = "lowpass";
@@ -1318,9 +1343,9 @@ export function createHoofLayer(
       bp.connect(g);
     }
     g.connect(pan);
-    pan.connect(bus);
     src.start(at);
     src.stop(at + 0.08);
+    src.onended = () => g.disconnect();
 
     // Mass of the hoof: low triangle thud.
     const body = ctx.createOscillator();
@@ -1342,6 +1367,7 @@ export function createHoofLayer(
     bg.connect(pan);
     body.start(at);
     body.stop(at + 0.12);
+    body.onended = () => bg.disconnect();
   }
 
   return {

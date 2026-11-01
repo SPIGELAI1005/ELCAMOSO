@@ -348,6 +348,8 @@ export function createDeepBassPulseLayer(ctx: BaseAudioContext, opts: LayerBaseO
   let next = ctx.currentTime + 0.08;
   let bpm = 72;
   let disposed = false;
+  const kit = createDrumKit(ctx, bus);
+  let step = 0; // 8th-note counter
 
   function firePulse(at: number, amp: number, fundamental: number, long: boolean) {
     const dur = long ? 0.42 : 0.28;
@@ -370,20 +372,6 @@ export function createDeepBassPulseLayer(ctx: BaseAudioContext, opts: LayerBaseO
     sub.start(at);
     sub.stop(at + dur + 0.05);
 
-    // Second harmonic for missing-fundamental perceived bass
-    const harm = ctx.createOscillator();
-    const harmG = ctx.createGain();
-    harm.type = "sine";
-    harm.frequency.setValueAtTime(fundamental * 2.3, at);
-    harm.frequency.exponentialRampToValueAtTime(Math.max(100, fundamental * 1.5), at + dur * 0.75);
-    harmG.gain.setValueAtTime(0.0001, at);
-    harmG.gain.exponentialRampToValueAtTime(Math.max(0.0002, amp * 0.55), at + 0.008);
-    harmG.gain.exponentialRampToValueAtTime(0.0001, at + dur * 0.8);
-    harm.connect(harmG);
-    harmG.connect(bus);
-    harm.start(at);
-    harm.stop(at + dur + 0.05);
-
     // Phone / cabin presence (120–200 Hz) - this is what makes the pulse audible
     const mid = ctx.createOscillator();
     const midLp = ctx.createBiquadFilter();
@@ -403,19 +391,6 @@ export function createDeepBassPulseLayer(ctx: BaseAudioContext, opts: LayerBaseO
     mid.start(at);
     mid.stop(at + dur + 0.05);
 
-    // Soft click so the attack is unmistakable on small speakers
-    const click = ctx.createOscillator();
-    const clickG = ctx.createGain();
-    click.type = "sine";
-    click.frequency.setValueAtTime(420, at);
-    click.frequency.exponentialRampToValueAtTime(180, at + 0.04);
-    clickG.gain.setValueAtTime(0.0001, at);
-    clickG.gain.exponentialRampToValueAtTime(Math.max(0.0002, amp * 0.25), at + 0.004);
-    clickG.gain.exponentialRampToValueAtTime(0.0001, at + 0.05);
-    click.connect(clickG);
-    clickG.connect(bus);
-    click.start(at);
-    click.stop(at + 0.07);
   }
 
   return {
@@ -440,6 +415,8 @@ export function createDeepBassPulseLayer(ctx: BaseAudioContext, opts: LayerBaseO
         if (intensity > 0.7 && audioRandom() > 0.55) {
           firePulse(next + interval * 0.48, amp * 0.65, fund * 0.94, false);
         }
+        scheduleDrumBeat(kit, next, interval, step, m.speedSlow, intensity, opts.level ?? 0.7);
+        step += 2;
         next += interval;
       }
 
@@ -452,6 +429,99 @@ export function createDeepBassPulseLayer(ctx: BaseAudioContext, opts: LayerBaseO
       stopSafe(bed);
     },
   };
+}
+
+// ── Deep Bass Pulse drum kit ───────────────────────────────────────────────
+// Kick / clap / hats are rendered ONCE into AudioBuffers; each hit is a single
+// AudioBufferSourceNode into a shared voice gain, so drums cost less audio-thread
+// work than the oscillators they replaced (2nd-harmonic + click per beat).
+export interface DrumKit {
+  ctx: BaseAudioContext;
+  buffers: Record<"kick" | "clap" | "hat" | "openHat", AudioBuffer>;
+  gains: Record<"kick" | "clap" | "hat" | "openHat", GainNode>;
+}
+
+function renderDrum(ctx: BaseAudioContext, seconds: number, fn: (t: number, i: number) => number): AudioBuffer {
+  const len = Math.max(1, Math.round(ctx.sampleRate * seconds));
+  const buf = ctx.createBuffer(1, len, ctx.sampleRate);
+  const d = buf.getChannelData(0);
+  for (let i = 0; i < len; i++) d[i] = fn(i / ctx.sampleRate, i);
+  return buf;
+}
+
+export function createDrumKit(ctx: BaseAudioContext, dest: AudioNode): DrumKit {
+  let seed = 0x2f6b3a1;
+  const rnd = () => ((seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296) * 2 - 1;
+  let phase = 0;
+  const kick = renderDrum(ctx, 0.32, (t) => {
+    const f = 48 + 110 * Math.exp(-t * 38);
+    phase += (2 * Math.PI * f) / ctx.sampleRate;
+    const click = t < 0.006 ? rnd() * (1 - t / 0.006) * 0.5 : 0;
+    return (Math.sin(phase) * Math.exp(-t * 11) + click) * 0.9;
+  });
+  let bp1 = 0, bp2 = 0;
+  const clap = renderDrum(ctx, 0.22, (t) => {
+    // three smeared bursts + tail, crude band-pass ~1.2 kHz
+    const env = [0, 0.011, 0.022].reduce((a, o) => a + (t >= o ? Math.exp(-(t - o) * 180) : 0), 0) * 0.55 + Math.exp(-t * 22) * 0.45;
+    const x = rnd();
+    bp1 += 0.16 * (x - bp1);
+    bp2 += 0.5 * (bp1 - bp2);
+    return (bp1 - bp2) * env * 2.4;
+  });
+  let hpPrev = 0, hpOut = 0;
+  const hp = () => { const x = rnd(); hpOut = 0.92 * (hpOut + x - hpPrev); hpPrev = x; return hpOut; };
+  const hat = renderDrum(ctx, 0.05, (t) => hp() * Math.exp(-t * 90) * 0.55);
+  const openHat = renderDrum(ctx, 0.2, (t) => hp() * Math.exp(-t * 16) * 0.4);
+  const mk = (pan: number) => {
+    const g = ctx.createGain();
+    g.gain.value = 0;
+    if (pan && typeof ctx.createStereoPanner === "function") {
+      const p = ctx.createStereoPanner();
+      p.pan.value = pan;
+      g.connect(p);
+      p.connect(dest);
+    } else g.connect(dest);
+    return g;
+  };
+  return {
+    ctx,
+    buffers: { kick, clap, hat, openHat },
+    gains: { kick: mk(0), clap: mk(-0.08), hat: mk(0.22), openHat: mk(0.22) },
+  };
+}
+
+function hitDrum(kit: DrumKit, kind: keyof DrumKit["buffers"], at: number, amp: number) {
+  const src = kit.ctx.createBufferSource();
+  src.buffer = kit.buffers[kind];
+  kit.gains[kind].gain.setValueAtTime(amp, at);
+  src.connect(kit.gains[kind]);
+  src.start(at);
+  src.onended = () => src.disconnect();
+}
+
+/**
+ * One beat (two 8ths) of the drum groove. Speed drives density:
+ * parked = kick on 1 & 3 only; rolling adds clap on 2 & 4 and 8th hats;
+ * fast adds 16th hats, 4-on-the-floor kick and an open hat on the off-beat.
+ * Returns the number of hits scheduled (for tests / CPU budgeting).
+ */
+export function scheduleDrumBeat(kit: DrumKit, at: number, interval: number, step: number, speed: number, intensity: number, level: number): number {
+  const beat = Math.floor(step / 2) % 4;
+  const drive = clamp(speed * 0.75 + intensity * 0.45);
+  const lvl = level * 0.9;
+  let hits = 0;
+  if (beat === 0 || beat === 2 || drive > 0.62) { hitDrum(kit, "kick", at, lvl * (0.75 + drive * 0.45) * (beat === 0 ? 1 : 0.85)); hits++; }
+  if ((beat === 1 || beat === 3) && drive > 0.12) { hitDrum(kit, "clap", at, lvl * (0.32 + drive * 0.4)); hits++; }
+  if (drive > 0.22) {
+    const sub = drive > 0.6 ? 4 : 2;
+    for (let i = 0; i < sub; i++) {
+      const tt = at + (interval * i) / sub;
+      if (sub === 4 && i === 2 && drive > 0.75) { hitDrum(kit, "openHat", tt, lvl * 0.3); hits++; continue; }
+      hitDrum(kit, "hat", tt, lvl * (i % 2 ? 0.2 : 0.3) * (0.6 + drive * 0.6));
+      hits++;
+    }
+  }
+  return hits;
 }
 
 export function createVtwinPulseLayer(

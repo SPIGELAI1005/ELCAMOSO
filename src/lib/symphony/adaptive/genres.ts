@@ -860,6 +860,52 @@ const LATINO_MONTUNO: readonly (readonly [number, number, number])[][] = [
   [[0, 0, 0], [2, 2, 0], [3, 1, 1], [5, 0, 1], [6, 2, 0], [8, 1, 0], [10, 2, 0], [11, 0, 1], [13, 1, 0], [14, 2, 0]],
   [[0, 2, 0], [1, 0, 1], [3, 1, 0], [4, 2, 0], [6, 0, 1], [8, 2, 0], [9, 1, 1], [11, 2, 0], [12, 0, 1], [14, 1, 0]],
 ];
+/**
+ * Spanish nylon-guitar solo lead (A minor / harmonic-minor G#), 2-bar phrases:
+ * [step, semitones from A4, length in 16ths]. Original material.
+ */
+export const LATINO_SOLO: readonly (readonly (readonly [number, number, number])[])[][] = [
+  [
+    [[0, 7, 2], [2, 5, 1], [3, 3, 1], [4, 5, 2], [6, 3, 1], [7, 2, 1], [8, 0, 3], [12, -1, 1], [13, 0, 3]],
+    [[0, 3, 1], [1, 5, 1], [2, 7, 2], [4, 8, 2], [6, 7, 1], [7, 5, 1], [8, 7, 4], [12, 3, 2], [14, 2, 2]],
+  ],
+  [
+    [[0, 12, 3], [3, 10, 1], [4, 8, 2], [6, 7, 2], [8, 8, 1], [9, 7, 1], [10, 5, 1], [11, 3, 1], [12, 2, 2], [14, 0, 2]],
+    [[2, -1, 1], [3, 0, 1], [4, 3, 2], [6, 5, 2], [8, 7, 6], [14, 8, 1], [15, 7, 1]],
+  ],
+  [
+    [[0, 0, 1], [1, 3, 1], [2, 7, 1], [3, 12, 3], [6, 11, 1], [7, 12, 1], [8, 10, 2], [10, 8, 2], [12, 7, 4]],
+    [[0, 8, 1], [1, 7, 1], [2, 5, 1], [3, 3, 1], [4, 2, 2], [6, 3, 1], [7, 2, 1], [8, -1, 2], [10, 0, 6]],
+  ],
+];
+
+/**
+ * Solo phrases come and go over the groove: they play in a window of each
+ * 8-bar cycle that widens with speed (2 bars rolling, up to 6 at pace), get an
+ * octave lift and grace-note ornaments at high intensity, and rest otherwise.
+ * One sampled nylon voice per note (≤ ~10 notes/bar), so CPU stays tiny.
+ */
+export function latinoSolo(c: StepContext): NoteSpec[] {
+  const I = c.intensity;
+  if (I < 0.2 || calm(c.mode)) return [];
+  const cyc = c.bar % 8;
+  const window = I > 0.7 ? 6 : I > 0.45 ? 4 : 2;
+  if (cyc < 2 || cyc >= 2 + window) return [];
+  const phrase = LATINO_SOLO[(Math.floor(c.bar / 8) + c.variation) % LATINO_SOLO.length]!;
+  const half = phrase[(cyc - 2) % 2]!;
+  const out: NoteSpec[] = [];
+  const lift = I > 0.72 && cyc >= 4 ? 12 : 0;
+  for (const [st, iv, len] of half) {
+    if (st !== c.step) continue;
+    // sparse at low speed: skip the passing 16ths, keep the phrase skeleton
+    if (I < 0.4 && len === 1 && st % 2 === 1) continue;
+    const midi = Math.min(88, 69 + iv + lift);
+    const vel = 0.5 + 0.35 * I;
+    if (I > 0.6 && len >= 2) out.push({ inst: "nylon", midi: midi + (iv === -1 || iv === 7 ? 1 : 2), vel: vel * 0.55, dur: 0.06, pan: 0.05, offset: 0 });
+    out.push({ inst: "nylon", midi, vel, dur: c.stepDur * (len + 0.4), pan: 0.05, offset: I > 0.6 && len >= 2 ? 0.045 : 0 });
+  }
+  return out;
+}
 
 const latino: GenreDef = {
   id: "latino",
@@ -905,6 +951,8 @@ const latino: GenreDef = {
       if (on(c, 4, 6, 12, 14)) out.push({ inst: "drums_latin", midi: 73, vel: 0.28 + 0.2 * I, dur: 0.15, pan: 0.5 });
       if (on(c, 0, 3, 6, 8, 11, 14)) c.chord.forEach((t, i) => out.push({ inst: "nylon", midi: into(t, 52, 71), vel: 0.35 + 0.25 * I, dur: c.stepDur * 2.5, pan: 0.3, offset: i * 0.06 }));
     }
+    // Spanish nylon-guitar solo lead, phrases come and go with speed
+    out.push(...latinoSolo(c));
     // piano montuno + timbales
     if (I > 0.57) {
       for (const [st, ix, up] of LATINO_MONTUNO[c.bar % 2]!) if (st === c.step) out.push({ inst: "piano", midi: into(c.chord[ix]!, 64, 79) + up * 12, vel: 0.35 + 0.25 * I, dur: c.stepDur * 1.6, pan: -0.25 });
