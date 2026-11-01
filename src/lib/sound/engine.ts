@@ -78,8 +78,8 @@ export const ALWAYS_LAYERED_PROFILE_IDS: ReadonlySet<string> = new Set(["dracula
 
 
 export const BACKGROUND_MUSIC_LEVELS: Readonly<Record<string, number>> = {
-  // v38: Gothic Night at ~50/50 with the carriage (measured stems -22.8 dB each)
-  "dracula-carriage": 4.5,
+  // v38b: Gothic Night ~65% vs carriage ~45% (music +3.2 dB over carriage stem)
+  "dracula-carriage": 6.5,
 };
 import { isWorldProfileId, WorldSynth } from "@/lib/worlds";
 import { fetchSoundAssetManifest } from "@/lib/sound-assets/client-loader";
