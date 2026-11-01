@@ -33,8 +33,8 @@ describe("latino fiesta nylon solo", () => {
   it("phrases come and go: always rests for part of each 8-bar cycle", () => {
     for (const bar of [0, 1]) for (let s = 0; s < 16; s++) expect(latinoSolo(ctx(bar, s, 1))).toEqual([]);
   });
-  it("uses the licence-clean sampled nylon voice", () => {
-    for (let s = 0; s < 16; s++) for (const n of latinoSolo(ctx(2, s, 0.8))) expect(n.inst).toBe("nylon");
+  it("uses the licence-clean sampled trumpet section (FluidR3_GM)", () => {
+    for (let s = 0; s < 16; s++) for (const n of latinoSolo(ctx(2, s, 0.8))) expect(n.inst).toBe("trumpet");
   });
 });
 
@@ -45,12 +45,15 @@ describe("latino fiesta nylon solo v36: melodic and in key", () => {
     return { step, bar, chord: chord.map((n) => n + tr), root: root + tr, intensity: I, mode: "cruise", variation: 0, stepDur: 0.156, barDur: 2.5, rand: Math.random } as never;
   };
   const AMIN = new Set([0, 2, 3, 5, 7, 8, 10]); // A natural minor pitch classes from A
-  it("stays diatonic, in the E4..G5 nylon range, and lands chord tones on the beats", () => {
-    for (let bar = 0; bar < 16; bar++) for (let s = 0; s < 16; s++) for (const n of latinoSolo(ctx(bar, s, 0.6)) as { midi: number }[]) {
-      expect(AMIN.has((n.midi - 69 + 120) % 12)).toBe(true);
-      expect(n.midi).toBeGreaterThanOrEqual(64);
-      expect(n.midi).toBeLessThanOrEqual(79);
-      if (s % 4 === 0) expect(prog[bar % 4]![1].map((t) => t % 12)).toContain(n.midi % 12);
+  it("stays diatonic; the lead trumpet keeps the E4..G5 melody and lands chord tones on the beats", () => {
+    for (let bar = 0; bar < 16; bar++) for (let s = 0; s < 16; s++) {
+      const notes = latinoSolo(ctx(bar, s, 0.6)) as { midi: number }[];
+      for (const n of notes) expect(AMIN.has((n.midi - 69 + 120) % 12)).toBe(true);
+      const lead = notes[0];
+      if (!lead) continue;
+      expect(lead.midi).toBeGreaterThanOrEqual(64);
+      expect(lead.midi).toBeLessThanOrEqual(79);
+      if (s % 4 === 0) expect(prog[bar % 4]![1].map((t) => t % 12)).toContain(lead.midi % 12);
     }
   });
   it("follows the conductor's climb transpose", () => {

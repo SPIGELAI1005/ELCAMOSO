@@ -74,3 +74,30 @@ export function resolveGenre(profileId: string, choice: GenreChoice = getGenreCh
   if (signature) return signature;
   return choice === "auto" ? defaultGenreForProfile(profileId) : choice;
 }
+
+/** UI label for the "auto" choice: the music changes genre on its own (Auto DJ). */
+export const AUTO_DJ_LABEL = "Auto DJ";
+
+// What the music is actually playing right now (Auto DJ changes it mid-drive).
+let activeGenre: GenreId | null = null;
+const activeListeners = new Set<(g: GenreId | null) => void>();
+
+export function getActiveGenre(): GenreId | null {
+  return activeGenre;
+}
+
+export function publishActiveGenre(g: GenreId | null) {
+  if (g === activeGenre) return;
+  activeGenre = g;
+  for (const l of activeListeners) l(g);
+}
+
+export function subscribeActiveGenre(fn: (g: GenreId | null) => void): () => void {
+  activeListeners.add(fn);
+  return () => activeListeners.delete(fn);
+}
+
+/** True when Auto DJ drives the genre for this profile. */
+export function isAutoDj(profileId: string, choice: GenreChoice = getGenreChoice()): boolean {
+  return choice === "auto" && !hasSignatureGenre(profileId);
+}
