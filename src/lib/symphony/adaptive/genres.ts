@@ -323,6 +323,35 @@ const HIPHOP_MELODY: readonly (readonly [number, number, number])[][] = [
   [[0, 15, 3], [3, 14, 1], [4, 10, 4], [10, 7, 2], [12, 10, 4]],
   [[0, 12, 3], [3, 10, 1], [4, 7, 3], [8, 3, 2], [11, 5, 1], [12, 7, 4]],
 ];
+/**
+ * Original dark minor loop (v36): a slow, singable 4-bar piano line written
+ * against Fm7 - Fm7 - Dbmaj7 - Cm7, [step, semitones from the (transposed) F4,
+ * len16]. The E-natural pickups lean back into F like a classic boom-bap loop.
+ */
+export const HIPHOP_LOOP: readonly (readonly (readonly [number, number, number])[])[] = [
+  [[0, 7, 3], [3, 5, 1], [4, 3, 2], [6, 2, 2], [8, 0, 6], [14, -1, 2]],
+  [[0, 0, 2], [2, 3, 2], [4, 7, 4], [8, 8, 3], [11, 7, 1], [12, 3, 4]],
+  [[0, 8, 3], [3, 7, 1], [4, 3, 4], [8, 0, 4], [12, 3, 2], [14, 7, 2]],
+  [[0, 7, 4], [4, 5, 2], [6, 3, 2], [8, 2, 4], [12, -2, 2], [14, -1, 2]],
+];
+const HIPHOP_DEGS = [0, 0, 8, 7] as const;
+
+/** Moody loop: piano from rolling speed, string octave double + the high hook as counter-melody with pace. */
+export function hiphopLoop(c: StepContext): NoteSpec[] {
+  const I = c.intensity;
+  const pb = c.bar % 4;
+  const keyF = c.root - HIPHOP_DEGS[pb]! + 24; // F4 when untransposed (key root F2)
+  const out: NoteSpec[] = [];
+  for (const [st, iv, len] of HIPHOP_LOOP[pb]!) {
+    if (st !== c.step) continue;
+    if (I < 0.3 && len === 1) continue; // sparser when slow
+    const vel = (st % 4 === 0 ? 0.5 : 0.42) + 0.25 * I;
+    out.push({ inst: "piano", midi: keyF + iv, vel, dur: c.stepDur * (len + 1), pan: -0.1, offset: 0.03 });
+    if (I > 0.55) out.push({ inst: "strings", midi: keyF + iv - 12, vel: 0.3 + 0.25 * I, dur: c.stepDur * (len + 0.5), pan: 0.3 });
+  }
+  return out;
+}
+
 const hiphop: GenreDef = {
   id: "hiphop",
   name: "Hip-hop",
@@ -346,8 +375,10 @@ const hiphop: GenreDef = {
     const keySteps = [[0, 7, 10], [0, 3, 10, 14], [2, 7, 12]][c.variation % 3]!;
     const voicing = [c.chord[1]!, c.chord[2]!, c.chord[3] ?? c.chord[0]! + 12, c.chord[0]! + 14];
     if (keySteps.includes(c.step) && (!quiet || c.step === 0)) for (const t of voicing) out.push({ inst: "piano", midi: into(t, 55, 74), vel: 0.32 + 0.22 * I, dur: c.stepDur * 3, pan: -0.15, offset: 0.12 });
-    // original piano melody loop (2 bars), right hand
-    if (!quiet || I > 0.1) for (const [st, iv, len] of HIPHOP_MELODY[c.bar % 2]!) if (st === c.step) out.push({ inst: "piano", midi: into(c.root + iv, 70, 89), vel: 0.38 + 0.25 * I, dur: c.stepDur * len, pan: 0.2, offset: 0.08 });
+    // dark minor piano loop (main melodic line, follows speed)
+    if (!quiet && I > 0.15) out.push(...hiphopLoop(c));
+    // original 2-bar high hook: now an occasional counter-melody answering the loop
+    if (!quiet && I > 0.4 && c.bar % 8 >= 4) for (const [st, iv, len] of HIPHOP_MELODY[c.bar % 2]!) if (st === c.step) out.push({ inst: "piano", midi: into(c.root + iv, 70, 89), vel: 0.38 + 0.25 * I, dur: c.stepDur * len, pan: 0.2, offset: 0.08 });
     if (quiet) return out;
     if (I > 0.15) {
       const kicks = c.variation % 2 ? [0, 7, 10] : [0, 3, 10];
@@ -861,50 +892,68 @@ const LATINO_MONTUNO: readonly (readonly [number, number, number])[][] = [
   [[0, 2, 0], [1, 0, 1], [3, 1, 0], [4, 2, 0], [6, 0, 1], [8, 2, 0], [9, 1, 1], [11, 2, 0], [12, 0, 1], [14, 1, 0]],
 ];
 /**
- * Spanish nylon-guitar solo lead (A minor / harmonic-minor G#), 2-bar phrases:
- * [step, semitones from A4, length in 16ths]. Original material.
+ * Spanish nylon-guitar solo (v36 rewrite, original material): one singable
+ * 4-bar motif written against the Am - F - C - G bars it plays over, so every
+ * beat lands on a chord tone. [step, semitones from the (transposed) A4, len16].
+ * Phrase A states the motif, A' repeats its first half and answers upward.
+ * Range E4..G5 stays within ~3 st of a recorded nylon note (no chipmunk shift).
  */
 export const LATINO_SOLO: readonly (readonly (readonly [number, number, number])[])[][] = [
   [
-    [[0, 7, 2], [2, 5, 1], [3, 3, 1], [4, 5, 2], [6, 3, 1], [7, 2, 1], [8, 0, 3], [12, -1, 1], [13, 0, 3]],
-    [[0, 3, 1], [1, 5, 1], [2, 7, 2], [4, 8, 2], [6, 7, 1], [7, 5, 1], [8, 7, 4], [12, 3, 2], [14, 2, 2]],
+    [[0, 7, 3], [3, 5, 1], [4, 3, 2], [6, 2, 2], [8, 0, 4], [12, 3, 2], [14, 7, 2]], // Am: E D C B A . C E
+    [[0, 8, 3], [3, 7, 1], [4, 3, 2], [6, 5, 2], [8, 0, 4], [12, -4, 2], [14, -2, 2]], // F: F E C D A . F G
+    [[0, 7, 3], [3, 5, 1], [4, 3, 2], [6, 2, 2], [8, -2, 4], [12, 3, 2], [14, 2, 2]], // C: E D C B G . C B
+    [[0, 5, 3], [3, 3, 1], [4, 2, 4], [8, -2, 2], [10, 2, 2], [12, 5, 4]], // G: D C B . G B D
   ],
   [
-    [[0, 12, 3], [3, 10, 1], [4, 8, 2], [6, 7, 2], [8, 8, 1], [9, 7, 1], [10, 5, 1], [11, 3, 1], [12, 2, 2], [14, 0, 2]],
-    [[2, -1, 1], [3, 0, 1], [4, 3, 2], [6, 5, 2], [8, 7, 6], [14, 8, 1], [15, 7, 1]],
-  ],
-  [
-    [[0, 0, 1], [1, 3, 1], [2, 7, 1], [3, 12, 3], [6, 11, 1], [7, 12, 1], [8, 10, 2], [10, 8, 2], [12, 7, 4]],
-    [[0, 8, 1], [1, 7, 1], [2, 5, 1], [3, 3, 1], [4, 2, 2], [6, 3, 1], [7, 2, 1], [8, -1, 2], [10, 0, 6]],
+    [[0, 7, 3], [3, 5, 1], [4, 3, 2], [6, 2, 2], [8, 0, 4], [12, 3, 2], [14, 7, 2]],
+    [[0, 8, 3], [3, 7, 1], [4, 3, 2], [6, 5, 2], [8, 0, 4], [12, -4, 2], [14, -2, 2]],
+    [[0, 10, 3], [3, 8, 1], [4, 7, 2], [6, 5, 1], [7, 3, 1], [8, 7, 4], [12, 3, 2], [14, 2, 2]], // C: G F E D C E . C B
+    [[0, 2, 2], [2, 5, 2], [4, 10, 4], [8, 5, 2], [10, 2, 2], [12, -2, 4]], // G: B D G . D B G -> back to Am
   ],
 ];
 
+/** Chord tone just below `midi` in the current chord (Latin parallel 3rds/6ths). */
+function harmonyBelow(chord: readonly number[], midi: number): number {
+  let best = midi - 12;
+  for (const t of chord) for (let o = -24; o <= 12; o += 12) { const n = t + o; if (n < midi - 2 && n > best) best = n; }
+  return best;
+}
+
 /**
- * Solo phrases come and go over the groove: they play in a window of each
- * 8-bar cycle that widens with speed (2 bars rolling, up to 6 at pace), get an
- * octave lift and grace-note ornaments at high intensity, and rest otherwise.
- * One sampled nylon voice per note (≤ ~10 notes/bar), so CPU stays tiny.
+ * Solo phrases come and go over the groove in each 8-bar cycle: rolling = A once
+ * (bars 4-7), pace = the A' answer leads in (bars 2-3) and A / A' alternate.
+ * Bars 0-1 always rest. At high intensity beat notes get a harmony a 3rd/6th
+ * below. Notes ring like a plucked string (length + 1.5 steps).
  */
 export function latinoSolo(c: StepContext): NoteSpec[] {
   const I = c.intensity;
   if (I < 0.2 || calm(c.mode)) return [];
   const cyc = c.bar % 8;
-  const window = I > 0.7 ? 6 : I > 0.45 ? 4 : 2;
-  if (cyc < 2 || cyc >= 2 + window) return [];
-  const phrase = LATINO_SOLO[(Math.floor(c.bar / 8) + c.variation) % LATINO_SOLO.length]!;
-  const half = phrase[(cyc - 2) % 2]!;
+  if (cyc < 2 || (cyc < 4 && I <= 0.45)) return [];
+  const phrase = LATINO_SOLO[cyc < 4 ? 1 : (Math.floor(c.bar / 8) + c.variation) % 2]!;
+  const bar = phrase[c.bar % 4]!;
+  const keyA = c.root - LATINO_DEGS[c.bar % 4]! + 24; // A4 when untransposed (key root A2)
   const out: NoteSpec[] = [];
-  const lift = I > 0.72 && cyc >= 4 ? 12 : 0;
-  for (const [st, iv, len] of half) {
+  for (const [st, iv, len] of bar) {
     if (st !== c.step) continue;
     // sparse at low speed: skip the passing 16ths, keep the phrase skeleton
-    if (I < 0.4 && len === 1 && st % 2 === 1) continue;
-    const midi = Math.min(88, 69 + iv + lift);
-    const vel = 0.5 + 0.35 * I;
-    if (I > 0.6 && len >= 2) out.push({ inst: "nylon", midi: midi + (iv === -1 || iv === 7 ? 1 : 2), vel: vel * 0.55, dur: 0.06, pan: 0.05, offset: 0 });
-    out.push({ inst: "nylon", midi, vel, dur: c.stepDur * (len + 0.4), pan: 0.05, offset: I > 0.6 && len >= 2 ? 0.045 : 0 });
+    if (I < 0.4 && len === 1) continue;
+    const midi = keyA + iv;
+    const vel = (st % 4 === 0 ? 0.62 : 0.52) + 0.3 * I;
+    out.push({ inst: "nylon", midi, vel, dur: c.stepDur * (len + 1.5), pan: 0.08 });
+    if (I > 0.72 && st % 4 === 0 && len >= 2) out.push({ inst: "nylon", midi: harmonyBelow(c.chord, midi), vel: vel * 0.6, dur: c.stepDur * (len + 1), pan: -0.08, offset: 0.012 });
   }
   return out;
+}
+const LATINO_DEGS = [0, 8, 3, 10] as const;
+
+/** Between solo phrases: a fingerpicked arpeggio (p-i-m-a) on the chord. */
+function latinoArpeggio(c: StepContext): NoteSpec[] {
+  if (c.step % 2 !== 0) return [];
+  const tones = [c.chord[0]!, c.chord[1]!, c.chord[2]!, c.chord[0]! + 12];
+  const order = [0, 2, 1, 3, 2, 1, 3, 2];
+  return [{ inst: "nylon", midi: into(tones[order[c.step / 2]!]!, 55, 74), vel: 0.36 + 0.2 * c.intensity, dur: c.stepDur * 3, pan: 0.3 }];
 }
 
 const latino: GenreDef = {
@@ -951,8 +1000,12 @@ const latino: GenreDef = {
       if (on(c, 4, 6, 12, 14)) out.push({ inst: "drums_latin", midi: 73, vel: 0.28 + 0.2 * I, dur: 0.15, pan: 0.5 });
       if (on(c, 0, 3, 6, 8, 11, 14)) c.chord.forEach((t, i) => out.push({ inst: "nylon", midi: into(t, 52, 71), vel: 0.35 + 0.25 * I, dur: c.stepDur * 2.5, pan: 0.3, offset: i * 0.06 }));
     }
-    // Spanish nylon-guitar solo lead, phrases come and go with speed
-    out.push(...latinoSolo(c));
+    // Spanish nylon-guitar solo lead, phrases come and go with speed;
+    // fingerpicked arpeggios fill the bars between phrases
+    const solo = latinoSolo(c);
+    const resting = c.bar % 8 < 2 || (c.bar % 8 < 4 && I <= 0.45);
+    out.push(...solo);
+    if (I > 0.32 && resting) out.push(...latinoArpeggio(c));
     // piano montuno + timbales
     if (I > 0.57) {
       for (const [st, ix, up] of LATINO_MONTUNO[c.bar % 2]!) if (st === c.step) out.push({ inst: "piano", midi: into(c.chord[ix]!, 64, 79) + up * 12, vel: 0.35 + 0.25 * I, dur: c.stepDur * 1.6, pan: -0.25 });
