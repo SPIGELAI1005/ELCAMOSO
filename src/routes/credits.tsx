@@ -6,9 +6,20 @@ import { RECORDED_LOOP_CREDITS } from "@/lib/sound/realism/v2/recorded-loops";
 import { RECORDED_BED_CREDITS } from "@/lib/sound/recorded-beds";
 import { SIREN_CREDIT } from "@/lib/sound/dsp/siren-overlay";
 import { HORSE_SNORT_CREDITS } from "@/lib/sound/horse-snorts";
+import type { RecordedCredit } from "@/lib/sound/realism/v2/recorded-loops";
 import { HORSE_WHINNY_CREDITS } from "@/lib/sound/horse-whinnies";
 
-const CREDITS = [...RECORDED_LOOP_CREDITS, ...RECORDED_BED_CREDITS, ...HORSE_SNORT_CREDITS, ...HORSE_WHINNY_CREDITS, ...DEBRIS_GRAIN_CREDITS, SIREN_CREDIT];
+const MUSIC_SOUNDFONT_CREDIT: RecordedCredit = {
+  title: "FluidR3_GM General MIDI soundfont (saxophone, electric piano, brush kit)",
+  attribution: "Instrument notes rendered from the FluidR3_GM soundfont by Frank Wen.",
+  author: "Frank Wen",
+  licence: "MIT",
+  licenceUrl: "https://opensource.org/licenses/MIT",
+  sourceUrl: "https://member.keymusician.com/Member/FluidR3_GM/index.html",
+  usedIn: "Drive Symphony: Piano Flow and Jazz Cruise",
+};
+
+const CREDITS = [...RECORDED_LOOP_CREDITS, ...RECORDED_BED_CREDITS, ...HORSE_SNORT_CREDITS, ...HORSE_WHINNY_CREDITS, ...DEBRIS_GRAIN_CREDITS, SIREN_CREDIT, MUSIC_SOUNDFONT_CREDIT];
 
 export const Route = createFileRoute("/credits")({
   component: CreditsPage,

@@ -17,7 +17,7 @@ export const PUBLIC_PROFILE_IDS = [
   "maglev-train", "high-speed-train", "submarine", "jet-ski", "motorcycle-superbike", "big-twin",
   "snowmobile", "tank", "construction-monster", "horse-gallop", "dragon", "thunder-beast",
   "retro-arcade", "synthwave-drive", "deep-bass-pulse", "zen-drive", "rain-drive", "ocean-drive",
-  "heartbeat", "rocket-car", "time-machine", "f1-v10", "traby", "ge-squared", "police-patrol", "symphony-cinematic-rock", "symphony-motion-orchestra", "symphony-neon-run", "symphony-latino-fiesta",
+  "heartbeat", "rocket-car", "time-machine", "f1-v10", "traby", "ge-squared", "police-patrol", "symphony-cinematic-rock", "symphony-motion-orchestra", "symphony-neon-run", "symphony-latino-fiesta", "symphony-piano-flow", "symphony-jazz-cruise",
   "world-space-drive", "world-cyber-city", "world-storm-run", "fusion-road-anthem",
   "fusion-mechanical-symphony", "fusion-midnight-boost", "fusion-future-pulse",
 ] as const;
@@ -192,6 +192,8 @@ export const PROFILE_EXPERIENCE_CONFIG = {
   "symphony-motion-orchestra": musical(["music", "event"], { transitionTauSeconds: 0.22, physics: "intentional-design", phases: { cruiseIntrusiveScale: 0.58, accelerationTexture: 1.12 } }),
   "symphony-neon-run": musical(["music", "event"], { transitionTauSeconds: 0.14, physics: "intentional-design", phases: { cruiseIntrusiveScale: 0.54, accelerationTexture: 1.12 } }),
   "symphony-latino-fiesta": musical(["music", "event"], { transitionTauSeconds: 0.16, physics: "intentional-design", phases: { cruiseIntrusiveScale: 0.54, accelerationTexture: 1.12 } }),
+  "symphony-piano-flow": musical(["music", "event"], { transitionTauSeconds: 0.2, physics: "intentional-design", phases: { cruiseIntrusiveScale: 0.54, accelerationTexture: 1.12 } }),
+  "symphony-jazz-cruise": musical(["music", "event"], { transitionTauSeconds: 0.16, physics: "intentional-design", phases: { cruiseIntrusiveScale: 0.54, accelerationTexture: 1.12 } }),
   "world-space-drive": designed({ pitchDriver: "energy", aspiration: "not-applicable", availableRoles: ["core", "environment", "event"], transitionTauSeconds: 0.24, phases: { accelerationTexture: 1.16, cruiseIntrusiveScale: 0.62, releaseCharacter: 0.76 } }),
   "world-cyber-city": designed({ pitchDriver: "vehicle-speed", aspiration: "not-applicable", availableRoles: ["core", "environment", "event"], transitionTauSeconds: 0.18, phases: { accelerationTexture: 1.12, cruiseIntrusiveScale: 0.58, releaseCharacter: 0.68 }, variation: { minEventCooldownSeconds: 7, maxEventVoices: 2 } }),
   "world-storm-run": designed({ pitchDriver: "vehicle-speed", aspiration: "not-applicable", availableRoles: ["core", "environment", "event"], transitionTauSeconds: 0.22, phases: { accelerationTexture: 1.14, cruiseIntrusiveScale: 0.6, releaseCharacter: 0.8 }, variation: { minEventCooldownSeconds: 16, maxEventVoices: 1 } }),

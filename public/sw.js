@@ -1,4 +1,5 @@
-const CACHE = "elcamoso-shell-v36";
+// PLACEHOLDER cache bump: final version number decided at merge.
+const CACHE = "elcamoso-shell-v37";
 // Bump CACHE whenever a file under /sample-packs/recorded/ is replaced at the same URL.
 const WORKLET = "/audio/combustion-processor.js";
 // Keep in sync with COMBUSTION_WORKLET_VERSION (checked by src/lib/sound/sw-precache.test.ts).
@@ -23,6 +24,9 @@ const AUDIO = [
   "/sample-packs/recorded/music-v1/square.m4a",
   "/sample-packs/recorded/music-v1/viola.m4a",
   "/sample-packs/recorded/music-v1/contrabass.m4a",
+  "/sample-packs/recorded/music-v1/sax.m4a",
+  "/sample-packs/recorded/music-v1/epiano.m4a",
+  "/sample-packs/recorded/music-v1/drums_jazz.m4a",
   "/sample-packs/recorded/music-v1/flute.m4a",
   "/sample-packs/recorded/music-v1/oboe.m4a",
   "/sample-packs/recorded/music-v1/clarinet.m4a",
