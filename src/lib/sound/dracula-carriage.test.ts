@@ -12,14 +12,13 @@ describe("Dracula Carriage", () => {
     expect(p?.name).toBe("Dracula Carriage");
     expect(p?.voice.rhythm?.kind).toBe("gallop");
     const kinds = p?.voice.signals?.map((s) => s.kind) ?? [];
-    for (const k of ["cackle", "eerie", "scream", "gust", "howl"]) expect(kinds).toContain(k);
+    expect(kinds).toContain("gust");
     expect(p?.voice.textures?.some((t) => t.kind === "wind")).toBe(true);
   });
 
-  it("keeps screams occasional (random every ~15-40 s)", () => {
-    const scream = p?.voice.signals?.find((s) => s.kind === "scream");
-    expect(scream!.everySeconds - (scream!.jitter ?? 0)).toBeGreaterThanOrEqual(15);
-    expect(scream!.everySeconds + (scream!.jitter ?? 0)).toBeLessThanOrEqual(40);
+  it("leaves the voices to the jump-scare scheduler (no duplicate signal voices)", () => {
+    const kinds = p?.voice.signals?.map((s) => s.kind) ?? [];
+    for (const k of ["cackle", "eerie", "scream", "howl"]) expect(kinds).not.toContain(k);
   });
 
   it("is a free profile", () => {

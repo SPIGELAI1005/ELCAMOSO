@@ -631,14 +631,9 @@ const baseStrategies: ProfileStrategy[] = [
           destination: buses.accents,
           level: 1,
           events: [
-            // Brought forward (owner, Oct 2026): events should sit ~60–75% of
-            // the carriage bed and step in front of it at times. The master
-            // limiter + DRACULA_EVENT_* tests keep this from clipping.
-            { kind: "cackle", everySeconds: 18, jitter: 6, level: 0.32, tone: 130 },
-            { kind: "howl", everySeconds: 12, jitter: 5, level: 0.16, tone: 420 },
+            // Voices (laugh, scream, wind whistle, crows, owl, wolf) are random
+            // jump scares in dsp/jump-scares.ts, played on every synthesis path.
             { kind: "gust", everySeconds: 10, jitter: 4, level: 0.15, tone: 700, speedLinked: true },
-            { kind: "eerie", everySeconds: 16, jitter: 6, level: 0.1, tone: 1150 },
-            { kind: "scream", everySeconds: 30, jitter: 10, level: 0.1, tone: 880 },
             { kind: "whip", everySeconds: 16, jitter: 8, level: 0.13, tone: 2600, onlyOnHardAccel: true },
           ],
         }),
