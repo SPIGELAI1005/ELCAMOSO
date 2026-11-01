@@ -1,7 +1,6 @@
 import type { DriveState } from "@/lib/drive/model";
 import { fireSpooky, isSpookyKind } from "@/lib/sound/dsp/spooky";
 import { createSirenOverlay, type SirenOverlay } from "@/lib/sound/dsp/siren-overlay";
-import { createJumpScares, type JumpScares } from "@/lib/sound/dsp/jump-scares";
 import { DEFAULT_CABIN_EQ, type CabinEq } from "@/lib/drive/types-extra";
 import type { RhythmSpec, SignalSpec, SoundProfile, TextureSpec } from "@/lib/sound/profiles";
 import { getProfile } from "@/lib/sound/profiles";
@@ -77,11 +76,10 @@ export const SOUND_ALIASES: Readonly<Record<string, { base: string; overlay: "si
  */
 export const ALWAYS_LAYERED_PROFILE_IDS: ReadonlySet<string> = new Set(["dracula-carriage"]);
 
-/** Profiles with random jump-scare voices (laugh, scream, whistle, crows, owl, wolf). */
-export const JUMP_SCARE_PROFILE_IDS: ReadonlySet<string> = new Set(["dracula-carriage"]);
 
 export const BACKGROUND_MUSIC_LEVELS: Readonly<Record<string, number>> = {
-  "dracula-carriage": 0.6,
+  // v38: Gothic Night at ~50/50 with the carriage (measured stems -22.8 dB each)
+  "dracula-carriage": 4.5,
 };
 import { isWorldProfileId, WorldSynth } from "@/lib/worlds";
 import { fetchSoundAssetManifest } from "@/lib/sound-assets/client-loader";
@@ -262,9 +260,6 @@ export class SoundEngine {
   /** Profile as the user picked it (keeps aliases like police-patrol so rebuilds keep the overlay). */
   private requestedProfile: SoundProfile | null = null;
   private siren: SirenOverlay | null = null;
-  /** Dracula jump scares (bypass `scareDuck`, which ducks everything else under loud ones). */
-  private scares: JumpScares | null = null;
-  private scareDuck: GainNode | null = null;
   private fusion: FusionSynth | null = null;
   private world: WorldSynth | null = null;
   /** Dev A/B: current engine vs Realism V2. Default v2 for combustion when eligible. */
@@ -727,11 +722,7 @@ export class SoundEngine {
     cabinMid.connect(cabinHigh);
     // Soft saturation → EQ → gentle program compressor after cabin shelves, before user volume.
     const profileBus = createMasterBus(ctx, master);
-    // Ducker for jump scares (gain 1 unless a loud scare is playing); scares enter profileBus directly.
-    const scareDuck = ctx.createGain();
-    cabinHigh.connect(scareDuck);
-    scareDuck.connect(profileBus.input);
-    this.scareDuck = scareDuck;
+    cabinHigh.connect(profileBus.input);
     this.profileBus = profileBus;
     this.peakProtect = peakProtect;
     this.boostGain = boostGain;
@@ -1104,10 +1095,6 @@ export class SoundEngine {
     return this.pinkBuffer;
   }
 
-  /** Diagnostics/tests: jump-scare scheduler state. */
-  scareDiagnostics() {
-    return this.scares ? { ...this.scares.diagnostics(), duckConnected: !!this.scareDuck } : null;
-  }
 
   /** Diagnostics/tests: siren overlay state for aliased profiles. */
   sirenDiagnostics(): { active: boolean; gain: number; connected: boolean; mode: "wail" | "yelp" | null } {
@@ -1267,10 +1254,6 @@ export class SoundEngine {
 
     // Atmosphere layers that must survive strategy early-returns below.
     if (ALWAYS_LAYERED_PROFILE_IDS.has(profile.id)) this.buildAtmosphere(profile, ctx.currentTime);
-    if (JUMP_SCARE_PROFILE_IDS.has(profile.id) && this.profileBus) {
-      this.scares = createJumpScares(ctx, this.profileBus.input, this.scareDuck);
-      this.scaresReady = this.scares.ready;
-    }
 
     // Fusion - Engine + Symphony through FusionMixer.
     if (isFusionProfileId(profile.id) && strategyBuses) {
@@ -1660,13 +1643,12 @@ export class SoundEngine {
   }
 
   private samplesReady: Promise<void> = Promise.resolve();
-  private scaresReady: Promise<void> = Promise.resolve();
   private bed: RecordedBed | null = null;
   private bedReady: Promise<void> = Promise.resolve();
 
   /** Resolves once the active profile's recorded loops are decoded (or failed). */
   whenSamplesReady(): Promise<void> {
-    return Promise.all([this.samplesReady, this.bedReady, this.scaresReady]).then(() => undefined);
+    return Promise.all([this.samplesReady, this.bedReady]).then(() => undefined);
   }
 
   /** Recorded texture bed (non-hybrid profiles with a RECORDED_BEDS entry). */
@@ -1731,7 +1713,6 @@ export class SoundEngine {
     if (this.whinnies && isHorseSnortProfile(profile.id)) this.whinnies.update(state, t);
     if (this.backgroundMusic) this.backgroundMusic.update(state, t);
     if (this.siren) this.siren.update(state, t);
-    if (this.scares) this.scares.update(Math.max(state.throttle, state.speed / 30), t);
 
     if (
       this.improved ||
@@ -2532,8 +2513,6 @@ export class SoundEngine {
     this.backgroundMusic = null;
     this.siren?.dispose();
     this.siren = null;
-    this.scares?.dispose();
-    this.scares = null;
     this.fusion?.dispose();
     this.fusion = null;
     this.world?.dispose();
@@ -2607,7 +2586,6 @@ export class SoundEngine {
     this.master = null;
     this.duck = null;
     this.cabinIn = null;
-    this.scareDuck = null;
     this.cabinLow = null;
     this.cabinMid = null;
     this.cabinHigh = null;

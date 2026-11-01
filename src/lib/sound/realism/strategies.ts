@@ -631,8 +631,7 @@ const baseStrategies: ProfileStrategy[] = [
           destination: buses.accents,
           level: 1,
           events: [
-            // Voices (laugh, scream, wind whistle, crows, owl, wolf) are random
-            // jump scares in dsp/jump-scares.ts, played on every synthesis path.
+            // No voice jump scares (removed v38); Gothic Night music carries the mood.
             { kind: "gust", everySeconds: 10, jitter: 4, level: 0.15, tone: 700, speedLinked: true },
             { kind: "whip", everySeconds: 16, jitter: 8, level: 0.13, tone: 2600, onlyOnHardAccel: true },
           ],

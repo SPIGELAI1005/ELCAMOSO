@@ -27,19 +27,6 @@ describe("Dracula Carriage layers in the live engine graph", { timeout: 30000 },
       expect(d.music).toBe(true);
     });
   }
-  it("improved (live default): jump scares are wired, warm their buffers and fire", async () => {
-    const engine = await engineFor("improved");
-    const ctx = engine as unknown as { now(): number };
-    let t = 0;
-    const realNow = ctx.now.bind(engine);
-    ctx.now = () => t;
-    for (let i = 0; i < 300; i += 1) { t = i * 0.1; engine.update(idle); }
-    ctx.now = realNow;
-    const sc = engine.scareDiagnostics()!;
-    expect(sc).toBeTruthy();
-    expect(sc.ready).toBeGreaterThanOrEqual(6);
-    expect(sc.fired).toBeGreaterThan(0);
-  });
   it("wind stays present at standstill", () => {
     const wind = getProfile("dracula-carriage").voice.textures!.find((t) => t.kind === "wind")!;
     expect(wind.speedScale).toBeLessThanOrEqual(0.3);

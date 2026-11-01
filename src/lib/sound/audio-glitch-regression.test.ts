@@ -48,7 +48,7 @@ describe("audio glitch regressions (weak in-car CPUs)", () => {
     const src = readFileSync("src/lib/sound/realism/strategies.ts", "utf8");
     const block = src.slice(src.indexOf('id: "dracula-carriage"'), src.indexOf('id: "romanian-85-carriage"'));
     const lvl = (k: string) => Number(new RegExp(`kind: "${k}"[^}]*level: ([0-9.]+)`).exec(block)![1]);
-    // Voices moved to dsp/jump-scares.ts (v35); only gust + whip remain here.
+    // Voice jump scares removed (v38); only gust + whip remain here.
     for (const k of ["gust", "whip"]) expect(lvl(k)).toBeGreaterThanOrEqual(0.1);
     for (const k of ["gust", "whip"]) expect(lvl(k)).toBeLessThanOrEqual(0.4);
     for (const k of ["cackle", "howl", "eerie", "scream"]) expect(block).not.toContain(`kind: "${k}"`);
