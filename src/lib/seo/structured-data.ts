@@ -65,7 +65,7 @@ export function softwareApplicationJsonLd(description: string): Record<string, u
       {
         "@type": "Offer",
         name: "Drive+",
-        price: "19.29",
+        price: "22.68",
         priceCurrency: "EUR",
         description: "Yearly engine sound package. Drive+ and individual sound purchases open on 2026-11-09.",
         availability: "https://schema.org/PreOrder",
@@ -75,7 +75,7 @@ export function softwareApplicationJsonLd(description: string): Record<string, u
       {
         "@type": "Offer",
         name: "Drive the Music",
-        price: "19.29",
+        price: "22.68",
         priceCurrency: "EUR",
         description:
           "Yearly music package: every music profile and Auto DJ. Black Friday: 4 months free. Opens on 2026-11-09.",
@@ -86,7 +86,7 @@ export function softwareApplicationJsonLd(description: string): Record<string, u
       {
         "@type": "Offer",
         name: "Lifetime",
-        price: "64.80",
+        price: "84.28",
         priceCurrency: "EUR",
         description: "One-time Lifetime purchase: Drive+ and Drive the Music. Opens on 2026-11-09.",
         availability: "https://schema.org/PreOrder",

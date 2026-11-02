@@ -7,7 +7,7 @@ import { DrivePlusCheckoutButton } from "@/components/DrivePlusCheckoutButton";
 import { PlansBillingIntervalToggle, PlansOverview } from "@/components/LandingPlansSection";
 import { getBillingPublicConfigFn } from "@/lib/billing/public-config-server-fn";
 import type { BillingDisplayInterval } from "@/lib/billing/plan-display";
-import { getDrivePlusMonthlyDisplay, getDrivePlusYearlyDisplay } from "@/lib/billing/plan-display";
+import { getDrivePlusYearlyDisplay } from "@/lib/billing/plan-display";
 import { useEntitlements } from "@/lib/entitlements/useEntitlements";
 import { MUSIC_TRIAL_MONTHS, isMusicTrialOfferActive } from "@/lib/billing/black-friday";
 import { trackMonetizationEvent } from "@/lib/telemetry/monetization-analytics";
@@ -85,7 +85,6 @@ function PricingFooterNotes({ showCancel = true }: { showCancel?: boolean }) {
 
 function Pricing() {
   const yearly = getDrivePlusYearlyDisplay();
-  const monthly = getDrivePlusMonthlyDisplay();
   const { plan } = useEntitlements();
   const { settings } = useSettings();
   const [interval, setInterval] = useState<BillingDisplayInterval>("yearly");
@@ -194,12 +193,6 @@ function Pricing() {
                 />
               ) : null}
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-6">
-                <DrivePlusCheckoutButton
-                  interval="monthly"
-                  label={`${monthly.amount} / month`}
-                  source="pricing"
-                  className="inline-flex h-11 items-center justify-center rounded-full border border-foreground/20 px-6 text-[11px] tracking-[0.18em] text-foreground uppercase transition hover:border-foreground/40"
-                />
                 {lifetimeAvailable ? (
                 <DrivePlusCheckoutButton
                   interval="lifetime"

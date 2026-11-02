@@ -17,12 +17,12 @@ export const DRIVE_PLUS_PRICING = {
   yearly: {
     commercialPlanId: "drive_plus_yearly" satisfies CommercialPlanId,
     /** Charged annual price after early adopter discount (George, 2 Nov 2026). */
-    amountCents: 1929,
+    amountCents: 2268,
   },
   lifetime: {
     commercialPlanId: "drive_plus_lifetime" satisfies CommercialPlanId,
     /** One-time Lifetime price (Drive+ AND Drive the Music) after early adopter discount. */
-    amountCents: 6480,
+    amountCents: 8428,
   },
 } as const;
 
@@ -32,7 +32,7 @@ export const DRIVE_MUSIC_PRICING = {
   yearly: {
     commercialPlanId: "drive_music_yearly" satisfies CommercialPlanId,
     /** Charged annual price after early adopter discount. */
-    amountCents: 1929,
+    amountCents: 2268,
   },
 } as const;
 
@@ -75,7 +75,7 @@ export interface PlanPriceDisplay {
 
 export function formatEuroAmount(cents: number): string {
   const value = cents / 100;
-  const decimals = Number.isInteger(value) ? 0 : 2;
+  const decimals = cents === 0 ? 0 : 2;
   return `€${value.toFixed(decimals)}`;
 }
 
@@ -111,8 +111,31 @@ export function getDrivePlusYearlyDisplay(): PlanPriceDisplay {
   };
 }
 
+/**
+ * Per-month view of a yearly price (George, 2 Nov 2026): there is no separate
+ * monthly billing plan in the cards; "Monthly" shows the yearly price / 12,
+ * billed yearly. List price = full yearly list price / 12.
+ */
+export function yearlyAsMonthlyDisplay(yearlyCents: number): PlanPriceDisplay {
+  return {
+    amount: formatEuroAmount(Math.round(yearlyCents / 12)),
+    listAmount: formatEuroAmount(
+      Math.round(listPriceBeforeEarlyAdopterDiscount(yearlyCents) / 12),
+    ),
+    cadence: "month",
+  };
+}
+
 export function getDrivePlusDisplay(interval: BillingDisplayInterval): PlanPriceDisplay {
-  return interval === "monthly" ? getDrivePlusMonthlyDisplay() : getDrivePlusYearlyDisplay();
+  return interval === "monthly"
+    ? yearlyAsMonthlyDisplay(DRIVE_PLUS_PRICING.yearly.amountCents)
+    : getDrivePlusYearlyDisplay();
+}
+
+export function getDriveMusicDisplay(interval: BillingDisplayInterval): PlanPriceDisplay {
+  return interval === "monthly"
+    ? yearlyAsMonthlyDisplay(DRIVE_MUSIC_PRICING.yearly.amountCents)
+    : getDriveMusicYearlyDisplay();
 }
 
 export function getDriveMusicYearlyDisplay(): PlanPriceDisplay {
