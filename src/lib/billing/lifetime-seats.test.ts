@@ -113,17 +113,17 @@ describe("Lifetime seats (limit 50)", () => {
     const en = renderToStaticMarkup(
       createElement(LifetimeSeatsCounter, { seats: lifetimeSeatStatus(8), language: "en" }),
     );
-    expect(en).toContain("42 of 50 seats left");
+    expect(en).toContain("Launch price: 42 of 50 seats left");
     expect(
       renderToStaticMarkup(
         createElement(LifetimeSeatsCounter, { seats: lifetimeSeatStatus(8), language: "de" }),
       ),
-    ).toContain("Noch 42 von 50 Plätzen frei");
+    ).toContain("Einführungspreis: noch 42 von 50 Plätzen frei");
     expect(
       renderToStaticMarkup(
         createElement(LifetimeSeatsCounter, { seats: lifetimeSeatStatus(8), language: "ro" }),
       ),
-    ).toContain("42 din 50 locuri disponibile");
+    ).toContain("Preț de lansare: 42 din 50 locuri disponibile");
     const out = renderToStaticMarkup(
       createElement(LifetimeSeatsCounter, { seats: lifetimeSeatStatus(50), language: "en" }),
     );
