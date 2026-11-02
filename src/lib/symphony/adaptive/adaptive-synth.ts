@@ -37,6 +37,8 @@ interface Deck {
   lp: BiquadFilterNode;
   /** trumpet FX send tap (post-fader twin of `gain`, so the wet tail crossfades with the deck); null when unused */
   send: GainNode | null;
+  /** piano hall send tap (post-fader, Road Anthem only); null when unused */
+  pianoSend: GainNode | null;
   /** stop scheduling notes at this audio time (outgoing deck) */
   until: number;
   /** disconnect the deck nodes after this audio time */
@@ -121,6 +123,8 @@ export class AdaptiveMusicSynth {
   private verb: ConvolverNode | null = null;
   /** trumpet-only FX bus (warm hall + tempo-synced dotted-8th echo); built once per profile start, on first need */
   private tfx: TrumpetFx | null = null;
+  private pverb: GainNode | null = null;
+  private pverbNodes: AudioNode[] = [];
   private voices: { src: AudioBufferSourceNode; end: number }[] = [];
   private deck: Deck | null = null;
   private outgoing: Deck[] = [];
@@ -229,6 +233,13 @@ export class AdaptiveMusicSynth {
           this.deck.send.connect(fx.input);
         }
       }
+      if (PIANO_VERB_GENRES.has(id) && !this.deck.pianoSend && this.ctx) {
+        const pv = this.ensurePianoVerb(this.ctx);
+        if (pv) {
+          this.deck.pianoSend = this.ctx.createGain();
+          this.deck.pianoSend.connect(pv);
+        }
+      }
     }
     publishActiveGenre(id);
     this.conductor?.setRange({ bpmMin: GENRES[id].bpmMin, bpmMax: GENRES[id].bpmMax });
@@ -311,7 +322,28 @@ export class AdaptiveMusicSynth {
         send.connect(fx.input);
       }
     }
-    return { timeline, genreId, gain, send, hp, lp, until: Infinity, disposeAt: Infinity };
+    let pianoSend: GainNode | null = null;
+    if (PIANO_VERB_GENRES.has(genreId)) {
+      const pv = this.ensurePianoVerb(ctx);
+      if (pv) {
+        pianoSend = ctx.createGain();
+        pianoSend.gain.value = 1;
+        pianoSend.connect(pv);
+      }
+    }
+    return { timeline, genreId, gain, send, pianoSend, hp, lp, until: Infinity, disposeAt: Infinity };
+  }
+
+  private ensurePianoVerb(ctx: BaseAudioContext): GainNode | null {
+    if (this.pverb || !this.bus) return this.pverb;
+    try {
+      const pv = buildPianoVerb(ctx, this.bus);
+      this.pverb = pv.input;
+      this.pverbNodes = pv.nodes;
+    } catch {
+      this.pverb = null;
+    }
+    return this.pverb;
   }
 
   private ensureTrumpetFx(ctx: BaseAudioContext): TrumpetFx | null {
@@ -374,9 +406,18 @@ export class AdaptiveMusicSynth {
         old.send.gain.setValueAtTime(1, t0);
         old.send.gain.setValueCurveAtTime(curves.out, t0, D);
       }
+      if (old.pianoSend) {
+        old.pianoSend.gain.cancelScheduledValues(t0);
+        old.pianoSend.gain.setValueAtTime(1, t0);
+        old.pianoSend.gain.setValueCurveAtTime(curves.out, t0, D);
+      }
       if (inc.send) {
         inc.send.gain.setValueAtTime(0, 0);
         inc.send.gain.setValueCurveAtTime(curves.in, t0, D);
+      }
+      if (inc.pianoSend) {
+        inc.pianoSend.gain.setValueAtTime(0, 0);
+        inc.pianoSend.gain.setValueCurveAtTime(curves.in, t0, D);
       }
       // outgoing: high-pass sweep pulls the bass out (classic DJ bass swap) with a resonant edge
       old.hp.Q.setValueAtTime(0.7, t0);
@@ -415,6 +456,7 @@ export class AdaptiveMusicSynth {
       try {
         d.gain.disconnect();
         d.send?.disconnect();
+        d.pianoSend?.disconnect();
         d.hp.disconnect();
         d.lp.disconnect();
       } catch {
@@ -454,6 +496,7 @@ export class AdaptiveMusicSynth {
     src.connect(g);
     tail.connect(deck.gain);
     if (deck.send && ev.inst === "trumpet") tail.connect(deck.send);
+    if (deck.pianoSend && ev.inst === "piano") tail.connect(deck.pianoSend);
     try {
       src.start(t, offset);
       src.stop(t + dur + 0.35);
@@ -525,6 +568,7 @@ export class AdaptiveMusicSynth {
       try {
         d?.gain.disconnect();
         d?.send?.disconnect();
+        d?.pianoSend?.disconnect();
         d?.hp.disconnect();
         d?.lp.disconnect();
       } catch {
@@ -553,6 +597,15 @@ export class AdaptiveMusicSynth {
       }
     }
     this.tfx = null;
+    for (const n of this.pverbNodes) {
+      try {
+        n.disconnect();
+      } catch {
+        /* */
+      }
+    }
+    this.pverb = null;
+    this.pverbNodes = [];
     this.conductor = null;
     this.timeline = null;
     this.energy = null;
@@ -576,6 +629,30 @@ interface TrumpetFx {
   input: GainNode;
   delay: DelayNode;
   nodes: AudioNode[];
+}
+/** Road Anthem piano: light warm hall only (no echo, which would smear the chords). */
+export const PIANO_VERB = { reverbSec: 2.0, wet: 0.2, hp: 200, lp: 5000 } as const;
+export const PIANO_VERB_GENRES: ReadonlySet<GenreId> = new Set<GenreId>(["anthem"]);
+function buildPianoVerb(ctx: BaseAudioContext, out: AudioNode): { input: GainNode; nodes: AudioNode[] } {
+  const input = ctx.createGain();
+  const hp = ctx.createBiquadFilter();
+  hp.type = "highpass";
+  hp.frequency.value = PIANO_VERB.hp;
+  hp.Q.value = 0.6;
+  const wet = ctx.createGain();
+  wet.gain.value = PIANO_VERB.wet;
+  const verb = ctx.createConvolver();
+  verb.buffer = hallImpulse(ctx, PIANO_VERB.reverbSec);
+  const warm = ctx.createBiquadFilter();
+  warm.type = "lowpass";
+  warm.frequency.value = PIANO_VERB.lp;
+  warm.Q.value = 0.5;
+  input.connect(hp);
+  hp.connect(wet);
+  wet.connect(verb);
+  verb.connect(warm);
+  warm.connect(out);
+  return { input, nodes: [input, hp, wet, verb, warm] };
 }
 export const TRUMPET_FX = { reverbSec: 2.3, reverbWet: 0.33, echoWet: 0.22, feedback: 0.3, echoLp: 3500, hp: 300, beats: 0.75 } as const;
 export function echoSeconds(bpm: number) {

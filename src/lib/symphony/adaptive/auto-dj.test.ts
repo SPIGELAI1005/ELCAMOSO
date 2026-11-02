@@ -94,3 +94,15 @@ describe("trumpet FX bus", () => {
     expect(TRUMPET_FX.echoWet).toBeLessThanOrEqual(0.25);
   });
 });
+
+import { PIANO_VERB, PIANO_VERB_GENRES } from "./adaptive-synth";
+describe("road anthem piano hall", () => {
+  it("is a light, warm hall on Road Anthem only (no echo)", () => {
+    expect([...PIANO_VERB_GENRES]).toEqual(["anthem"]);
+    expect(PIANO_VERB.wet).toBeGreaterThanOrEqual(0.18);
+    expect(PIANO_VERB.wet).toBeLessThanOrEqual(0.22);
+    expect(PIANO_VERB.reverbSec).toBeLessThanOrEqual(2.2);
+    expect(PIANO_VERB.hp).toBeGreaterThanOrEqual(150);
+    expect(PIANO_VERB).not.toHaveProperty("echoWet");
+  });
+});
