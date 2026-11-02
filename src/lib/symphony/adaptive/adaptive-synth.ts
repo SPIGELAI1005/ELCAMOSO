@@ -284,7 +284,7 @@ export class AdaptiveMusicSynth {
     this.timeline.pushAccents(this.conductor.drainAccents());
     this.timeline.resync(audioTime);
     try {
-      this.filter.frequency.setTargetAtTime(cutoffForBrightness(cs.brightness), audioTime, 0.15);
+      this.filter.frequency.setTargetAtTime(cutoffForBrightness(Math.min(1, Math.max(0, cs.brightness + this.timeline.highwayBright))), audioTime, 0.15);
     } catch {
       this.late += 1;
     }
