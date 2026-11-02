@@ -8,7 +8,6 @@ import {
   DRIVE_PLUS_PRICING,
   getDriveMusicYearlyDisplay,
   formatEuroAmount,
-  getDrivePlusMonthlyDisplay,
   getDrivePlusYearlyDisplay,
   getDrivePlusLifetimeDisplay,
 } from "@/lib/billing/plan-display";
@@ -37,7 +36,6 @@ export interface BillingPublicConfig {
 
 export function getBillingPublicConfig(): BillingPublicConfig {
   const yearly = getDrivePlusYearlyDisplay();
-  const monthly = getDrivePlusMonthlyDisplay();
 
   return {
     monetizationEnabled: isMonetizationEnabled(),
@@ -46,7 +44,8 @@ export function getBillingPublicConfig(): BillingPublicConfig {
     musicAvailable: isBillingAvailable() && isMusicPriceConfigured(),
     freePrice: formatEuroAmount(0),
     yearlyEquivalentMonthly: yearly.equivalentMonthly ?? "",
-    plans: COMMERCIAL_PLANS.map((plan) => ({
+    // No separate monthly plan is sold (George, 2 Nov 2026) - yearly packages + Lifetime only.
+    plans: COMMERCIAL_PLANS.filter((plan) => plan.interval !== "month").map((plan) => ({
       id: plan.id,
       label: plan.label,
       interval: plan.interval,
@@ -54,8 +53,6 @@ export function getBillingPublicConfig(): BillingPublicConfig {
       displayPrice:
         plan.id === DRIVE_MUSIC_PRICING.yearly.commercialPlanId
           ? getDriveMusicYearlyDisplay().amount
-          : plan.id === DRIVE_PLUS_PRICING.monthly.commercialPlanId
-          ? monthly.amount
           : plan.id === DRIVE_PLUS_PRICING.lifetime.commercialPlanId
             ? getDrivePlusLifetimeDisplay().amount
             : yearly.amount,

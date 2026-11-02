@@ -104,7 +104,7 @@ describe("stripe config", () => {
     expect(serialized).not.toContain("sk_test");
     expect(serialized).not.toContain("whsec");
     expect(serialized).not.toContain("price_month_test");
-    expect(publicConfig.plans.map((plan) => plan.id)).toEqual(COMMERCIAL_PLAN_IDS);
+    expect(publicConfig.plans.map((plan) => plan.id)).toEqual(COMMERCIAL_PLAN_IDS.filter((id) => id !== "drive_plus_monthly"));
   });
 });
 

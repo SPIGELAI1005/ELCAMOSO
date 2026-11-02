@@ -204,7 +204,7 @@ export function PlansOverview({
                 billingNoticeTone === "danger" ? "text-[#e53935]" : "text-muted-foreground",
               )}
             >
-              Drive+ and individual sound purchases open on 9.11.2026. Until then, ELCAMOSO is free of charge.
+              All purchases (Drive+, Drive the Music, Lifetime and individual sounds) open on 9.11.2026. Until then, ELCAMOSO is free of charge.
             </p>
           ) : null}
         </div>
@@ -268,7 +268,7 @@ export function PlansOverview({
           </p>
           <p className="mt-4 text-sm text-muted-foreground">{t(language, "pricing.lifetimeBody")}</p>
           <p className="mt-3 text-sm text-[#e53935]" data-testid="lifetime-payback">
-            Pays for itself in under 2 years, then it&apos;s free forever.
+            Pays for itself in 1.5 years, then it&apos;s free forever.
           </p>
         </div>
       </div>

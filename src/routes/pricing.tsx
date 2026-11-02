@@ -77,7 +77,7 @@ function PricingFooterNotes({ showCancel = true }: { showCancel?: boolean }) {
         }
       >
         Racing V10, American Muscle V8 and GT V8 are free. Every other engine sound is Drive+, every
-        music profile is Drive the Music. Both open 09.11.2026. Lifetime includes both.
+        music profile is Drive the Music. All purchases open 09.11.2026. Lifetime includes both.
       </p>
     </section>
   );
@@ -124,7 +124,7 @@ function Pricing() {
             Make every drive yours.
           </h1>
           <p className="mt-6 max-w-md text-sm leading-relaxed text-muted-foreground">
-            Start with essential motion sound — free during early access. Drive+ and individual sound purchases open on 9.11.2026.
+            Start with essential motion sound — free during early access. All purchases (Drive+, Drive the Music, Lifetime and individual sounds) open on 9.11.2026.
           </p>
         </section>
         <section className="mx-auto w-full max-w-2xl px-6 sm:px-10">
@@ -155,8 +155,7 @@ function Pricing() {
           Make every drive yours.
         </h1>
         <p className="mt-6 max-w-md text-sm leading-relaxed text-muted-foreground">
-          Start with essential motion sound. Drive+ and individual sound purchases open on
-          9.11.2026.
+          Start with essential motion sound. All purchases (Drive+, Drive the Music, Lifetime and individual sounds) open on 9.11.2026.
         </p>
       </section>
 
@@ -210,7 +209,7 @@ function Pricing() {
             </>
           ) : (
             <p className="text-sm text-muted-foreground">
-              Drive+ and individual sound purchases open on 9.11.2026. Until then, ELCAMOSO is free
+              All purchases (Drive+, Drive the Music, Lifetime and individual sounds) open on 9.11.2026. Until then, ELCAMOSO is free
               of charge.
             </p>
           )}

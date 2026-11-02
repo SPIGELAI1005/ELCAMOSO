@@ -86,10 +86,10 @@ afterEach(() => {
 });
 
 describe("Drive+ Lifetime display", () => {
-  it("shows €84.28 once with the early adopter struck-through list price", () => {
+  it("shows €59.67 once with the early adopter struck-through list price", () => {
     const d = getDrivePlusLifetimeDisplay();
-    expect(d.amount).toBe("€84.28");
-    expect(d.listAmount).toBe("€98.00");
+    expect(d.amount).toBe("€59.67");
+    expect(d.listAmount).toBe("€69.38");
     expect(d.cadence).toBe("once");
   });
 

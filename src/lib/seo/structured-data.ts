@@ -57,7 +57,7 @@ export function softwareApplicationJsonLd(description: string): Record<string, u
         price: "0",
         priceCurrency: "EUR",
         description:
-          "Free with Racing V10, American Muscle V8 and GT V8. Drive+ and individual sound purchases open 2026-11-09.",
+          "Free with Racing V10, American Muscle V8 and GT V8. All purchases (Drive+, Drive the Music, Lifetime) open 2026-11-09.",
         availability: "https://schema.org/InStock",
         url: absoluteSeoUrl("/pricing"),
         validThrough: "2026-11-09",
@@ -65,9 +65,9 @@ export function softwareApplicationJsonLd(description: string): Record<string, u
       {
         "@type": "Offer",
         name: "Drive+",
-        price: "22.68",
+        price: "19.89",
         priceCurrency: "EUR",
-        description: "Yearly engine sound package. Drive+ and individual sound purchases open on 2026-11-09.",
+        description: "Yearly engine sound package. Opens on 2026-11-09.",
         availability: "https://schema.org/PreOrder",
         availabilityStarts: "2026-11-09",
         url: absoluteSeoUrl("/pricing"),
@@ -75,7 +75,7 @@ export function softwareApplicationJsonLd(description: string): Record<string, u
       {
         "@type": "Offer",
         name: "Drive the Music",
-        price: "22.68",
+        price: "19.89",
         priceCurrency: "EUR",
         description:
           "Yearly music package: every music profile and Auto DJ. Black Friday: 4 months free. Opens on 2026-11-09.",
@@ -86,7 +86,7 @@ export function softwareApplicationJsonLd(description: string): Record<string, u
       {
         "@type": "Offer",
         name: "Lifetime",
-        price: "84.28",
+        price: "59.67",
         priceCurrency: "EUR",
         description: "One-time Lifetime purchase: Drive+ and Drive the Music. Opens on 2026-11-09.",
         availability: "https://schema.org/PreOrder",

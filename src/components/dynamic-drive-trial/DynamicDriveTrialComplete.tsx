@@ -1,6 +1,6 @@
 import { DrivePlusCheckoutButton } from "@/components/DrivePlusCheckoutButton";
 import { useMonetizationEnabled } from "@/lib/billing/use-billing-public-config";
-import { getDrivePlusMonthlyDisplay, getDrivePlusYearlyDisplay } from "@/lib/billing/plan-display";
+import { getDrivePlusLifetimeDisplay, getDrivePlusYearlyDisplay } from "@/lib/billing/plan-display";
 import { dismissDynamicDriveTrialComplete } from "@/lib/dynamic-drive-trial/trial-ui-store";
 import { useDynamicDriveTrialUi } from "@/lib/dynamic-drive-trial/use-dynamic-drive-trial-ui";
 
@@ -20,7 +20,7 @@ export function DynamicDriveTrialComplete({ className = "" }: DynamicDriveTrialC
   const { showComplete } = useDynamicDriveTrialUi();
   const monetizationEnabled = useMonetizationEnabled();
   const yearly = getDrivePlusYearlyDisplay();
-  const monthly = getDrivePlusMonthlyDisplay();
+  const lifetime = getDrivePlusLifetimeDisplay();
 
   if (!showComplete || !monetizationEnabled) return null;
 
@@ -49,9 +49,12 @@ export function DynamicDriveTrialComplete({ className = "" }: DynamicDriveTrialC
           className="inline-flex h-12 w-full items-center justify-center rounded-full bg-primary px-6 text-[10px] tracking-[0.18em] text-primary-foreground uppercase"
           returnTo="/drive"
         />
+        <p className="text-center text-xs text-muted-foreground">
+          {yearly.equivalentMonthly} per month, billed yearly · 14% off {yearly.listAmount}
+        </p>
         <DrivePlusCheckoutButton
-          interval="monthly"
-          label={`${monthly.amount} / month`}
+          interval="lifetime"
+          label={`Lifetime · ${lifetime.amount} once · both packages`}
           source="trial_complete"
           className="inline-flex h-10 w-full items-center justify-center rounded-full border border-foreground/20 px-6 text-[10px] tracking-[0.16em] uppercase"
           returnTo="/drive"
