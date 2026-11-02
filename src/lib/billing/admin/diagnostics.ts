@@ -61,7 +61,7 @@ function resolveEntitlementUserForAccountId(
 
   const subscription = getSubscriptionForUser(userId);
   if (subscription && hasDrivePlusSubscriptionAccess(subscription, now)) {
-    plan = "DRIVE_PLUS";
+    plan = subscription.plan;
     subscriptionStatus =
       subscription.status === "trialing"
         ? "trialing"

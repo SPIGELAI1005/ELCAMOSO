@@ -48,13 +48,13 @@ describe("canDriveProfileWithAccess", () => {
     ).toBe(false);
   });
 
-  it("allows Drive+ fusion and premium symphony", () => {
+  it("allows Drive the Music fusion and premium symphony", () => {
     expect(
       canDriveProfileWithAccess({
         profileId: "fusion-road-anthem",
         hasAllSoundProfiles: false,
         grantedProfileIds: [],
-        hasEntitlement: hasFromPlan("DRIVE_PLUS"),
+        hasEntitlement: hasFromPlan("DRIVE_MUSIC"),
       }),
     ).toBe(true);
     expect(
@@ -62,7 +62,7 @@ describe("canDriveProfileWithAccess", () => {
         profileId: "symphony-neon-run",
         hasAllSoundProfiles: false,
         grantedProfileIds: [],
-        hasEntitlement: hasFromPlan("DRIVE_PLUS"),
+        hasEntitlement: hasFromPlan("DRIVE_MUSIC"),
       }),
     ).toBe(true);
   });

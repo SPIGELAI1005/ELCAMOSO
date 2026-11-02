@@ -1,15 +1,16 @@
-import type { CheckoutIntervalSlug } from "@/lib/billing/checkout-request";
+import type { CheckoutIntervalSlug, CheckoutPlanSlug } from "@/lib/billing/checkout-request";
 import { createCheckoutSessionFn } from "@/lib/billing/server-fns";
 
 export async function openDrivePlusCheckout(
   interval: CheckoutIntervalSlug,
   returnPath = "/pricing",
   source = "pricing",
+  plan: CheckoutPlanSlug = "drive_plus",
 ): Promise<void> {
   const result = await createCheckoutSessionFn({
     data: {
       sessionToken: null,
-      plan: "drive_plus",
+      plan,
       interval,
       origin: window.location.origin,
       returnPath,

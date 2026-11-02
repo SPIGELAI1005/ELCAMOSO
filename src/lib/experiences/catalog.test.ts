@@ -17,7 +17,7 @@ describe("experiences catalog", () => {
     return (entitlement: Entitlement) => grants.has(entitlement);
   };
 
-  it("gives Free one Symphony and one Worlds sampler while reserving Fusion for Drive+", () => {
+  it("gives Free one Symphony and one Worlds sampler while reserving Fusion for Drive the Music", () => {
     const symphonies = listSymphonyExperiences();
     const worlds = listWorldExperiences();
     const fusion = listFusionExperiences();
@@ -26,7 +26,7 @@ describe("experiences catalog", () => {
     );
     expect(worlds.filter((item) => canAccessExperience(item, accessFor("FREE")))).toHaveLength(1);
     expect(fusion.every((item) => !canAccessExperience(item, accessFor("FREE")))).toBe(true);
-    expect(fusion.every((item) => canAccessExperience(item, accessFor("DRIVE_PLUS")))).toBe(true);
+    expect(fusion.every((item) => canAccessExperience(item, accessFor("DRIVE_MUSIC")))).toBe(true);
   });
 
   it("defines four product families with routes", () => {

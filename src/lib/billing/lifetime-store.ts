@@ -115,7 +115,8 @@ export function countActiveLifetimeGrants(): number {
 export function lifetimeEntitlementRecord(userId: string): UserSubscriptionRecord {
   return {
     userId,
-    plan: "DRIVE_PLUS",
+    // Lifetime includes both packages (Drive+ and Drive the Music).
+    plan: "DRIVE_COMPLETE",
     status: "active",
     interval: null,
     cancelAtPeriodEnd: false,

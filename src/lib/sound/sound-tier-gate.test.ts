@@ -85,11 +85,37 @@ describe("Drive+ sound tier gate (22 Oct 2026 Europe/Berlin)", () => {
     ).toBe(false);
   });
 
-  it("Drive+ subscribers keep every sound after the gate", () => {
+  it("Drive+ subscribers keep engine sounds but not music profiles", () => {
     const user = {
       ...signedOut,
       accountId: "a1",
       plan: "DRIVE_PLUS" as const,
+      subscriptionStatus: "active" as const,
+    };
+    for (const id of lockedIds) {
+      const music = id.startsWith("symphony-") || id.startsWith("fusion-");
+      expect(resolveProfileDriveAccess(id, { user, now: AFTER }).allowed).toBe(!music);
+    }
+  });
+
+  it("Drive the Music subscribers get music profiles but not premium engines", () => {
+    const user = {
+      ...signedOut,
+      accountId: "a1",
+      plan: "DRIVE_MUSIC" as const,
+      subscriptionStatus: "active" as const,
+    };
+    for (const id of lockedIds) {
+      const music = id.startsWith("symphony-") || id.startsWith("fusion-");
+      expect(resolveProfileDriveAccess(id, { user, now: AFTER }).allowed).toBe(music);
+    }
+  });
+
+  it("Complete (Lifetime / Founders) keeps every sound after the gate", () => {
+    const user = {
+      ...signedOut,
+      accountId: "a1",
+      plan: "DRIVE_COMPLETE" as const,
       subscriptionStatus: "active" as const,
     };
     for (const id of lockedIds)

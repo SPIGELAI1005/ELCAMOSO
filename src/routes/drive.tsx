@@ -166,7 +166,7 @@ function DriveScreen() {
   const resumedNativeCapture = status === "idle" && sessionSnap.nativeCapture.active;
 
   useEffect(() => {
-    if (monetizationEnabled && upgrade === "drive-plus" && plan !== "DRIVE_PLUS") {
+    if (monetizationEnabled && upgrade === "drive-plus" && plan === "FREE") {
       setShowTeslaUpgrade(true);
     }
   }, [monetizationEnabled, plan, upgrade]);

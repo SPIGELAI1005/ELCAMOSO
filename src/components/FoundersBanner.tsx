@@ -18,7 +18,7 @@ const pad = (n: number) => String(n).padStart(2, "0");
 
 /**
  * Founders Pack ticker strip: thin red-accent "special promotion" bar with live countdown
- * to 09.11.2026 23:59:59 Berlin, live seats left and a Claim button. Disappears after the
+ * to 27.11.2026 23:59:59 Berlin (Black Friday), live seats left and a Claim button. Disappears after the
  * deadline, can be dismissed (localStorage). Founders see a "You're a Founder" state.
  */
 export function FoundersBanner({ compact = false, className }: { compact?: boolean; className?: string }) {
@@ -95,12 +95,12 @@ export function FoundersBanner({ compact = false, className }: { compact?: boole
   } else {
     message = compact ? (
       <>
-        <span className="text-foreground">Sign up before 09.11.</span>
+        <span className="text-foreground">Sign up before 27.11.</span>
         <span className="text-muted-foreground"> · 3 sounds free forever + 6 mo Drive+</span>
       </>
     ) : (
       <>
-        <span className="text-foreground">Sign up before 09.11.</span>
+        <span className="text-foreground">Sign up before 27.11.</span>
         <span className="text-muted-foreground">
           {" "}and keep 3 sounds free forever + 6 months Drive+ free + Founders Test Crew
         </span>
@@ -194,7 +194,7 @@ export function FoundersBanner({ compact = false, className }: { compact?: boole
         onOpenChange={setSignInOpen}
         returnTo="/"
         title="Claim your Founder seat"
-        description="Sign in with your email before 09.11. to keep 3 sounds free forever, get 6 months of Drive+ free and join the Founders Test Crew. Limited seats."
+        description="Sign in with your email before 27.11. to keep 3 sounds free forever, get 6 months of Drive+ and Drive the Music free and join the Founders Test Crew. Limited seats."
       />
     </div>
   );

@@ -27,7 +27,7 @@ export const billingStatusEnum = pgEnum("billing_status", [
 
 export const subscriptionProviderEnum = pgEnum("subscription_provider", ["stripe"]);
 
-export const billingPlanEnum = pgEnum("billing_plan", ["FREE", "DRIVE_PLUS"]);
+export const billingPlanEnum = pgEnum("billing_plan", ["FREE", "DRIVE_PLUS", "DRIVE_MUSIC", "DRIVE_COMPLETE"]);
 
 export const billingIntervalEnum = pgEnum("billing_interval", ["month", "year"]);
 
@@ -40,7 +40,7 @@ export const users = pgTable(
     email: text("email"),
     stripeCustomerId: text("stripe_customer_id"),
     role: userRoleEnum("role").notNull().default("user"),
-    /** Founders Pack: verified sign-in on/before 09.11.2026 23:59:59 Berlin. Null = not a Founder. */
+    /** Founders Pack: verified sign-in on/before 27.11.2026 23:59:59 Berlin (Black Friday). Null = not a Founder. */
     founderAt: timestamp("founder_at", { withTimezone: true, mode: "date" }),
     /** 1-based Founder seat number (unique; capped by FOUNDER_SEAT_LIMIT). */
     founderSeat: integer("founder_seat"),

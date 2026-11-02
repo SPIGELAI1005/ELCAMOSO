@@ -57,11 +57,57 @@ export const PREMIUM_ENTITLEMENTS: readonly Entitlement[] = ALL_ENTITLEMENTS.fil
   (e) => !FREE_ENTITLEMENTS.includes(e),
 );
 
+/**
+ * "Drive the Music" package: every music profile / Symphony genre (incl. Auto DJ,
+ * which plays the Symphony genres), music Studio and Fusion (machine meets music).
+ */
+export const DRIVE_MUSIC_PACKAGE_ENTITLEMENTS: readonly Entitlement[] = [
+  "symphony_all",
+  "studio_symphony",
+  "fusion",
+  "studio_fusion",
+] as const;
+
+/** Drive+ package: every premium entitlement that is not music. */
+export const DRIVE_PLUS_PACKAGE_ENTITLEMENTS: readonly Entitlement[] = PREMIUM_ENTITLEMENTS.filter(
+  (e) => !DRIVE_MUSIC_PACKAGE_ENTITLEMENTS.includes(e),
+);
+
 /** Plan → entitlement configuration (single source of truth). */
 export const PLAN_ENTITLEMENTS: Record<Plan, readonly Entitlement[]> = {
   FREE: FREE_ENTITLEMENTS,
-  DRIVE_PLUS: ALL_ENTITLEMENTS,
+  DRIVE_PLUS: [...FREE_ENTITLEMENTS, ...DRIVE_PLUS_PACKAGE_ENTITLEMENTS],
+  DRIVE_MUSIC: [...FREE_ENTITLEMENTS, ...DRIVE_MUSIC_PACKAGE_ENTITLEMENTS],
+  DRIVE_COMPLETE: ALL_ENTITLEMENTS,
 };
+
+export type PackageId = "drive_plus" | "drive_music";
+
+/** Which packages a plan contains. */
+export function packagesForPlan(plan: Plan): readonly PackageId[] {
+  switch (plan) {
+    case "DRIVE_PLUS":
+      return ["drive_plus"];
+    case "DRIVE_MUSIC":
+      return ["drive_music"];
+    case "DRIVE_COMPLETE":
+      return ["drive_plus", "drive_music"];
+    default:
+      return [];
+  }
+}
+
+/**
+ * Profile ids that belong to the "Drive the Music" package (Symphony genres incl.
+ * Auto DJ, and Fusion). Engine profiles and Worlds stay in Drive+.
+ */
+export function isMusicPackageProfileId(profileId: string): boolean {
+  return profileId.startsWith("symphony-") || profileId.startsWith("fusion-");
+}
+
+export function isPaidPlan(plan: Plan): boolean {
+  return plan !== "FREE";
+}
 
 export function entitlementsForPlan(plan: Plan): readonly Entitlement[] {
   return PLAN_ENTITLEMENTS[plan];

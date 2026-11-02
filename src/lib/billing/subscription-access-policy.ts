@@ -48,7 +48,7 @@ export function evaluateSubscriptionAccess(
   now = Date.now(),
   config: SubscriptionAccessPolicyConfig = readSubscriptionAccessPolicyConfig(),
 ): SubscriptionAccessDecision {
-  if (input.plan !== "DRIVE_PLUS") {
+  if (input.plan === "FREE") {
     return { hasDrivePlusAccess: false, reason: "not_drive_plus", effectiveUntil: null };
   }
 

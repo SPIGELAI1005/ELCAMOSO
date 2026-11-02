@@ -1,5 +1,11 @@
 /** Commercial plan - independent of Stripe product/price ids. */
-export type Plan = "FREE" | "DRIVE_PLUS";
+/**
+ * Packages (George, 2 Nov 2026):
+ * - DRIVE_PLUS: premium engine sounds + drive features (no music).
+ * - DRIVE_MUSIC: "Drive the Music" — every music profile / Symphony genre incl. Auto DJ.
+ * - DRIVE_COMPLETE: both packages (Lifetime, Founders, admins).
+ */
+export type Plan = "FREE" | "DRIVE_PLUS" | "DRIVE_MUSIC" | "DRIVE_COMPLETE";
 
 /** Feature capability granted to a user. Never derived from Stripe directly. */
 export type Entitlement =

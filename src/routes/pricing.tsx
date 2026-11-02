@@ -9,6 +9,7 @@ import { getBillingPublicConfigFn } from "@/lib/billing/public-config-server-fn"
 import type { BillingDisplayInterval } from "@/lib/billing/plan-display";
 import { getDrivePlusMonthlyDisplay, getDrivePlusYearlyDisplay } from "@/lib/billing/plan-display";
 import { useEntitlements } from "@/lib/entitlements/useEntitlements";
+import { MUSIC_TRIAL_MONTHS, isMusicTrialOfferActive } from "@/lib/billing/black-friday";
 import { trackMonetizationEvent } from "@/lib/telemetry/monetization-analytics";
 import { useSettings } from "@/lib/drive/useSettings";
 import { t } from "@/lib/i18n";
@@ -75,7 +76,8 @@ function PricingFooterNotes({ showCancel = true }: { showCancel?: boolean }) {
           showCancel ? "mt-2 text-sm text-muted-foreground" : "text-sm text-muted-foreground"
         }
       >
-        Racing V10, American Muscle V8 and GT V8 are free. Every other sound is Drive+, opening 09.11.2026.
+        Racing V10, American Muscle V8 and GT V8 are free. Every other engine sound is Drive+, every
+        music profile is Drive the Music. Both open 09.11.2026. Lifetime includes both.
       </p>
     </section>
   );
@@ -95,7 +97,8 @@ function Pricing() {
   const monetizationEnabled = billingQuery.data?.monetizationEnabled ?? false;
   const billingAvailable = billingQuery.data?.available ?? false;
   const lifetimeAvailable = billingQuery.data?.lifetimeAvailable ?? false;
-  const hasDrivePlus = plan === "DRIVE_PLUS";
+  const musicAvailable = billingQuery.data?.musicAvailable ?? false;
+  const hasDrivePlus = plan !== "FREE";
   const viewedRef = useRef(false);
 
   useEffect(() => {
@@ -177,6 +180,19 @@ function Pricing() {
                 source="pricing"
                 className="inline-flex h-14 w-full items-center justify-center rounded-full bg-primary px-10 text-sm tracking-[0.22em] text-primary-foreground uppercase transition-opacity hover:opacity-90 sm:w-auto"
               />
+              {musicAvailable ? (
+                <DrivePlusCheckoutButton
+                  plan="drive_music"
+                  interval="yearly"
+                  label={
+                    isMusicTrialOfferActive()
+                      ? `Drive the Music · ${MUSIC_TRIAL_MONTHS} months free`
+                      : "Drive the Music · annual"
+                  }
+                  source="pricing"
+                  className="inline-flex h-14 w-full items-center justify-center rounded-full bg-primary px-10 text-sm tracking-[0.22em] text-primary-foreground uppercase transition-opacity hover:opacity-90 sm:ml-4 sm:w-auto"
+                />
+              ) : null}
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-6">
                 <DrivePlusCheckoutButton
                   interval="monthly"

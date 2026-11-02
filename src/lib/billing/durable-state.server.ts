@@ -137,7 +137,7 @@ export function applyDurableBillingRows(
   if (hasActiveLifetimeGrant(userId)) {
     setSubscriptionForUser(lifetimeEntitlementRecord(userId));
   } else if (recurringState && hasDrivePlusSubscriptionAccess(recurringState, now)) {
-    setSubscriptionForUser({ ...recurringState, plan: "DRIVE_PLUS" });
+    setSubscriptionForUser(recurringState);
   } else if (recurringState) {
     setSubscriptionForUser(freeRecord(userId));
   } else {

@@ -39,7 +39,7 @@ const daysFromNow = (d: number | null | undefined) =>
   d && d > 0 ? new Date(Date.now() + Math.min(d, 3650) * 86400_000) : null;
 
 /** Drive+ = every entitlement the DRIVE_PLUS plan carries. */
-export const drivePlusEntitlements = () => [...entitlementsForPlan("DRIVE_PLUS")];
+export const drivePlusEntitlements = () => [...entitlementsForPlan("DRIVE_COMPLETE")];
 
 async function upsertGrant(
   userId: string,

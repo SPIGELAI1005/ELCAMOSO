@@ -20,6 +20,8 @@ function readScopedEnv(baseName: string, deploy: ElcamosoDeployEnv): string | un
 export interface StripePriceConfig {
   drive_plus_monthly: string;
   drive_plus_yearly: string;
+  /** Drive the Music yearly price; music checkout is unavailable when empty. */
+  drive_music_yearly: string;
   /** Optional one-time price; lifetime checkout is unavailable when empty. */
   drive_plus_lifetime: string;
 }
@@ -38,6 +40,8 @@ export function readStripeConfig(deploy = resolveDeployEnv()): StripeConfig {
   const prices: StripePriceConfig = {
     drive_plus_monthly: readScopedEnv(stripePriceEnvKeyForPlan("drive_plus_monthly"), deploy) ?? "",
     drive_plus_yearly: readScopedEnv(stripePriceEnvKeyForPlan("drive_plus_yearly"), deploy) ?? "",
+    drive_music_yearly:
+      readScopedEnv(stripePriceEnvKeyForPlan("drive_music_yearly"), deploy) ?? "",
     drive_plus_lifetime:
       readScopedEnv(stripePriceEnvKeyForPlan("drive_plus_lifetime"), deploy) ?? "",
   };
@@ -70,6 +74,11 @@ export function resolveStripePriceId(
 /** Whether the one-time Drive+ Lifetime price is configured. */
 export function isLifetimePriceConfigured(config: StripeConfig = readStripeConfig()): boolean {
   return Boolean(config.prices.drive_plus_lifetime);
+}
+
+/** Whether the Drive the Music yearly price is configured. */
+export function isMusicPriceConfigured(config: StripeConfig = readStripeConfig()): boolean {
+  return Boolean(config.prices.drive_music_yearly);
 }
 
 /** Whether checkout and webhooks can run in the current environment. */

@@ -85,6 +85,13 @@
       "when": 1797000000000,
       "tag": "0011_smile_theme",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1798000000000,
+      "tag": "0012_music_package",
+      "breakpoints": true
     }
   ]
 }

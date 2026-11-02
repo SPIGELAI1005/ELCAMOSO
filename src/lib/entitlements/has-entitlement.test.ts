@@ -26,7 +26,7 @@ describe("hasEntitlement", () => {
   it("grants all entitlements for DRIVE_PLUS", () => {
     const user: EntitlementUser = {
       ...DEFAULT_ENTITLEMENT_USER,
-      plan: "DRIVE_PLUS",
+      plan: "DRIVE_COMPLETE",
       subscriptionStatus: "active",
     };
     for (const entitlement of ALL_ENTITLEMENTS) {
@@ -87,10 +87,10 @@ describe("hasEntitlement", () => {
   it("buildEntitlementSnapshot lists sorted entitlements", () => {
     const snapshot = buildEntitlementSnapshot({
       ...DEFAULT_ENTITLEMENT_USER,
-      plan: "DRIVE_PLUS",
+      plan: "DRIVE_COMPLETE",
       subscriptionStatus: "active",
     });
-    expect(snapshot.plan).toBe("DRIVE_PLUS");
+    expect(snapshot.plan).toBe("DRIVE_COMPLETE");
     expect(snapshot.trialActive).toBe(false);
     expect(snapshot.entitlements).toEqual([...ALL_ENTITLEMENTS].sort());
   });

@@ -7,6 +7,7 @@ import {
   PREMIUM_ENTITLEMENTS,
   TRIAL_DRIVE_PLUS_ENTITLEMENTS,
   entitlementsForPlan,
+  isMusicPackageProfileId,
 } from "@/lib/entitlements/plans";
 
 describe("plan entitlements", () => {
@@ -27,9 +28,22 @@ describe("plan entitlements", () => {
     expect(entitlementsForPlan("FREE")).toEqual(FREE_ENTITLEMENTS);
   });
 
-  it("DRIVE_PLUS includes all entitlements", () => {
-    expect(PLAN_ENTITLEMENTS.DRIVE_PLUS).toEqual(ALL_ENTITLEMENTS);
-    expect(entitlementsForPlan("DRIVE_PLUS")).toHaveLength(ALL_ENTITLEMENTS.length);
+  it("DRIVE_COMPLETE (Lifetime / Founders) includes all entitlements", () => {
+    expect(PLAN_ENTITLEMENTS.DRIVE_COMPLETE).toEqual(ALL_ENTITLEMENTS);
+    expect(entitlementsForPlan("DRIVE_COMPLETE")).toHaveLength(ALL_ENTITLEMENTS.length);
+  });
+
+  it("splits Drive+ (engines) and Drive the Music (music) without overlap", () => {
+    const plus = entitlementsForPlan("DRIVE_PLUS");
+    const music = entitlementsForPlan("DRIVE_MUSIC");
+    expect(plus).toContain("all_sound_profiles");
+    expect(plus).not.toContain("symphony_all");
+    expect(plus).not.toContain("fusion");
+    expect(music).toEqual(expect.arrayContaining(["symphony_all", "fusion"]));
+    expect(music).not.toContain("all_sound_profiles");
+    expect(isMusicPackageProfileId("symphony-neon-run")).toBe(true);
+    expect(isMusicPackageProfileId("fusion-road-anthem")).toBe(true);
+    expect(isMusicPackageProfileId("gt-v8")).toBe(false);
   });
 
   it("premium list excludes FREE basics", () => {
@@ -43,8 +57,8 @@ describe("plan entitlements", () => {
     expect(TRIAL_DRIVE_PLUS_ENTITLEMENTS).toEqual(PREMIUM_ENTITLEMENTS);
   });
 
-  it("Drive+ includes every full creative capability", () => {
-    expect(entitlementsForPlan("DRIVE_PLUS")).toEqual(
+  it("Complete includes every full creative capability", () => {
+    expect(entitlementsForPlan("DRIVE_COMPLETE")).toEqual(
       expect.arrayContaining([
         "symphony_all",
         "worlds_all",
