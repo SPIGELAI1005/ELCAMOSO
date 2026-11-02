@@ -16,7 +16,10 @@ import { createStripePortalSession } from "@/lib/billing/stripe/portal";
 import { userHasActiveDrivePlusSubscription } from "@/lib/billing/stripe/subscription-guard";
 import { wrapStripeBillingError } from "@/lib/billing/resilience/stripe-errors";
 import { getUserBillingRepository } from "@/lib/billing/user-billing-store";
-import { hasActiveLifetimeGrant } from "@/lib/billing/lifetime-store";
+import { LIFETIME_SOLD_OUT_MESSAGE } from "@/lib/billing/lifetime-seats";
+import { getUnderlyingSubscriptionRecord, hasActiveLifetimeGrant } from "@/lib/billing/lifetime-store";
+import { getSubscriptionForUser } from "@/lib/billing/subscription-store";
+import { isMusicTrialOfferActive, musicTrialEndUnix } from "@/lib/billing/black-friday";
 import { hydrateUserBillingState } from "@/lib/billing/durable-state.server";
 
 export interface BeginCheckoutInput {
@@ -72,6 +75,14 @@ export async function beginDrivePlusCheckout(
 
   const isLifetime = described.mode === "payment";
   const ownsLifetime = hasActiveLifetimeGrant(input.userId);
+
+  // Lifetime is limited to LIFETIME_SEAT_LIMIT seats: block new Lifetime checkouts when sold out.
+  if (isLifetime && !ownsLifetime) {
+    const { getLifetimeSeatStatus } = await import("@/lib/billing/lifetime-seats.server");
+    if ((await getLifetimeSeatStatus()).soldOut) {
+      throw new Error(LIFETIME_SOLD_OUT_MESSAGE);
+    }
+  }
   const hasActiveSubscription =
     !ownsLifetime &&
     (await userHasActiveDrivePlusSubscription(input.userId, existingCustomerId));
@@ -85,12 +96,17 @@ export async function beginDrivePlusCheckout(
       origin: sanitizeOrigin(input.origin, input.trustedHost),
       returnPath: sanitizeReturnPath(input.request.returnPath ?? "/settings"),
     });
+    const activePlan = getSubscriptionForUser(input.userId)?.plan;
+    const otherPackage =
+      !ownsLifetime && activePlan && activePlan !== described.entitlementPlan;
     return {
       action: "manage",
       url: portal.url,
       message: ownsLifetime
-        ? "You already own Drive+ Lifetime."
-        : "You already have an active Drive+ subscription.",
+        ? "You already own Lifetime (Drive+ and Drive the Music)."
+        : otherPackage
+          ? `You already have an active ${activePlan === "DRIVE_MUSIC" ? "Drive the Music" : "Drive+"} subscription. Choose Lifetime to get both packages.`
+          : `You already have an active ${described.entitlementPlan === "DRIVE_MUSIC" ? "Drive the Music" : "Drive+"} subscription.`,
     };
   }
 
@@ -139,7 +155,7 @@ export async function beginDrivePlusCheckout(
       sessionId: session.id,
       ...(hasActiveSubscription
         ? {
-            note: "You still have an active Drive+ subscription. After buying Lifetime, cancel it in Manage plan so you are not charged again.",
+            note: "You still have an active subscription. After buying Lifetime, cancel it in Manage plan so you are not charged again.",
           }
         : {}),
     };
@@ -158,6 +174,17 @@ export async function beginDrivePlusCheckout(
     },
     ...buildCheckoutSessionTaxParams(),
   };
+
+  // Black Friday special: Drive the Music yearly starts with a 4-month free trial
+  // (first music subscription per account only).
+  if (
+    described.commercialPlanId === "drive_music_yearly" &&
+    isMusicTrialOfferActive() &&
+    !getUnderlyingSubscriptionRecord(input.userId)
+  ) {
+    metadata["promo"] = "black_friday_music_trial";
+    params.subscription_data = { metadata, trial_end: musicTrialEndUnix() };
+  }
 
   if (input.rewardReservationId && input.request.interval !== "lifetime") {
     const { isRewardDiscountsEnabled } = await import("@/lib/rewards/discount/flag");
@@ -178,7 +205,7 @@ export async function beginDrivePlusCheckout(
     params.discounts = [{ coupon: prepared.couponId }];
     Object.assign(metadata, prepared.metadata);
     params.metadata = metadata;
-    params.subscription_data = { metadata };
+    params.subscription_data = { ...params.subscription_data, metadata };
     // Session id bound after create — see below.
     const session = await stripe.checkout.sessions
       .create(params, {

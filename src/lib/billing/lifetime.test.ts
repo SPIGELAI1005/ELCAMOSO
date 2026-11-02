@@ -86,10 +86,10 @@ afterEach(() => {
 });
 
 describe("Drive+ Lifetime display", () => {
-  it("shows €38.99 once with the early adopter struck-through list price", () => {
+  it("shows €59.67 once with the early adopter struck-through list price", () => {
     const d = getDrivePlusLifetimeDisplay();
-    expect(d.amount).toBe("€38.99");
-    expect(d.listAmount).toBe("€45.34");
+    expect(d.amount).toBe("€59.67");
+    expect(d.listAmount).toBe("€69.38");
     expect(d.cadence).toBe("once");
   });
 
@@ -154,7 +154,7 @@ describe("lifetime webhooks", () => {
     await dispatchStripeWebhookEvent(event("evt_2", "checkout.session.completed", lifetimeSession()));
     expect(hasActiveLifetimeGrant(USER_ID)).toBe(true);
     const record = getSubscriptionForUser(USER_ID);
-    expect(record?.plan).toBe("DRIVE_PLUS");
+    expect(record?.plan).toBe("DRIVE_COMPLETE");
     expect(record?.lifetime).toBe(true);
     expect(record?.currentPeriodEnd).toBeNull();
     const farFuture = Date.UTC(2099, 0, 1);

@@ -1,6 +1,7 @@
 import { canAccessExperience } from "@/lib/experiences/access";
 import { experienceForProfileId } from "@/lib/experiences/catalog";
-import { entitlementsForPlan } from "@/lib/entitlements/plans";
+import { entitlementsForPlan, isMusicPackageProfileId } from "@/lib/entitlements/plans";
+import { allSoundsFreeAt } from "@/lib/sound/sound-unlock-flag";
 import type { Entitlement } from "@/lib/entitlements/types";
 import { canDriveWithSoundProfile, FREE_SOUND_PROFILE_IDS } from "@/lib/sound/profile-access";
 import { getProfile } from "@/lib/sound/profiles";
@@ -26,6 +27,21 @@ export function canDriveProfileWithAccess(input: {
   hasEntitlement: (entitlement: Entitlement) => boolean;
 }): boolean {
   const profile = getProfile(input.profileId);
+  // Music profiles (Drive the Music package): Drive+ (all_sound_profiles) never unlocks them.
+  if (isMusicPackageProfileId(input.profileId)) {
+    if (input.grantedProfileIds.includes(input.profileId)) return true;
+    if (allSoundsFreeAt()) return true;
+    const experience = experienceForProfileId(input.profileId);
+    if (experience.kind === "engine" || !experience.capabilities.selectableInDrive) return false;
+    const required = experience.capabilities.requiredEntitlement;
+    // Free-sampler music profiles (locked after the sound gate) need the package itself.
+    if (!required || entitlementsForPlan("FREE").includes(required)) {
+      return input.hasEntitlement(
+        input.profileId.startsWith("fusion-") ? "fusion" : "symphony_all",
+      );
+    }
+    return canAccessExperience(experience, input.hasEntitlement);
+  }
   if (
     canDriveWithSoundProfile(profile, input.hasAllSoundProfiles, undefined, input.grantedProfileIds)
   ) {

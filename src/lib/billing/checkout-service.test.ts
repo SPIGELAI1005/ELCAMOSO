@@ -18,6 +18,7 @@ const ENV_KEYS = [
   "STRIPE_WEBHOOK_SECRET",
   "STRIPE_PRICE_DRIVE_PLUS_MONTHLY",
   "STRIPE_PRICE_DRIVE_PLUS_YEARLY",
+  "STRIPE_PRICE_DRIVE_MUSIC_YEARLY",
   "STRIPE_CHECKOUT_AUTOMATIC_TAX",
   "STRIPE_CHECKOUT_BILLING_ADDRESS_COLLECTION",
   "STRIPE_CHECKOUT_TAX_ID_COLLECTION",
@@ -124,6 +125,47 @@ describe("beginDrivePlusCheckout", () => {
         }),
       }),
     );
+  });
+
+  it("gives Drive the Music a 4-month Black Friday trial before 27.11.2026", async () => {
+    process.env.STRIPE_PRICE_DRIVE_MUSIC_YEARLY = "price_music_test";
+    vi.useFakeTimers({ toFake: ["Date"] });
+    const now = Date.parse("2026-11-20T12:00:00Z");
+    vi.setSystemTime(now);
+    try {
+      const result = await beginDrivePlusCheckout({
+        userId,
+        email: "driver@example.com",
+        origin: "http://localhost:5173",
+        request: { plan: "drive_music", interval: "yearly" },
+      });
+      expect(result.action).toBe("checkout");
+      const params = checkoutCreate.mock.calls[0]![0];
+      expect(params.line_items).toEqual([{ price: "price_music_test", quantity: 1 }]);
+      expect(params.subscription_data.trial_end).toBe(
+        Math.floor(Date.parse("2027-03-20T12:00:00Z") / 1000),
+      );
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("does not add the music trial after Black Friday", async () => {
+    process.env.STRIPE_PRICE_DRIVE_MUSIC_YEARLY = "price_music_test";
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(Date.parse("2026-11-28T00:00:01+01:00"));
+    try {
+      await beginDrivePlusCheckout({
+        userId,
+        email: "driver@example.com",
+        origin: "http://localhost:5173",
+        request: { plan: "drive_music", interval: "yearly" },
+      });
+      const params = checkoutCreate.mock.calls[0]![0];
+      expect(params.subscription_data?.trial_end).toBeUndefined();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("creates a yearly subscription checkout session using the yearly price", async () => {

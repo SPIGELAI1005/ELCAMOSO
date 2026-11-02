@@ -7,8 +7,9 @@ import { DrivePlusCheckoutButton } from "@/components/DrivePlusCheckoutButton";
 import { PlansBillingIntervalToggle, PlansOverview } from "@/components/LandingPlansSection";
 import { getBillingPublicConfigFn } from "@/lib/billing/public-config-server-fn";
 import type { BillingDisplayInterval } from "@/lib/billing/plan-display";
-import { getDrivePlusMonthlyDisplay, getDrivePlusYearlyDisplay } from "@/lib/billing/plan-display";
+import { getDrivePlusYearlyDisplay } from "@/lib/billing/plan-display";
 import { useEntitlements } from "@/lib/entitlements/useEntitlements";
+import { MUSIC_TRIAL_MONTHS, isMusicTrialOfferActive } from "@/lib/billing/black-friday";
 import { trackMonetizationEvent } from "@/lib/telemetry/monetization-analytics";
 import { useSettings } from "@/lib/drive/useSettings";
 import { t } from "@/lib/i18n";
@@ -75,7 +76,8 @@ function PricingFooterNotes({ showCancel = true }: { showCancel?: boolean }) {
           showCancel ? "mt-2 text-sm text-muted-foreground" : "text-sm text-muted-foreground"
         }
       >
-        Racing V10, American Muscle V8 and GT V8 are free. Every other sound is Drive+, opening 09.11.2026.
+        Racing V10, American Muscle V8 and GT V8 are free. Every other engine sound is Drive+, every
+        music profile is Drive the Music. All purchases open 09.11.2026. Lifetime includes both.
       </p>
     </section>
   );
@@ -83,10 +85,9 @@ function PricingFooterNotes({ showCancel = true }: { showCancel?: boolean }) {
 
 function Pricing() {
   const yearly = getDrivePlusYearlyDisplay();
-  const monthly = getDrivePlusMonthlyDisplay();
   const { plan } = useEntitlements();
   const { settings } = useSettings();
-  const [interval, setInterval] = useState<BillingDisplayInterval>("yearly");
+  const [interval, setInterval] = useState<BillingDisplayInterval>("monthly");
   const billingQuery = useQuery({
     queryKey: ["billing-public-config"],
     queryFn: () => getBillingPublicConfigFn(),
@@ -95,7 +96,8 @@ function Pricing() {
   const monetizationEnabled = billingQuery.data?.monetizationEnabled ?? false;
   const billingAvailable = billingQuery.data?.available ?? false;
   const lifetimeAvailable = billingQuery.data?.lifetimeAvailable ?? false;
-  const hasDrivePlus = plan === "DRIVE_PLUS";
+  const musicAvailable = billingQuery.data?.musicAvailable ?? false;
+  const hasDrivePlus = plan !== "FREE";
   const viewedRef = useRef(false);
 
   useEffect(() => {
@@ -122,7 +124,7 @@ function Pricing() {
             Make every drive yours.
           </h1>
           <p className="mt-6 max-w-md text-sm leading-relaxed text-muted-foreground">
-            Start with essential motion sound — free during early access. Drive+ and individual sound purchases open on 9.11.2026.
+            Start with essential motion sound — free during early access. All purchases (Drive+, Drive the Music, Lifetime and individual sounds) open on 9.11.2026.
           </p>
         </section>
         <section className="mx-auto w-full max-w-2xl px-6 sm:px-10">
@@ -153,8 +155,7 @@ function Pricing() {
           Make every drive yours.
         </h1>
         <p className="mt-6 max-w-md text-sm leading-relaxed text-muted-foreground">
-          Start with essential motion sound. Drive+ and individual sound purchases open on
-          9.11.2026.
+          Start with essential motion sound. All purchases (Drive+, Drive the Music, Lifetime and individual sounds) open on 9.11.2026.
         </p>
       </section>
 
@@ -177,13 +178,20 @@ function Pricing() {
                 source="pricing"
                 className="inline-flex h-14 w-full items-center justify-center rounded-full bg-primary px-10 text-sm tracking-[0.22em] text-primary-foreground uppercase transition-opacity hover:opacity-90 sm:w-auto"
               />
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-6">
+              {musicAvailable ? (
                 <DrivePlusCheckoutButton
-                  interval="monthly"
-                  label={`${monthly.amount} / month`}
+                  plan="drive_music"
+                  interval="yearly"
+                  label={
+                    isMusicTrialOfferActive()
+                      ? `Drive the Music · ${MUSIC_TRIAL_MONTHS} months free`
+                      : "Drive the Music · annual"
+                  }
                   source="pricing"
-                  className="inline-flex h-11 items-center justify-center rounded-full border border-foreground/20 px-6 text-[11px] tracking-[0.18em] text-foreground uppercase transition hover:border-foreground/40"
+                  className="inline-flex h-14 w-full items-center justify-center rounded-full bg-primary px-10 text-sm tracking-[0.22em] text-primary-foreground uppercase transition-opacity hover:opacity-90 sm:ml-4 sm:w-auto"
                 />
+              ) : null}
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-6">
                 {lifetimeAvailable ? (
                 <DrivePlusCheckoutButton
                   interval="lifetime"
@@ -201,7 +209,7 @@ function Pricing() {
             </>
           ) : (
             <p className="text-sm text-muted-foreground">
-              Drive+ and individual sound purchases open on 9.11.2026. Until then, ELCAMOSO is free
+              All purchases (Drive+, Drive the Music, Lifetime and individual sounds) open on 9.11.2026. Until then, ELCAMOSO is free
               of charge.
             </p>
           )}

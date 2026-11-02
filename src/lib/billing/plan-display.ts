@@ -16,13 +16,23 @@ export const DRIVE_PLUS_PRICING = {
   },
   yearly: {
     commercialPlanId: "drive_plus_yearly" satisfies CommercialPlanId,
-    /** Charged annual price after early adopter discount. */
-    amountCents: 2499,
+    /** Charged annual price after early adopter discount (George, 2 Nov 2026). */
+    amountCents: 2736,
   },
   lifetime: {
     commercialPlanId: "drive_plus_lifetime" satisfies CommercialPlanId,
-    /** One-time Lifetime price after early adopter discount. */
-    amountCents: 3899,
+    /** One-time Lifetime price (Drive+ AND Drive the Music) after early adopter discount. */
+    amountCents: 5967,
+  },
+} as const;
+
+/** "Drive the Music" package - yearly only, same price as Drive+. */
+export const DRIVE_MUSIC_PRICING = {
+  currency: "EUR",
+  yearly: {
+    commercialPlanId: "drive_music_yearly" satisfies CommercialPlanId,
+    /** Charged annual price after early adopter discount. */
+    amountCents: 2736,
   },
 } as const;
 
@@ -37,15 +47,23 @@ export const FREE_PLAN_FEATURES = [
   "One basic Drive Song with sharing",
 ] as const;
 
-/** Shipped Drive+ capabilities - omit speculative or unreleased entitlements. */
+/** Shipped Drive+ (engine package) capabilities - omit speculative or unreleased entitlements. */
 export const DRIVE_PLUS_FEATURES = [
   "Every Engine personality",
-  "All Symphony packs and Worlds",
-  "Fusion: machine meets music",
+  "Dynamic Drive: rev match and shift feel",
+  "All Worlds",
   "Full Drive Songs and multiple remixes",
   "Full Journey history and Drive Reel",
-  "Sound, Symphony, and Fusion Studio",
   "Premium presets and future Experience Drops",
+] as const;
+
+/** Shipped "Drive the Music" package capabilities. */
+export const DRIVE_MUSIC_FEATURES = [
+  "Every music profile and Symphony genre",
+  "Auto DJ: a new genre every few minutes, on the beat",
+  "Highway stages from 90 to 220 km/h",
+  "Fusion: machine meets music",
+  "Symphony and Fusion Studio",
 ] as const;
 
 export interface PlanPriceDisplay {
@@ -57,7 +75,7 @@ export interface PlanPriceDisplay {
 
 export function formatEuroAmount(cents: number): string {
   const value = cents / 100;
-  const decimals = Number.isInteger(value) ? 0 : 2;
+  const decimals = cents === 0 ? 0 : 2;
   return `€${value.toFixed(decimals)}`;
 }
 
@@ -93,8 +111,41 @@ export function getDrivePlusYearlyDisplay(): PlanPriceDisplay {
   };
 }
 
+/**
+ * Per-month view of a yearly price (George, 2 Nov 2026): there is no separate
+ * monthly billing plan in the cards; "Monthly" shows the yearly price / 12,
+ * billed yearly. List price = full yearly list price / 12.
+ */
+export function yearlyAsMonthlyDisplay(yearlyCents: number): PlanPriceDisplay {
+  return {
+    amount: formatEuroAmount(Math.round(yearlyCents / 12)),
+    listAmount: formatEuroAmount(
+      Math.round(listPriceBeforeEarlyAdopterDiscount(yearlyCents) / 12),
+    ),
+    cadence: "month",
+  };
+}
+
 export function getDrivePlusDisplay(interval: BillingDisplayInterval): PlanPriceDisplay {
-  return interval === "monthly" ? getDrivePlusMonthlyDisplay() : getDrivePlusYearlyDisplay();
+  return interval === "monthly"
+    ? yearlyAsMonthlyDisplay(DRIVE_PLUS_PRICING.yearly.amountCents)
+    : getDrivePlusYearlyDisplay();
+}
+
+export function getDriveMusicDisplay(interval: BillingDisplayInterval): PlanPriceDisplay {
+  return interval === "monthly"
+    ? yearlyAsMonthlyDisplay(DRIVE_MUSIC_PRICING.yearly.amountCents)
+    : getDriveMusicYearlyDisplay();
+}
+
+export function getDriveMusicYearlyDisplay(): PlanPriceDisplay {
+  const amountCents = DRIVE_MUSIC_PRICING.yearly.amountCents;
+  return {
+    amount: formatEuroAmount(amountCents),
+    listAmount: formatEuroAmount(listPriceBeforeEarlyAdopterDiscount(amountCents)),
+    cadence: "year",
+    equivalentMonthly: formatEuroAmount(Math.round(amountCents / 12)),
+  };
 }
 
 /** One-time Drive+ Lifetime - same early adopter struck-through list price logic. */

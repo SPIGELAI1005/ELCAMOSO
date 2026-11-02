@@ -36,7 +36,7 @@ export function TeslaDrivePlusUpgrade({
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const alreadyUnlocked = plan === "DRIVE_PLUS";
+  const alreadyUnlocked = plan !== "FREE";
 
   useEffect(() => {
     if (!open) return;
@@ -106,7 +106,7 @@ export function TeslaDrivePlusUpgrade({
     if (!open || phase !== "pending" || alreadyUnlocked) return;
     const interval = window.setInterval(() => {
       void getEntitlementsFn({ data: { sessionToken: null } }).then((snapshot) => {
-        if (snapshot.plan === "DRIVE_PLUS") markUnlocked();
+        if (snapshot.plan !== "FREE") markUnlocked();
       });
     }, 2500);
     return () => window.clearInterval(interval);

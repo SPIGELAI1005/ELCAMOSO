@@ -15,8 +15,8 @@ import {
 } from "@/lib/founders/founders";
 import { claimFounderSeat, resetFoundersStoreForTests, setTestCrewOptIn } from "@/lib/founders/founders.server";
 
-const DEADLINE = Date.parse("2026-11-09T22:59:59Z");
-const UNTIL = Date.parse("2027-05-09T21:59:59Z");
+const DEADLINE = Date.parse("2026-11-27T22:59:59Z");
+const UNTIL = Date.parse("2027-05-27T21:59:59Z");
 
 describe("founders eligibility", () => {
   afterEach(() => {
@@ -24,7 +24,7 @@ describe("founders eligibility", () => {
     resetFoundersStoreForTests();
   });
 
-  it("deadline is 09.11.2026 23:59:59 Berlin and perk ends 09.05.2027 23:59:59 Berlin", () => {
+  it("deadline is 27.11.2026 (Black Friday) 23:59:59 Berlin and perk ends 27.05.2027 23:59:59 Berlin", () => {
     expect(FOUNDERS_SIGNUP_DEADLINE_MS).toBe(DEADLINE);
     expect(FOUNDER_DRIVE_PLUS_UNTIL_MS).toBe(UNTIL);
   });
@@ -41,7 +41,7 @@ describe("founders eligibility", () => {
     expect(isFounderEligible({ createdAt: DEADLINE - 10, confirmedAt: null })).toBe(false);
   });
 
-  it("Drive+ perk active until 09.05.2027 inclusive, then expires", () => {
+  it("Drive+ perk active until 27.05.2027 inclusive, then expires", () => {
     const at = DEADLINE - 1000;
     expect(isFounderDrivePlusActive(at, UNTIL)).toBe(true);
     expect(isFounderDrivePlusActive(at, UNTIL + 1)).toBe(false);

@@ -2,15 +2,24 @@ import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 
 import { DynamicDriveTrialOffer } from "@/components/dynamic-drive-trial/DynamicDriveTrialOffer";
-import { useMonetizationEnabled } from "@/lib/billing/use-billing-public-config";
+import { useBillingPublicConfig, useMonetizationEnabled } from "@/lib/billing/use-billing-public-config";
+import type { LifetimeSeatStatus } from "@/lib/billing/lifetime-seats";
+import type { Locale } from "@/lib/i18n";
 import {
+  DRIVE_MUSIC_FEATURES,
   DRIVE_PLUS_FEATURES,
   FREE_PLAN_FEATURES,
+  getDriveMusicDisplay,
   getDrivePlusDisplay,
   getDrivePlusLifetimeDisplay,
   getFreePlanDisplay,
   type BillingDisplayInterval,
 } from "@/lib/billing/plan-display";
+import {
+  BLACK_FRIDAY_LABEL,
+  MUSIC_TRIAL_MONTHS,
+  isMusicTrialOfferActive,
+} from "@/lib/billing/black-friday";
 import { cn } from "@/lib/utils";
 import { useSettings } from "@/lib/drive/useSettings";
 import { t } from "@/lib/i18n";
@@ -42,11 +51,14 @@ function PlanPrice({
   amount,
   suffix,
   size = "large",
+  badge,
 }: {
   listAmount: string;
   amount: string;
   suffix?: string;
   size?: "large" | "compact";
+  /** e.g. "-14%" next to the struck-through full price. */
+  badge?: string;
 }) {
   const priceClass = size === "compact" ? "text-2xl" : "text-3xl";
   const listClass = size === "compact" ? "text-lg" : "text-xl";
@@ -63,6 +75,14 @@ function PlanPrice({
           </span>
         ) : null}
       </p>
+      {badge ? (
+        <span
+          className="self-center rounded-full bg-[#e53935] px-2 py-0.5 text-[11px] font-medium tracking-[0.08em] text-white"
+          data-testid="discount-badge"
+        >
+          {badge}
+        </span>
+      ) : null}
     </div>
   );
 }
@@ -114,6 +134,35 @@ export function PlansBillingIntervalToggle({
 }
 
 /** Informational Free / Drive+ pricing - checkout gated separately. */
+/** Live seat counter from the real Lifetime purchase count. Renders nothing when unknown. */
+export function LifetimeSeatsCounter({
+  seats,
+  language,
+}: {
+  seats: LifetimeSeatStatus | null | undefined;
+  language: Locale;
+}) {
+  if (!seats) return null;
+  const fill = (key: string) =>
+    t(language, key)
+      .replace("{left}", String(seats.left))
+      .replace("{limit}", String(seats.limit));
+  return (
+    <p
+      data-testid="lifetime-seats"
+      data-sold-out={seats.soldOut ? "true" : "false"}
+      className={cn(
+        "mt-3 inline-flex rounded-full border px-3 py-1 text-[10px] tracking-[0.18em] uppercase",
+        seats.soldOut
+          ? "border-muted-foreground/40 text-muted-foreground"
+          : "border-[#e53935]/60 text-[#e53935]",
+      )}
+    >
+      {seats.soldOut ? fill("pricing.lifetimeSoldOut") : fill("pricing.lifetimeSeatsLeft")}
+    </p>
+  );
+}
+
 export function PlansOverview({
   monetizationEnabled,
   compact = false,
@@ -125,6 +174,10 @@ export function PlansOverview({
   const drivePlus = getDrivePlusDisplay(interval);
   const drivePlusSuffix = interval === "monthly" ? "/ month" : "/ year";
   const lifetime = getDrivePlusLifetimeDisplay();
+  const lifetimeSeats = useBillingPublicConfig().data?.lifetimeSeats ?? null;
+  const music = getDriveMusicDisplay(interval);
+  const musicYearly = getDriveMusicDisplay("yearly");
+  const musicTrial = isMusicTrialOfferActive();
   const { settings } = useSettings();
   const language = settings.language;
 
@@ -153,25 +206,24 @@ export function PlansOverview({
             </p>
           ) : null}
         </div>
-        <div className={compact ? "py-8" : "py-12"}>
+        <div className={compact ? "py-8" : "py-12"} data-testid="plan-drive-plus">
           <p className="text-xs tracking-[0.2em] text-muted-foreground uppercase">Drive+</p>
-          <p className="mt-3 text-2xl font-light">Make every drive yours.</p>
+          <p className="mt-3 text-2xl font-light">Every engine sound.</p>
           <PlanPrice
             listAmount={drivePlus.listAmount}
             amount={drivePlus.amount}
             suffix={drivePlusSuffix}
             size={compact ? "compact" : "large"}
+            badge="-14%"
           />
           <p className="mt-2 text-xs tracking-[0.12em] text-muted-foreground uppercase">
             14% off for early adopters
           </p>
-          {interval === "yearly" && drivePlus.equivalentMonthly ? (
-            <p className="mt-2 text-sm text-muted-foreground">
-              {compact
-                ? `${drivePlus.equivalentMonthly}/month equivalent`
-                : `${drivePlus.equivalentMonthly} per month, billed annually`}
-            </p>
-          ) : null}
+          <p className="mt-2 text-sm text-muted-foreground">
+            {interval === "monthly"
+              ? `Billed yearly at ${getDrivePlusDisplay("yearly").amount}`
+              : `${drivePlus.equivalentMonthly} per month, billed yearly`}
+          </p>
           <ul className={`space-y-3 text-sm text-muted-foreground ${compact ? "mt-4" : "mt-10"}`}>
             {(compact ? DRIVE_PLUS_FEATURES.slice(0, 3) : DRIVE_PLUS_FEATURES).map((feature) => (
               <li key={feature}>{feature}</li>
@@ -184,9 +236,52 @@ export function PlansOverview({
                 billingNoticeTone === "danger" ? "text-[#e53935]" : "text-muted-foreground",
               )}
             >
-              Drive+ and individual sound purchases open on 9.11.2026. Until then, ELCAMOSO is free of charge.
+              All purchases (Drive+, Drive the Music, Lifetime and individual sounds) open on 9.11.2026. Until then, ELCAMOSO is free of charge.
             </p>
           ) : null}
+        </div>
+        <div className={compact ? "py-8" : "py-12"} data-testid="plan-drive-music">
+          <div className="flex flex-wrap items-center gap-3">
+            <p className="text-xs tracking-[0.2em] text-muted-foreground uppercase">
+              Drive the Music
+            </p>
+            {musicTrial ? (
+              <span
+                className="rounded-full border border-[#e53935] px-2.5 py-0.5 text-[10px] tracking-[0.16em] text-[#e53935] uppercase"
+                data-testid="music-trial-badge"
+              >
+                Black Friday · {MUSIC_TRIAL_MONTHS} months free
+              </span>
+            ) : null}
+          </div>
+          <p className="mt-3 text-2xl font-light">Every music profile.</p>
+          <PlanPrice
+            listAmount={music.listAmount}
+            amount={music.amount}
+            suffix={drivePlusSuffix}
+            size={compact ? "compact" : "large"}
+            badge="-14%"
+          />
+          <p className="mt-2 text-xs tracking-[0.12em] text-muted-foreground uppercase">
+            14% off for early adopters
+          </p>
+          {musicTrial ? (
+            <p className="mt-2 text-sm text-muted-foreground">
+              Start before {BLACK_FRIDAY_LABEL} and the first {MUSIC_TRIAL_MONTHS} months are free.
+              Then {musicYearly.amount} per year, billed yearly. Cancel anytime during the trial.
+            </p>
+          ) : (
+            <p className="mt-2 text-sm text-muted-foreground">
+              {interval === "monthly"
+                ? `Billed yearly at ${musicYearly.amount}`
+                : `${musicYearly.equivalentMonthly} per month, billed yearly`}
+            </p>
+          )}
+          <ul className={`space-y-3 text-sm text-muted-foreground ${compact ? "mt-4" : "mt-10"}`}>
+            {(compact ? DRIVE_MUSIC_FEATURES.slice(0, 3) : DRIVE_MUSIC_FEATURES).map((feature) => (
+              <li key={feature}>{feature}</li>
+            ))}
+          </ul>
         </div>
         <div className={compact ? "py-8" : "py-12"} data-testid="plan-lifetime">
           <p className="text-xs tracking-[0.2em] text-muted-foreground uppercase">
@@ -198,11 +293,16 @@ export function PlansOverview({
             amount={lifetime.amount}
             suffix={t(language, "pricing.lifetimeOnce")}
             size={compact ? "compact" : "large"}
+            badge="-14%"
           />
           <p className="mt-2 text-xs tracking-[0.12em] text-muted-foreground uppercase">
             {t(language, "pricing.lifetimeDiscount")}
           </p>
           <p className="mt-4 text-sm text-muted-foreground">{t(language, "pricing.lifetimeBody")}</p>
+          <p className="mt-3 text-sm text-[#e53935]" data-testid="lifetime-payback">
+            {t(language, "pricing.lifetimePayback")}
+          </p>
+          <LifetimeSeatsCounter seats={lifetimeSeats} language={language} />
         </div>
       </div>
       {monetizationEnabled ? (
@@ -216,7 +316,7 @@ export function PlansOverview({
 
 export function LandingPlansSection() {
   const monetizationEnabled = useMonetizationEnabled();
-  const [interval, setInterval] = useState<BillingDisplayInterval>("yearly");
+  const [interval, setInterval] = useState<BillingDisplayInterval>("monthly");
 
   return (
     <section className="mx-auto w-full max-w-3xl px-6 py-16 sm:px-12">

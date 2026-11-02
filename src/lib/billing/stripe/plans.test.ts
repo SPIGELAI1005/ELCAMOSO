@@ -35,7 +35,7 @@ function restoreEnv(previous: Record<string, string | undefined>): void {
 
 describe("commercial plan mapping", () => {
   it("defines internal plan ids without Stripe price ids", () => {
-    expect(COMMERCIAL_PLAN_IDS).toEqual(["drive_plus_monthly", "drive_plus_yearly", "drive_plus_lifetime"]);
+    expect(COMMERCIAL_PLAN_IDS).toEqual(["drive_plus_monthly", "drive_plus_yearly", "drive_music_yearly", "drive_plus_lifetime"]);
     for (const id of COMMERCIAL_PLAN_IDS) {
       expect(id.startsWith("price_")).toBe(false);
     }
@@ -104,7 +104,7 @@ describe("stripe config", () => {
     expect(serialized).not.toContain("sk_test");
     expect(serialized).not.toContain("whsec");
     expect(serialized).not.toContain("price_month_test");
-    expect(publicConfig.plans.map((plan) => plan.id)).toEqual(COMMERCIAL_PLAN_IDS);
+    expect(publicConfig.plans.map((plan) => plan.id)).toEqual(COMMERCIAL_PLAN_IDS.filter((id) => id !== "drive_plus_monthly"));
   });
 });
 

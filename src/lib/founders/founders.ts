@@ -2,17 +2,18 @@
  * Founders Pack (pre-launch promotion).
  *
  * Anyone who signs in with a verified email (email code / magic link / Google — every
- * ELCAMOSO sign-in proves email ownership) on or before 09.11.2026 23:59:59 Europe/Berlin
- * is stamped as a Founder (`users.founder_at`). Founders keep the 3 free engine sounds
- * forever (free for everyone today) and get full Drive+ until 09.05.2027 23:59:59 Berlin.
+ * ELCAMOSO sign-in proves email ownership) on or before Black Friday, 27.11.2026 23:59:59
+ * Europe/Berlin (extended from 09.11.2026 — George, 2 Nov 2026) is stamped as a Founder
+ * (`users.founder_at`). Founders keep the free engine sounds forever and get BOTH
+ * packages (Drive+ and Drive the Music) for 6 months, until 27.05.2027 23:59:59 Berlin.
  */
 
-/** 09.11.2026 23:59:59 Europe/Berlin (CET, UTC+1). */
-export const FOUNDERS_SIGNUP_DEADLINE_ISO = "2026-11-09T23:59:59+01:00";
+/** Black Friday 27.11.2026 23:59:59 Europe/Berlin (CET, UTC+1). */
+export const FOUNDERS_SIGNUP_DEADLINE_ISO = "2026-11-27T23:59:59+01:00";
 export const FOUNDERS_SIGNUP_DEADLINE_MS = Date.parse(FOUNDERS_SIGNUP_DEADLINE_ISO);
 
-/** 09.05.2027 23:59:59 Europe/Berlin (CEST, UTC+2) — 6 months after the deadline. */
-export const FOUNDER_DRIVE_PLUS_UNTIL_ISO = "2027-05-09T23:59:59+02:00";
+/** 27.05.2027 23:59:59 Europe/Berlin (CEST, UTC+2) — 6 months after the deadline. */
+export const FOUNDER_DRIVE_PLUS_UNTIL_ISO = "2027-05-27T23:59:59+02:00";
 export const FOUNDER_DRIVE_PLUS_UNTIL_MS = Date.parse(FOUNDER_DRIVE_PLUS_UNTIL_ISO);
 
 /** Free engine profiles Founders keep forever. */
@@ -93,7 +94,7 @@ export function seatsLeft(seatsTaken: number, limit = founderSeatLimit()): numbe
 
 export const FOUNDER_PERKS = [
   "3 sounds free forever",
-  "6 months Drive+ free",
+  "6 months Drive+ and Drive the Music free",
   "Founders Test Crew: new features first",
   "Exclusive Crew perks to follow",
 ] as const;

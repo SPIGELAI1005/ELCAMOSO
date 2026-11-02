@@ -34,7 +34,7 @@ export function provisionEntitlementsFromSubscription(subscription: Subscription
     // Lifetime refunded/revoked - fall back to any recurring subscription state.
     const underlying = getUnderlyingSubscriptionRecord(subscription.userId);
     if (underlying && hasDrivePlusSubscriptionAccess(underlying)) {
-      setSubscriptionForUser({ ...underlying, plan: "DRIVE_PLUS" });
+      setSubscriptionForUser(underlying);
       return;
     }
     setFree(subscription.userId);
@@ -60,7 +60,7 @@ export function provisionEntitlementsFromSubscription(subscription: Subscription
   }
 
   if (hasDrivePlusSubscriptionAccess(record)) {
-    setSubscriptionForUser({ ...record, plan: "DRIVE_PLUS" });
+    setSubscriptionForUser(record);
     return;
   }
 

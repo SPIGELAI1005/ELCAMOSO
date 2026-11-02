@@ -78,7 +78,7 @@ export async function resolveEntitlementUser(input: {
 
       const subscription = getSubscriptionForUser(session.userId);
       if (subscription && hasDrivePlusSubscriptionAccess(subscription, now)) {
-        plan = "DRIVE_PLUS";
+        plan = subscription.plan;
         subscriptionStatus = mapBillingStatusToSubscription(subscription.status);
         revision += 1;
       }
@@ -109,7 +109,7 @@ export async function resolveEntitlementUser(input: {
       }
 
       // Founders Pack: a verified session before the deadline claims a seat (atomic, capped).
-      // Active Founders get the full Drive+ entitlement set until FOUNDER_DRIVE_PLUS_UNTIL.
+      // Active Founders get both packages (Drive+ and Drive the Music) until FOUNDER_DRIVE_PLUS_UNTIL.
       try {
         const { claimFounderSeat, foundersEnabled } = await import("@/lib/founders/founders.server");
         const rec = foundersEnabled()
@@ -121,7 +121,7 @@ export async function resolveEntitlementUser(input: {
           founder = { ...status, seat: rec.seat, drivePlusActive: active, testCrewOptIn: rec.testCrewOptIn };
           if (active) {
             grantedEntitlements = [
-              ...new Set([...grantedEntitlements, ...entitlementsForPlan("DRIVE_PLUS")]),
+              ...new Set([...grantedEntitlements, ...entitlementsForPlan("DRIVE_COMPLETE")]),
             ];
             revision += 16;
           }

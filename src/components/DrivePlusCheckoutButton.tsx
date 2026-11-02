@@ -2,7 +2,7 @@ import { useState } from "react";
 
 import { useAccount } from "@/lib/account/AccountProvider";
 import { AccountSignInDialog } from "@/components/AccountSignInDialog";
-import type { CheckoutIntervalSlug } from "@/lib/billing/checkout-request";
+import type { CheckoutIntervalSlug, CheckoutPlanSlug } from "@/lib/billing/checkout-request";
 import { openDrivePlusCheckout } from "@/lib/billing/checkout-client";
 import { trackMonetizationEvent } from "@/lib/telemetry/monetization-analytics";
 
@@ -12,6 +12,8 @@ interface DrivePlusCheckoutButtonProps {
   label: string;
   returnTo?: string;
   source?: string;
+  /** Package to buy (Lifetime always includes both). */
+  plan?: CheckoutPlanSlug;
 }
 
 /** Starts Stripe Checkout for Drive+ or redirects existing subscribers to manage. */
@@ -21,6 +23,7 @@ export function DrivePlusCheckoutButton({
   label,
   returnTo = "/pricing",
   source = "pricing",
+  plan = "drive_plus",
 }: DrivePlusCheckoutButtonProps) {
   const { session, isAuthenticated, isLoading } = useAccount();
   const [showSignIn, setShowSignIn] = useState(false);
@@ -33,16 +36,16 @@ export function DrivePlusCheckoutButton({
     setError(null);
     trackMonetizationEvent("plan_interval_selected", {
       source,
-      plan: "drive_plus",
+      plan,
       interval,
     });
     trackMonetizationEvent("checkout_started", {
       source,
-      plan: "drive_plus",
+      plan,
       interval,
     });
     try {
-      await openDrivePlusCheckout(interval, returnTo, source);
+      await openDrivePlusCheckout(interval, returnTo, source, plan);
     } catch {
       setError("Payment is unavailable right now.");
       setBusy(false);
@@ -53,7 +56,7 @@ export function DrivePlusCheckoutButton({
     if (isLoading || busy) return;
     trackMonetizationEvent("upgrade_clicked", {
       source,
-      plan: "drive_plus",
+      plan,
       interval,
     });
     if (isAuthenticated && session) {

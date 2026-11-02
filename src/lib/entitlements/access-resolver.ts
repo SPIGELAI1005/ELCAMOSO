@@ -20,9 +20,9 @@ import {
   evaluateSubscriptionAccess,
   type SubscriptionAccessInput,
 } from "@/lib/billing/subscription-access-policy";
-import { entitlementsForPlan } from "@/lib/entitlements/plans";
+import { entitlementsForPlan, isMusicPackageProfileId } from "@/lib/entitlements/plans";
 import { isTrialActive } from "@/lib/entitlements/trial";
-import type { Entitlement, EntitlementUser, SubscriptionStatus } from "@/lib/entitlements/types";
+import type { Entitlement, EntitlementUser, Plan, SubscriptionStatus } from "@/lib/entitlements/types";
 import { canAccessExperience } from "@/lib/experiences/access";
 import { experienceForProfileId } from "@/lib/experiences/catalog";
 import {
@@ -98,22 +98,23 @@ function hasAllSoundsFromSubscription(
   user: EntitlementUser,
   subscription: SubscriptionAccessInput | null | undefined,
   now: number,
-): { allowed: boolean; source: AccessSource; expiresAtUtc: number | null } {
+): { allowed: boolean; source: AccessSource; expiresAtUtc: number | null; plan: Plan } {
   if (subscription) {
     const decision = evaluateSubscriptionAccess(subscription, now);
     if (decision.hasDrivePlusAccess) {
       return {
         allowed: true,
+        plan: subscription.plan,
         source: subscriptionSource(decision.reason),
         expiresAtUtc: decision.effectiveUntil?.getTime() ?? null,
       };
     }
     // Explicit subscription record examined — do not second-guess with plan flags.
-    return { allowed: false, source: "denied", expiresAtUtc: null };
+    return { allowed: false, source: "denied", expiresAtUtc: null, plan: "FREE" };
   }
   // Fallback: `resolveEntitlementUser` only sets plan=DRIVE_PLUS after
   // `hasDrivePlusSubscriptionAccess` (includes past_due grace / cancel period).
-  if (user.plan === "DRIVE_PLUS") {
+  if (user.plan !== "FREE") {
     const status: SubscriptionStatus = user.subscriptionStatus;
     const source: AccessSource =
       status === "past_due"
@@ -121,9 +122,9 @@ function hasAllSoundsFromSubscription(
         : status === "canceled"
           ? "cancel_period"
           : "subscription";
-    return { allowed: true, source, expiresAtUtc: null };
+    return { allowed: true, source, expiresAtUtc: null, plan: user.plan };
   }
-  return { allowed: false, source: "denied", expiresAtUtc: null };
+  return { allowed: false, source: "denied", expiresAtUtc: null, plan: "FREE" };
 }
 
 function leaseValid(input: AccessResolverInput, now: number): boolean {
@@ -203,6 +204,29 @@ export function resolveProfileDriveAccess(
     }
   }
 
+  // Music profiles need the Drive the Music package (handled above via the
+  // experience entitlement) — Drive+ / all_sound_profiles never unlock them.
+  if (isMusicPackageProfileId(profileId)) {
+    // Free-sampler music profiles (e.g. the free Symphony) are locked after the
+    // sound gate; the music package itself unlocks them.
+    const pkg = resolveCapabilityAccess(
+      profileId.startsWith("fusion-") ? "fusion" : "symphony_all",
+      input,
+    );
+    if (pkg.allowed && pkg.source !== "permanent_free") {
+      return { allowed: true, source: pkg.source, expiresAtUtc: pkg.expiresAtUtc, fallbackProfileId };
+    }
+    if (leaseValid(input, now) && input.leaseProfileIds?.includes(profileId)) {
+      return {
+        allowed: true,
+        source: "offline_lease",
+        expiresAtUtc: input.leaseExpiresAtUtc ?? null,
+        fallbackProfileId,
+      };
+    }
+    return { allowed: false, source: "denied", expiresAtUtc: null, fallbackProfileId };
+  }
+
   if (isTrialActive(input.user, now)) {
     return {
       allowed: true,
@@ -213,7 +237,7 @@ export function resolveProfileDriveAccess(
   }
 
   const sub = hasAllSoundsFromSubscription(input.user, input.subscription, now);
-  if (sub.allowed) {
+  if (sub.allowed && entitlementsForPlan(sub.plan).includes("all_sound_profiles")) {
     return {
       allowed: true,
       source: sub.source,
@@ -273,7 +297,7 @@ export function resolveCapabilityAccess(
   }
 
   const sub = hasAllSoundsFromSubscription(input.user, input.subscription, now);
-  if (sub.allowed && entitlementsForPlan("DRIVE_PLUS").includes(entitlement)) {
+  if (sub.allowed && entitlementsForPlan(sub.plan).includes(entitlement)) {
     return { allowed: true, source: sub.source, expiresAtUtc: sub.expiresAtUtc };
   }
 
@@ -301,7 +325,7 @@ export function resolveEffectiveEntitlements(input: AccessResolverInput): Readon
 
   const sub = hasAllSoundsFromSubscription(input.user, input.subscription, now);
   if (sub.allowed) {
-    for (const e of entitlementsForPlan("DRIVE_PLUS")) granted.add(e);
+    for (const e of entitlementsForPlan(sub.plan)) granted.add(e);
   }
 
   if (leaseValid(input, now)) {

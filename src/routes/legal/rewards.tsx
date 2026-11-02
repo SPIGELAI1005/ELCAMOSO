@@ -104,7 +104,7 @@ function RewardsTerms() {
       <LegalSection title="8. Founder seats">
         <p>
           Founder seats are limited and allocated on a first come, first served basis. Eligibility
-          ends on 09.11.2026 at 23:59 (Berlin time) and requires a confirmed email address. The
+          ends on 27.11.2026 at 23:59 (Berlin time) and requires a confirmed email address. The
           number of seats shown in the app or on the website is for information only and may be
           approximate or delayed.
         </p>

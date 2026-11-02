@@ -6,6 +6,7 @@ import {
   isSoundProfilePreviewAllowed,
 } from "@/lib/entitlements/catalog";
 import { canDriveProfileWithAccess } from "@/lib/entitlements/drive-profile-access";
+import { isMusicPackageProfileId } from "@/lib/entitlements/plans";
 import {
   grantedProfileIdsDuringLiveDriveHold,
   hasEntitlementDuringLiveDriveHold,
@@ -50,7 +51,10 @@ export function useFeatureAccess() {
   const canPreviewProfile = (profileId: string) => isSoundProfilePreviewAllowed(profileId);
 
   const previewDurationForProfile = (profileId: string) =>
-    lockedProfilePreviewSeconds(getProfile(profileId), hasAllSoundProfiles);
+    lockedProfilePreviewSeconds(
+      getProfile(profileId),
+      isMusicPackageProfileId(profileId) ? canDriveWithProfile(profileId) : hasAllSoundProfiles,
+    );
 
   return {
     dynamicDrive: effectiveHas("dynamic_drive"),

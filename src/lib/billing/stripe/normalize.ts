@@ -33,18 +33,24 @@ export function resolveIntervalFromStripePrice(priceId: string): BillingInterval
   const config = readStripeConfig();
   if (priceId === config.prices.drive_plus_monthly) return "month";
   if (priceId === config.prices.drive_plus_yearly) return "year";
+  if (config.prices.drive_music_yearly && priceId === config.prices.drive_music_yearly)
+    return "year";
   return null;
 }
 
 export function resolvePlanFromMetadata(metadata: Stripe.Metadata | null | undefined): Plan | null {
   const raw = metadata?.["elcamosoPlan"]?.toUpperCase();
   if (raw === "DRIVE_PLUS") return "DRIVE_PLUS";
+  if (raw === "DRIVE_MUSIC") return "DRIVE_MUSIC";
   return null;
 }
 
 /** Drive+ is granted only when the Stripe Price matches configured env ids. */
 export function resolvePlanFromStripePrice(priceId: string): Plan | null {
   if (!priceId.trim()) return null;
+  const config = readStripeConfig();
+  if (config.prices.drive_music_yearly && priceId === config.prices.drive_music_yearly)
+    return "DRIVE_MUSIC";
   return resolveIntervalFromStripePrice(priceId) ? "DRIVE_PLUS" : null;
 }
 
