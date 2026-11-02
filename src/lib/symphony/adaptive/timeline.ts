@@ -4,6 +4,7 @@
  */
 import type { ConductorState, MusicAccent } from "./conductor";
 import { accentNotes, GENRES, type GenreDef, type GenreId, type NoteSpec } from "./genres";
+import { arrangeHighway, createHighwayTracker, highwayBrightness, highwayEnergy, highwayKit } from "./highway";
 
 export interface NoteEvent extends NoteSpec {
   time: number;
@@ -40,6 +41,9 @@ export function createTimeline(genreId: GenreId, startTime: number, seed = 1) {
   const GLIDE_PER_STEP = 0.4; // bpm per 16th, about 6 bpm per bar: a smooth DJ pitch ride
   let handoffBar: number | null = null;
   let handoff: { time: number; barDur: number; bpm: number } | null = null;
+  const highway = createHighwayTracker();
+  let hwStage = 0;
+  let kit = highwayKit(genre);
 
   return {
     get genre() {
@@ -93,8 +97,10 @@ export function createTimeline(genreId: GenreId, startTime: number, seed = 1) {
           if (pendingGenre) {
             genre = pendingGenre;
             pendingGenre = null;
+            kit = highwayKit(genre);
           }
           transpose = state.transpose;
+          hwStage = highway.onBar(state.speedKmh ?? 0);
           if (state.mode === "cruise") {
             cruiseBars += 1;
             if (cruiseBars % 8 === 0) variation += 1;
@@ -128,15 +134,17 @@ export function createTimeline(genreId: GenreId, startTime: number, seed = 1) {
           bar,
           chord,
           root,
-          intensity: state.intensity,
+          intensity: highwayEnergy(hwStage, state.intensity, state.mode === "surge"),
           mode: state.mode,
           variation,
           stepDur,
           barDur: stepDur * (genre.stepsPerBar ?? 16),
           rand,
         };
-        const notes = genre.pattern(ctx);
+        let notes = genre.pattern(ctx);
         if (genre.layers && ctx.mode !== "brake" && ctx.mode !== "stopped") notes.push(...genre.layers(ctx));
+        if (hwStage > 0 && ctx.mode !== "brake" && ctx.mode !== "stopped")
+          notes = arrangeHighway(genre, { ...ctx, stage: hwStage, sub: highway.sub, barsInStage: highway.barsInStage, stepsPerBar: genre.stepsPerBar ?? 16 }, notes, kit);
 
         if (step === 0 && crashNextBar) {
           notes.push({ inst: genre.accents.crash[0], midi: genre.accents.crash[1], vel: 0.8, dur: 1.5 });
@@ -176,6 +184,14 @@ export function createTimeline(genreId: GenreId, startTime: number, seed = 1) {
     },
     get bar() {
       return barCount;
+    },
+    /** Highway arrangement stage (0 = base, 1..11 = 90..220 km/h). */
+    get highwayStage() {
+      return hwStage;
+    },
+    /** Brightness offset for the master filter at this stage. */
+    get highwayBright() {
+      return highwayBrightness(hwStage);
     },
   };
 }

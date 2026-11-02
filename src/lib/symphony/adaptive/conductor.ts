@@ -42,6 +42,8 @@ export interface ConductorState {
   elevationTrend: "climb" | "flat" | "descent" | "unknown";
   cruiseSeconds: number;
   musicalGear: number;
+  /** smoothed speed, km/h (drives the highway arrangement stages) */
+  speedKmh?: number;
 }
 
 export interface ConductorConfig {
@@ -223,6 +225,7 @@ export function createConductor(initial: ConductorConfig) {
         elevationTrend: trend,
         cruiseSeconds,
         musicalGear,
+        speedKmh,
       };
     },
     drainAccents(): MusicAccent[] {
