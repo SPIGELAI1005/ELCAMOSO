@@ -17,7 +17,7 @@ export const DRIVE_PLUS_PRICING = {
   yearly: {
     commercialPlanId: "drive_plus_yearly" satisfies CommercialPlanId,
     /** Charged annual price after early adopter discount (George, 2 Nov 2026). */
-    amountCents: 1989,
+    amountCents: 2736,
   },
   lifetime: {
     commercialPlanId: "drive_plus_lifetime" satisfies CommercialPlanId,
@@ -32,7 +32,7 @@ export const DRIVE_MUSIC_PRICING = {
   yearly: {
     commercialPlanId: "drive_music_yearly" satisfies CommercialPlanId,
     /** Charged annual price after early adopter discount. */
-    amountCents: 1989,
+    amountCents: 2736,
   },
 } as const;
 

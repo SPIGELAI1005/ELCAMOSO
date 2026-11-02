@@ -1,3 +1,4 @@
+import type { LifetimeSeatStatus } from "@/lib/billing/lifetime-seats";
 import { COMMERCIAL_PLANS } from "@/lib/billing/stripe/plans";
 import type { Plan } from "@/lib/entitlements/types";
 import { isBillingAvailable } from "@/lib/billing/billing-available";
@@ -27,6 +28,8 @@ export interface BillingPublicConfig {
   available: boolean;
   /** Lifetime checkout needs STRIPE_PRICE_DRIVE_PLUS_LIFETIME in addition to billing. */
   lifetimeAvailable: boolean;
+  /** Real seat count from completed Lifetime purchases; null/absent when unknown. */
+  lifetimeSeats?: LifetimeSeatStatus | null;
   /** Drive the Music checkout needs STRIPE_PRICE_DRIVE_MUSIC_YEARLY. */
   musicAvailable: boolean;
   plans: BillingPublicPlan[];

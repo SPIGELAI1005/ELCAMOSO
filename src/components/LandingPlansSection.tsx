@@ -2,7 +2,9 @@ import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 
 import { DynamicDriveTrialOffer } from "@/components/dynamic-drive-trial/DynamicDriveTrialOffer";
-import { useMonetizationEnabled } from "@/lib/billing/use-billing-public-config";
+import { useBillingPublicConfig, useMonetizationEnabled } from "@/lib/billing/use-billing-public-config";
+import type { LifetimeSeatStatus } from "@/lib/billing/lifetime-seats";
+import type { Locale } from "@/lib/i18n";
 import {
   DRIVE_MUSIC_FEATURES,
   DRIVE_PLUS_FEATURES,
@@ -132,6 +134,35 @@ export function PlansBillingIntervalToggle({
 }
 
 /** Informational Free / Drive+ pricing - checkout gated separately. */
+/** Live seat counter from the real Lifetime purchase count. Renders nothing when unknown. */
+export function LifetimeSeatsCounter({
+  seats,
+  language,
+}: {
+  seats: LifetimeSeatStatus | null | undefined;
+  language: Locale;
+}) {
+  if (!seats) return null;
+  const fill = (key: string) =>
+    t(language, key)
+      .replace("{left}", String(seats.left))
+      .replace("{limit}", String(seats.limit));
+  return (
+    <p
+      data-testid="lifetime-seats"
+      data-sold-out={seats.soldOut ? "true" : "false"}
+      className={cn(
+        "mt-3 inline-flex rounded-full border px-3 py-1 text-[10px] tracking-[0.18em] uppercase",
+        seats.soldOut
+          ? "border-muted-foreground/40 text-muted-foreground"
+          : "border-[#e53935]/60 text-[#e53935]",
+      )}
+    >
+      {seats.soldOut ? fill("pricing.lifetimeSoldOut") : fill("pricing.lifetimeSeatsLeft")}
+    </p>
+  );
+}
+
 export function PlansOverview({
   monetizationEnabled,
   compact = false,
@@ -143,6 +174,7 @@ export function PlansOverview({
   const drivePlus = getDrivePlusDisplay(interval);
   const drivePlusSuffix = interval === "monthly" ? "/ month" : "/ year";
   const lifetime = getDrivePlusLifetimeDisplay();
+  const lifetimeSeats = useBillingPublicConfig().data?.lifetimeSeats ?? null;
   const music = getDriveMusicDisplay(interval);
   const musicYearly = getDriveMusicDisplay("yearly");
   const musicTrial = isMusicTrialOfferActive();
@@ -268,8 +300,9 @@ export function PlansOverview({
           </p>
           <p className="mt-4 text-sm text-muted-foreground">{t(language, "pricing.lifetimeBody")}</p>
           <p className="mt-3 text-sm text-[#e53935]" data-testid="lifetime-payback">
-            Pays for itself in 1.5 years, then it&apos;s free forever.
+            {t(language, "pricing.lifetimePayback")}
           </p>
+          <LifetimeSeatsCounter seats={lifetimeSeats} language={language} />
         </div>
       </div>
       {monetizationEnabled ? (
@@ -283,7 +316,7 @@ export function PlansOverview({
 
 export function LandingPlansSection() {
   const monetizationEnabled = useMonetizationEnabled();
-  const [interval, setInterval] = useState<BillingDisplayInterval>("yearly");
+  const [interval, setInterval] = useState<BillingDisplayInterval>("monthly");
 
   return (
     <section className="mx-auto w-full max-w-3xl px-6 py-16 sm:px-12">

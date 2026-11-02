@@ -87,7 +87,7 @@ function Pricing() {
   const yearly = getDrivePlusYearlyDisplay();
   const { plan } = useEntitlements();
   const { settings } = useSettings();
-  const [interval, setInterval] = useState<BillingDisplayInterval>("yearly");
+  const [interval, setInterval] = useState<BillingDisplayInterval>("monthly");
   const billingQuery = useQuery({
     queryKey: ["billing-public-config"],
     queryFn: () => getBillingPublicConfigFn(),

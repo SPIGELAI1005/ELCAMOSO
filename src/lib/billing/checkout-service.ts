@@ -16,6 +16,7 @@ import { createStripePortalSession } from "@/lib/billing/stripe/portal";
 import { userHasActiveDrivePlusSubscription } from "@/lib/billing/stripe/subscription-guard";
 import { wrapStripeBillingError } from "@/lib/billing/resilience/stripe-errors";
 import { getUserBillingRepository } from "@/lib/billing/user-billing-store";
+import { LIFETIME_SOLD_OUT_MESSAGE } from "@/lib/billing/lifetime-seats";
 import { getUnderlyingSubscriptionRecord, hasActiveLifetimeGrant } from "@/lib/billing/lifetime-store";
 import { getSubscriptionForUser } from "@/lib/billing/subscription-store";
 import { isMusicTrialOfferActive, musicTrialEndUnix } from "@/lib/billing/black-friday";
@@ -74,6 +75,14 @@ export async function beginDrivePlusCheckout(
 
   const isLifetime = described.mode === "payment";
   const ownsLifetime = hasActiveLifetimeGrant(input.userId);
+
+  // Lifetime is limited to LIFETIME_SEAT_LIMIT seats: block new Lifetime checkouts when sold out.
+  if (isLifetime && !ownsLifetime) {
+    const { getLifetimeSeatStatus } = await import("@/lib/billing/lifetime-seats.server");
+    if ((await getLifetimeSeatStatus()).soldOut) {
+      throw new Error(LIFETIME_SOLD_OUT_MESSAGE);
+    }
+  }
   const hasActiveSubscription =
     !ownsLifetime &&
     (await userHasActiveDrivePlusSubscription(input.userId, existingCustomerId));
