@@ -190,7 +190,7 @@ export const NEWS_ITEMS: NewsItem[] = [
       "7 Days Drive Special: Einloggen und Drive the Music ist bis 09.11. kostenlos. Alle Musik-Sounds, Auto DJ, Fusion und die neuen Autobahn-Stufen. Die Musik-Sounds stehen jetzt ganz oben in deiner Soundliste, neben American Muscle V8, Racing V10, Police Patrol und den Kutschen.",
     textRo:
       "7 Days Drive Special: autentifica-te si Drive the Music este gratuit pana pe 09.11. Toate sunetele muzicale, Auto DJ, Fusion si noile trepte de autostrada. Sunetele muzicale sunt acum sus in lista ta de sunete, langa American Muscle V8, Racing V10, Police Patrol si trasuri.",
-    image: "/news/drive-special/7day-drive-special.png",
+    image: "/news/drive-special/7day-drive-special-logo.png",
     link: { href: "/sounds", label: "Open sounds" },
   },
 ];
