@@ -30,7 +30,7 @@ export function DriveSpecialBanner({ className }: { className?: string }) {
       )}
       style={{
         borderColor: `${DRIVE_SPECIAL_PURPLE}55`,
-        background: `linear-gradient(90deg, #08050b, ${DRIVE_SPECIAL_PURPLE}2e, #08050b)`,
+        background: `linear-gradient(90deg, #08050b, ${DRIVE_SPECIAL_PURPLE}2e, #08050b), #08050b`,
       }}
     >
       <span
