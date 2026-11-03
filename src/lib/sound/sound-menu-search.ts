@@ -4,6 +4,12 @@
  */
 import { isMusicPackageProfileId } from "@/lib/entitlements/plans";
 import { DRIVE_SPECIAL_COMPANION_IDS } from "@/lib/billing/drive-special";
+import {
+  DRIVE_SPECIAL_EXCLUDED_IDS,
+  DRIVE_SPECIAL_GENRE_HOST_ID,
+  DRIVE_SPECIAL_GENRE_ITEMS,
+  driveSpecialGenreItem,
+} from "@/lib/billing/drive-special-genres";
 
 /** Lowercase, strip diacritics (ă â î ș ț ä ö ü ß …) and collapse spaces. */
 export function normalizeSearch(text: string): string {
@@ -85,22 +91,45 @@ export function filterMenuGroups<T extends SearchableProfile, G extends MenuGrou
     .filter((g) => g.profiles.length > 0);
 }
 
-/** Music profiles + the named engine sounds, in that list order (companions first). */
-export function driveSpecialPinned<T extends { id: string }>(
+/**
+ * Special group: the named engine sounds, then every Drive the Music genre (a genre with
+ * its own profile uses that profile, others are `genre:<id>` items played through
+ * Motion Orchestra), then the remaining music profiles. Excluded ids stay in `rest`.
+ */
+export function driveSpecialPinned<T extends { id: string; name: string }>(
   profiles: readonly T[],
 ): { pinned: T[]; rest: T[] } {
-  const companions = DRIVE_SPECIAL_COMPANION_IDS.map((id) =>
-    profiles.find((p) => p.id === id),
-  ).filter((p): p is T => Boolean(p));
-  const music = profiles.filter((p) => isMusicPackageProfileId(p.id));
-  const pinned = [...companions, ...music];
+  const byId = new Map(profiles.map((p) => [p.id, p]));
+  const companions = DRIVE_SPECIAL_COMPANION_IDS.map((id) => byId.get(id)).filter((p): p is T =>
+    Boolean(p),
+  );
+  const host = byId.get(DRIVE_SPECIAL_GENRE_HOST_ID);
+  const genres: T[] = [];
+  for (const g of DRIVE_SPECIAL_GENRE_ITEMS) {
+    const own = g.signature ? byId.get(g.profileId) : undefined;
+    if (own && own.name === g.name) genres.push(own);
+    else if (host) genres.push({ ...host, id: g.id, name: g.name });
+  }
+  const used = new Set([...companions, ...genres].map((p) => p.id));
+  const music = profiles.filter(
+    (p) =>
+      isMusicPackageProfileId(p.id) &&
+      !used.has(p.id) &&
+      !DRIVE_SPECIAL_EXCLUDED_IDS.includes(p.id),
+  );
+  const pinned = [...companions, ...genres, ...music];
   const ids = new Set(pinned.map((p) => p.id));
   return { pinned, rest: profiles.filter((p) => !ids.has(p.id)) };
 }
 
+/** Real profile behind a menu item id (`genre:<id>` → its playing profile). */
+export function profileIdForMenuItem(id: string): string {
+  return driveSpecialGenreItem(id)?.profileId ?? id;
+}
+
 /** Which package unlocks a locked profile, and where to buy it. */
 export function packageForProfile(profileId: string): "drive_music" | "drive_plus" {
-  return isMusicPackageProfileId(profileId) ? "drive_music" : "drive_plus";
+  return isMusicPackageProfileId(profileIdForMenuItem(profileId)) ? "drive_music" : "drive_plus";
 }
 export function pricingHrefForProfile(profileId: string): string {
   return packageForProfile(profileId) === "drive_music"

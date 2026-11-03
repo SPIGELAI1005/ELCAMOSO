@@ -23,11 +23,13 @@ import { useFeatureAccess } from "@/lib/entitlements/selectors";
 import { useAccount } from "@/lib/account/AccountProvider";
 import { isMusicPackageProfileId } from "@/lib/entitlements/plans";
 import {
-  DRIVE_SPECIAL_COMPANION_IDS,
   DRIVE_SPECIAL_NAME,
   DRIVE_SPECIAL_PURPLE,
   isDriveSpecialActive,
 } from "@/lib/billing/drive-special";
+import { GENRE_ITEM_PREFIX, driveSpecialGenreItem } from "@/lib/billing/drive-special-genres";
+import { driveSpecialPinned } from "@/lib/sound/sound-menu-search";
+import { setGenreChoice } from "@/lib/symphony/adaptive/genre-store";
 import { SoundProfileAccessIndicator } from "@/components/SoundProfileAccessIndicator";
 import { UpgradePrompt } from "@/components/premium/UpgradePrompt";
 import { trackMonetizationEvent } from "@/lib/telemetry/monetization-analytics";
@@ -75,28 +77,41 @@ function Sounds() {
   const canDrive = access.canDriveWithProfile;
   const sections = useMemo(() => {
     // 7 Days Drive Special: music sounds on top, next to the named engine sounds.
-    const specialIds = new Set<string>();
-    const special: SoundProfile[] = [];
-    if (specialActive) {
-      for (const id of DRIVE_SPECIAL_COMPANION_IDS) {
-        const p = profiles.find((x) => x.id === id);
-        if (p) special.push(p);
-      }
-      for (const p of profiles) if (isMusicPackageProfileId(p.id)) special.push(p);
-      for (const p of special) specialIds.add(p.id);
-    }
+    // Genres without their own profile show as purple pills (see specialGenres).
+    const special: SoundProfile[] = specialActive
+      ? driveSpecialPinned(profiles).pinned.filter((p) => !p.id.startsWith(GENRE_ITEM_PREFIX))
+      : [];
+    const specialIds = new Set(special.map((p) => p.id));
     const specialSection = special.length ? [{ section: DRIVE_SPECIAL_NAME, items: special }] : [];
     const remaining = profiles.filter((p) => !specialIds.has(p.id));
     const free = remaining.filter((p) => canDrive(p.id));
     if (free.length === remaining.length)
       return [...specialSection, ...groupProfilesBySection(remaining)];
     const locked = remaining.filter((p) => !canDrive(p.id));
-    const rest = groupProfilesBySection(locked).map((g) => ({
-      ...g,
-      section: `Drive+ · ${g.section}`,
-    }));
+    const lockedMusic = locked.filter((p) => isMusicPackageProfileId(p.id));
+    const lockedPlus = locked.filter((p) => !isMusicPackageProfileId(p.id));
+    const rest = [
+      ...groupProfilesBySection(lockedMusic).map((g) => ({
+        ...g,
+        section: `Drive the Music · ${g.section}`,
+      })),
+      ...groupProfilesBySection(lockedPlus).map((g) => ({
+        ...g,
+        section: `Drive+ · ${g.section}`,
+      })),
+    ];
     return [...specialSection, ...(free.length ? [{ section: "Free", items: free }] : []), ...rest];
   }, [profiles, canDrive, specialActive]);
+  const specialGenres = useMemo(
+    () =>
+      specialActive
+        ? driveSpecialPinned(profiles)
+            .pinned.filter((p) => p.id.startsWith(GENRE_ITEM_PREFIX))
+            .map((p) => driveSpecialGenreItem(p.id))
+            .filter((g): g is NonNullable<typeof g> => Boolean(g))
+        : [],
+    [profiles, specialActive],
+  );
 
   /** True when Sounds Listen / audition audio is already live. */
   const listeningLive =
@@ -284,6 +299,50 @@ function Sounds() {
                   )}
                 </p>
               ) : null}
+              {section === DRIVE_SPECIAL_NAME && specialGenres.length ? (
+                <div
+                  data-testid="special-genres"
+                  className="mt-4 flex flex-wrap gap-2"
+                  role="group"
+                  aria-label="Drive the Music genres"
+                >
+                  {specialGenres.map((g) => {
+                    const locked = !access.canDriveWithProfile(g.profileId);
+                    return (
+                      <button
+                        key={g.id}
+                        type="button"
+                        data-testid={`special-genre-${g.genreId}`}
+                        data-locked={locked ? "true" : undefined}
+                        onClick={() => {
+                          if (locked) {
+                            window.location.href = isAuthenticated
+                              ? "/pricing#drive-music"
+                              : "/auth/account/google/start";
+                            return;
+                          }
+                          if (!g.signature) setGenreChoice(g.genreId);
+                          select(g.profileId);
+                        }}
+                        className="inline-flex h-11 items-center gap-2 rounded-full border px-5 text-[11px] tracking-[0.18em] uppercase"
+                        style={{ borderColor: `${DRIVE_SPECIAL_PURPLE}99` }}
+                      >
+                        {g.name}
+                        {locked ? (
+                          <SoundProfileAccessIndicator label="Drive the Music" />
+                        ) : (
+                          <span
+                            className="rounded-full px-1.5 py-0.5 text-[8px] font-semibold tracking-[0.12em] text-white"
+                            style={{ background: DRIVE_SPECIAL_PURPLE }}
+                          >
+                            7 Days
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : null}
               <ul className="mt-4 divide-y divide-border border-y border-border">
                 {items.map((profile) => {
                   const starred = settings.favourites.includes(profile.id);
@@ -317,7 +376,13 @@ function Sounds() {
                       >
                         <span className="flex items-baseline gap-2">
                           <span className="text-xl font-light">{profile.name}</span>
-                          {lockedForDrive ? <SoundProfileAccessIndicator /> : null}
+                          {lockedForDrive ? (
+                            <SoundProfileAccessIndicator
+                              label={
+                                isMusicPackageProfileId(profile.id) ? "Drive the Music" : "Drive+"
+                              }
+                            />
+                          ) : null}
                         </span>
                         <span className="mt-2 block text-xs tracking-[0.18em] text-muted-foreground uppercase">
                           {profile.traits.join(" · ")}

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { ElcamosoLogo } from "@/components/ElcamosoLogo";
 import { PremiumBadge } from "@/components/premium/PremiumBadge";
+import { isMusicPackageProfileId } from "@/lib/entitlements/plans";
 import {
   Select,
   SelectContent,
@@ -862,7 +863,11 @@ export function DriveCockpit({
                         aria-disabled={(locked && !active) || undefined}
                         onClick={() => {
                           if (locked && !active) {
-                            setSwitchStatus(DRIVE_PLUS_LOCKED_MESSAGE);
+                            setSwitchStatus(
+                              isMusicPackageProfileId(item.id)
+                                ? "Part of Drive the Music."
+                                : DRIVE_PLUS_LOCKED_MESSAGE,
+                            );
                             return;
                           }
                           void pickSound(item.id);
@@ -887,7 +892,12 @@ export function DriveCockpit({
                             {item.traits.join(" · ")}
                           </span>
                         </span>
-                        {locked ? <PremiumBadge className="mt-0.5 shrink-0" /> : null}
+                        {locked ? (
+                          <PremiumBadge
+                            className="mt-0.5 shrink-0"
+                            label={isMusicPackageProfileId(item.id) ? "Drive the Music" : "Drive+"}
+                          />
+                        ) : null}
                       </button>
                     );
                   })}

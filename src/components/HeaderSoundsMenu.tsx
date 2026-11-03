@@ -36,7 +36,10 @@ import {
   filterMenuGroups,
   packageForProfile,
   pricingHrefForProfile,
+  profileIdForMenuItem,
 } from "@/lib/sound/sound-menu-search";
+import { driveSpecialGenreItem } from "@/lib/billing/drive-special-genres";
+import { getGenreChoice, setGenreChoice } from "@/lib/symphony/adaptive/genre-store";
 
 type MenuGroup = {
   category: ProfileCategory | typeof HALLOWEEN_TAG | typeof DRIVE_SPECIAL_NAME;
@@ -154,7 +157,9 @@ export function HeaderSoundsMenu({
       </p>
       <p className="mt-0.5 text-muted-foreground">
         {isAuthenticated
-          ? "Upgrade to Drive+ to drive with every sound."
+          ? packageForProfile(upsellProfile.id) === "drive_music"
+            ? "Get Drive the Music to drive with every music sound."
+            : "Upgrade to Drive+ to drive with every sound."
           : "Sign in to use Drive+ or sounds granted to your account."}
       </p>
       <div className="mt-2 flex flex-wrap gap-2">
@@ -265,9 +270,14 @@ export function HeaderSoundsMenu({
             </p>
           ) : null}
           {profiles.map((profile) => {
-            const locked = !canDriveWithProfile(profile.id);
-            const selectable = canSelect(profile.id);
-            const active = profile.id === activeId;
+            const realId = profileIdForMenuItem(profile.id);
+            const genreItem = driveSpecialGenreItem(profile.id);
+            const locked = !canDriveWithProfile(realId);
+            const selectable = canSelect(realId);
+            const active = genreItem
+              ? realId === activeId &&
+                (genreItem.signature || getGenreChoice() === genreItem.genreId)
+              : profile.id === activeId;
             return (
               <button
                 key={profile.id}
@@ -275,7 +285,11 @@ export function HeaderSoundsMenu({
                 role="menuitem"
                 data-testid={`sound-item-${profile.id}`}
                 data-locked={locked ? "true" : undefined}
-                onClick={() => (locked ? goToPackage(profile.id) : selectProfile(profile.id))}
+                onClick={() => {
+                  if (locked) return goToPackage(realId);
+                  if (genreItem && !genreItem.signature) setGenreChoice(genreItem.genreId);
+                  selectProfile(realId);
+                }}
                 className={cn(
                   "flex min-h-11 w-full items-center justify-between gap-2 rounded-sm px-3 py-2.5 text-left text-xs tracking-[0.08em] transition-colors",
                   active
@@ -303,7 +317,14 @@ export function HeaderSoundsMenu({
                     7 Days
                   </span>
                 ) : null}
-                {locked ? <PremiumBadge className="shrink-0" /> : null}
+                {locked ? (
+                  <PremiumBadge
+                    className="shrink-0"
+                    label={
+                      packageForProfile(realId) === "drive_music" ? "Drive the Music" : "Drive+"
+                    }
+                  />
+                ) : null}
               </button>
             );
           })}

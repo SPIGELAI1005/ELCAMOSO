@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
   driveSpecialPinned,
+  profileIdForMenuItem,
   filterMenuGroups,
   matchesSoundQuery,
   normalizeSearch,
   pricingHrefForProfile,
+  packageForProfile,
 } from "@/lib/sound/sound-menu-search";
 import { SOUND_PROFILES } from "@/lib/sound/profiles";
 import { profilesByCategory } from "@/components/HeaderSoundsMenu";
@@ -57,7 +59,36 @@ describe("special pinning", () => {
       "wild-west-carriage",
       "romanian-85-carriage",
     ]);
-    expect(pinned.slice(5).every((p) => /^(symphony|fusion)-/.test(p.id))).toBe(true);
+    expect(pinned.slice(5).every((p) => /^(symphony-|fusion-|genre:)/.test(p.id))).toBe(true);
+    const ids = pinned.map((p) => p.id);
+    expect(ids).not.toContain("fusion-mechanical-symphony");
+    expect(ids).not.toContain("fusion-future-pulse");
+    expect(pinned.slice(5, 20).map((p) => p.name)).toEqual([
+      "Cinematic Orchestra",
+      "House / Techno",
+      "Rock",
+      "Pop",
+      "Metal",
+      "Hip-hop",
+      "Country",
+      "Vienna Waltz",
+      "Electro Bass",
+      "Road Anthem",
+      "Midnight Dark Rave",
+      "Latino Fiesta",
+      "Gothic Night",
+      "Piano Flow",
+      "Jazz Cruise",
+    ]);
+    expect(profileIdForMenuItem("genre:rock")).toBe("symphony-motion-orchestra");
+    expect(profileIdForMenuItem("genre:darkrave")).toBe("fusion-midnight-boost");
+    expect(packageForProfile("genre:gothic")).toBe("drive_music");
+    const musical = profilesByCategory(Date.parse("2026-11-05T12:00:00+01:00")).find(
+      (g) => g.category === "Musical",
+    );
+    expect(musical?.profiles.map((p) => p.id)).toEqual(
+      expect.arrayContaining(["fusion-mechanical-symphony", "fusion-future-pulse"]),
+    );
     expect(profilesByCategory(Date.parse("2026-11-05T12:00:00+01:00"))[0].category).toBe(
       "7 Days Drive Special",
     );
