@@ -17,7 +17,7 @@ export const PUBLIC_PROFILE_IDS = [
   "maglev-train", "high-speed-train", "submarine", "jet-ski", "motorcycle-superbike", "big-twin",
   "snowmobile", "tank", "construction-monster", "horse-gallop", "dragon", "thunder-beast",
   "retro-arcade", "synthwave-drive", "deep-bass-pulse", "zen-drive", "rain-drive", "ocean-drive",
-  "heartbeat", "rocket-car", "time-machine", "f1-v10", "traby", "ge-squared", "police-patrol", "symphony-cinematic-rock", "symphony-motion-orchestra", "symphony-neon-run", "symphony-latino-fiesta", "symphony-piano-flow", "symphony-jazz-cruise",
+  "heartbeat", "rocket-car", "time-machine", "f1-v10", "traby", "ge-squared", "ge-squared-90", "police-patrol", "symphony-cinematic-rock", "symphony-motion-orchestra", "symphony-neon-run", "symphony-latino-fiesta", "symphony-piano-flow", "symphony-jazz-cruise",
   "world-space-drive", "world-cyber-city", "world-storm-run", "fusion-road-anthem",
   "fusion-mechanical-symphony", "fusion-midnight-boost", "fusion-future-pulse",
 ] as const;
@@ -187,6 +187,7 @@ export const PROFILE_EXPERIENCE_CONFIG = {
   "f1-v10": combustion({ aspiration: "naturally-aspirated", availableRoles: ["combustion", "intake", "exhaust", "mechanical", "event"], transitionTauSeconds: 0.045, phases: { idleCharacter: 0.7, pullAwayTexture: 0.92, accelerationTexture: 1.3, cruiseIntrusiveScale: 0.90, releaseCharacter: 0.5 }, variation: { depth: 0.012, minEventCooldownSeconds: 7 } }),
   "traby": combustion({ aspiration: "naturally-aspirated", availableRoles: ["combustion", "exhaust", "mechanical", "event"], transitionTauSeconds: 0.1, phases: { idleCharacter: 1.1, pullAwayTexture: 1.05, accelerationTexture: 1.12, cruiseIntrusiveScale: 0.86, releaseCharacter: 0.7 } }),
   "ge-squared": combustion({ aspiration: "turbocharged", availableRoles: ["combustion", "intake", "exhaust", "boost", "mechanical", "event"], transitionTauSeconds: 0.1, phases: { idleCharacter: 1.1, pullAwayTexture: 1.1, accelerationTexture: 1.18, cruiseIntrusiveScale: 0.9, releaseCharacter: 0.72 }, aspirationDynamics: { attackSeconds: 0.7, decaySeconds: 0.45, minimumReleaseState: 0.6 } }),
+  "ge-squared-90": combustion({ aspiration: "naturally-aspirated", availableRoles: ["combustion", "intake", "exhaust", "mechanical", "event"], transitionTauSeconds: 0.14, phases: { idleCharacter: 1.0, pullAwayTexture: 0.95, accelerationTexture: 0.95, cruiseIntrusiveScale: 0.8, releaseCharacter: 0.6 } }),
   "police-patrol": combustion({ aspiration: "naturally-aspirated", availableRoles: ["combustion", "intake", "exhaust", "mechanical", "event"], transitionTauSeconds: 0.06, phases: { idleCharacter: 0.9, pullAwayTexture: 1.0, accelerationTexture: 1.22, cruiseIntrusiveScale: 0.88, releaseCharacter: 0.6 }, variation: { depth: 0.012, minEventCooldownSeconds: 7 } }),
   "symphony-cinematic-rock": musical(["music", "event"], { transitionTauSeconds: 0.18, physics: "intentional-design", phases: { cruiseIntrusiveScale: 0.56, accelerationTexture: 1.14 } }),
   "symphony-motion-orchestra": musical(["music", "event"], { transitionTauSeconds: 0.22, physics: "intentional-design", phases: { cruiseIntrusiveScale: 0.58, accelerationTexture: 1.12 } }),

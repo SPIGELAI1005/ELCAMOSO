@@ -816,11 +816,11 @@ export const EXPANSION_PROFILES: SoundProfile[] = [
   },
   {
     id: "ge-squared",
-    name: "Ge-Squared",
+    name: "Ge-Squared O)))",
     category: "Classic",
-    traits: ["Biturbo", "Off-Road", "Brutal"],
+    traits: ["Biturbo", "Modern", "Brutal"],
     description:
-      "A boxy 4x4 with a biturbo V8: lumpy cross-plane idle, twin turbos spooling up under load, blow-off sighs between gears and crackles when you lift.",
+      "The modern boxy 4x4 with a biturbo V8: lumpy idle, twin turbos spooling hard under load, brutal pulls, blow-off sighs between gears and crackles when you lift.",
     drivetrainMode: "virtual-transmission",
     motionModel: "virtual-transmission",
     sourceMode: "procedural",
@@ -852,6 +852,46 @@ export const EXPANSION_PROFILES: SoundProfile[] = [
       gearRatios: [13.8, 8.6, 6.2, 4.8, 3.9, 3.3, 2.9],
       idleRpm: 700,
       redlineRpm: 6200,
+      shiftSmoothing: 0.18,
+    },
+  },  {
+    id: "ge-squared-90",
+    name: "Ge-Squared '90",
+    category: "Classic",
+    traits: ["V8", "Off-Road", "Relaxed"],
+    description:
+      "The classic 1990s boxy 4x4 with a big V8: soft, smooth burble, relaxed torque and gentle, unhurried acceleration.",
+    drivetrainMode: "virtual-transmission",
+    motionModel: "virtual-transmission",
+    sourceMode: "procedural",
+    drivetrainPersonalityId: "american-v8",
+    voice: {
+      baseFrequency: 23,
+      // cross-plane V8: uneven pulse pattern gives the burble
+      harmonics: [1, 1.5, 2, 2.98, 4, 5.02],
+      waveResponse: 0.85,
+      filterBase: 200,
+      filterRange: 2600,
+      noise: 0.15,
+      detune: 13,
+      wave: "sawtooth",
+      lfoRate: 3.4,
+      lfoDepth: 6,
+      lfoTarget: "amp",
+      textures: [
+        { kind: "rumble", level: 0.34, tone: 90, speedScale: 0.55, surge: 0.5 },
+        // turbo whine sits high and follows the load
+        { kind: "sizzle", level: 0.09, tone: 5200, speedScale: 1 },
+        { kind: "wind", level: 0.14, tone: 1500, speedScale: 1 },
+      ],
+      signals: [
+        { kind: "whistle", everySeconds: 9, jitter: 4, level: 0.07, tone: 3200, speedLinked: true },
+      ],
+    },
+    transmission: {
+      gearRatios: [12.4, 7.4, 4.9, 3.6],
+      idleRpm: 700,
+      redlineRpm: 5200,
       shiftSmoothing: 0.18,
     },
   },

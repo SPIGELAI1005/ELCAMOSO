@@ -199,6 +199,17 @@ const baseStrategies: ProfileStrategy[] = [
     body: [75, 140, 240],
     pulse: 75,
   }),
+  combustionFamily("ge-squared-90", {
+    ratios: [1, 2, 3, 4.02, 6],
+    weights: [1, 0.75, 0.48, 0.3, 0.18],
+    cylinders: 8,
+    drive: 0.42,
+    filterBase: 180,
+    intake: 0.24,
+    mechanical: 0.07,
+    body: [75, 140, 240],
+    pulse: 75,
+  }),
   combustionFamily("police-patrol", {
     ratios: [1, 2, 3.01, 5, 7.03, 9],
     weights: [0.6, 0.7, 0.6, 0.45, 0.3, 0.2],

@@ -19,13 +19,13 @@ import {
 import { LISTENING_RUBRIC_DIMENSIONS } from "@/lib/sound/realism/catalog-tuning/listening-rubric";
 
 describe("Prompt 07 catalog tuning", () => {
-  it("covers the live public catalog (67) with one distinct row per ID", () => {
-    expect(PUBLIC_PROFILE_IDS).toHaveLength(67);
+  it("covers the live public catalog (68) with one distinct row per ID", () => {
+    expect(PUBLIC_PROFILE_IDS).toHaveLength(68);
     const entries = allCatalogTuningEntries();
-    expect(entries).toHaveLength(67);
+    expect(entries).toHaveLength(68);
     expect(Object.keys(CATALOG_TUNING_BY_PROFILE).sort()).toEqual([...PUBLIC_PROFILE_IDS].sort());
     const ids = new Set(entries.map((e) => e.profileId));
-    expect(ids.size).toBe(67);
+    expect(ids.size).toBe(68);
   });
 
   it("gives every row a concrete outcome or explicit blocker", () => {
@@ -51,7 +51,7 @@ describe("Prompt 07 catalog tuning", () => {
 
   it("applies combustion acoustic overlays distinctly for V2 engines", () => {
     const combustion = PUBLIC_PROFILE_IDS.filter((id) => isCombustionRealismV2Profile(id));
-    expect(combustion.length).toBe(10);
+    expect(combustion.length).toBe(13);
     for (const id of combustion) {
       const base = acousticEngineBaseForProfile(id)!;
       const tuned = acousticEngineForProfile(id)!;
