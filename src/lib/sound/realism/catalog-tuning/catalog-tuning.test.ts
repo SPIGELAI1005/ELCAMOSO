@@ -51,7 +51,7 @@ describe("Prompt 07 catalog tuning", () => {
 
   it("applies combustion acoustic overlays distinctly for V2 engines", () => {
     const combustion = PUBLIC_PROFILE_IDS.filter((id) => isCombustionRealismV2Profile(id));
-    expect(combustion.length).toBe(10);
+    expect(combustion.length).toBe(11);
     for (const id of combustion) {
       const base = acousticEngineBaseForProfile(id)!;
       const tuned = acousticEngineForProfile(id)!;

@@ -151,6 +151,7 @@ export const TOPOLOGY_PILOT_PROFILE_IDS = [
   "rally-car",
   "motorcycle-superbike",
   "big-twin",
+  "traby",
 ] as const;
 export type TopologyPilotProfileId = (typeof TOPOLOGY_PILOT_PROFILE_IDS)[number];
 
@@ -568,6 +569,23 @@ export const V_TWIN_TOPOLOGY: CombustionTopologyV1 = {
   ],
 };
 
+/** Traby: two-stroke parallel twin, both cylinders fire every revolution (180° apart). */
+export const TWO_STROKE_TWIN_TOPOLOGY: CombustionTopologyV1 = {
+  version: 1,
+  cycleDegrees: 360,
+  cylinderCount: 2,
+  noiseScale: 0.4,
+  collectors: [{ id: 0 }],
+  soundSpeedMetresPerSecond: TOPOLOGY_SOUND_SPEED_DEFAULT,
+  cylinders: [
+    { id: 1, firingAngleDegrees: 0, collectorId: 0, pulseWeight: 1.08, primaryLengthMetres: 0.07 },
+    { id: 2, firingAngleDegrees: 180, collectorId: 0, pulseWeight: 0.92, primaryLengthMetres: 0.09 },
+  ],
+  // Ring-ding idle: clearly uneven cycles and a wandering crank.
+  cycleLope: 0.7,
+  organic: { crankJitter: 0.006, crankWander: 0.005, wanderHz: 1.4 },
+};
+
 export const TOPOLOGY_BY_PILOT_PROFILE: Record<TopologyPilotProfileId, CombustionTopologyV1> = {
   "american-muscle-v8": MUSCLE_V8_TOPOLOGY,
   "race-car": FLAT_PLANE_V8_TOPOLOGY,
@@ -579,6 +597,7 @@ export const TOPOLOGY_BY_PILOT_PROFILE: Record<TopologyPilotProfileId, Combustio
   "rally-car": RALLY_I3_TOPOLOGY,
   "motorcycle-superbike": SUPERBIKE_I4_TOPOLOGY,
   "big-twin": V_TWIN_TOPOLOGY,
+  "traby": TWO_STROKE_TWIN_TOPOLOGY,
 };
 
 export function combustionTopologyForProfile(profileId: string): CombustionTopologyV1 | null {

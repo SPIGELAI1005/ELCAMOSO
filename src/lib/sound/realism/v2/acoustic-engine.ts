@@ -626,6 +626,46 @@ const V_TWIN: AcousticEngineConfig = {
   growl: { centersHz: [180, 380], q: 0.9, drive: 0.85, level: 0.05, lowpassHz: 2600 },
 };
 
+/**
+ * Traby: small two-stroke parallel twin (fires every revolution). Voiced against a
+ * public-domain two-stroke recording (energy 100-200 Hz, steep top roll-off): nasal
+ * "ring-ding" buzz from the expansion pipe, a dry rattle and a light misfiring idle.
+ */
+const TWO_STROKE_TWIN: AcousticEngineConfig = {
+  cylinders: 2,
+  stroke: "two-stroke",
+  architecture: "v-twin",
+  banks: "inline",
+  architectureCode: 0,
+  idleIrregularity: 0.5,
+  exhaustPulse: 0.84,
+  intakePresence: 0.3,
+  mechanicalIntensity: 0.55,
+  combustionSharpness: 0.74,
+  highLoadEnrichment: 0.6,
+  loadContrast: 0.7,
+  upperRpmEnergy: 0.7,
+  intakeLoadResponse: 0.5,
+  overrunCharacter: 0.62,
+  exhaustFormantsHz: [140, 290, 600, 1150],
+  intakeFormantsHz: [520, 1100, 2100],
+  bodyResonanceHz: [150, 320, 680],
+  supportRatios: [1, 2, 3, 4, 5],
+  supportWeights: [0.9, 0.62, 0.42, 0.24, 0.12],
+  forcedInduction: false,
+  bodyBrightness: 0.5,
+  redlineRpm: 4200,
+  outputTrimDb: 18.0,
+  throttleGapDb: 2.4,
+  // Ring-ding idle: uneven hunt and the odd soft stumble.
+  idleLife: { wanderRpm: 90, wanderTauS: 0.3, blipRpm: [200, 600], blipEveryS: [3, 7], blipIntensity: 0.14, breathDb: 1.6 },
+  accelCharacter: { gentleGainDb: -1, hardGainDb: 2, hardTiltDb: 3, gentleTiltDb: -1 },
+  // Nasal buzz under load.
+  growl: { centersHz: [300, 640], q: 1.1, drive: 0.8, level: 0.05, lowpassHz: 2800 },
+  // Overrun: soft "ring-ding" crackle, not big bangs.
+  liftPops: { probability: 0.7, level: 0.18, rate: 1.2 },
+};
+
 /** Sound profile id → acoustic config for Realism V2 combustion. */
 export const ACOUSTIC_ENGINE_BY_PROFILE: Record<string, AcousticEngineConfig> = {
   "gt-v8": GT_V8,
@@ -638,6 +678,7 @@ export const ACOUSTIC_ENGINE_BY_PROFILE: Record<string, AcousticEngineConfig> = 
   "rally-car": RALLY_TURBO_3,
   "motorcycle-superbike": INLINE_4,
   "big-twin": V_TWIN,
+  "traby": TWO_STROKE_TWIN,
 };
 
 /** Drivetrain personality id → acoustic config. */

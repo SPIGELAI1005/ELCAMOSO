@@ -319,6 +319,7 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
   },
   "traby": {
     profileId: "traby",
+    acousticOverlay: { exhaustPulse: 0.86, bodyBrightness: 0.52 },
     family: familyForProfile("traby"),
     intendedIdentity: "Small two-stroke twin — buzzy putt-putt",
     previousSource: "New profile",

@@ -350,6 +350,13 @@ export interface RecordedLoopBank {
    * spectrum (dB per band: 100 Hz low shelf, 250 / 600 / 1400 Hz peaks, 3 kHz high shelf).
    */
   synthMatch?: { rpm: number[]; bandsDb: number[][] };
+  /**
+   * Optional synth duck at full sample weight (default RECORDED_SYNTH_DUCK). Close to 1 = the
+   * recordings carry the sound and the synth only adds a little sub and continuity.
+   */
+  synthDuck?: number;
+  /** Optional synth duck under load / acceleration (blends from synthDuck); >= 1.05 mutes the synth. */
+  loadSynthDuck?: number;
   /** Match-EQ on the recorded layer toward the synth timbre (dB). */
   eq: {
     lowShelfDb: number;
@@ -622,6 +629,71 @@ export const RECORDED_LOOP_BANKS: Record<string, RecordedLoopBank> = {
   },
 };
 
+
+/**
+ * Per-profile recorded banks (v7): each of these three cars plays its own recording, so they
+ * no longer share a personality bank. Regions were cut from free recordings (CC0 / CC BY 3.0,
+ * see RECORDED_LOOP_CREDITS), high-passed at 30 Hz and set to equal loudness per region; RPM
+ * tracks are measured every 0.1 s from the firing line.
+ */
+const PROFILE_BASE = "/sample-packs/recorded/v7";
+const TRABY_IDLE_REGIONS: RecordedRegion[] = [
+  { start: 0.06, end: 10.02, rpm: [877, 877, 885, 885, 935, 951, 902, 869, 869, 910, 869, 869, 861, 902, 852, 910, 852, 894, 852, 845, 845, 852, 943, 902, 877, 877, 885, 877, 820, 836, 861, 877, 910, 869, 852, 852, 852, 861, 861, 861, 869, 1000, 885, 861, 1000, 1000, 1000, 935, 959, 852, 852, 976, 976, 968, 894, 1000, 984, 976, 1000, 935, 959, 1000, 852, 885, 877, 894, 787, 845, 836, 951, 845, 968, 968, 828, 869, 984, 984, 1000, 968, 968, 984, 869, 968, 1000, 1000, 1000, 852, 845, 845, 861, 968, 959, 910, 804, 861, 861, 869, 976, 968, 877] },
+  { start: 10.1, end: 18.26, rpm: [902, 984, 984, 943, 935, 852, 1000, 1000, 1000, 885, 885, 869, 852, 852, 836, 976, 1000, 885, 885, 885, 885, 812, 894, 1009, 869, 869, 877, 902, 910, 1009, 1000, 877, 869, 861, 845, 861, 852, 852, 861, 861, 869, 861, 1009, 1033, 935, 943, 951, 894, 943, 951, 1016, 976, 976, 1000, 885, 787, 820, 812, 902, 902, 951, 852, 894, 894, 910, 869, 869, 852, 861, 845, 845, 852, 852, 812, 885, 869, 861, 861, 1009, 1009, 992, 852] },
+];
+const TRABY_GROWL_REGIONS: RecordedRegion[] = [
+  { start: 18.34, end: 20.5, rpm: [892, 1002, 866, 900, 908, 959, 968, 985, 994, 977, 943, 917, 849, 841, 789, 773, 756, 738, 705, 688, 662, 654] },
+  { start: 20.58, end: 22.94, rpm: [875, 866, 883, 900, 917, 917, 917, 926, 951, 968, 994, 1010, 1036, 1045, 1027, 1027, 892, 892, 875, 875, 892, 883, 892, 875] },
+];
+const TRABY_HARD_REGIONS: RecordedRegion[] = [
+  { start: 23.02, end: 24.78, rpm: [1036, 892, 892, 994, 883, 892, 951, 959, 926, 917, 841, 756, 892, 892, 875, 934, 968, 968] },
+];
+const TRABY_REV_GROWL_REGIONS: RecordedRegion[] = [
+  { start: 0.06, end: 11.02, rpm: [1951, 1986, 2091, 1880, 2074, 2126, 2179, 2179, 2074, 2074, 2091, 2074, 2056, 1758, 1792, 1792, 1758, 1705, 1670, 1670, 1740, 1898, 1863, 1845, 1986, 2022, 2022, 2109, 2109, 2038, 2038, 2038, 2144, 1827, 1810, 1845, 1845, 1951, 1845, 1845, 1827, 1758, 1740, 2038, 2074, 1933, 1916, 2056, 2056, 1933, 1969, 2022, 1880, 1986, 2022, 2126, 2109, 1792, 1863, 1898, 2109, 2268, 2425, 2478, 2496, 2443, 2373, 2022, 1723, 1827, 1670, 1933, 1933, 2056, 1863, 1845, 1845, 1986, 1898, 1916, 1933, 1740, 2038, 2056, 2109, 2091, 1951, 1810, 1951, 2109, 2268, 2408, 2654, 2636, 2619, 2530, 2443, 2408, 2355, 2320, 2302, 2162, 1845, 2074, 2056, 2038, 1951, 1951, 1827, 1827] },
+];
+const TRABY_REV_HARD_REGIONS: RecordedRegion[] = [
+  { start: 11.1, end: 18.36, rpm: [1845, 2056, 1810, 1774, 1880, 2109, 2162, 1845, 1827, 1810, 1863, 1898, 2022, 2162, 2179, 2126, 2074, 2074, 1986, 2004, 2004, 2038, 2337, 2250, 2250, 2162, 2022, 2022, 2056, 2091, 1827, 1845, 1810, 1546, 1564, 1687, 1723, 1845, 1916, 2004, 2109, 2284, 2390, 2530, 2689, 2953, 3111, 3093, 3638, 3674, 3638, 3603, 3445, 3445, 3339, 3902, 3778, 3762, 3621, 3568, 3532, 3480, 3357, 3322, 3234, 3709, 3691, 3480, 3480, 3955, 3709, 3638, 3621] },
+];
+
+const src = (
+  id: string,
+  file: string,
+  regions: RecordedRegion[],
+  load: SourceLoad,
+  minRate: number,
+  maxRate: number,
+  weight = 1,
+): RecordedSource => ({ id, url: `${PROFILE_BASE}/${file}`, regions, weight, minRate, maxRate, load });
+
+// Recordings carry these three across the whole rev range (rate-capped grains, several rev-band
+// clips per load), the synth is ducked to a little sub and continuity underneath.
+const RAW_HANDOVER: RecordedHandover = { rpmStart: 0, rpmSpan: 1, accelKeep: 1, rpmKeep: 0.96, topRpm: 20000, topSpan: 1000 };
+
+export const RECORDED_LOOP_BANKS_BY_PROFILE: Record<string, RecordedLoopBank> = {
+  // Small two-stroke twin: ring-ding idle, buzzy rattly revs. Idle clip for idle, the revving
+  // clip (rev blips) for driving so the two-stroke buzz stays under load.
+  traby: {
+    personalityId: "traby",
+    sources: [
+      src("traby-idle", "traby_twin.m4a", TRABY_IDLE_REGIONS, "idle", 0.8, 1.6),
+      src("traby-cruise", "traby_twin_rev.m4a", TRABY_REV_GROWL_REGIONS, "cruise", 0.6, 1.5),
+      src("traby-growl", "traby_twin_rev.m4a", TRABY_REV_GROWL_REGIONS, "growl", 0.6, 1.5, 1.2),
+      src("traby-hard", "traby_twin_rev.m4a", [...TRABY_REV_GROWL_REGIONS, ...TRABY_REV_HARD_REGIONS], "hard", 0.6, 1.45, 1.3),
+      src("traby-overrun", "traby_twin_rev.m4a", TRABY_REV_GROWL_REGIONS, "overrun", 0.55, 1.4, 0.8),
+    ],
+    level: 0.34,
+    synthDuck: 0.97,
+    loadSynthDuck: 1.05,
+    handover: RAW_HANDOVER,
+    eq: { lowShelfDb: 4, midDb: 3, midHz: 900, highShelfDb: 1, highShelfHz: 3000, lowpassHz: 10000 },
+  },
+};
+
+/** Recorded bank for a profile: its own bank first, then the shared personality bank. */
+export function getRecordedLoopBankForProfile(profileId: string, personalityId: string): RecordedLoopBank | null {
+  return RECORDED_LOOP_BANKS_BY_PROFILE[profileId] ?? getRecordedLoopBank(personalityId);
+}
+
 export function getRecordedLoopBank(personalityId: string): RecordedLoopBank | null {
   return RECORDED_LOOP_BANKS[personalityId] ?? null;
 }
@@ -875,5 +947,24 @@ export const RECORDED_LOOP_CREDITS: RecordedCredit[] = [
     usedIn: "Grand Prix Mood (high-rpm pass-by texture)",
     attribution:
       "F1practice3MelbGP2012DR066 by Ears68 (Freesound #150337), CC0 1.0, edited (short pass-by clips, filtered, granular).",
+  },
+
+  {
+    title: "Two-stroke twin car engine (Freesound #412819)",
+    author: "blukotek",
+    licence: "CC0 1.0",
+    licenceUrl: "https://creativecommons.org/publicdomain/zero/1.0/",
+    sourceUrl: "https://freesound.org/s/412819/",
+    usedIn: "Traby (idle)",
+    attribution: "Two-stroke engine recording by blukotek (Freesound #412819), CC0 1.0, edited (trimmed, filtered, granular).",
+  },
+  {
+    title: "Two-stroke twin car engine, revving (Freesound #412818)",
+    author: "blukotek",
+    licence: "CC0 1.0",
+    licenceUrl: "https://creativecommons.org/publicdomain/zero/1.0/",
+    sourceUrl: "https://freesound.org/s/412818/",
+    usedIn: "Traby (driving, revs)",
+    attribution: "Two-stroke engine recording by blukotek (Freesound #412818), CC0 1.0, edited (trimmed, filtered, granular).",
   },
 ];
