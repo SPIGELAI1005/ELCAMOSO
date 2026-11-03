@@ -2,7 +2,10 @@ import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 
 import { DynamicDriveTrialOffer } from "@/components/dynamic-drive-trial/DynamicDriveTrialOffer";
-import { useBillingPublicConfig, useMonetizationEnabled } from "@/lib/billing/use-billing-public-config";
+import {
+  useBillingPublicConfig,
+  useMonetizationEnabled,
+} from "@/lib/billing/use-billing-public-config";
 import type { LifetimeSeatStatus } from "@/lib/billing/lifetime-seats";
 import type { Locale } from "@/lib/i18n";
 import {
@@ -144,9 +147,7 @@ export function LifetimeSeatsCounter({
 }) {
   if (!seats) return null;
   const fill = (key: string) =>
-    t(language, key)
-      .replace("{left}", String(seats.left))
-      .replace("{limit}", String(seats.limit));
+    t(language, key).replace("{left}", String(seats.left)).replace("{limit}", String(seats.limit));
   return (
     <p
       data-testid="lifetime-seats"
@@ -206,7 +207,7 @@ export function PlansOverview({
             </p>
           ) : null}
         </div>
-        <div className={compact ? "py-8" : "py-12"} data-testid="plan-drive-plus">
+        <div className={compact ? "py-8" : "py-12"} id="drive-plus" data-testid="plan-drive-plus">
           <p className="text-xs tracking-[0.2em] text-muted-foreground uppercase">Drive+</p>
           <p className="mt-3 text-2xl font-light">Every engine sound.</p>
           <PlanPrice
@@ -236,11 +237,12 @@ export function PlansOverview({
                 billingNoticeTone === "danger" ? "text-[#e53935]" : "text-muted-foreground",
               )}
             >
-              All purchases (Drive+, Drive the Music, Lifetime and individual sounds) open on 9.11.2026. Until then, ELCAMOSO is free of charge.
+              All purchases (Drive+, Drive the Music, Lifetime and individual sounds) open on
+              9.11.2026. Until then, ELCAMOSO is free of charge.
             </p>
           ) : null}
         </div>
-        <div className={compact ? "py-8" : "py-12"} data-testid="plan-drive-music">
+        <div className={compact ? "py-8" : "py-12"} id="drive-music" data-testid="plan-drive-music">
           <div className="flex flex-wrap items-center gap-3">
             <p className="text-xs tracking-[0.2em] text-muted-foreground uppercase">
               Drive the Music
@@ -298,7 +300,9 @@ export function PlansOverview({
           <p className="mt-2 text-xs tracking-[0.12em] text-muted-foreground uppercase">
             {t(language, "pricing.lifetimeDiscount")}
           </p>
-          <p className="mt-4 text-sm text-muted-foreground">{t(language, "pricing.lifetimeBody")}</p>
+          <p className="mt-4 text-sm text-muted-foreground">
+            {t(language, "pricing.lifetimeBody")}
+          </p>
           <p className="mt-3 text-sm text-[#e53935]" data-testid="lifetime-payback">
             {t(language, "pricing.lifetimePayback")}
           </p>

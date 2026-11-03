@@ -1,5 +1,6 @@
 import { formatSpeed } from "@/lib/i18n";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, redirect } from "@tanstack/react-router";
+import { DEMO_PAGE_ENABLED } from "@/lib/feature-flags";
 import { createSeoHeadFromPath } from "@/lib/seo";
 import { useCallback } from "react";
 import { ElcamosoMark } from "@/components/ElcamosoLogo";
@@ -16,6 +17,9 @@ import { DemoGuidedTour } from "@/components/DemoGuidedTour";
 import { getSession } from "@/lib/drive/session";
 
 export const Route = createFileRoute("/demo")({
+  beforeLoad: () => {
+    if (!DEMO_PAGE_ENABLED) throw redirect({ to: "/" });
+  },
   component: DemoDrive,
   head: () => createSeoHeadFromPath("/demo"),
 });

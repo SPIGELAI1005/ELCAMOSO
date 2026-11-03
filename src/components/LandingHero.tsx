@@ -8,6 +8,7 @@ import {
 import { HeroSoundBackdrop } from "@/components/HeroSoundBackdrop";
 import { StartDriveMarkControl } from "@/components/StartDriveMarkControl";
 import { cn } from "@/lib/utils";
+import { DEMO_PAGE_ENABLED } from "@/lib/feature-flags";
 
 /**
  * Hero Start Drive: brand + expansion above, O ))) in the middle, tagline next,
@@ -28,10 +29,7 @@ export function LandingStartDriveMark({
 
   return (
     <div
-      className={cn(
-        "inline-flex w-fit max-w-full flex-col items-center text-center",
-        className,
-      )}
+      className={cn("inline-flex w-fit max-w-full flex-col items-center text-center", className)}
     >
       <div className="inline-flex w-fit max-w-full flex-col items-center">
         <ElcamosoWordmark
@@ -79,25 +77,24 @@ function HeroSecondaryLinks({ className }: { className?: string }) {
       )}
     >
       <div className="flex items-center gap-3">
-        <Link
-          to="/story"
-          className="group shrink-0 leading-[1.2] text-muted-foreground"
-        >
+        <Link to="/story" className="group shrink-0 leading-[1.2] text-muted-foreground">
           Read{" "}
-          <span className="text-[#e53935] transition-colors group-hover:text-[#ff5252]">
-            Story
-          </span>
+          <span className="text-[#e53935] transition-colors group-hover:text-[#ff5252]">Story</span>
         </Link>
-        <span className="text-muted-foreground/50" aria-hidden="true">
-          //
-        </span>
-        <Link
-          to="/demo"
-          hash="feel"
-          className="shrink-0 text-muted-foreground hover:text-foreground"
-        >
-          Hear it
-        </Link>
+        {DEMO_PAGE_ENABLED ? (
+          <>
+            <span className="text-muted-foreground/50" aria-hidden="true">
+              //
+            </span>
+            <Link
+              to="/demo"
+              hash="feel"
+              className="shrink-0 text-muted-foreground hover:text-foreground"
+            >
+              Hear it
+            </Link>
+          </>
+        ) : null}
       </div>
       <Link to="/explore" className="text-muted-foreground hover:text-foreground">
         Explore Experiences

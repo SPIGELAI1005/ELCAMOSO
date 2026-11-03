@@ -5,6 +5,7 @@ import { ElcamosoMark } from "@/components/ElcamosoLogo";
 import { useSettings } from "@/lib/drive/useSettings";
 import { useReducedMotion } from "@/lib/drive/useReducedMotion";
 import { trackEvent } from "@/lib/telemetry/analytics";
+import { DEMO_PAGE_ENABLED } from "@/lib/feature-flags";
 
 export const Route = createFileRoute("/calibrate")({
   component: Calibrate,
@@ -234,12 +235,14 @@ function Calibrate() {
             >
               Reset
             </button>
-            <Link
-              to="/demo"
-              className="text-[11px] tracking-[0.24em] text-muted-foreground uppercase hover:text-foreground"
-            >
-              Try in demo drive
-            </Link>
+            {DEMO_PAGE_ENABLED ? (
+              <Link
+                to="/demo"
+                className="text-[11px] tracking-[0.24em] text-muted-foreground uppercase hover:text-foreground"
+              >
+                Try in demo drive
+              </Link>
+            ) : null}
           </div>
         </section>
       </div>
