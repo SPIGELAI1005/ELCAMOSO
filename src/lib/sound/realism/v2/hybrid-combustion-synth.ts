@@ -2380,7 +2380,7 @@ export class HybridCombustionSynth {
     if (this.combustionBus) {
       targetParam(
         this.combustionBus.gain,
-        Math.max(0.0001, body * Math.sqrt(1 - RECORDED_SYNTH_DUCK * w) * louder * synthMute),
+        Math.max(0.0001, body * Math.sqrt(1 - (bank.synthDuck ?? RECORDED_SYNTH_DUCK) * w) * louder * synthMute),
         audioTime,
         0.15,
       );
@@ -2388,7 +2388,7 @@ export class HybridCombustionSynth {
     if (this.intakeBus) {
       targetParam(
         this.intakeBus.gain,
-        Math.max(0.0001, this.intakeTarget * (1 + 0.6 * ac.aggression) * (1 - 0.4 * w) * synthMute),
+        Math.max(0.0001, this.intakeTarget * (1 + 0.6 * ac.aggression) * (1 - (bank.synthDuck ? 0.9 : 0.4) * w) * synthMute),
         audioTime,
         0.15,
       );
@@ -2396,7 +2396,7 @@ export class HybridCombustionSynth {
     if (this.pipeSend) {
       targetParam(
         this.pipeSend.gain,
-        Math.max(0.0001, this.pipeTarget * (1 + 0.5 * ac.aggression) * synthMute),
+        Math.max(0.0001, this.pipeTarget * (1 + 0.5 * ac.aggression) * (bank.synthDuck ? 1 - 0.8 * w : 1) * synthMute),
         audioTime,
         0.15,
       );
@@ -2405,7 +2405,7 @@ export class HybridCombustionSynth {
       // Support/noise bed is the main hiss source: thin it while recordings carry the sound.
       targetParam(
         this.supportBus.gain,
-        Math.max(0.0001, this.supportTarget * (1 - 0.6 * w) * synthMute),
+        Math.max(0.0001, this.supportTarget * (1 - (bank.synthDuck ? 0.9 : 0.6) * w) * synthMute),
         audioTime,
         0.15,
       );

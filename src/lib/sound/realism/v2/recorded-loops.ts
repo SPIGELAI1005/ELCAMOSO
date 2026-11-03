@@ -350,6 +350,11 @@ export interface RecordedLoopBank {
    * spectrum (dB per band: 100 Hz low shelf, 250 / 600 / 1400 Hz peaks, 3 kHz high shelf).
    */
   synthMatch?: { rpm: number[]; bandsDb: number[][] };
+  /**
+   * Optional synth duck at full sample weight (default RECORDED_SYNTH_DUCK). Close to 1 = the
+   * recordings carry the sound and the synth only adds a little sub and continuity.
+   */
+  synthDuck?: number;
   /** Match-EQ on the recorded layer toward the synth timbre (dB). */
   eq: {
     lowShelfDb: number;
@@ -672,6 +677,22 @@ const GE2_BITURBO_CRUISE_REGIONS: RecordedRegion[] = [
 const GE2_BITURBO_OVERRUN_REGIONS: RecordedRegion[] = [
   { start: 46.18, end: 50.14, rpm: [2154, 2175, 2175, 2131, 2154, 2154, 2131, 2131, 2131, 2131, 2109, 2109, 2088, 2088, 2088, 2065, 2065, 2042, 2042, 2042, 2042, 2022, 2022, 2022, 2022, 1999, 1999, 1977, 1977, 1977, 1977, 1956, 1956, 1933, 1933, 1933, 1933, 1933, 1911, 1911] },
 ];
+const TRABY_REV_GROWL_REGIONS: RecordedRegion[] = [
+  { start: 0.06, end: 11.02, rpm: [1951, 1986, 2091, 1880, 2074, 2126, 2179, 2179, 2074, 2074, 2091, 2074, 2056, 1758, 1792, 1792, 1758, 1705, 1670, 1670, 1740, 1898, 1863, 1845, 1986, 2022, 2022, 2109, 2109, 2038, 2038, 2038, 2144, 1827, 1810, 1845, 1845, 1951, 1845, 1845, 1827, 1758, 1740, 2038, 2074, 1933, 1916, 2056, 2056, 1933, 1969, 2022, 1880, 1986, 2022, 2126, 2109, 1792, 1863, 1898, 2109, 2268, 2425, 2478, 2496, 2443, 2373, 2022, 1723, 1827, 1670, 1933, 1933, 2056, 1863, 1845, 1845, 1986, 1898, 1916, 1933, 1740, 2038, 2056, 2109, 2091, 1951, 1810, 1951, 2109, 2268, 2408, 2654, 2636, 2619, 2530, 2443, 2408, 2355, 2320, 2302, 2162, 1845, 2074, 2056, 2038, 1951, 1951, 1827, 1827] },
+];
+const TRABY_REV_HARD_REGIONS: RecordedRegion[] = [
+  { start: 11.1, end: 18.36, rpm: [1845, 2056, 1810, 1774, 1880, 2109, 2162, 1845, 1827, 1810, 1863, 1898, 2022, 2162, 2179, 2126, 2074, 2074, 1986, 2004, 2004, 2038, 2337, 2250, 2250, 2162, 2022, 2022, 2056, 2091, 1827, 1845, 1810, 1546, 1564, 1687, 1723, 1845, 1916, 2004, 2109, 2284, 2390, 2530, 2689, 2953, 3111, 3093, 3638, 3674, 3638, 3603, 3445, 3445, 3339, 3902, 3778, 3762, 3621, 3568, 3532, 3480, 3357, 3322, 3234, 3709, 3691, 3480, 3480, 3955, 3709, 3638, 3621] },
+];
+const GE2_CLASSIC_REV_GROWL_REGIONS: RecordedRegion[] = [
+  { start: 0.06, end: 6.52, rpm: [1899, 1924, 1899, 2057, 1924, 1872, 1713, 1661, 1872, 1924, 1951, 1845, 1634, 1924, 2003, 1978, 1819, 2109, 2109, 1924, 2082, 2030, 2003, 2320, 2161, 2003, 1872, 1819, 1634, 1634, 1819, 1978, 1899, 1740, 2030, 1924, 1951, 1924, 1819, 2136, 1951, 1978, 2268, 2530, 2161, 2188, 2161, 2109, 2003, 1872, 1792, 1634, 1555, 1819, 2057, 1951, 1845, 1688, 1845, 2161, 1978, 1951, 1819, 1765, 1872] },
+];
+const GE2_CLASSIC_REV_HARD_REGIONS: RecordedRegion[] = [
+  { start: 6.6, end: 11.56, rpm: [1845, 1845, 1899, 2003, 1740, 1899, 1899, 2030, 2057, 2082, 1978, 2057, 2109, 2109, 2136, 2161, 2214, 2293, 2347, 2372, 2399, 2451, 2478, 2530, 2557, 2584, 2637, 2689, 2716, 2741, 2795, 2847, 2926, 3033, 3137, 3637, 4087, 3612, 3637, 4140, 3744, 4271, 3929, 3954, 4008, 4323, 4298, 3875, 3954, 3981] },
+  { start: 11.64, end: 15.8, rpm: [1819, 1688, 1978, 2030, 2320, 2478, 2136, 2057, 2082, 2057, 2161, 2399, 2451, 2505, 2557, 2584, 2584, 2716, 2768, 2847, 2557, 2926, 2979, 3006, 3058, 3085, 3189, 3216, 3243, 3268, 3268, 3268, 3216, 3189, 3164, 2768, 2689, 2426, 2268, 1978, 1978, 2003] },
+];
+const GE2_CLASSIC_DRIVE_REGIONS: RecordedRegion[] = [
+  { start: 0.06, end: 14.02, rpm: [2608, 2636, 2636, 2666, 2666, 2666, 2696, 2696, 2724, 2724, 2724, 3076, 2724, 2402, 2168, 2168, 2198, 2198, 2198, 2226, 2226, 2226, 2256, 2256, 2256, 2226, 2198, 2226, 2256, 2256, 2256, 2226, 2256, 2256, 2286, 2578, 2988, 3134, 2812, 2812, 2812, 2754, 2842, 2872, 2900, 2900, 2872, 2872, 3222, 3194, 2724, 2520, 2256, 2374, 2226, 1962, 1934, 1962, 2314, 2374, 2374, 2402, 2050, 2080, 2402, 2402, 2432, 2432, 2432, 2432, 2460, 2460, 2460, 2460, 2460, 2374, 2490, 2490, 2490, 2520, 2520, 2314, 2314, 2286, 2256, 2256, 2256, 2256, 2256, 2226, 2460, 2432, 2256, 2520, 2198, 2138, 1904, 1816, 1816, 1846, 1846, 1846, 1876, 1846, 1876, 1876, 1876, 1876, 1876, 1904, 1904, 1904, 1904, 1904, 1904, 2226, 2226, 2226, 2226, 2226, 2226, 2226, 2226, 2226, 2226, 1934, 1934, 1962, 1934, 1934, 2226, 2226, 2226, 2198, 2198, 2198, 2432, 2198, 2198, 2198] },
+];
 
 const src = (
   id: string,
@@ -683,49 +704,56 @@ const src = (
   weight = 1,
 ): RecordedSource => ({ id, url: `${PROFILE_BASE}/${file}`, regions, weight, minRate, maxRate, load });
 
+// Recordings carry these three across the whole rev range (rate-capped grains, several rev-band
+// clips per load), the synth is ducked to a little sub and continuity underneath.
+const RAW_HANDOVER: RecordedHandover = { rpmStart: 0, rpmSpan: 1, accelKeep: 1, rpmKeep: 0.96, topRpm: 20000, topSpan: 1000 };
+
 export const RECORDED_LOOP_BANKS_BY_PROFILE: Record<string, RecordedLoopBank> = {
-  // Small two-stroke twin: ring-ding idle, buzzy blips. The source is thin below ~100 Hz, the
-  // synth carries the body; grains stretch further up because a two-stroke buzz pitches well.
+  // Small two-stroke twin: ring-ding idle, buzzy rattly revs. Idle clip for idle, the revving
+  // clip (rev blips) for driving so the two-stroke buzz stays under load.
   traby: {
     personalityId: "traby",
     sources: [
       src("traby-idle", "traby_twin.m4a", TRABY_IDLE_REGIONS, "idle", 0.8, 1.6),
-      src("traby-cruise", "traby_twin.m4a", [...TRABY_IDLE_REGIONS, ...TRABY_GROWL_REGIONS], "cruise", 0.8, 3.4),
-      src("traby-growl", "traby_twin.m4a", TRABY_GROWL_REGIONS, "growl", 0.8, 3.6, 1.2),
-      src("traby-hard", "traby_twin.m4a", [...TRABY_GROWL_REGIONS, ...TRABY_HARD_REGIONS], "hard", 0.8, 3.8, 1.3),
-      src("traby-overrun", "traby_twin.m4a", TRABY_IDLE_REGIONS, "overrun", 0.8, 3.4, 0.8),
+      src("traby-cruise", "traby_twin_rev.m4a", TRABY_REV_GROWL_REGIONS, "cruise", 0.6, 1.5),
+      src("traby-growl", "traby_twin_rev.m4a", TRABY_REV_GROWL_REGIONS, "growl", 0.6, 1.5, 1.2),
+      src("traby-hard", "traby_twin_rev.m4a", [...TRABY_REV_GROWL_REGIONS, ...TRABY_REV_HARD_REGIONS], "hard", 0.6, 1.45, 1.3),
+      src("traby-overrun", "traby_twin_rev.m4a", TRABY_REV_GROWL_REGIONS, "overrun", 0.55, 1.4, 0.8),
     ],
-    level: 0.32,
-    handover: { rpmStart: 2800, rpmSpan: 1400, accelKeep: 0.8, rpmKeep: 0.6, topRpm: 4300, topSpan: 500 },
-    eq: { lowShelfDb: 4, midDb: 3, midHz: 900, highShelfDb: 0, highShelfHz: 3000, lowpassHz: 9000 },
+    level: 0.34,
+    synthDuck: 0.97,
+    handover: RAW_HANDOVER,
+    eq: { lowShelfDb: 4, midDb: 3, midHz: 900, highShelfDb: 1, highShelfHz: 3000, lowpassHz: 10000 },
   },
-  // Classic naturally aspirated V8 4x4: slow idle burble and smooth free revs, mellow top end.
+  // Classic naturally aspirated V8 4x4: lumpy burble, raw free revs and loose drive-by under load.
   "ge-squared-90": {
     personalityId: "ge-squared-90",
     sources: [
       src("ge2c-idle", "ge2_classic_v8.m4a", GE2_CLASSIC_IDLE_REGIONS, "idle", 0.75, 1.8),
-      src("ge2c-cruise", "ge2_classic_v8.m4a", GE2_CLASSIC_GROWL_REGIONS, "cruise", 0.55, 1.8),
-      src("ge2c-growl", "ge2_classic_v8.m4a", GE2_CLASSIC_GROWL_REGIONS, "growl", 0.55, 1.8, 1.1),
-      src("ge2c-hard", "ge2_classic_v8.m4a", GE2_CLASSIC_HARD_REGIONS, "hard", 0.5, 1.7, 1.2),
-      src("ge2c-overrun", "ge2_classic_v8.m4a", GE2_CLASSIC_GROWL_REGIONS, "overrun", 0.55, 1.8, 0.7),
+      src("ge2c-cruise", "ge2_classic_drive.m4a", GE2_CLASSIC_DRIVE_REGIONS, "cruise", 0.6, 1.3),
+      src("ge2c-growl", "ge2_classic_rev.m4a", [...GE2_CLASSIC_REV_GROWL_REGIONS, ...GE2_CLASSIC_GROWL_REGIONS], "growl", 0.6, 1.3, 1.1),
+      src("ge2c-hard", "ge2_classic_rev.m4a", GE2_CLASSIC_REV_HARD_REGIONS, "hard", 0.6, 1.3, 1.2),
+      src("ge2c-overrun", "ge2_classic_drive.m4a", GE2_CLASSIC_DRIVE_REGIONS, "overrun", 0.55, 1.3, 0.7),
     ],
     level: 0.45,
-    handover: { rpmStart: 3400, rpmSpan: 1200, accelKeep: 0.7, rpmKeep: 0.6, topRpm: 5100, topSpan: 500 },
-    eq: { lowShelfDb: 6, midDb: -2, midHz: 1800, highShelfDb: -6, highShelfHz: 2500, lowpassHz: 5000 },
+    synthDuck: 0.97,
+    handover: RAW_HANDOVER,
+    eq: { lowShelfDb: 7, midDb: 2, midHz: 500, highShelfDb: -3, highShelfHz: 3000, lowpassHz: 7000 },
   },
   // Modern biturbo V8 4x4: lumpy idle, loud bark under load, hard pulls, crackling overrun.
   "ge-squared": {
     personalityId: "ge-squared",
     sources: [
       src("ge2b-idle", "ge2_biturbo_v8.m4a", GE2_BITURBO_IDLE_REGIONS, "idle", 0.7, 1.5),
-      src("ge2b-cruise", "ge2_biturbo_v8.m4a", GE2_BITURBO_CRUISE_REGIONS, "cruise", 0.55, 1.9),
-      src("ge2b-growl", "ge2_biturbo_v8.m4a", GE2_BITURBO_GROWL_REGIONS, "growl", 0.6, 2.4, 1.3),
-      src("ge2b-hard", "ge2_biturbo_v8.m4a", GE2_BITURBO_HARD_REGIONS, "hard", 0.55, 1.9, 1.5),
-      src("ge2b-overrun", "ge2_biturbo_v8.m4a", GE2_BITURBO_OVERRUN_REGIONS, "overrun", 0.55, 2.2, 1),
+      src("ge2b-cruise", "ge2_biturbo_v8.m4a", GE2_BITURBO_CRUISE_REGIONS, "cruise", 0.6, 1.35),
+      src("ge2b-growl", "ge2_biturbo_v8.m4a", GE2_BITURBO_GROWL_REGIONS, "growl", 0.6, 1.6, 1.3),
+      src("ge2b-hard", "ge2_biturbo_v8.m4a", GE2_BITURBO_HARD_REGIONS, "hard", 0.6, 1.35, 1.5),
+      src("ge2b-overrun", "ge2_biturbo_v8.m4a", GE2_BITURBO_OVERRUN_REGIONS, "overrun", 0.55, 1.4, 1),
     ],
     level: 0.4,
-    handover: { rpmStart: 4200, rpmSpan: 1200, accelKeep: 0.9, rpmKeep: 0.75, topRpm: 6600, topSpan: 600 },
-    eq: { lowShelfDb: 6, midDb: 3, midHz: 1200, highShelfDb: 2, highShelfHz: 3000, lowpassHz: 12000 },
+    synthDuck: 0.97,
+    handover: RAW_HANDOVER,
+    eq: { lowShelfDb: 7, midDb: 3, midHz: 700, highShelfDb: 0, highShelfHz: 3000, lowpassHz: 10000 },
   },
 };
 
@@ -994,8 +1022,35 @@ export const RECORDED_LOOP_CREDITS: RecordedCredit[] = [
     licence: "CC0 1.0",
     licenceUrl: "https://creativecommons.org/publicdomain/zero/1.0/",
     sourceUrl: "https://freesound.org/s/412819/",
-    usedIn: "Traby (idle, revs)",
+    usedIn: "Traby (idle)",
     attribution: "Two-stroke engine recording by blukotek (Freesound #412819), CC0 1.0, edited (trimmed, filtered, granular).",
+  },
+  {
+    title: "Two-stroke twin car engine, revving (Freesound #412818)",
+    author: "blukotek",
+    licence: "CC0 1.0",
+    licenceUrl: "https://creativecommons.org/publicdomain/zero/1.0/",
+    sourceUrl: "https://freesound.org/s/412818/",
+    usedIn: "Traby (driving, revs)",
+    attribution: "Two-stroke engine recording by blukotek (Freesound #412818), CC0 1.0, edited (trimmed, filtered, granular).",
+  },
+  {
+    title: "Classic V8 muscle car engine and exhaust sound (Wikimedia Commons)",
+    author: "Luciano's Classics (YouTube)",
+    licence: "CC BY 3.0",
+    licenceUrl: "https://creativecommons.org/licenses/by/3.0/",
+    sourceUrl: "https://commons.wikimedia.org/wiki/File:Oldsmobile_442_-_engine_and_exhaust_sound_(YouTube_xqK8IFpMdE4).opus",
+    usedIn: "Ge-Squared '90 (revs, hard pulls)",
+    attribution: "Engine recording by Luciano's Classics (YouTube), via Wikimedia Commons, CC BY 3.0, edited (trimmed, filtered, granular).",
+  },
+  {
+    title: "Classic V8 coupe engine and exhaust sound (Wikimedia Commons)",
+    author: "AfricaAuddyTech (YouTube)",
+    licence: "CC BY 3.0",
+    licenceUrl: "https://creativecommons.org/licenses/by/3.0/",
+    sourceUrl: "https://commons.wikimedia.org/wiki/File:Chevrolet_Monte_Carlo_-_engine_and_exhaust_sound_(YouTube_fc2HYy5fQQ4).opus",
+    usedIn: "Ge-Squared '90 (driving, overrun)",
+    attribution: "Engine recording by AfricaAuddyTech (YouTube), via Wikimedia Commons, CC BY 3.0, edited (trimmed, filtered, granular).",
   },
   {
     title: "Classic V8 off-roader engine and exhaust sound (Wikimedia Commons)",

@@ -880,12 +880,7 @@ export const EXPANSION_PROFILES: SoundProfile[] = [
       lfoTarget: "amp",
       textures: [
         { kind: "rumble", level: 0.34, tone: 90, speedScale: 0.55, surge: 0.5 },
-        // turbo whine sits high and follows the load
-        { kind: "sizzle", level: 0.09, tone: 5200, speedScale: 1 },
         { kind: "wind", level: 0.14, tone: 1500, speedScale: 1 },
-      ],
-      signals: [
-        { kind: "whistle", everySeconds: 9, jitter: 4, level: 0.07, tone: 3200, speedLinked: true },
       ],
     },
     transmission: {
