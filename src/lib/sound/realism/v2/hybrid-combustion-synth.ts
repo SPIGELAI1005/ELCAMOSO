@@ -2377,10 +2377,16 @@ export class HybridCombustionSynth {
     if (!this.bassDecelOnly) {
       this.bass?.setDrive(0.5 * ac.onLoad + 0.5 * ac.aggression, ac.overrun, audioTime);
     }
+    // Synth duck: per-bank, optionally deeper under load (loadSynthDuck >= 1.05 = recordings only).
+    const baseDuck = bank.synthDuck ?? RECORDED_SYNTH_DUCK;
+    const loadK = bank.loadSynthDuck != null ? Math.min(1, ac.onLoad + ac.aggression) : 0;
+    const duck = baseDuck + ((bank.loadSynthDuck ?? baseDuck) - baseDuck) * loadK;
+    // Side layers (intake, pipe, noise bed) fade out with the same load blend; muted banks (duck >= 1) drop them.
+    const side = baseDuck >= 1 ? 0 : 1 - loadK;
     if (this.combustionBus) {
       targetParam(
         this.combustionBus.gain,
-        Math.max(0.0001, body * Math.sqrt(1 - (bank.synthDuck ?? RECORDED_SYNTH_DUCK) * w) * louder * synthMute),
+        Math.max(0.0001, body * Math.sqrt(Math.max(0, 1 - duck * w)) * louder * synthMute),
         audioTime,
         0.15,
       );
@@ -2388,7 +2394,7 @@ export class HybridCombustionSynth {
     if (this.intakeBus) {
       targetParam(
         this.intakeBus.gain,
-        Math.max(0.0001, this.intakeTarget * (1 + 0.6 * ac.aggression) * (1 - (bank.synthDuck ? 0.9 : 0.4) * w) * synthMute),
+        Math.max(0.0001, this.intakeTarget * (1 + 0.6 * ac.aggression) * (bank.synthDuck ? (1 - 0.9 * w) * side : 1 - 0.4 * w) * synthMute),
         audioTime,
         0.15,
       );
@@ -2396,7 +2402,7 @@ export class HybridCombustionSynth {
     if (this.pipeSend) {
       targetParam(
         this.pipeSend.gain,
-        Math.max(0.0001, this.pipeTarget * (1 + 0.5 * ac.aggression) * (bank.synthDuck ? 1 - 0.8 * w : 1) * synthMute),
+        Math.max(0.0001, this.pipeTarget * (1 + 0.5 * ac.aggression) * (bank.synthDuck ? (1 - 0.8 * w) * side : 1) * synthMute),
         audioTime,
         0.15,
       );
@@ -2405,7 +2411,7 @@ export class HybridCombustionSynth {
       // Support/noise bed is the main hiss source: thin it while recordings carry the sound.
       targetParam(
         this.supportBus.gain,
-        Math.max(0.0001, this.supportTarget * (1 - (bank.synthDuck ? 0.9 : 0.6) * w) * synthMute),
+        Math.max(0.0001, this.supportTarget * (bank.synthDuck ? (1 - 0.9 * w) * side : 1 - 0.6 * w) * synthMute),
         audioTime,
         0.15,
       );

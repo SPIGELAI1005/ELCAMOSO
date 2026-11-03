@@ -818,13 +818,13 @@ export const EXPANSION_PROFILES: SoundProfile[] = [
     id: "ge-squared",
     name: "Ge-Squared O)))",
     category: "Classic",
-    traits: ["Biturbo", "Modern", "Brutal"],
+    traits: ["Double Big Twin", "Modern", "Brutal"],
     description:
-      "The modern boxy 4x4 with a biturbo V8: lumpy idle, twin turbos spooling hard under load, brutal pulls, blow-off sighs between gears and crackles when you lift.",
+      "The modern boxy 4x4, voiced like two big twins bolted together: a deep uneven lope at idle, hard thumping hits under load, a fast aggressive build and a raw crackle when you lift.",
     drivetrainMode: "virtual-transmission",
     motionModel: "virtual-transmission",
     sourceMode: "procedural",
-    drivetrainPersonalityId: "turbo-inline-6",
+    drivetrainPersonalityId: "v-twin-cruiser",
     voice: {
       baseFrequency: 23,
       // cross-plane V8: uneven pulse pattern gives the burble
@@ -851,20 +851,20 @@ export const EXPANSION_PROFILES: SoundProfile[] = [
     transmission: {
       gearRatios: [13.8, 8.6, 6.2, 4.8, 3.9, 3.3, 2.9],
       idleRpm: 700,
-      redlineRpm: 6200,
+      redlineRpm: 5000,
       shiftSmoothing: 0.18,
     },
   },  {
     id: "ge-squared-90",
     name: "Ge-Squared '90",
     category: "Classic",
-    traits: ["V8", "Off-Road", "Relaxed"],
+    traits: ["Double Big Twin", "Off-Road", "Relaxed"],
     description:
-      "The classic 1990s boxy 4x4 with a big V8: soft, smooth burble, relaxed torque and gentle, unhurried acceleration.",
+      "The classic 1990s boxy 4x4, voiced like two big twins side by side: a slow, soft potato-potato lope, relaxed torque and unhurried, mechanical acceleration.",
     drivetrainMode: "virtual-transmission",
     motionModel: "virtual-transmission",
     sourceMode: "procedural",
-    drivetrainPersonalityId: "american-v8",
+    drivetrainPersonalityId: "v-twin-cruiser",
     voice: {
       baseFrequency: 23,
       // cross-plane V8: uneven pulse pattern gives the burble
@@ -886,7 +886,7 @@ export const EXPANSION_PROFILES: SoundProfile[] = [
     transmission: {
       gearRatios: [12.4, 7.4, 4.9, 3.6],
       idleRpm: 700,
-      redlineRpm: 5200,
+      redlineRpm: 4300,
       shiftSmoothing: 0.18,
     },
   },
