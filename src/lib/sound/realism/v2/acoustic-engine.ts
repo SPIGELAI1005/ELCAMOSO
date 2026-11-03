@@ -185,7 +185,7 @@ export interface AcousticEngineConfig {
    * Optional turbo echo: a soft feedback delay (lowpassed each repeat) on the whistle, the
    * blow-off flutter and the spool-down tone. Absent → no echo.
    */
-  turboEcho?: { delayS: number; feedback: number; lpHz: number; flutterSend: number; whistleSend: number };
+  turboReverb?: { decayS: number; wet: number; lpHz: number };
   /** Optional spool-down tone on blow-off: a sine glide fromHz → toHz over `seconds`. */
   spoolDown?: { fromHz: number; toHz: number; seconds: number; level: number };
   /** Optional whistle pitch range (base + span × spool). Absent → 2200 + 3400 × spool. */
@@ -546,7 +546,7 @@ const RALLY_TURBO_3: AcousticEngineConfig = {
   whistleSettle: { holdS: 1.6, tauS: 1.6, floor: 0.45 },
   whistleRange: { baseHz: 2500, spanHz: 4300 },
   // One single faint, darkened repeat (no feedback).
-  turboEcho: { delayS: 0.17, feedback: 0, lpHz: 2000, flutterSend: 0.3, whistleSend: 0.25 },
+  turboReverb: { decayS: 0.8, wet: 0.15, lpHz: 3000 },
   spoolDown: { fromHz: 6400, toHz: 1800, seconds: 2.4, level: 0.05 },
   fastLift: { windowS: 0.25, peakMs2: 0.9, liftMs2: -0.25 },
 };

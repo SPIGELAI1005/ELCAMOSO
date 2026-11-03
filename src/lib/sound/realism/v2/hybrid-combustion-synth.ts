@@ -974,42 +974,43 @@ export class HybridCombustionSynth {
       });
       wg.connect(buses.accents);
       this.turboWhistle = { oscs, gain: wg };
-      if (cfg.turboEcho) {
-        // Feedback echo for the turbo voices: delay → lowpass → feedback gain (< 1, stable).
-        const e = cfg.turboEcho;
+      if (cfg.turboReverb) {
+        // Short, smooth, dark reverb for the turbo voices: a convolver with a
+        // generated exponentially decaying noise tail (no delay lines → no distinct repeats).
+        const r = cfg.turboReverb;
         const input = ctx.createGain();
         input.gain.value = 1;
-        const delay = ctx.createDelay(1);
-        delay.delayTime.value = e.delayS;
+        const conv = ctx.createConvolver();
+        conv.normalize = true;
+        const len = Math.max(1, Math.floor(ctx.sampleRate * r.decayS * 1.2));
+        const ir = ctx.createBuffer(2, len, ctx.sampleRate);
+        let seed = 0x2f6b1d;
+        for (let c = 0; c < 2; c++) {
+          const d = ir.getChannelData(c);
+          let lpState = 0;
+          for (let i = 0; i < len; i++) {
+            seed = (seed * 1664525 + 1013904223) >>> 0;
+            const n = seed / 4294967296 - 0.5;
+            lpState += 0.35 * (n - lpState); // pre-darkened tail
+            const t = i / ctx.sampleRate;
+            const fadeIn = Math.min(1, t / 0.008);
+            d[i] = lpState * fadeIn * Math.exp((-6.9 * t) / r.decayS); // -60 dB at decayS
+          }
+        }
+        conv.buffer = ir;
         const lp = ctx.createBiquadFilter();
         lp.type = "lowpass";
-        lp.frequency.value = e.lpHz;
+        lp.frequency.value = r.lpHz;
         lp.Q.value = 0.5;
-        // Second gentle lowpass pole so the repeat is smooth and dark.
-        const lp2 = ctx.createBiquadFilter();
-        lp2.type = "lowpass";
-        lp2.frequency.value = e.lpHz * 1.2;
-        lp2.Q.value = 0.5;
-        const fb = ctx.createGain();
-        fb.gain.value = Math.min(0.7, e.feedback);
         const wet = ctx.createGain();
-        wet.gain.value = 0.8;
-        input.connect(delay);
-        delay.connect(lp);
-        // feedback 0 → a single repeat (no loop at all).
-        if (fb.gain.value > 0) {
-          lp.connect(fb);
-          fb.connect(delay);
-        }
-        lp.connect(lp2);
-        lp2.connect(wet);
+        wet.gain.value = r.wet;
+        input.connect(conv);
+        conv.connect(lp);
+        lp.connect(wet);
         wet.connect(buses.accents);
-        const ws = ctx.createGain();
-        ws.gain.value = e.whistleSend;
-        wg.connect(ws);
-        ws.connect(input);
-        this.turboEcho = { input, nodes: [input, delay, lp, lp2, fb, wet, ws] };
-        nodes += 6;
+        wg.connect(input);
+        this.turboEcho = { input, nodes: [input, conv, lp, wet] };
+        nodes += 4;
       }
       if (cfg.spoolDown) {
         const osc = ctx.createOscillator();
@@ -1040,9 +1041,9 @@ export class HybridCombustionSynth {
       bsrc.start();
       this.bov = { src: bsrc, filter: bf, gain: bg };
       let flutterSend: GainNode | null = null;
-      if (this.turboEcho && cfg.turboEcho) {
+      if (this.turboEcho && cfg.turboReverb) {
         flutterSend = ctx.createGain();
-        flutterSend.gain.value = cfg.turboEcho.flutterSend;
+        flutterSend.gain.value = 1;
         bg.connect(flutterSend);
         flutterSend.connect(this.turboEcho.input);
         this.turboEcho.nodes.push(flutterSend);
