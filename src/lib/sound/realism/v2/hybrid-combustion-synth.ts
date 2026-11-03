@@ -71,6 +71,7 @@ import {
 import {
   AccelerationCharacter,
   getRecordedLoopBank,
+  getRecordedLoopBankForProfile,
   recordedLowShelfHz,
   recordedSampleWeight,
   loadMixGains,
@@ -479,7 +480,7 @@ export class HybridCombustionSynth {
     this.scheduler = createTransientSchedulerState(0.42);
 
     const personalityId = resolvePersonalityId(profile);
-    this.recordedBank = getRecordedLoopBank(personalityId);
+    this.recordedBank = getRecordedLoopBankForProfile(profile.id, personalityId);
     const bassCfg = getBassEnhancerConfig(profile.id);
     if (bassCfg) {
       // Engine bass enhancer: every engine path that feeds the body bus (synth, recordings,

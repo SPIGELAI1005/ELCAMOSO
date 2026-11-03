@@ -622,6 +622,118 @@ export const RECORDED_LOOP_BANKS: Record<string, RecordedLoopBank> = {
   },
 };
 
+
+/**
+ * Per-profile recorded banks (v7): each of these three cars plays its own recording, so they
+ * no longer share a personality bank. Regions were cut from free recordings (CC0 / CC BY 3.0,
+ * see RECORDED_LOOP_CREDITS), high-passed at 30 Hz and set to equal loudness per region; RPM
+ * tracks are measured every 0.1 s from the firing line.
+ */
+const PROFILE_BASE = "/sample-packs/recorded/v7";
+const TRABY_IDLE_REGIONS: RecordedRegion[] = [
+  { start: 0.06, end: 10.02, rpm: [877, 877, 885, 885, 935, 951, 902, 869, 869, 910, 869, 869, 861, 902, 852, 910, 852, 894, 852, 845, 845, 852, 943, 902, 877, 877, 885, 877, 820, 836, 861, 877, 910, 869, 852, 852, 852, 861, 861, 861, 869, 1000, 885, 861, 1000, 1000, 1000, 935, 959, 852, 852, 976, 976, 968, 894, 1000, 984, 976, 1000, 935, 959, 1000, 852, 885, 877, 894, 787, 845, 836, 951, 845, 968, 968, 828, 869, 984, 984, 1000, 968, 968, 984, 869, 968, 1000, 1000, 1000, 852, 845, 845, 861, 968, 959, 910, 804, 861, 861, 869, 976, 968, 877] },
+  { start: 10.1, end: 18.26, rpm: [902, 984, 984, 943, 935, 852, 1000, 1000, 1000, 885, 885, 869, 852, 852, 836, 976, 1000, 885, 885, 885, 885, 812, 894, 1009, 869, 869, 877, 902, 910, 1009, 1000, 877, 869, 861, 845, 861, 852, 852, 861, 861, 869, 861, 1009, 1033, 935, 943, 951, 894, 943, 951, 1016, 976, 976, 1000, 885, 787, 820, 812, 902, 902, 951, 852, 894, 894, 910, 869, 869, 852, 861, 845, 845, 852, 852, 812, 885, 869, 861, 861, 1009, 1009, 992, 852] },
+];
+const TRABY_GROWL_REGIONS: RecordedRegion[] = [
+  { start: 18.34, end: 20.5, rpm: [892, 1002, 866, 900, 908, 959, 968, 985, 994, 977, 943, 917, 849, 841, 789, 773, 756, 738, 705, 688, 662, 654] },
+  { start: 20.58, end: 22.94, rpm: [875, 866, 883, 900, 917, 917, 917, 926, 951, 968, 994, 1010, 1036, 1045, 1027, 1027, 892, 892, 875, 875, 892, 883, 892, 875] },
+];
+const TRABY_HARD_REGIONS: RecordedRegion[] = [
+  { start: 23.02, end: 24.78, rpm: [1036, 892, 892, 994, 883, 892, 951, 959, 926, 917, 841, 756, 892, 892, 875, 934, 968, 968] },
+];
+const GE2_CLASSIC_IDLE_REGIONS: RecordedRegion[] = [
+  { start: 0.06, end: 3.72, rpm: [658, 769, 724, 703, 658, 637, 637, 615, 615, 615, 615, 615, 637, 637, 615, 615, 637, 615, 637, 637, 637, 637, 615, 615, 615, 615, 594, 615, 637, 637, 637, 637, 637, 637, 615, 637, 637] },
+  { start: 3.8, end: 7.36, rpm: [703, 790, 813, 769, 703, 658, 637, 615, 594, 615, 615, 615, 615, 658, 769, 813, 813, 769, 813, 813, 813, 790, 724, 681, 790, 813, 813, 813, 813, 769, 813, 747, 703, 658, 637, 637] },
+  { start: 7.44, end: 11.2, rpm: [571, 549, 528, 615, 724, 769, 813, 813, 747, 703, 681, 724, 813, 790, 747, 681, 637, 615, 594, 594, 594, 615, 615, 637, 637, 637, 637, 637, 637, 637, 637, 637, 637, 637, 637, 637, 637, 594] },
+  { start: 11.28, end: 20.44, rpm: [658, 658, 637, 637, 637, 637, 637, 658, 658, 658, 658, 658, 658, 637, 658, 658, 681, 658, 658, 658, 658, 658, 658, 658, 637, 637, 658, 658, 658, 681, 658, 658, 681, 681, 658, 658, 658, 658, 658, 681, 681, 681, 681, 681, 658, 658, 658, 658, 658, 681, 658, 658, 681, 681, 658, 681, 681, 681, 658, 658, 658, 658, 658, 658, 637, 637, 637, 637, 637, 637, 658, 658, 658, 658, 637, 637, 637, 637, 637, 637, 615, 637, 637, 637, 637, 637, 637, 637, 615, 637, 637, 658] },
+];
+const GE2_CLASSIC_GROWL_REGIONS: RecordedRegion[] = [
+  { start: 20.52, end: 25.88, rpm: [1582, 1603, 1648, 1450, 1516, 1537, 1560, 1582, 1603, 1648, 1648, 1669, 1692, 1714, 1735, 1735, 1758, 1780, 1801, 1824, 1845, 1867, 1890, 1911, 1933, 1956, 1977, 1999, 2022, 2042, 2065, 2088, 2109, 2131, 2197, 2197, 2263, 2307, 2329, 2307, 2461, 2461, 2527, 2527, 2527, 2614, 2614, 2637, 2680, 2703, 2746, 2769, 2812, 2878] },
+];
+const GE2_CLASSIC_HARD_REGIONS: RecordedRegion[] = [
+  { start: 25.96, end: 31.02, rpm: [2131, 2131, 2154, 2175, 2175, 2197, 2197, 2175, 2175, 2329, 2350, 2373, 2416, 2439, 2461, 2505, 2548, 2571, 2614, 2637, 2680, 2703, 2746, 2790, 2812, 2835, 2901, 2922, 2944, 2967, 3031, 3054, 3097, 3120, 3142, 3186, 3208, 3208, 3208, 3208, 3229, 3229, 3208, 3229, 3274, 3274, 3274, 3384, 3361, 3361, 3361] },
+];
+const GE2_BITURBO_IDLE_REGIONS: RecordedRegion[] = [
+  { start: 0.06, end: 13.72, rpm: [922, 922, 922, 922, 922, 945, 922, 922, 967, 1032, 1011, 922, 967, 922, 922, 901, 922, 945, 922, 922, 945, 901, 1054, 1054, 988, 988, 988, 988, 988, 988, 988, 1098, 967, 988, 945, 922, 922, 922, 922, 922, 945, 922, 922, 922, 1077, 1098, 945, 922, 922, 922, 922, 945, 922, 922, 945, 945, 945, 1098, 1077, 988, 988, 988, 988, 967, 967, 988, 988, 988, 988, 945, 922, 922, 922, 922, 922, 945, 945, 945, 945, 967, 879, 901, 967, 945, 922, 922, 901, 922, 922, 922, 901, 901, 945, 945, 967, 988, 988, 988, 988, 988, 988, 1011, 1077, 967, 967, 922, 922, 922, 922, 922, 922, 945, 922, 945, 988, 1098, 1077, 945, 988, 856, 945, 967, 922, 922, 922, 922, 922, 922, 922, 967, 988, 988, 988, 988, 967, 988, 988] },
+];
+const GE2_BITURBO_GROWL_REGIONS: RecordedRegion[] = [
+  { start: 13.8, end: 22.76, rpm: [1098, 1054, 1186, 1230, 1428, 1362, 1164, 1098, 967, 945, 945, 1032, 1209, 1120, 1054, 945, 945, 922, 1077, 1252, 1252, 1471, 1407, 1296, 1143, 1054, 945, 945, 901, 901, 945, 1098, 1011, 1011, 1077, 1077, 1230, 1450, 1407, 1275, 1120, 988, 945, 945, 901, 901, 901, 1054, 1098, 945, 901, 1054, 1054, 1230, 1098, 1077, 945, 945, 901, 901, 967, 1120, 1077, 945, 945, 1077, 1054, 1230, 1209, 1407, 1384, 1230, 1054, 1054, 945, 945, 1077, 1252, 1230, 1120, 967, 945, 922, 988, 988, 1164, 1120, 967, 922, 945] },
+  { start: 22.84, end: 27.9, rpm: [1471, 1648, 1824, 1560, 1407, 1252, 1230, 1054, 945, 967, 988, 1164, 1164, 1341, 1318, 1120, 967, 967, 1054, 1077, 1120, 1032, 1209, 1407, 1384, 1384, 1603, 1714, 1537, 1407, 1384, 1318, 1341, 1362, 1603, 1471, 1384, 1384, 1626, 1714, 1471, 1450, 1648, 1735, 1494, 1362, 1384, 1362, 1582, 1516, 1384] },
+];
+const GE2_BITURBO_HARD_REGIONS: RecordedRegion[] = [
+  { start: 27.98, end: 31.84, rpm: [2175, 2241, 2395, 2593, 2703, 2812, 2988, 3076, 3318, 3450, 3603, 3714, 4042, 4087, 4131, 4329, 4395, 4461, 4416, 3955, 3384, 3318, 3427, 3493, 3559, 3669, 3735, 3889, 3955, 4021, 4108, 4174, 4306, 4395, 4461, 4482, 4438, 4153, 3714] },
+  { start: 31.92, end: 34.78, rpm: [1735, 1780, 1890, 1977, 2042, 2109, 2197, 2241, 2284, 2284, 2395, 2263, 2241, 2307, 2373, 2439, 2482, 2548, 2593, 2658, 2724, 2769, 2835, 2901, 2944, 2988, 3031, 3076, 2724] },
+  { start: 34.86, end: 37.32, rpm: [1648, 1626, 1648, 1692, 1714, 1714, 1758, 1758, 1801, 1824, 1845, 1867, 1890, 1911, 1933, 1956, 1977, 1977, 2022, 2042, 2042, 2065, 2088, 2109, 2042] },
+  { start: 37.4, end: 40.56, rpm: [1977, 2065, 2065, 2065, 2042, 2022, 2022, 1999, 1956, 1780, 1801, 1801, 1845, 1714, 1933, 1911, 1933, 1956, 1977, 1999, 2022, 2042, 2065, 2088, 2109, 2131, 2154, 2175, 2175, 2197, 2109, 2109] },
+];
+const GE2_BITURBO_CRUISE_REGIONS: RecordedRegion[] = [
+  { start: 40.64, end: 46.1, rpm: [2350, 2439, 2505, 2548, 2593, 2680, 2724, 2724, 2724, 2944, 2944, 2988, 2901, 2812, 2395, 2307, 2307, 2307, 2329, 2284, 2307, 2284, 2307, 2307, 2284, 2284, 2263, 2241, 2241, 2241, 2218, 2197, 2175, 2175, 2175, 2154, 2131, 2109, 2109, 2109, 2109, 2109, 2154, 2131, 2154, 2175, 2197, 2218, 2241, 2263, 2284, 2329, 2350, 2395, 2241] },
+];
+const GE2_BITURBO_OVERRUN_REGIONS: RecordedRegion[] = [
+  { start: 46.18, end: 50.14, rpm: [2154, 2175, 2175, 2131, 2154, 2154, 2131, 2131, 2131, 2131, 2109, 2109, 2088, 2088, 2088, 2065, 2065, 2042, 2042, 2042, 2042, 2022, 2022, 2022, 2022, 1999, 1999, 1977, 1977, 1977, 1977, 1956, 1956, 1933, 1933, 1933, 1933, 1933, 1911, 1911] },
+];
+
+const src = (
+  id: string,
+  file: string,
+  regions: RecordedRegion[],
+  load: SourceLoad,
+  minRate: number,
+  maxRate: number,
+  weight = 1,
+): RecordedSource => ({ id, url: `${PROFILE_BASE}/${file}`, regions, weight, minRate, maxRate, load });
+
+export const RECORDED_LOOP_BANKS_BY_PROFILE: Record<string, RecordedLoopBank> = {
+  // Small two-stroke twin: ring-ding idle, buzzy blips. The source is thin below ~100 Hz, the
+  // synth carries the body; grains stretch further up because a two-stroke buzz pitches well.
+  traby: {
+    personalityId: "traby",
+    sources: [
+      src("traby-idle", "traby_twin.m4a", TRABY_IDLE_REGIONS, "idle", 0.8, 1.6),
+      src("traby-cruise", "traby_twin.m4a", [...TRABY_IDLE_REGIONS, ...TRABY_GROWL_REGIONS], "cruise", 0.8, 3.4),
+      src("traby-growl", "traby_twin.m4a", TRABY_GROWL_REGIONS, "growl", 0.8, 3.6, 1.2),
+      src("traby-hard", "traby_twin.m4a", [...TRABY_GROWL_REGIONS, ...TRABY_HARD_REGIONS], "hard", 0.8, 3.8, 1.3),
+      src("traby-overrun", "traby_twin.m4a", TRABY_IDLE_REGIONS, "overrun", 0.8, 3.4, 0.8),
+    ],
+    level: 0.32,
+    handover: { rpmStart: 2800, rpmSpan: 1400, accelKeep: 0.8, rpmKeep: 0.6, topRpm: 4300, topSpan: 500 },
+    eq: { lowShelfDb: 4, midDb: 3, midHz: 900, highShelfDb: 0, highShelfHz: 3000, lowpassHz: 9000 },
+  },
+  // Classic naturally aspirated V8 4x4: slow idle burble and smooth free revs, mellow top end.
+  "ge-squared-90": {
+    personalityId: "ge-squared-90",
+    sources: [
+      src("ge2c-idle", "ge2_classic_v8.m4a", GE2_CLASSIC_IDLE_REGIONS, "idle", 0.75, 1.8),
+      src("ge2c-cruise", "ge2_classic_v8.m4a", GE2_CLASSIC_GROWL_REGIONS, "cruise", 0.55, 1.8),
+      src("ge2c-growl", "ge2_classic_v8.m4a", GE2_CLASSIC_GROWL_REGIONS, "growl", 0.55, 1.8, 1.1),
+      src("ge2c-hard", "ge2_classic_v8.m4a", GE2_CLASSIC_HARD_REGIONS, "hard", 0.5, 1.7, 1.2),
+      src("ge2c-overrun", "ge2_classic_v8.m4a", GE2_CLASSIC_GROWL_REGIONS, "overrun", 0.55, 1.8, 0.7),
+    ],
+    level: 0.45,
+    handover: { rpmStart: 3400, rpmSpan: 1200, accelKeep: 0.7, rpmKeep: 0.6, topRpm: 5100, topSpan: 500 },
+    eq: { lowShelfDb: 6, midDb: -2, midHz: 1800, highShelfDb: -6, highShelfHz: 2500, lowpassHz: 5000 },
+  },
+  // Modern biturbo V8 4x4: lumpy idle, loud bark under load, hard pulls, crackling overrun.
+  "ge-squared": {
+    personalityId: "ge-squared",
+    sources: [
+      src("ge2b-idle", "ge2_biturbo_v8.m4a", GE2_BITURBO_IDLE_REGIONS, "idle", 0.7, 1.5),
+      src("ge2b-cruise", "ge2_biturbo_v8.m4a", GE2_BITURBO_CRUISE_REGIONS, "cruise", 0.55, 1.9),
+      src("ge2b-growl", "ge2_biturbo_v8.m4a", GE2_BITURBO_GROWL_REGIONS, "growl", 0.6, 2.4, 1.3),
+      src("ge2b-hard", "ge2_biturbo_v8.m4a", GE2_BITURBO_HARD_REGIONS, "hard", 0.55, 1.9, 1.5),
+      src("ge2b-overrun", "ge2_biturbo_v8.m4a", GE2_BITURBO_OVERRUN_REGIONS, "overrun", 0.55, 2.2, 1),
+    ],
+    level: 0.4,
+    handover: { rpmStart: 4200, rpmSpan: 1200, accelKeep: 0.9, rpmKeep: 0.75, topRpm: 6600, topSpan: 600 },
+    eq: { lowShelfDb: 6, midDb: 3, midHz: 1200, highShelfDb: 2, highShelfHz: 3000, lowpassHz: 12000 },
+  },
+};
+
+/** Recorded bank for a profile: its own bank first, then the shared personality bank. */
+export function getRecordedLoopBankForProfile(profileId: string, personalityId: string): RecordedLoopBank | null {
+  return RECORDED_LOOP_BANKS_BY_PROFILE[profileId] ?? getRecordedLoopBank(personalityId);
+}
+
 export function getRecordedLoopBank(personalityId: string): RecordedLoopBank | null {
   return RECORDED_LOOP_BANKS[personalityId] ?? null;
 }
@@ -875,5 +987,35 @@ export const RECORDED_LOOP_CREDITS: RecordedCredit[] = [
     usedIn: "Grand Prix Mood (high-rpm pass-by texture)",
     attribution:
       "F1practice3MelbGP2012DR066 by Ears68 (Freesound #150337), CC0 1.0, edited (short pass-by clips, filtered, granular).",
+  },
+  {
+    title: "Two-stroke twin car engine (Freesound #412819)",
+    author: "blukotek",
+    licence: "CC0 1.0",
+    licenceUrl: "https://creativecommons.org/publicdomain/zero/1.0/",
+    sourceUrl: "https://freesound.org/s/412819/",
+    usedIn: "Traby (idle, revs)",
+    attribution: "Two-stroke engine recording by blukotek (Freesound #412819), CC0 1.0, edited (trimmed, filtered, granular).",
+  },
+  {
+    title: "Classic V8 off-roader engine and exhaust sound (Wikimedia Commons)",
+    author: "LUNI Classic Cars (YouTube)",
+    licence: "CC BY 3.0",
+    licenceUrl: "https://creativecommons.org/licenses/by/3.0/",
+    sourceUrl: "https://commons.wikimedia.org/wiki/File:Ford_Bronco_(1979)_-_engine_and_exhaust_sound_(YouTube_h49p3ivoHYI).opus",
+    usedIn: "Ge-Squared \u201990 (idle, revs)",
+    attribution:
+      "Engine and exhaust recording by LUNI Classic Cars (YouTube, via Wikimedia Commons), CC BY 3.0 (creativecommons.org/licenses/by/3.0), edited (trimmed, filtered, re-sequenced, granular).",
+  },
+  {
+    title: "Biturbo V8 off-roader engine and exhaust sound (Wikimedia Commons)",
+    author: "FiExhaust (YouTube)",
+    licence: "CC BY 3.0",
+    licenceUrl: "https://creativecommons.org/licenses/by/3.0/",
+    sourceUrl:
+      "https://commons.wikimedia.org/wiki/File:Mercedes-Benz_G_63_AMG_(W463)_with_Fi_Exhaust_-_engine_and_exhaust_sound_(YouTube_mb8DYaIiRr4).opus",
+    usedIn: "Ge-Squared O))) (idle, bark, pulls, overrun)",
+    attribution:
+      "Engine and exhaust recording by FiExhaust (YouTube, via Wikimedia Commons), CC BY 3.0 (creativecommons.org/licenses/by/3.0), edited (trimmed, filtered, re-sequenced, granular).",
   },
 ];
