@@ -162,7 +162,36 @@ export interface AcousticEngineConfig {
    * Optional Supra-style blow-off flutter (turbo only): chirp count, chirp rate (Hz), gate
    * depth 0..1, bandpass centre/Q and level scale. Absent → the default soft 3-dip blow-off.
    */
-  turboFlutter?: { chirps: number; rateHz: number; depth: number; hz: number; q: number; level: number };
+  turboFlutter?: {
+    chirps: number;
+    rateHz: number;
+    depth: number;
+    hz: number;
+    q: number;
+    level: number;
+    /**
+     * Optional "percussion instrument" mode: each chirp is its own tuned hit. Semitone
+     * offsets from `hz` cycled per chirp, a rhythmic accelerando (period × accel per hit),
+     * and a resonant tone layer (toneQ / toneLevel) so the chatter rings like a drum roll.
+     */
+    notesSemis?: number[];
+    accel?: number;
+    toneQ?: number;
+    toneLevel?: number;
+  };
+  /**
+   * Optional big-drum engine body: tuned tom-like resonators struck by every combustion pulse
+   * (fixed pitches, felt in the chest) plus a load-driven growl (bandpassed, driven rasp).
+   * Levels follow load/demand smoothly in update(). Absent → unchanged.
+   */
+  drumBody?: {
+    hz: number[];
+    q: number;
+    level: number;
+    growl: number;
+    growlHz: number;
+    growlDrive: number;
+  };
 }
 
 /** True four-stroke firing frequency: RPM × cylinders / 120. */
@@ -477,7 +506,22 @@ const RALLY_TURBO_3: AcousticEngineConfig = {
   idleLife: { wanderRpm: 80, wanderTauS: 0.4, blipRpm: [400, 1000], blipEveryS: [5, 10], blipIntensity: 0.15 },
   // GPS-robust gentle vs hard: gentle pulls stay smooth and a touch darker, hard pulls open up.
   accelCharacter: { gentleGainDb: -1, hardGainDb: 2, hardTiltDb: 3, gentleTiltDb: -1.5 },
-  turboFlutter: { chirps: 9, rateHz: 18, depth: 0.9, hz: 1500, q: 2, level: 1.2 },
+  // Percussion-instrument flutter: tuned "ths-ths-ths" hits on a descending minor pentatonic
+  // with a drum-roll accelerando, louder and ringing, still soft-edged.
+  turboFlutter: {
+    chirps: 11,
+    rateHz: 13,
+    depth: 0.96,
+    hz: 1760,
+    q: 4.5,
+    level: 5.5,
+    notesSemis: [0, -3, -5, -7, -10, -12, -15, -17],
+    accel: 0.93,
+    toneQ: 14,
+    toneLevel: 1.3,
+  },
+  // Big-drum body: tom resonators struck by each pulse + rasp under load.
+  drumBody: { hz: [58, 87, 131], q: 7, level: 1.1, growl: 0.8, growlHz: 420, growlDrive: 6 },
   // Anti-lag style bangs on lift-off at speed.
   liftPops: { probability: 0.85, level: 0.4 },
   whistleSettle: { holdS: 0.4, tauS: 0.5, floor: 0.2 },
