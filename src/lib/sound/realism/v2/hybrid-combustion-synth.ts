@@ -985,21 +985,30 @@ export class HybridCombustionSynth {
         lp.type = "lowpass";
         lp.frequency.value = e.lpHz;
         lp.Q.value = 0.5;
+        // Second gentle lowpass pole so the repeat is smooth and dark.
+        const lp2 = ctx.createBiquadFilter();
+        lp2.type = "lowpass";
+        lp2.frequency.value = e.lpHz * 1.2;
+        lp2.Q.value = 0.5;
         const fb = ctx.createGain();
         fb.gain.value = Math.min(0.7, e.feedback);
         const wet = ctx.createGain();
         wet.gain.value = 0.8;
         input.connect(delay);
         delay.connect(lp);
-        lp.connect(fb);
-        fb.connect(delay);
-        lp.connect(wet);
+        // feedback 0 → a single repeat (no loop at all).
+        if (fb.gain.value > 0) {
+          lp.connect(fb);
+          fb.connect(delay);
+        }
+        lp.connect(lp2);
+        lp2.connect(wet);
         wet.connect(buses.accents);
         const ws = ctx.createGain();
         ws.gain.value = e.whistleSend;
         wg.connect(ws);
         ws.connect(input);
-        this.turboEcho = { input, nodes: [input, delay, lp, fb, wet, ws] };
+        this.turboEcho = { input, nodes: [input, delay, lp, lp2, fb, wet, ws] };
         nodes += 6;
       }
       if (cfg.spoolDown) {

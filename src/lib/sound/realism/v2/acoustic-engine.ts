@@ -545,7 +545,8 @@ const RALLY_TURBO_3: AcousticEngineConfig = {
   // Longer whistle: holds ~1.6 s of boost, then settles gently to 45%.
   whistleSettle: { holdS: 1.6, tauS: 1.6, floor: 0.45 },
   whistleRange: { baseHz: 2500, spanHz: 4300 },
-  turboEcho: { delayS: 0.17, feedback: 0.38, lpHz: 3200, flutterSend: 0.55, whistleSend: 0.45 },
+  // One single faint, darkened repeat (no feedback).
+  turboEcho: { delayS: 0.17, feedback: 0, lpHz: 2000, flutterSend: 0.3, whistleSend: 0.25 },
   spoolDown: { fromHz: 6400, toHz: 1800, seconds: 2.4, level: 0.05 },
   fastLift: { windowS: 0.25, peakMs2: 0.9, liftMs2: -0.25 },
 };
