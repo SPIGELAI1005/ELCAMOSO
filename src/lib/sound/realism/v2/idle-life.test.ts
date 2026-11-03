@@ -45,7 +45,9 @@ describe("petrol car states (gentle/hard, turbo flutter, performance exhaust)", 
     for (const [id, cfg] of Object.entries(ACOUSTIC_ENGINE_BY_PROFILE)) {
       if (cfg.whistleSettle) {
         expect(cfg.forcedInduction, id).toBe(true);
-        expect(cfg.whistleSettle.holdS + cfg.whistleSettle.tauS * 1.5).toBeLessThanOrEqual(2);
+        // Echo turbo profiles (Rally) keep a deliberately longer whistle; still bounded.
+        const maxSettleS = cfg.turboReverb ? 4.5 : 2;
+        expect(cfg.whistleSettle.holdS + cfg.whistleSettle.tauS * 1.5).toBeLessThanOrEqual(maxSettleS);
         expect(cfg.whistleSettle.floor).toBeGreaterThan(0);
         expect(cfg.whistleSettle.floor).toBeLessThan(0.5);
       }

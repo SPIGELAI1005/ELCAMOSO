@@ -401,6 +401,18 @@ export class HybridCombustionSynth {
   private saturation: WaveShaperNode | null = null;
   private saturationPostLp: BiquadFilterNode | null = null;
   private outputLimiter: WaveShaperNode | null = null;
+  private drumBody: {
+    toms: { filter: BiquadFilterNode; gain: GainNode }[];
+    growlIn: BiquadFilterNode;
+    growlShaper: WaveShaperNode;
+    growlGain: GainNode;
+    bus: GainNode;
+  } | null = null;
+  private turboEcho: { input: GainNode; nodes: AudioNode[] } | null = null;
+  private spoolDownVoice: { osc: OscillatorNode; gain: GainNode } | null = null;
+  private flHist: { t: number; v: number }[] = [];
+  private flPeakSlope = 0;
+  private bovTone: { filter: BiquadFilterNode; gain: GainNode } | null = null;
   private highRpmVoicing: { low: BiquadFilterNode; pres: BiquadFilterNode } | null = null;
   private supportLp: BiquadFilterNode | null = null;
   private shiftConsumer = new ShiftEventConsumer();
@@ -779,8 +791,62 @@ export class HybridCombustionSynth {
         into = bands[0]!;
         nodes += bands.length;
       }
+      if (cfg.drumBody && this.excitation) {
+        // Big-drum body: high-Q fixed-pitch resonators ring on each combustion pulse (tom
+        // thump), plus a driven, bandpassed copy of the combustion bus for growl under load.
+        const d = cfg.drumBody;
+        const bus = ctx.createGain();
+        bus.gain.value = 0;
+        const toms = d.hz.map((hz, i) => {
+          const filter = ctx.createBiquadFilter();
+          filter.type = "bandpass";
+          filter.frequency.value = belowNyquist(hz, ctx.sampleRate);
+          filter.Q.value = d.q;
+          const gain = ctx.createGain();
+          gain.gain.value = (d.level * 2.2) / (1 + i * 0.6);
+          this.excitation!.node.connect(filter);
+          filter.connect(gain);
+          gain.connect(bus);
+          return { filter, gain };
+        });
+        const growlIn = ctx.createBiquadFilter();
+        growlIn.type = "bandpass";
+        growlIn.frequency.value = d.growlHz;
+        growlIn.Q.value = 0.9;
+        const growlShaper = ctx.createWaveShaper();
+        const n = 1024;
+        const curve = new Float32Array(n);
+        for (let i = 0; i < n; i += 1) {
+          const x = (i / (n - 1)) * 2 - 1;
+          // Asymmetric soft drive: odd + even harmonics (rasp), bounded, zero at zero.
+          const y = Math.tanh(d.growlDrive * x) + 0.25 * Math.tanh(d.growlDrive * x * x);
+          curve[i] = y - 0.25 * Math.tanh(0);
+        }
+        growlShaper.curve = curve;
+        growlShaper.oversample = "2x";
+        const growlLp = ctx.createBiquadFilter();
+        growlLp.type = "lowpass";
+        growlLp.frequency.value = 2400;
+        growlLp.Q.value = 0.6;
+        const growlHp = ctx.createBiquadFilter();
+        growlHp.type = "highpass";
+        growlHp.frequency.value = 70;
+        growlHp.Q.value = 0.7;
+        const growlGain = ctx.createGain();
+        growlGain.gain.value = 0;
+        growlIn.connect(growlShaper);
+        growlShaper.connect(growlLp);
+        growlLp.connect(growlHp);
+        growlHp.connect(growlGain);
+        growlGain.connect(into);
+        bus.connect(into);
+        this.drumBody = { toms, growlIn, growlShaper, growlGain, bus };
+        nodes += toms.length * 2 + 6;
+      }
       this.combustionBus.disconnect();
       this.combustionBus.connect(into);
+      // Growl taps the combustion bus after the reroute (disconnect() above drops all outputs).
+      if (this.drumBody) this.combustionBus.connect(this.drumBody.growlIn);
       if (this.harshnessShelf) {
         this.harshnessShelf.disconnect();
         this.harshnessShelf.connect(into);
@@ -908,6 +974,57 @@ export class HybridCombustionSynth {
       });
       wg.connect(buses.accents);
       this.turboWhistle = { oscs, gain: wg };
+      if (cfg.turboReverb) {
+        // Short, smooth, dark reverb for the turbo voices: a convolver with a
+        // generated exponentially decaying noise tail (no delay lines → no distinct repeats).
+        const r = cfg.turboReverb;
+        const input = ctx.createGain();
+        input.gain.value = 1;
+        const conv = ctx.createConvolver();
+        conv.normalize = true;
+        const len = Math.max(1, Math.floor(ctx.sampleRate * r.decayS * 1.2));
+        const ir = ctx.createBuffer(2, len, ctx.sampleRate);
+        let seed = 0x2f6b1d;
+        for (let c = 0; c < 2; c++) {
+          const d = ir.getChannelData(c);
+          let lpState = 0;
+          for (let i = 0; i < len; i++) {
+            seed = (seed * 1664525 + 1013904223) >>> 0;
+            const n = seed / 4294967296 - 0.5;
+            lpState += 0.35 * (n - lpState); // pre-darkened tail
+            const t = i / ctx.sampleRate;
+            const fadeIn = Math.min(1, t / 0.008);
+            d[i] = lpState * fadeIn * Math.exp((-6.9 * t) / r.decayS); // -60 dB at decayS
+          }
+        }
+        conv.buffer = ir;
+        const lp = ctx.createBiquadFilter();
+        lp.type = "lowpass";
+        lp.frequency.value = r.lpHz;
+        lp.Q.value = 0.5;
+        const wet = ctx.createGain();
+        wet.gain.value = r.wet;
+        input.connect(conv);
+        conv.connect(lp);
+        lp.connect(wet);
+        wet.connect(buses.accents);
+        wg.connect(input);
+        this.turboEcho = { input, nodes: [input, conv, lp, wet] };
+        nodes += 4;
+      }
+      if (cfg.spoolDown) {
+        const osc = ctx.createOscillator();
+        osc.type = "sine";
+        osc.frequency.value = cfg.spoolDown.fromHz;
+        const gain = ctx.createGain();
+        gain.gain.value = 0.0001;
+        osc.connect(gain);
+        gain.connect(buses.accents);
+        if (this.turboEcho) gain.connect(this.turboEcho.input);
+        osc.start();
+        this.spoolDownVoice = { osc, gain };
+        nodes += 2;
+      }
       // Blow-off "pssh": white noise through a sweeping bandpass, enveloped on boost release.
       const bsrc = ctx.createBufferSource();
       bsrc.buffer = getNoiseBuffer(ctx, "white");
@@ -923,6 +1040,29 @@ export class HybridCombustionSynth {
       bg.connect(buses.accents);
       bsrc.start();
       this.bov = { src: bsrc, filter: bf, gain: bg };
+      let flutterSend: GainNode | null = null;
+      if (this.turboEcho && cfg.turboReverb) {
+        flutterSend = ctx.createGain();
+        flutterSend.gain.value = 1;
+        bg.connect(flutterSend);
+        flutterSend.connect(this.turboEcho.input);
+        this.turboEcho.nodes.push(flutterSend);
+      }
+      if (cfg.turboFlutter?.toneQ) {
+        // Tuned ring layer for the percussion flutter (same noise, narrow bandpass).
+        const tf = ctx.createBiquadFilter();
+        tf.type = "bandpass";
+        tf.frequency.value = cfg.turboFlutter.hz;
+        tf.Q.value = cfg.turboFlutter.toneQ;
+        const tg = ctx.createGain();
+        tg.gain.value = 0.0001;
+        bsrc.connect(tf);
+        tf.connect(tg);
+        tg.connect(buses.accents);
+        if (flutterSend) tg.connect(flutterSend);
+        this.bovTone = { filter: tf, gain: tg };
+        nodes += 2;
+      }
       nodes += 6;
     }
 
@@ -1281,6 +1421,17 @@ export class HybridCombustionSynth {
       this.diagnostics.spectralTiltDb = tiltDb;
     }
 
+    if (this.drumBody && cfg.drumBody) {
+      const d = cfg.drumBody;
+      // Drum thump: always present, swells with load; growl only under load (rasp).
+      const loadAmt = Math.min(1, Math.max(0, load));
+      const drum = (0.45 + 0.55 * Math.max(loadAmt, demand)) * (overrun ? 0.7 : 1) * (1 - this.ilGate * 0.4);
+      targetParam(this.drumBody.bus.gain, drum, audioTime, 0.06);
+      const growl = overrun ? 0.05 : d.growl * Math.max(0, (Math.max(loadAmt, demand) - 0.2) / 0.8);
+      targetParam(this.drumBody.growlGain.gain, growl * 1.6, audioTime, 0.07);
+      targetParam(this.drumBody.growlIn.frequency, d.growlHz * (0.8 + rpmNorm * 0.9), audioTime, 0.1);
+    }
+
     if (this.highRpmVoicing && cfg.highRpmVoicing) {
       const v = cfg.highRpmVoicing;
       const rpmGate = Math.min(1, Math.max(0, (rpm - v.startRpm) / (v.fullRpm - v.startRpm)));
@@ -1601,14 +1752,30 @@ export class HybridCombustionSynth {
           this.flSpoolPeak = Math.max(spool, this.flSpoolPeak - dt * 0.35);
           this.flHardPeak = Math.max(accHard, this.flHardPeak - dt * 0.3);
           const ov = this.accelChar.overrun;
-          const gpsLift = ov > 0.35 && this.flPrevOverrun <= 0.35;
+          let fastLift = false;
+          if (cfg.fastLift) {
+            // Short-window raw speed slope: a hard pull turning into a lift fires within ~0.2 s.
+            const fz = cfg.fastLift;
+            this.flHist.push({ t: audioTime, v: this.lastSpeedMs });
+            while (this.flHist.length > 2 && audioTime - this.flHist[0]!.t > fz.windowS) this.flHist.shift();
+            const h0 = this.flHist[0]!;
+            const span = audioTime - h0.t;
+            const slope = span > fz.windowS * 0.6 ? (this.lastSpeedMs - h0.v) / span : 0;
+            this.flPeakSlope = Math.max(slope, this.flPeakSlope - dt * 0.8);
+            if (this.flPeakSlope >= fz.peakMs2 && slope <= fz.liftMs2) {
+              fastLift = true;
+              this.flPeakSlope = 0;
+            }
+          }
+          const gpsLift = (ov > 0.35 && this.flPrevOverrun <= 0.35) || fastLift;
           const anyShift = shifting && pt?.shiftDirection === "up" && !this.flPrevShift;
           if (
             (gpsLift || anyShift) &&
             Math.max(this.flSpoolPeak, this.flHardPeak * 0.8) >= 0.3 &&
             speedKmh > 10 &&
             this.ilGate < 0.5 &&
-            audioTime - this.bovLastAt > 1.2
+            // A fast lift may already have fired; the late GPS lift must not restart the roll.
+            audioTime - this.bovLastAt > (cfg.fastLift ? 2.6 : 1.2)
           ) {
             this.bovLastAt = audioTime;
             const st = Math.max(this.flSpoolPeak, this.flHardPeak * 0.8);
@@ -1644,7 +1811,8 @@ export class HybridCombustionSynth {
           audioTime,
           0.12,
         );
-        const hz = 2200 + spool * 3400 + rpmNorm * 700;
+        const wr = cfg.whistleRange;
+        const hz = (wr ? wr.baseHz + spool * wr.spanHz : 2200 + spool * 3400) + rpmNorm * 700;
         this.turboWhistle.oscs.forEach((o, i) =>
           targetParam(o.frequency, hz * (i === 0 ? 1 : 1.013), audioTime, 0.15),
         );
@@ -2511,6 +2679,10 @@ export class HybridCombustionSynth {
       this.wsDuck = 0;
     }
     const fl = this.cfg?.turboFlutter;
+    if (fl?.notesSemis?.length) {
+      this.fireTunedFlutter(fl, spool, audioTime, gateLevel);
+      return;
+    }
     if (fl) {
       // Supra-style compressor surge / wastegate flutter: a short "pssh" then a train of
       // fast decaying chirps ("stu-tu-tu-tu"), each slightly lower, with jittered spacing.
@@ -2566,6 +2738,81 @@ export class HybridCombustionSynth {
     g.setTargetAtTime(0.0001, tt, 0.11);
   }
 
+  /**
+   * Percussion-instrument flutter: a soft "pssh" then a roll of tuned hits. Each hit drops to a
+   * near-silent gate before its pitch steps (so pitch changes never click), attacks in ~3 ms and
+   * decays exponentially; spacing tightens (accelerando) and levels fall like a drum roll.
+   */
+  private fireTunedFlutter(
+    fl: NonNullable<AcousticEngineConfig["turboFlutter"]>,
+    spool: number,
+    audioTime: number,
+    gateLevel: number,
+  ) {
+    if (!this.bov) return;
+    const notes = fl.notesSemis ?? [0];
+    const t0 = Math.max(audioTime, this.lastUpdateTime) + 0.004;
+    const peak0 = (0.05 + spool * 0.07) * gateLevel * fl.level;
+    const g = this.bov.gain.gain;
+    const f = this.bov.filter.frequency;
+    const q = this.bov.filter.Q;
+    const tone = this.bovTone;
+    const tg = tone?.gain.gain;
+    const tf = tone?.filter.frequency;
+    const toneLevel = fl.toneLevel ?? 0;
+    for (const prm of [g, f, q, tg, tf]) prm?.cancelScheduledValues(t0);
+    g.setValueAtTime(Math.max(0.0001, g.value), t0);
+    tg?.setValueAtTime(Math.max(0.0001, tg.value), t0);
+    // Opening "pssh": wide and bright, short.
+    q.setValueAtTime(0.9, t0);
+    f.setValueAtTime(fl.hz * 1.8, t0);
+    f.setTargetAtTime(fl.hz * 1.2, t0 + 0.02, 0.05);
+    g.setTargetAtTime(peak0 * 0.7, t0, 0.008);
+    g.setTargetAtTime(peak0 * 0.25, t0 + 0.05, 0.03);
+    let tt = t0 + 0.11;
+    let p = peak0;
+    let period = 1 / fl.rateHz;
+    const accel = fl.accel ?? 1;
+    const chirps = Math.max(3, Math.round(fl.chirps * (0.55 + spool * 0.45)));
+    for (let k = 0; k < chirps; k += 1) {
+      const hz = fl.hz * 2 ** ((notes[k % notes.length] ?? 0) / 12);
+      // Gate down, then step pitch while (nearly) silent.
+      g.setTargetAtTime(0.0001 + p * (1 - fl.depth), tt - 0.012, 0.004);
+      tg?.setTargetAtTime(0.0001, tt - 0.012, 0.004);
+      q.setValueAtTime(fl.q, tt - 0.001);
+      f.setValueAtTime(hz * 1.08, tt - 0.001);
+      f.setTargetAtTime(hz, tt, 0.012);
+      tf?.setValueAtTime(hz, tt - 0.001);
+      // Hit: fast attack, exponential decay.
+      g.setTargetAtTime(p, tt, 0.003);
+      g.setTargetAtTime(0.0001 + p * 0.08, tt + 0.012, period * 0.28);
+      if (tg) {
+        tg.setTargetAtTime(p * toneLevel * 3, tt, 0.003);
+        tg.setTargetAtTime(0.0001, tt + 0.014, period * 0.4);
+      }
+      // Small human timing feel, never on the grid exactly.
+      tt += period * (0.96 + this.popRand() * 0.08);
+      period = Math.min(0.2, Math.max(0.035, period * accel));
+      p *= fl.decay ?? 0.88;
+    }
+    g.setTargetAtTime(0.0001, tt, 0.05);
+    tg?.setTargetAtTime(0.0001, tt, 0.05);
+    q.setTargetAtTime(0.8, tt + 0.3, 0.1);
+    const sd = this.cfg?.spoolDown;
+    if (sd && this.spoolDownVoice) {
+      // Spool-down tone: the turbo whistle glides down as the shaft slows (soft in/out).
+      const of = this.spoolDownVoice.osc.frequency;
+      const og = this.spoolDownVoice.gain.gain;
+      of.cancelScheduledValues(t0);
+      og.cancelScheduledValues(t0);
+      og.setValueAtTime(Math.max(0.0001, og.value), t0);
+      of.setValueAtTime(sd.fromHz * (0.75 + spool * 0.25), t0);
+      of.exponentialRampToValueAtTime(sd.toHz, t0 + sd.seconds);
+      og.setTargetAtTime(sd.level * (0.4 + spool * 0.6) * gateLevel, t0, 0.04);
+      og.setTargetAtTime(0.0001, t0 + sd.seconds * 0.35, sd.seconds * 0.3);
+    }
+  }
+
   dispose() {
     this.disposed = true;
     this.excitation?.dispose();
@@ -2598,6 +2845,36 @@ export class HybridCombustionSynth {
     this.outputLimiter = null;
     this.raceGate?.disconnect();
     this.raceGate = null;
+    if (this.drumBody) {
+      this.drumBody.toms.forEach((t) => {
+        t.filter.disconnect();
+        t.gain.disconnect();
+      });
+      this.drumBody.growlIn.disconnect();
+      this.drumBody.growlShaper.disconnect();
+      this.drumBody.growlGain.disconnect();
+      this.drumBody.bus.disconnect();
+      this.drumBody = null;
+    }
+    if (this.spoolDownVoice) {
+      try {
+        this.spoolDownVoice.osc.stop();
+      } catch {
+        /* already stopped */
+      }
+      this.spoolDownVoice.osc.disconnect();
+      this.spoolDownVoice.gain.disconnect();
+      this.spoolDownVoice = null;
+    }
+    if (this.turboEcho) {
+      this.turboEcho.nodes.forEach((n) => n.disconnect());
+      this.turboEcho = null;
+    }
+    if (this.bovTone) {
+      this.bovTone.filter.disconnect();
+      this.bovTone.gain.disconnect();
+      this.bovTone = null;
+    }
     this.highRpmVoicing?.low.disconnect();
     this.highRpmVoicing?.pres.disconnect();
     this.highRpmVoicing = null;
