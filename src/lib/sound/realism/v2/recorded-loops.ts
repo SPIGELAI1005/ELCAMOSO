@@ -656,9 +656,9 @@ const TRABY_REV_HARD_REGIONS: RecordedRegion[] = [
 ];
 
 /**
- * Ge-Squared (v8): doubled big-twin banks. Each clip is the recording plus two copies on a slowly
- * wandering 40-120 ms offset (two to three engines stacked, slightly detuned), so the lope
- * is fatter; O))) also gets harder pulse attacks. No oscillators involved.
+ * Ge-Squared (v9): deep big-twin lope with the fast "trrr" chatter smoothed out (zero-phase
+ * envelope smoothing above ~8 Hz) and the valve/tappet rattle band filtered off; the American
+ * Muscle V8 recordings ride along as the main growl layer under load. No oscillators involved.
  */
 const GE2_TWIN90_IDLE_REGIONS: RecordedRegion[] = [
   { start: 0.06, end: 30.02, rpm: [700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700,  700] },
@@ -746,6 +746,14 @@ const src = (
 // clips per load), the synth is ducked to a little sub and continuity underneath.
 const RAW_HANDOVER: RecordedHandover = { rpmStart: 0, rpmSpan: 1, accelKeep: 1, rpmKeep: 0.96, topRpm: 20000, topSpan: 1000 };
 
+const v8Growl = (id: string, load: SourceLoad, regions: RecordedRegion[], minRate: number, maxRate: number, weight: number): RecordedSource => ({
+  id, url: `${BASE}/maserati_v8_regions.m4a`, regions, weight, minRate, maxRate, load,
+});
+const v8Cruise = (id: string, load: SourceLoad, minRate: number, maxRate: number, weight: number): RecordedSource => ({
+  id, url: `${BASE}/rover_v8_regions.m4a`, regions: ROVER_REGIONS, weight, minRate, maxRate, load,
+});
+const MASERATI_PULL_REGIONS = MASERATI_REGIONS.slice(4);
+
 export const RECORDED_LOOP_BANKS_BY_PROFILE: Record<string, RecordedLoopBank> = {
   // Small two-stroke twin: ring-ding idle, buzzy rattly revs. Idle clip for idle, the revving
   // clip (rev blips) for driving so the two-stroke buzz stays under load.
@@ -764,37 +772,44 @@ export const RECORDED_LOOP_BANKS_BY_PROFILE: Record<string, RecordedLoopBank> = 
     handover: RAW_HANDOVER,
     eq: { lowShelfDb: 4, midDb: 3, midHz: 900, highShelfDb: 1, highShelfHz: 3000, lowpassHz: 10000 },
   },
-  // '90: two big twins stacked, slow relaxed lope, soft top end. Recordings only, no synth tone.
+  // '90: deep twin lope + V8 growl underneath, slow relaxed build, soft top end. Recordings only, no synth tone.
   "ge-squared-90": {
     personalityId: "ge-squared-90",
     sources: [
-      src("ge2c-idle", "ge2_90_twin.m4a", GE2_TWIN90_IDLE_REGIONS, "idle", 0.8, 1.5),
-      src("ge2c-cruise", "ge2_90_twin.m4a", GE2_TWIN90_CRUISE_REGIONS, "cruise", 0.55, 1.3),
-      src("ge2c-growl", "ge2_90_twin.m4a", GE2_TWIN90_GROWL_REGIONS, "growl", 0.55, 1.3, 1.1),
-      src("ge2c-hard", "ge2_90_twin.m4a", GE2_TWIN90_HARD_REGIONS, "hard", 0.55, 1.3, 1.2),
-      src("ge2c-overrun", "ge2_90_twin.m4a", GE2_TWIN90_OVERRUN_REGIONS, "overrun", 0.55, 1.3, 0.8),
+      src("ge2c-idle", "ge2_90_lope.m4a", GE2_TWIN90_IDLE_REGIONS, "idle", 0.8, 1.5),
+      src("ge2c-cruise", "ge2_90_lope.m4a", GE2_TWIN90_CRUISE_REGIONS, "cruise", 0.55, 1.2, 0.8),
+      src("ge2c-growl", "ge2_90_lope.m4a", GE2_TWIN90_GROWL_REGIONS, "growl", 0.55, 1.2, 0.6),
+      src("ge2c-hard", "ge2_90_lope.m4a", GE2_TWIN90_HARD_REGIONS, "hard", 0.55, 1.2, 0.6),
+      src("ge2c-overrun", "ge2_90_lope.m4a", GE2_TWIN90_OVERRUN_REGIONS, "overrun", 0.55, 1.3, 0.8),
+      v8Cruise("ge2c-v8-cruise", "cruise", 0.6, 1.5, 0.9),
+      v8Growl("ge2c-v8-growl", "growl", MASERATI_PULL_REGIONS, 0.55, 1.5, 1.4),
+      v8Growl("ge2c-v8-hard", "hard", MASERATI_PULL_REGIONS, 0.55, 1.5, 1.5),
     ],
     level: 0.45,
     synthDuck: 1.05,
     loadSynthDuck: 1.05,
     handover: RAW_HANDOVER,
-    eq: { lowShelfDb: 6, midDb: -1, midHz: 1500, highShelfDb: -4, highShelfHz: 2500, lowpassHz: 5500 },
+    eq: { lowShelfDb: 7, midDb: -2, midHz: 1200, highShelfDb: -6, highShelfHz: 1800, lowpassHz: 2400 },
   },
-  // O))): doubled big twins with harder hits, faster aggressive build. Recordings only.
+  // O))): twin lope + V8 growl leading under load, faster aggressive build. Recordings only.
   "ge-squared": {
     personalityId: "ge-squared",
     sources: [
-      src("ge2b-idle", "ge2_o_twin.m4a", GE2_TWINO_IDLE_REGIONS, "idle", 0.8, 1.5),
-      src("ge2b-cruise", "ge2_o_twin.m4a", GE2_TWINO_CRUISE_REGIONS, "cruise", 0.55, 1.35),
-      src("ge2b-growl", "ge2_o_twin.m4a", GE2_TWINO_GROWL_REGIONS, "growl", 0.55, 1.4, 1.3),
-      src("ge2b-hard", "ge2_o_twin.m4a", GE2_TWINO_HARD_REGIONS, "hard", 0.55, 1.35, 1.5),
-      src("ge2b-overrun", "ge2_o_twin.m4a", GE2_TWINO_OVERRUN_REGIONS, "overrun", 0.55, 1.35, 1),
+      src("ge2b-idle", "ge2_o_lope.m4a", GE2_TWINO_IDLE_REGIONS, "idle", 0.8, 1.5),
+      src("ge2b-cruise", "ge2_o_lope.m4a", GE2_TWINO_CRUISE_REGIONS, "cruise", 0.55, 1.25, 0.8),
+      src("ge2b-growl", "ge2_o_lope.m4a", GE2_TWINO_GROWL_REGIONS, "growl", 0.55, 1.25, 0.7),
+      src("ge2b-hard", "ge2_o_lope.m4a", GE2_TWINO_HARD_REGIONS, "hard", 0.55, 1.25, 0.75),
+      src("ge2b-overrun", "ge2_o_lope.m4a", GE2_TWINO_OVERRUN_REGIONS, "overrun", 0.55, 1.35, 1),
+      v8Cruise("ge2b-v8-cruise", "cruise", 0.6, 1.6, 1),
+      v8Growl("ge2b-v8-growl", "growl", MASERATI_PULL_REGIONS, 0.55, 1.7, 1.7),
+      v8Growl("ge2b-v8-hard", "hard", MASERATI_PULL_REGIONS, 0.55, 1.7, 2),
+      v8Growl("ge2b-v8-overrun", "overrun", MASERATI_PULL_REGIONS, 0.55, 1.5, 0.8),
     ],
     level: 0.42,
     synthDuck: 1.05,
     loadSynthDuck: 1.05,
     handover: RAW_HANDOVER,
-    eq: { lowShelfDb: 7, midDb: 3, midHz: 800, highShelfDb: 1, highShelfHz: 3000, lowpassHz: 9000 },
+    eq: { lowShelfDb: 8, midDb: 2, midHz: 500, highShelfDb: -4, highShelfHz: 2000, lowpassHz: 3200 },
   },
 };
 
@@ -985,7 +1000,7 @@ export const RECORDED_LOOP_CREDITS: RecordedCredit[] = [
     licence: "CC0 1.0",
     licenceUrl: "https://creativecommons.org/publicdomain/zero/1.0/",
     sourceUrl: "https://freesound.org/s/743981/",
-    usedIn: "Big Twin, Ge-Squared '90 and O))) (cruise, rev growl, hard acceleration, engine braking; doubled on Ge-Squared)",
+    usedIn: "Big Twin, Ge-Squared '90 and O))) (cruise, rev growl, hard acceleration, engine braking)",
     attribution:
       "Big V-twin recording by BranCorvus (Freesound #743981), CC0 1.0, edited (trimmed, filtered, re-sequenced, granular).",
   },
@@ -1004,7 +1019,7 @@ export const RECORDED_LOOP_CREDITS: RecordedCredit[] = [
     licence: "CC BY 4.0",
     licenceUrl: "https://creativecommons.org/licenses/by/4.0/",
     sourceUrl: "https://commons.wikimedia.org/wiki/File:Maserati_GranTurismo_S_Exhaust.ogg",
-    usedIn: "American Muscle V8, GT V8 (idle and cruise)",
+    usedIn: "American Muscle V8, GT V8 (idle and cruise), Ge-Squared '90 and O))) (growl under load)",
     attribution:
       "\u201CMaserati GranTurismo S Exhaust\u201D by lmartins, CC BY 4.0 (creativecommons.org/licenses/by/4.0), edited (trimmed, filtered, re-sequenced).",
   },
@@ -1014,7 +1029,7 @@ export const RECORDED_LOOP_CREDITS: RecordedCredit[] = [
     licence: "Public domain",
     licenceUrl: "https://commons.wikimedia.org/wiki/File:Rover-v8-rr79.ogg",
     sourceUrl: "https://commons.wikimedia.org/wiki/File:Rover-v8-rr79.ogg",
-    usedIn: "American Muscle V8 (idle and low cruise)",
+    usedIn: "American Muscle V8 (idle and low cruise), Ge-Squared '90 and O))) (cruise)",
     attribution: "\u201CRover-v8-rr79\u201D by Collard, public domain.",
   },
   {
@@ -1063,7 +1078,7 @@ export const RECORDED_LOOP_CREDITS: RecordedCredit[] = [
     licence: "CC BY 4.0",
     licenceUrl: "https://creativecommons.org/licenses/by/4.0/",
     sourceUrl: "https://freesound.org/s/185077/",
-    usedIn: "Ge-Squared '90 (idle, doubled)",
+    usedIn: "Ge-Squared '90 (idle)",
     attribution: "Sound from http://www.freesound.org/people/klankbeeld/ (Freesound #185077), CC BY 4.0, edited (trimmed, filtered, layered, granular).",
   },
   {
@@ -1072,7 +1087,7 @@ export const RECORDED_LOOP_CREDITS: RecordedCredit[] = [
     licence: "CC0 1.0",
     licenceUrl: "https://creativecommons.org/publicdomain/zero/1.0/",
     sourceUrl: "https://freesound.org/s/502690/",
-    usedIn: "Ge-Squared O))) (revs, doubled)",
+    usedIn: "Ge-Squared O))) (revs)",
     attribution: "Big V-twin recording by demodave (Freesound #502690), CC0 1.0, edited (trimmed, filtered, layered, granular).",
   },
   {
@@ -1081,7 +1096,7 @@ export const RECORDED_LOOP_CREDITS: RecordedCredit[] = [
     licence: "CC0 1.0",
     licenceUrl: "https://creativecommons.org/publicdomain/zero/1.0/",
     sourceUrl: "https://freesound.org/s/657763/",
-    usedIn: "Ge-Squared O))) (idle, take-off, doubled)",
+    usedIn: "Ge-Squared O))) (idle, take-off)",
     attribution: "Big V-twin recording by Tom_Kaszuba (Freesound #657763), CC0 1.0, edited (trimmed, filtered, layered, granular).",
   },
 
