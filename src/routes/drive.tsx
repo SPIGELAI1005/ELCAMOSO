@@ -334,7 +334,7 @@ function DriveScreen() {
       {status === "idle" ? (
         <>
           {/* Mobile: inline in the page flow so it never sits under the bottom tab nav. */}
-          <DriveSpecialBanner className="-mx-6 -mt-6 mb-4 sm:hidden" />
+          <DriveSpecialBanner className="relative z-10 -mx-6 -mt-6 mb-4 sm:hidden" />
           {/* Desktop: unchanged fixed strip above the founders bar. */}
           <DriveSpecialBanner className="fixed inset-x-0 bottom-[29px] z-30 hidden border-t sm:flex sm:bottom-[29px]" />
         </>
