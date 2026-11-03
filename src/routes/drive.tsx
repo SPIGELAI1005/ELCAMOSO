@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { FoundersBanner } from "@/components/FoundersBanner";
+import { DriveSpecialBanner } from "@/components/DriveSpecialBanner";
 import { HalloweenBanner } from "@/components/HalloweenBanner";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { createSeoHeadFromPath } from "@/lib/seo";
@@ -329,6 +330,9 @@ function DriveScreen() {
       ) : null}
       {status === "idle" ? (
         <HalloweenBanner className="fixed inset-x-0 bottom-[29px] z-30 border-t sm:bottom-[29px]" />
+      ) : null}
+      {status === "idle" ? (
+        <DriveSpecialBanner className="fixed inset-x-0 bottom-[29px] z-30 border-t sm:bottom-[29px]" />
       ) : null}
       {status === "idle" && !sessionSnap.nativeCapture.active ? (
         <IncompleteJourneyRecovery />

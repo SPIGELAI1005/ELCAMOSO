@@ -74,3 +74,13 @@ describe("Demo page flag", () => {
     expect(buildSitemapXml()).not.toContain("/demo");
   });
 });
+
+describe("7 Days Drive Special banner copy", () => {
+  it("has EN/DE/RO copy and falls back to EN", async () => {
+    const { driveSpecialBannerText, DRIVE_SPECIAL_PURPLE } = await import("./drive-special");
+    expect(driveSpecialBannerText("de").text).toMatch(/gratis/);
+    expect(driveSpecialBannerText("ro").text).toMatch(/gratuit/);
+    expect(driveSpecialBannerText("fr").text).toMatch(/free/);
+    expect(DRIVE_SPECIAL_PURPLE).toMatch(/^#[0-9a-f]{6}$/i);
+  });
+});

@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { createSeoHeadFromPath } from "@/lib/seo";
 import { FoundersBanner } from "@/components/FoundersBanner";
+import { DriveSpecialBanner } from "@/components/DriveSpecialBanner";
 import { HalloweenBanner } from "@/components/HalloweenBanner";
 import { LandingHero } from "@/components/LandingHero";
 import { LandingPlansSection } from "@/components/LandingPlansSection";
@@ -26,6 +27,7 @@ function Landing() {
       <div className="sticky top-0 z-40">
         <FoundersBanner />
         <HalloweenBanner />
+        <DriveSpecialBanner />
       </div>
       <LandingHero />
 

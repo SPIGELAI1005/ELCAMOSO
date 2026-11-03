@@ -25,6 +25,7 @@ import { isMusicPackageProfileId } from "@/lib/entitlements/plans";
 import {
   DRIVE_SPECIAL_COMPANION_IDS,
   DRIVE_SPECIAL_NAME,
+  DRIVE_SPECIAL_PURPLE,
   isDriveSpecialActive,
 } from "@/lib/billing/drive-special";
 import { SoundProfileAccessIndicator } from "@/components/SoundProfileAccessIndicator";
@@ -246,12 +247,33 @@ function Sounds() {
 
         <div className="mt-10 space-y-12">
           {sections.map(({ section, items }) => (
-            <section key={section}>
-              <h2 className="text-[11px] tracking-[0.28em] text-muted-foreground uppercase">
+            <section
+              key={section}
+              data-testid={section === DRIVE_SPECIAL_NAME ? "sounds-special-section" : undefined}
+              className={section === DRIVE_SPECIAL_NAME ? "rounded-sm border-l-2 pl-4" : undefined}
+              style={
+                section === DRIVE_SPECIAL_NAME
+                  ? {
+                      borderColor: DRIVE_SPECIAL_PURPLE,
+                      background: `linear-gradient(90deg, ${DRIVE_SPECIAL_PURPLE}14, transparent)`,
+                    }
+                  : undefined
+              }
+            >
+              <h2
+                className={`text-[11px] tracking-[0.28em] uppercase ${
+                  section === DRIVE_SPECIAL_NAME ? "font-semibold" : "text-muted-foreground"
+                }`}
+                style={section === DRIVE_SPECIAL_NAME ? { color: DRIVE_SPECIAL_PURPLE } : undefined}
+              >
                 {section}
               </h2>
               {section === DRIVE_SPECIAL_NAME ? (
-                <p data-testid="special-hint" className="mt-2 text-xs text-[#e53935]">
+                <p
+                  data-testid="special-hint"
+                  className="mt-2 text-xs"
+                  style={{ color: DRIVE_SPECIAL_PURPLE }}
+                >
                   {isAuthenticated ? (
                     "Drive the Music is free for you until 09.11."
                   ) : (

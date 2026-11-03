@@ -25,7 +25,11 @@ import {
 import { useSessionSelector } from "@/lib/store/session-store";
 import { cn } from "@/lib/utils";
 import { HALLOWEEN_ORANGE, HALLOWEEN_TAG, halloweenPinned } from "@/lib/halloween/halloween";
-import { DRIVE_SPECIAL_NAME, isDriveSpecialActive } from "@/lib/billing/drive-special";
+import {
+  DRIVE_SPECIAL_NAME,
+  DRIVE_SPECIAL_PURPLE,
+  isDriveSpecialActive,
+} from "@/lib/billing/drive-special";
 import { isMusicPackageProfileId } from "@/lib/entitlements/plans";
 import {
   driveSpecialPinned,
@@ -222,20 +226,33 @@ export function HeaderSoundsMenu({
       {groups.map(({ category, profiles, halloween, special }) => (
         <div
           key={category}
-          className={cn("mb-1", halloween && "mb-2 rounded-sm border pb-1")}
+          className={cn("mb-1", (halloween || special) && "mb-2 rounded-sm border pb-1")}
           style={
             halloween
               ? { borderColor: `${HALLOWEEN_ORANGE}66`, background: `${HALLOWEEN_ORANGE}12` }
-              : undefined
+              : special
+                ? {
+                    borderColor: `${DRIVE_SPECIAL_PURPLE}66`,
+                    background: `${DRIVE_SPECIAL_PURPLE}14`,
+                  }
+                : undefined
           }
-          data-testid={halloween ? "sounds-halloween-group" : undefined}
+          data-testid={
+            halloween ? "sounds-halloween-group" : special ? "sounds-special-group" : undefined
+          }
         >
           <p
             className={cn(
               "px-3 py-1.5 text-[9px] tracking-[0.22em] uppercase",
-              halloween ? "font-semibold" : "text-muted-foreground/70",
+              halloween || special ? "font-semibold" : "text-muted-foreground/70",
             )}
-            style={halloween ? { color: HALLOWEEN_ORANGE } : undefined}
+            style={
+              halloween
+                ? { color: HALLOWEEN_ORANGE }
+                : special
+                  ? { color: DRIVE_SPECIAL_PURPLE }
+                  : undefined
+            }
           >
             {category}
           </p>
@@ -276,6 +293,14 @@ export function HeaderSoundsMenu({
                     style={{ background: HALLOWEEN_ORANGE }}
                   >
                     🎃 Special
+                  </span>
+                ) : null}
+                {special && !locked ? (
+                  <span
+                    className="shrink-0 rounded-full px-1.5 py-0.5 text-[8px] font-semibold tracking-[0.12em] text-white uppercase"
+                    style={{ background: DRIVE_SPECIAL_PURPLE }}
+                  >
+                    7 Days
                   </span>
                 ) : null}
                 {locked ? <PremiumBadge className="shrink-0" /> : null}

@@ -42,3 +42,28 @@ export function driveSpecialAppliesTo(
 ): boolean {
   return Boolean(accountId) && isDriveSpecialActive(now);
 }
+
+/** Purple accent for the special (banner + Sounds list marking, like Halloween orange). */
+export const DRIVE_SPECIAL_PURPLE = "#a855f7";
+
+export const DRIVE_SPECIAL_BANNER_TEXT = {
+  en: {
+    text: "Drive the Music is free for every signed-in driver until 9 Nov.",
+    cta: "See the sounds",
+  },
+  de: {
+    text: "Drive the Music ist bis 9. Nov. für alle angemeldeten Fahrer gratis.",
+    cta: "Zu den Sounds",
+  },
+  ro: {
+    text: "Drive the Music e gratuit pentru toți șoferii conectați până pe 9 nov.",
+    cta: "Vezi sunetele",
+  },
+} as const;
+
+export function driveSpecialBannerText(language: string | undefined) {
+  const key = (language ?? "en").slice(0, 2).toLowerCase();
+  return key === "de" || key === "ro"
+    ? DRIVE_SPECIAL_BANNER_TEXT[key]
+    : DRIVE_SPECIAL_BANNER_TEXT.en;
+}
