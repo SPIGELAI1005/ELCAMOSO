@@ -408,6 +408,10 @@ export class HybridCombustionSynth {
     growlGain: GainNode;
     bus: GainNode;
   } | null = null;
+  private turboEcho: { input: GainNode; nodes: AudioNode[] } | null = null;
+  private spoolDownVoice: { osc: OscillatorNode; gain: GainNode } | null = null;
+  private flHist: { t: number; v: number }[] = [];
+  private flPeakSlope = 0;
   private bovTone: { filter: BiquadFilterNode; gain: GainNode } | null = null;
   private highRpmVoicing: { low: BiquadFilterNode; pres: BiquadFilterNode } | null = null;
   private supportLp: BiquadFilterNode | null = null;
@@ -970,6 +974,47 @@ export class HybridCombustionSynth {
       });
       wg.connect(buses.accents);
       this.turboWhistle = { oscs, gain: wg };
+      if (cfg.turboEcho) {
+        // Feedback echo for the turbo voices: delay → lowpass → feedback gain (< 1, stable).
+        const e = cfg.turboEcho;
+        const input = ctx.createGain();
+        input.gain.value = 1;
+        const delay = ctx.createDelay(1);
+        delay.delayTime.value = e.delayS;
+        const lp = ctx.createBiquadFilter();
+        lp.type = "lowpass";
+        lp.frequency.value = e.lpHz;
+        lp.Q.value = 0.5;
+        const fb = ctx.createGain();
+        fb.gain.value = Math.min(0.7, e.feedback);
+        const wet = ctx.createGain();
+        wet.gain.value = 0.8;
+        input.connect(delay);
+        delay.connect(lp);
+        lp.connect(fb);
+        fb.connect(delay);
+        lp.connect(wet);
+        wet.connect(buses.accents);
+        const ws = ctx.createGain();
+        ws.gain.value = e.whistleSend;
+        wg.connect(ws);
+        ws.connect(input);
+        this.turboEcho = { input, nodes: [input, delay, lp, fb, wet, ws] };
+        nodes += 6;
+      }
+      if (cfg.spoolDown) {
+        const osc = ctx.createOscillator();
+        osc.type = "sine";
+        osc.frequency.value = cfg.spoolDown.fromHz;
+        const gain = ctx.createGain();
+        gain.gain.value = 0.0001;
+        osc.connect(gain);
+        gain.connect(buses.accents);
+        if (this.turboEcho) gain.connect(this.turboEcho.input);
+        osc.start();
+        this.spoolDownVoice = { osc, gain };
+        nodes += 2;
+      }
       // Blow-off "pssh": white noise through a sweeping bandpass, enveloped on boost release.
       const bsrc = ctx.createBufferSource();
       bsrc.buffer = getNoiseBuffer(ctx, "white");
@@ -985,6 +1030,14 @@ export class HybridCombustionSynth {
       bg.connect(buses.accents);
       bsrc.start();
       this.bov = { src: bsrc, filter: bf, gain: bg };
+      let flutterSend: GainNode | null = null;
+      if (this.turboEcho && cfg.turboEcho) {
+        flutterSend = ctx.createGain();
+        flutterSend.gain.value = cfg.turboEcho.flutterSend;
+        bg.connect(flutterSend);
+        flutterSend.connect(this.turboEcho.input);
+        this.turboEcho.nodes.push(flutterSend);
+      }
       if (cfg.turboFlutter?.toneQ) {
         // Tuned ring layer for the percussion flutter (same noise, narrow bandpass).
         const tf = ctx.createBiquadFilter();
@@ -996,6 +1049,7 @@ export class HybridCombustionSynth {
         bsrc.connect(tf);
         tf.connect(tg);
         tg.connect(buses.accents);
+        if (flutterSend) tg.connect(flutterSend);
         this.bovTone = { filter: tf, gain: tg };
         nodes += 2;
       }
@@ -1688,14 +1742,30 @@ export class HybridCombustionSynth {
           this.flSpoolPeak = Math.max(spool, this.flSpoolPeak - dt * 0.35);
           this.flHardPeak = Math.max(accHard, this.flHardPeak - dt * 0.3);
           const ov = this.accelChar.overrun;
-          const gpsLift = ov > 0.35 && this.flPrevOverrun <= 0.35;
+          let fastLift = false;
+          if (cfg.fastLift) {
+            // Short-window raw speed slope: a hard pull turning into a lift fires within ~0.2 s.
+            const fz = cfg.fastLift;
+            this.flHist.push({ t: audioTime, v: this.lastSpeedMs });
+            while (this.flHist.length > 2 && audioTime - this.flHist[0]!.t > fz.windowS) this.flHist.shift();
+            const h0 = this.flHist[0]!;
+            const span = audioTime - h0.t;
+            const slope = span > fz.windowS * 0.6 ? (this.lastSpeedMs - h0.v) / span : 0;
+            this.flPeakSlope = Math.max(slope, this.flPeakSlope - dt * 0.8);
+            if (this.flPeakSlope >= fz.peakMs2 && slope <= fz.liftMs2) {
+              fastLift = true;
+              this.flPeakSlope = 0;
+            }
+          }
+          const gpsLift = (ov > 0.35 && this.flPrevOverrun <= 0.35) || fastLift;
           const anyShift = shifting && pt?.shiftDirection === "up" && !this.flPrevShift;
           if (
             (gpsLift || anyShift) &&
             Math.max(this.flSpoolPeak, this.flHardPeak * 0.8) >= 0.3 &&
             speedKmh > 10 &&
             this.ilGate < 0.5 &&
-            audioTime - this.bovLastAt > 1.2
+            // A fast lift may already have fired; the late GPS lift must not restart the roll.
+            audioTime - this.bovLastAt > (cfg.fastLift ? 2.6 : 1.2)
           ) {
             this.bovLastAt = audioTime;
             const st = Math.max(this.flSpoolPeak, this.flHardPeak * 0.8);
@@ -1731,7 +1801,8 @@ export class HybridCombustionSynth {
           audioTime,
           0.12,
         );
-        const hz = 2200 + spool * 3400 + rpmNorm * 700;
+        const wr = cfg.whistleRange;
+        const hz = (wr ? wr.baseHz + spool * wr.spanHz : 2200 + spool * 3400) + rpmNorm * 700;
         this.turboWhistle.oscs.forEach((o, i) =>
           targetParam(o.frequency, hz * (i === 0 ? 1 : 1.013), audioTime, 0.15),
         );
@@ -2711,12 +2782,25 @@ export class HybridCombustionSynth {
       }
       // Small human timing feel, never on the grid exactly.
       tt += period * (0.96 + this.popRand() * 0.08);
-      period = Math.max(0.035, period * accel);
-      p *= 0.88;
+      period = Math.min(0.2, Math.max(0.035, period * accel));
+      p *= fl.decay ?? 0.88;
     }
     g.setTargetAtTime(0.0001, tt, 0.05);
     tg?.setTargetAtTime(0.0001, tt, 0.05);
     q.setTargetAtTime(0.8, tt + 0.3, 0.1);
+    const sd = this.cfg?.spoolDown;
+    if (sd && this.spoolDownVoice) {
+      // Spool-down tone: the turbo whistle glides down as the shaft slows (soft in/out).
+      const of = this.spoolDownVoice.osc.frequency;
+      const og = this.spoolDownVoice.gain.gain;
+      of.cancelScheduledValues(t0);
+      og.cancelScheduledValues(t0);
+      og.setValueAtTime(Math.max(0.0001, og.value), t0);
+      of.setValueAtTime(sd.fromHz * (0.75 + spool * 0.25), t0);
+      of.exponentialRampToValueAtTime(sd.toHz, t0 + sd.seconds);
+      og.setTargetAtTime(sd.level * (0.4 + spool * 0.6) * gateLevel, t0, 0.04);
+      og.setTargetAtTime(0.0001, t0 + sd.seconds * 0.35, sd.seconds * 0.3);
+    }
   }
 
   dispose() {
@@ -2761,6 +2845,20 @@ export class HybridCombustionSynth {
       this.drumBody.growlGain.disconnect();
       this.drumBody.bus.disconnect();
       this.drumBody = null;
+    }
+    if (this.spoolDownVoice) {
+      try {
+        this.spoolDownVoice.osc.stop();
+      } catch {
+        /* already stopped */
+      }
+      this.spoolDownVoice.osc.disconnect();
+      this.spoolDownVoice.gain.disconnect();
+      this.spoolDownVoice = null;
+    }
+    if (this.turboEcho) {
+      this.turboEcho.nodes.forEach((n) => n.disconnect());
+      this.turboEcho = null;
     }
     if (this.bovTone) {
       this.bovTone.filter.disconnect();
