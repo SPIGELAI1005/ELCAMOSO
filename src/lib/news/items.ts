@@ -3,6 +3,9 @@ export type NewsItem = {
   id: string;
   publishAt: string;
   text: string;
+  /** Optional German / Romanian text (falls back to `text`). */
+  textDe?: string;
+  textRo?: string;
   image?: string;
   link?: { href: string; label: string };
 };
@@ -179,6 +182,17 @@ export const NEWS_ITEMS: NewsItem[] = [
     text: "8 days left. Become a Founder before 09.11. Three sounds free forever, 6 months Drive+, Crew perks to follow.",
     image: DIR + "01_founders_pack.jpg",
   },
+  {
+    id: "drive-special-7day",
+    publishAt: "2026-11-03T15:00:00+01:00",
+    text: "7 Days Drive Special: sign in and Drive the Music is free until 09.11. Every music sound, Auto DJ, Fusion and the new highway stages. The music sounds now sit at the top of your sounds list, next to American Muscle V8, Racing V10, Police Patrol and the carriages.",
+    textDe:
+      "7 Days Drive Special: Einloggen und Drive the Music ist bis 09.11. kostenlos. Alle Musik-Sounds, Auto DJ, Fusion und die neuen Autobahn-Stufen. Die Musik-Sounds stehen jetzt ganz oben in deiner Soundliste, neben American Muscle V8, Racing V10, Police Patrol und den Kutschen.",
+    textRo:
+      "7 Days Drive Special: autentifica-te si Drive the Music este gratuit pana pe 09.11. Toate sunetele muzicale, Auto DJ, Fusion si noile trepte de autostrada. Sunetele muzicale sunt acum sus in lista ta de sunete, langa American Muscle V8, Racing V10, Police Patrol si trasuri.",
+    image: "/news/drive-special/7day-drive-special.png",
+    link: { href: "/sounds", label: "Open sounds" },
+  },
 ];
 
 /** Items already published at `now`, newest first. */
@@ -190,4 +204,11 @@ export function getVisibleNewsItems(
   return items
     .filter((item) => Date.parse(item.publishAt) <= t)
     .sort((a, b) => Date.parse(b.publishAt) - Date.parse(a.publishAt));
+}
+
+/** News text in the reader's language (EN fallback). */
+export function newsText(item: NewsItem, locale: string): string {
+  if (locale === "de" && item.textDe) return item.textDe;
+  if (locale === "ro" && item.textRo) return item.textRo;
+  return item.text;
 }

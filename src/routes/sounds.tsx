@@ -20,6 +20,13 @@ import { needsIntenseConfirm } from "@/lib/drive/safety";
 import { t } from "@/lib/i18n";
 import { FindSoundPanel } from "@/components/FindSoundPanel";
 import { useFeatureAccess } from "@/lib/entitlements/selectors";
+import { useAccount } from "@/lib/account/AccountProvider";
+import { isMusicPackageProfileId } from "@/lib/entitlements/plans";
+import {
+  DRIVE_SPECIAL_COMPANION_IDS,
+  DRIVE_SPECIAL_NAME,
+  isDriveSpecialActive,
+} from "@/lib/billing/drive-special";
 import { SoundProfileAccessIndicator } from "@/components/SoundProfileAccessIndicator";
 import { UpgradePrompt } from "@/components/premium/UpgradePrompt";
 import { trackMonetizationEvent } from "@/lib/telemetry/monetization-analytics";
@@ -40,6 +47,8 @@ export const Route = createFileRoute("/sounds")({
 function Sounds() {
   const { settings, update } = useSettings();
   const access = useFeatureAccess();
+  const { isAuthenticated } = useAccount();
+  const specialActive = isDriveSpecialActive();
   const reducedMotion = useReducedMotion();
   const snap = useSessionStore();
   const [query, setQuery] = useState("");
@@ -64,15 +73,29 @@ function Sounds() {
   // Free users: everything they can drive first ("Free"), Drive+ sounds below with a lock.
   const canDrive = access.canDriveWithProfile;
   const sections = useMemo(() => {
-    const free = profiles.filter((p) => canDrive(p.id));
-    if (free.length === profiles.length) return groupProfilesBySection(profiles);
-    const locked = profiles.filter((p) => !canDrive(p.id));
+    // 7 Days Drive Special: music sounds on top, next to the named engine sounds.
+    const specialIds = new Set<string>();
+    const special: SoundProfile[] = [];
+    if (specialActive) {
+      for (const id of DRIVE_SPECIAL_COMPANION_IDS) {
+        const p = profiles.find((x) => x.id === id);
+        if (p) special.push(p);
+      }
+      for (const p of profiles) if (isMusicPackageProfileId(p.id)) special.push(p);
+      for (const p of special) specialIds.add(p.id);
+    }
+    const specialSection = special.length ? [{ section: DRIVE_SPECIAL_NAME, items: special }] : [];
+    const remaining = profiles.filter((p) => !specialIds.has(p.id));
+    const free = remaining.filter((p) => canDrive(p.id));
+    if (free.length === remaining.length)
+      return [...specialSection, ...groupProfilesBySection(remaining)];
+    const locked = remaining.filter((p) => !canDrive(p.id));
     const rest = groupProfilesBySection(locked).map((g) => ({
       ...g,
       section: `Drive+ · ${g.section}`,
     }));
-    return free.length ? [{ section: "Free", items: free }, ...rest] : rest;
-  }, [profiles, canDrive]);
+    return [...specialSection, ...(free.length ? [{ section: "Free", items: free }] : []), ...rest];
+  }, [profiles, canDrive, specialActive]);
 
   /** True when Sounds Listen / audition audio is already live. */
   const listeningLive =
@@ -227,6 +250,18 @@ function Sounds() {
               <h2 className="text-[11px] tracking-[0.28em] text-muted-foreground uppercase">
                 {section}
               </h2>
+              {section === DRIVE_SPECIAL_NAME ? (
+                <p data-testid="special-hint" className="mt-2 text-xs text-[#e53935]">
+                  {isAuthenticated ? (
+                    "Drive the Music is free for you until 09.11."
+                  ) : (
+                    <a href="/auth/account/google/start" className="underline">
+                      {t(settings.language, "sounds.loginToUnlock")}: Drive the Music free until
+                      09.11.
+                    </a>
+                  )}
+                </p>
+              ) : null}
               <ul className="mt-4 divide-y divide-border border-y border-border">
                 {items.map((profile) => {
                   const starred = settings.favourites.includes(profile.id);

@@ -22,7 +22,17 @@ import {
 } from "@/lib/billing/subscription-access-policy";
 import { entitlementsForPlan, isMusicPackageProfileId } from "@/lib/entitlements/plans";
 import { isTrialActive } from "@/lib/entitlements/trial";
-import type { Entitlement, EntitlementUser, Plan, SubscriptionStatus } from "@/lib/entitlements/types";
+import {
+  DRIVE_SPECIAL_END_MS,
+  DRIVE_SPECIAL_ENTITLEMENTS,
+  driveSpecialAppliesTo,
+} from "@/lib/billing/drive-special";
+import type {
+  Entitlement,
+  EntitlementUser,
+  Plan,
+  SubscriptionStatus,
+} from "@/lib/entitlements/types";
 import { canAccessExperience } from "@/lib/experiences/access";
 import { experienceForProfileId } from "@/lib/experiences/catalog";
 import {
@@ -48,6 +58,7 @@ export type AccessSource =
   | "past_due_grace"
   | "cancel_period"
   | "trial"
+  | "drive_special"
   | "offline_lease"
   | "denied";
 
@@ -148,8 +159,17 @@ export function resolveProfileDriveAccess(
     }
   })();
 
-  if (isSeasonalFreeProfile(profileId, now) && !FREE_SET.has(profileId) && !allSoundsFreeAt(input.now)) {
-    return { allowed: true, source: "permanent_free", expiresAtUtc: HALLOWEEN_WINDOW_END_UTC_MS, fallbackProfileId };
+  if (
+    isSeasonalFreeProfile(profileId, now) &&
+    !FREE_SET.has(profileId) &&
+    !allSoundsFreeAt(input.now)
+  ) {
+    return {
+      allowed: true,
+      source: "permanent_free",
+      expiresAtUtc: HALLOWEEN_WINDOW_END_UTC_MS,
+      fallbackProfileId,
+    };
   }
   if (
     FREE_SET.has(profileId) ||
@@ -214,7 +234,12 @@ export function resolveProfileDriveAccess(
       input,
     );
     if (pkg.allowed && pkg.source !== "permanent_free") {
-      return { allowed: true, source: pkg.source, expiresAtUtc: pkg.expiresAtUtc, fallbackProfileId };
+      return {
+        allowed: true,
+        source: pkg.source,
+        expiresAtUtc: pkg.expiresAtUtc,
+        fallbackProfileId,
+      };
     }
     if (leaseValid(input, now) && input.leaseProfileIds?.includes(profileId)) {
       return {
@@ -288,6 +313,13 @@ export function resolveCapabilityAccess(
     return { allowed: true, source: "reward_grant", expiresAtUtc: null };
   }
 
+  if (
+    DRIVE_SPECIAL_ENTITLEMENTS.includes(entitlement) &&
+    driveSpecialAppliesTo(input.user.accountId, now)
+  ) {
+    return { allowed: true, source: "drive_special", expiresAtUtc: DRIVE_SPECIAL_END_MS };
+  }
+
   if (isTrialActive(input.user, now) && input.user.trialEntitlements?.includes(entitlement)) {
     return {
       allowed: true,
@@ -330,6 +362,11 @@ export function resolveEffectiveEntitlements(input: AccessResolverInput): Readon
 
   if (leaseValid(input, now)) {
     for (const e of input.leaseEntitlements ?? []) granted.add(e);
+  }
+
+  // 7 Days Drive Special: Drive the Music for signed-in accounts until 9.11.
+  if (driveSpecialAppliesTo(input.user.accountId, now)) {
+    for (const e of DRIVE_SPECIAL_ENTITLEMENTS) granted.add(e);
   }
 
   // Pre-launch: every sound free until SOUND_TIER_GATE_STARTS_AT_ISO.

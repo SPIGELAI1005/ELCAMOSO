@@ -2,7 +2,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { createSeoHeadFromPath } from "@/lib/seo";
 import { ElcamosoMark } from "@/components/ElcamosoLogo";
-import { getVisibleNewsItems } from "@/lib/news/items";
+import { getVisibleNewsItems, newsText } from "@/lib/news/items";
+import { useSettings } from "@/lib/drive/useSettings";
 
 export const Route = createFileRoute("/news")({
   // Server side: only items whose publish time has passed are sent.
@@ -28,6 +29,7 @@ function NewsPage() {
     const id = window.setInterval(() => setNow(Date.now()), 60_000);
     return () => window.clearInterval(id);
   }, []);
+  const { settings } = useSettings();
   const items = getVisibleNewsItems(now);
 
   return (
@@ -77,7 +79,9 @@ function NewsPage() {
                   >
                     {DATE_FMT.format(new Date(item.publishAt))}
                   </time>
-                  <p className="text-sm leading-relaxed text-foreground">{item.text}</p>
+                  <p className="text-sm leading-relaxed text-foreground">
+                    {newsText(item, settings.language)}
+                  </p>
                   {item.link ? (
                     <a
                       href={item.link.href}

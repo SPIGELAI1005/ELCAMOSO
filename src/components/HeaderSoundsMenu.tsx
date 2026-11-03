@@ -25,17 +25,39 @@ import {
 import { useSessionSelector } from "@/lib/store/session-store";
 import { cn } from "@/lib/utils";
 import { HALLOWEEN_ORANGE, HALLOWEEN_TAG, halloweenPinned } from "@/lib/halloween/halloween";
+import { DRIVE_SPECIAL_NAME, isDriveSpecialActive } from "@/lib/billing/drive-special";
+import { isMusicPackageProfileId } from "@/lib/entitlements/plans";
+import {
+  driveSpecialPinned,
+  filterMenuGroups,
+  packageForProfile,
+  pricingHrefForProfile,
+} from "@/lib/sound/sound-menu-search";
 
-type MenuGroup = { category: ProfileCategory | typeof HALLOWEEN_TAG; profiles: SoundProfile[]; halloween?: boolean };
+type MenuGroup = {
+  category: ProfileCategory | typeof HALLOWEEN_TAG | typeof DRIVE_SPECIAL_NAME;
+  profiles: SoundProfile[];
+  halloween?: boolean;
+  special?: boolean;
+};
 
-/** Halloween profiles pinned first (only inside the window), then the normal categories. */
+/**
+ * 7 Days Drive Special (until 9.11.): music + the named engine sounds pinned first.
+ * Halloween profiles pinned next (only inside the window), then the normal categories.
+ */
 export function profilesByCategory(now?: number): MenuGroup[] {
-  const { pinned, rest } = halloweenPinned(SOUND_PROFILES, now);
+  const special = isDriveSpecialActive(now) ? driveSpecialPinned(SOUND_PROFILES) : null;
+  const base = special ? special.rest : SOUND_PROFILES;
+  const { pinned, rest } = halloweenPinned(base, now);
   const groups: MenuGroup[] = PROFILE_CATEGORIES.map((category) => ({
     category,
     profiles: rest.filter((p) => p.category === category),
   })).filter((group) => group.profiles.length > 0);
-  return pinned.length ? [{ category: HALLOWEEN_TAG, profiles: pinned, halloween: true }, ...groups] : groups;
+  const head: MenuGroup[] = [];
+  if (special?.pinned.length)
+    head.push({ category: DRIVE_SPECIAL_NAME, profiles: special.pinned, special: true });
+  if (pinned.length) head.push({ category: HALLOWEEN_TAG, profiles: pinned, halloween: true });
+  return [...head, ...groups];
 }
 
 function closeOtherNavGroups(except?: Element | null) {
@@ -71,8 +93,22 @@ export function HeaderSoundsMenu({
   const { isAuthenticated } = useAccount();
   const gateActive = isSoundTierGateActive();
   const [upsellFor, setUpsellFor] = useState<string | null>(null);
-  const groups = useMemo(() => profilesByCategory(), []);
+  const allGroups = useMemo(() => profilesByCategory(), []);
+  const [query, setQuery] = useState("");
+  const groups = useMemo(() => filterMenuGroups(allGroups, query), [allGroups, query]);
+  const specialActive = isDriveSpecialActive();
 
+  /** Locked sound tap: straight to its package on the pricing page (or sign-in for the special). */
+  function goToPackage(id: string) {
+    closeOtherNavGroups();
+    setSheetOpen(false);
+    onNavigate?.();
+    if (!isAuthenticated && specialActive && isMusicPackageProfileId(id)) {
+      window.location.href = "/auth/account/google/start";
+      return;
+    }
+    window.location.href = pricingHrefForProfile(id);
+  }
   function canSelect(id: string) {
     return canDriveWithProfile(id) || canPreviewProfile(id);
   }
@@ -105,7 +141,12 @@ export function HeaderSoundsMenu({
       className="mx-2 mb-2 rounded-sm border border-border/70 bg-secondary/40 px-3 py-2.5 text-xs"
     >
       <p className="text-foreground">
-        {upsellProfile.name}: {DRIVE_PLUS_LOCKED_MESSAGE}
+        {upsellProfile.name}:{" "}
+        {packageForProfile(upsellProfile.id) === "drive_music"
+          ? !isAuthenticated && specialActive
+            ? t(language, "sounds.loginToUnlock")
+            : "Drive the Music"
+          : DRIVE_PLUS_LOCKED_MESSAGE}
       </p>
       <p className="mt-0.5 text-muted-foreground">
         {isAuthenticated
@@ -116,6 +157,9 @@ export function HeaderSoundsMenu({
         {isAuthenticated ? (
           <Link
             to="/pricing"
+            hash={
+              packageForProfile(upsellProfile.id) === "drive_music" ? "drive-music" : "drive-plus"
+            }
             onClick={() => {
               closeOtherNavGroups();
               setSheetOpen(false);
@@ -123,7 +167,9 @@ export function HeaderSoundsMenu({
             }}
             className="rounded-sm bg-foreground px-2.5 py-1 text-[10px] tracking-[0.14em] text-background uppercase"
           >
-            Get Drive+
+            {packageForProfile(upsellProfile.id) === "drive_music"
+              ? t(language, "sounds.getMusic")
+              : t(language, "sounds.getDrivePlus")}
           </Link>
         ) : (
           <a
@@ -154,12 +200,34 @@ export function HeaderSoundsMenu({
           All sounds free until {SOUND_TIER_GATE_LABEL}
         </p>
       ) : null}
+      <div className="sticky top-0 z-10 bg-background/95 px-2 pt-1 pb-1.5">
+        <input
+          type="search"
+          data-testid="sounds-search"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder={t(language, "sounds.search")}
+          aria-label={t(language, "sounds.search")}
+          autoComplete="off"
+          enterKeyHint="search"
+          className="h-11 w-full rounded-sm border border-border bg-background px-3 text-sm outline-none focus:border-foreground"
+        />
+      </div>
       {upsellPanel}
-      {groups.map(({ category, profiles, halloween }) => (
+      {!groups.length ? (
+        <p data-testid="sounds-no-match" className="px-3 py-4 text-sm text-muted-foreground">
+          {t(language, "sounds.noMatch")}
+        </p>
+      ) : null}
+      {groups.map(({ category, profiles, halloween, special }) => (
         <div
           key={category}
           className={cn("mb-1", halloween && "mb-2 rounded-sm border pb-1")}
-          style={halloween ? { borderColor: `${HALLOWEEN_ORANGE}66`, background: `${HALLOWEEN_ORANGE}12` } : undefined}
+          style={
+            halloween
+              ? { borderColor: `${HALLOWEEN_ORANGE}66`, background: `${HALLOWEEN_ORANGE}12` }
+              : undefined
+          }
           data-testid={halloween ? "sounds-halloween-group" : undefined}
         >
           <p
@@ -171,6 +239,14 @@ export function HeaderSoundsMenu({
           >
             {category}
           </p>
+          {special && !isAuthenticated ? (
+            <p
+              data-testid="sounds-special-login-hint"
+              className="px-3 pb-1.5 text-[10px] text-[#e53935]"
+            >
+              {t(language, "sounds.loginToUnlock")}: Drive the Music
+            </p>
+          ) : null}
           {profiles.map((profile) => {
             const locked = !canDriveWithProfile(profile.id);
             const selectable = canSelect(profile.id);
@@ -180,15 +256,16 @@ export function HeaderSoundsMenu({
                 key={profile.id}
                 type="button"
                 role="menuitem"
-                disabled={!selectable}
-                onClick={() => selectProfile(profile.id)}
+                data-testid={`sound-item-${profile.id}`}
+                data-locked={locked ? "true" : undefined}
+                onClick={() => (locked ? goToPackage(profile.id) : selectProfile(profile.id))}
                 className={cn(
-                  "flex w-full items-center justify-between gap-2 rounded-sm px-3 py-2.5 text-left text-xs tracking-[0.08em] transition-colors",
+                  "flex min-h-11 w-full items-center justify-between gap-2 rounded-sm px-3 py-2.5 text-left text-xs tracking-[0.08em] transition-colors",
                   active
                     ? "bg-foreground text-background"
                     : selectable
                       ? "text-foreground hover:bg-secondary"
-                      : "cursor-not-allowed text-muted-foreground/50",
+                      : "text-muted-foreground/70 hover:bg-secondary",
                   locked && selectable && !active ? "text-muted-foreground" : null,
                 )}
               >

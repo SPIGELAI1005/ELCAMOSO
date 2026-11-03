@@ -8,11 +8,7 @@ import { AccountMenu } from "@/components/AccountMenu";
 import { ElcamosoLogo, ElcamosoMark } from "@/components/ElcamosoLogo";
 import { HeaderSoundsMenu } from "@/components/HeaderSoundsMenu";
 import { WaveMenuIcon } from "@/components/WaveMenuIcon";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
   Sheet,
   SheetContent,
@@ -25,6 +21,7 @@ import { useSettings } from "@/lib/drive/useSettings";
 import { useSessionSelector } from "@/lib/store/session-store";
 import { t } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
+import { DEMO_PAGE_ENABLED } from "@/lib/feature-flags";
 
 type NavLeaf = {
   to: string;
@@ -55,7 +52,7 @@ const NAV_ENTRIES: NavEntry[] = [
     key: "nav.explore",
     items: [
       { to: "/explore", key: "nav.explore" },
-      { to: "/demo", key: "nav.demo" },
+      ...(DEMO_PAGE_ENABLED ? [{ to: "/demo", key: "nav.demo" }] : []),
     ],
   },
   { kind: "link", to: "/pricing", key: "nav.pricing" },
@@ -74,9 +71,7 @@ const NAV_ENTRIES: NavEntry[] = [
   { kind: "link", to: "/settings", key: "nav.settings" },
 ];
 
-const DESKTOP_ENTRIES = NAV_ENTRIES.filter(
-  (entry) => !(entry.kind === "link" && entry.to === "/"),
-);
+const DESKTOP_ENTRIES = NAV_ENTRIES.filter((entry) => !(entry.kind === "link" && entry.to === "/"));
 
 function isNavLinkActive(pathname: string, to: string) {
   if (to === "/") return pathname === "/";
@@ -250,7 +245,11 @@ export function BrandNav() {
             <ElcamosoMark className="h-9 w-auto" />
           </Link>
 
-          <Link to="/" aria-label="ELCAMOSO home" className="hidden min-w-0 shrink-0 lg:inline-flex">
+          <Link
+            to="/"
+            aria-label="ELCAMOSO home"
+            className="hidden min-w-0 shrink-0 lg:inline-flex"
+          >
             <ElcamosoLogo variant="full" className="scale-110" />
           </Link>
         </div>
@@ -411,7 +410,11 @@ export function BrandNav() {
                   aria-label="Legal"
                   className="mt-4 flex flex-col gap-3 text-xs tracking-[0.16em] text-muted-foreground uppercase"
                 >
-                  <Link to="/legal/impressum" onClick={closeSheet} className="hover:text-foreground">
+                  <Link
+                    to="/legal/impressum"
+                    onClick={closeSheet}
+                    className="hover:text-foreground"
+                  >
                     Impressum
                   </Link>
                   <Link to="/legal/privacy" onClick={closeSheet} className="hover:text-foreground">

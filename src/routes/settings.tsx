@@ -32,6 +32,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { DEMO_PAGE_ENABLED } from "@/lib/feature-flags";
 
 export const Route = createFileRoute("/settings")({
   validateSearch: (
@@ -633,12 +634,14 @@ function SensorsWorkspace({
             Preview with manual throttle, acceleration and regen.
           </p>
         </div>
-        <Link
-          to="/demo"
-          className="shrink-0 self-center rounded-full border border-border px-6 py-3 text-[11px] tracking-[0.24em] text-muted-foreground uppercase hover:text-foreground"
-        >
-          Open
-        </Link>
+        {DEMO_PAGE_ENABLED ? (
+          <Link
+            to="/demo"
+            className="shrink-0 self-center rounded-full border border-border px-6 py-3 text-[11px] tracking-[0.24em] text-muted-foreground uppercase hover:text-foreground"
+          >
+            Open
+          </Link>
+        ) : null}
       </div>
 
       <PremiumFeatureGate context="advanced_controls">

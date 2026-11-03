@@ -45,6 +45,7 @@ import { SilentCaptureHud } from "@/components/drive/SilentCaptureHud";
 import { PostSilentCaptureExperience } from "@/components/drive/PostSilentCaptureExperience";
 import { IncompleteJourneyRecovery } from "@/components/drive/IncompleteJourneyRecovery";
 import { shouldCaptureTrace, shouldPlayLiveAudio } from "@/lib/journey-trace";
+import { DEMO_PAGE_ENABLED } from "@/lib/feature-flags";
 
 const TeslaDrivePlusUpgrade = lazy(() =>
   import("@/components/TeslaDrivePlusUpgrade").then((m) => ({
@@ -321,7 +322,10 @@ function DriveScreen() {
   return (
     <main className="relative flex min-h-screen flex-col px-6 pt-6 pb-10 sm:px-10">
       {status === "idle" ? (
-        <FoundersBanner compact className="fixed inset-x-0 bottom-0 z-30 hidden border-t border-b-0 sm:block" />
+        <FoundersBanner
+          compact
+          className="fixed inset-x-0 bottom-0 z-30 hidden border-t border-b-0 sm:block"
+        />
       ) : null}
       {status === "idle" ? (
         <HalloweenBanner className="fixed inset-x-0 bottom-[29px] z-30 border-t sm:bottom-[29px]" />
@@ -724,12 +728,14 @@ function ErrorState({ message, onRetry }: { message: string | null; onRetry: () 
       >
         Continue with GPS
       </button>
-      <Link
-        to="/demo"
-        className="text-xs tracking-[0.24em] text-muted-foreground uppercase hover:text-foreground"
-      >
-        Open Demo Drive
-      </Link>
+      {DEMO_PAGE_ENABLED ? (
+        <Link
+          to="/demo"
+          className="text-xs tracking-[0.24em] text-muted-foreground uppercase hover:text-foreground"
+        >
+          Open Demo Drive
+        </Link>
+      ) : null}
     </div>
   );
 }

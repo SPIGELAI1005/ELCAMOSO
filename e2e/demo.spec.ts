@@ -1,7 +1,8 @@
 import { test, expect } from "@playwright/test";
 import { expectAppHealthy, gotoPath, seedReadySettings } from "./helpers";
 
-test.describe("Demo Drive", () => {
+// Demo page is disabled (DEMO_PAGE_ENABLED=false); re-enable with the flag.
+test.describe.skip("Demo Drive", () => {
   test.beforeEach(async ({ page }) => {
     await seedReadySettings(page);
     await gotoPath(page, "/demo");
