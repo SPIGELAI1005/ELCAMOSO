@@ -6,6 +6,10 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { createSeoHeadFromPath } from "@/lib/seo";
 import { parseSharedSoundParam, soundShareSocialMeta } from "@/lib/drive/sound-share";
 import { ShareSoundButton } from "@/components/drive/ShareSoundButton";
+import { resolveDisplayedProfileId, shouldApplySharedSound } from "@/lib/drive/sound-share";
+import { useLockedFallback } from "@/lib/entitlements/locked-fallback-notice";
+import { useFeatureAccess as useSharedSoundAccess } from "@/lib/entitlements/selectors";
+import { FALLBACK_SOUND_PROFILE_ID as SHARED_FALLBACK_ID } from "@/lib/sound/profile-access-config";
 import { ElcamosoMark } from "@/components/ElcamosoLogo";
 import { BrandLoader } from "@/components/BrandLoader";
 import { StartDriveMarkControl } from "@/components/StartDriveMarkControl";
@@ -182,7 +186,16 @@ function DriveScreen() {
   const [postCaptureTraceId, setPostCaptureTraceId] = useState<string | null>(null);
   const [captureHadBrowserPause, setCaptureHadBrowserPause] = useState(false);
   const monetizationEnabled = useMonetizationEnabled();
-  const selectedExperience = experienceForProfileId(settings.profileId);
+  const lockedFallbackId = useLockedFallback();
+  const sharedAccess = useSharedSoundAccess();
+  const displayed = resolveDisplayedProfileId({
+    current: settings.profileId,
+    shared: sharedSound,
+    lockedFallback: lockedFallbackId,
+    fallbackId: SHARED_FALLBACK_ID,
+    canDrive: sharedAccess.canDriveWithProfile,
+  });
+  const selectedExperience = experienceForProfileId(displayed.id);
   const isSilentCapture =
     status === "driving" && !shouldPlayLiveAudio(sessionSnap.driveOutputMode ?? "live");
   const resumedNativeCapture = status === "idle" && sessionSnap.nativeCapture.active;
@@ -197,11 +210,21 @@ function DriveScreen() {
   // Locked sounds go through EntitlementEnforcer, which shows the package notice.
   const sharedSoundHandled = useRef(false);
   useEffect(() => {
-    if (!sharedSound || !loaded || sharedSoundHandled.current) return;
-    sharedSoundHandled.current = true;
-    if (settings.profileId !== sharedSound) update({ profileId: sharedSound });
-    track("share_visit", { kind: "drive-sound", profileId: sharedSound });
-  }, [loaded, settings.profileId, sharedSound, update]);
+    if (!sharedSound || !loaded) return;
+    const apply = shouldApplySharedSound({
+      current: settings.profileId,
+      shared: sharedSound,
+      alreadyApplied: sharedSoundHandled.current,
+      lockedFallback: lockedFallbackId,
+      fallbackId: SHARED_FALLBACK_ID,
+      canDrive: sharedAccess.canDriveWithProfile,
+    });
+    if (!sharedSoundHandled.current) {
+      sharedSoundHandled.current = true;
+      track("share_visit", { kind: "drive-sound", profileId: sharedSound });
+    }
+    if (apply) update({ profileId: sharedSound });
+  }, [loaded, settings.profileId, sharedSound, update, lockedFallbackId, sharedAccess]);
 
   useEffect(() => {
     if (!activateTrial) return;
@@ -527,6 +550,14 @@ function DriveScreen() {
               >
                 {selectedExperience.name}
               </button>
+              {displayed.lockedPreview ? (
+                <p
+                  data-testid="shared-sound-locked"
+                  className="mt-2 text-[10px] tracking-[0.22em] text-muted-foreground uppercase"
+                >
+                  Drive+ sound · playing free V10 until you upgrade
+                </p>
+              ) : null}
               <p className="mt-3 text-sm text-muted-foreground">
                 {selectedExperience.tagline || profile.traits.join(" · ")}
               </p>
@@ -548,7 +579,7 @@ function DriveScreen() {
               onStart={() => void handleStart()}
             />
             <div className="flex w-full max-w-md flex-col items-center gap-4">
-              <ShareSoundButton profileId={settings.profileId} locale={settings.language} />
+              <ShareSoundButton profileId={displayed.id} locale={settings.language} />
               <DriveModePicker
                 value={settings.driveOutputMode}
                 onChange={(driveOutputMode) => update({ driveOutputMode })}

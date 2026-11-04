@@ -116,3 +116,38 @@ export async function shareSound(
     return "failed";
   }
 }
+
+/**
+ * Which sound the Drive page should show as selected. A shared link to a
+ * locked (Drive+) sound gets clamped to the free fallback by the enforcer;
+ * keep showing the requested sound so the link never silently switches away.
+ */
+export function resolveDisplayedProfileId(opts: {
+  current: string;
+  shared: string | null | undefined;
+  lockedFallback: string | null;
+  fallbackId: string;
+  canDrive: (id: string) => boolean;
+}): { id: string; lockedPreview: boolean } {
+  const { current, shared, lockedFallback, fallbackId, canDrive } = opts;
+  if (shared && current === fallbackId && lockedFallback === shared && !canDrive(shared)) {
+    return { id: shared, lockedPreview: true };
+  }
+  return { id: current, lockedPreview: false };
+}
+
+/** True when the shared sound should be (re)applied to settings. */
+export function shouldApplySharedSound(opts: {
+  current: string;
+  shared: string | null | undefined;
+  alreadyApplied: boolean;
+  lockedFallback: string | null;
+  fallbackId: string;
+  canDrive: (id: string) => boolean;
+}): boolean {
+  const { current, shared, alreadyApplied, lockedFallback, fallbackId, canDrive } = opts;
+  if (!shared || current === shared) return false;
+  if (!alreadyApplied) return true;
+  // Entitlements resolved after the enforcer clamped the shared sound: restore it.
+  return current === fallbackId && lockedFallback === shared && canDrive(shared);
+}
