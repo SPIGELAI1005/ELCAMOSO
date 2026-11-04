@@ -656,52 +656,116 @@ const TRABY_REV_HARD_REGIONS: RecordedRegion[] = [
 ];
 
 /**
- * Ge-Squared (v10): real V8 pulls under load, rpm-labelled every 0.1 s from the harmonic
- * spacing (half-order of a cross-plane V8, rpm = 30 x spacing). Hum notched, 30 Hz high-pass,
- * each clip loudness-set by its rpm (louder higher up). '90 = older naturally aspirated V8,
- * O))) = modern biturbo V8 with lift-off crackle in the overrun clips.
+ * Ge-Squared (v11): no recordings. Loops rendered offline from a physical model of a cross-plane
+ * V8 (uneven left/right bank firing, per-cylinder blowdown pulses with combustion noise, jitter,
+ * lossy pipe waveguides, muffler/side-pipe filtering, intake roar; O))) adds a light turbo
+ * whoosh and lift-off crackle). One loop per rpm point and load, so rate stays near 1.
  */
-const GE2_V8_90_IDLE_REGIONS: RecordedRegion[] = [
-  { start: 0.0, end: 5.98, rpm: [700, 700, 700, 700, 700, 700, 700, 700, 700, 700, 700, 700, 700, 700, 700, 700, 700, 700, 700, 700, 700, 700, 700, 700, 700, 700, 700, 700, 700, 700, 700, 700, 700, 700, 700, 700, 700, 700, 700, 700, 700, 700, 700, 700, 700, 700, 700, 700, 700, 700, 700, 700, 700, 700, 700, 700, 700, 700, 700, 700] },
+const GE2_M90_IDLE_REGIONS: RecordedRegion[] = [
+  { start: 0.03, end: 2.37, rpm: Array(23).fill(650) },
+  { start: 2.49, end: 4.83, rpm: Array(23).fill(750) },
+  { start: 4.95, end: 7.29, rpm: Array(23).fill(900) },
 ];
-const GE2_V8_90_GROWL_REGIONS: RecordedRegion[] = [
-  { start: 6.08, end: 9.56, rpm: [3462, 3393, 3366, 3372, 3420, 3497, 3561, 3597, 3627, 3665, 3710, 3763, 3816, 3863, 3902, 3942, 3991, 4048, 4080, 4122, 4198, 4258, 4311, 4354, 4416, 4479, 4553, 4666, 4771, 4858, 4928, 4988, 5038, 5111, 5173] },
-  { start: 13.64, end: 18.62, rpm: [2664, 2686, 2770, 2960, 3190, 3387, 3519, 3598, 3643, 3651, 3665, 3679, 3702, 3718, 3733, 3747, 3785, 3832, 3878, 3918, 3965, 4015, 4056, 4096, 4156, 4216, 4285, 4364, 4489, 4580, 4580, 4525, 4442, 4407, 4371, 4285, 4182, 4122, 4156, 4260, 4390, 4507, 4600, 4684, 4791, 4908, 5018, 5080, 5142, 5184] },
-  { start: 18.72, end: 24.7, rpm: [3072, 3078, 3096, 3134, 3173, 3198, 3231, 3291, 3358, 3448, 3541, 3673, 3794, 3878, 3910, 3918, 3925, 3941, 3973, 3990, 3999, 3999, 4007, 4064, 4131, 4180, 4197, 4224, 4241, 4276, 4320, 4381, 4434, 4469, 4470, 4452, 4434, 4425, 4433, 4452, 4479, 4525, 4609, 4675, 4704, 4704, 4704, 4713, 4751, 4800, 4858, 4927, 4987, 5059, 5122, 5174, 5216, 5269, 5302, 5313] },
+const GE2_M90_CRUISE_REGIONS: RecordedRegion[] = [
+  { start: 7.41, end: 9.75, rpm: Array(23).fill(700) },
+  { start: 9.87, end: 12.21, rpm: Array(23).fill(900) },
+  { start: 12.33, end: 14.67, rpm: Array(23).fill(1200) },
+  { start: 14.79, end: 17.13, rpm: Array(23).fill(1600) },
+  { start: 17.25, end: 19.59, rpm: Array(23).fill(2100) },
+  { start: 19.71, end: 22.05, rpm: Array(23).fill(2700) },
+  { start: 22.17, end: 24.51, rpm: Array(23).fill(3400) },
+  { start: 24.63, end: 26.97, rpm: Array(23).fill(4200) },
+  { start: 27.09, end: 29.43, rpm: Array(23).fill(5000) },
+  { start: 29.55, end: 31.89, rpm: Array(23).fill(5800) },
 ];
-const GE2_V8_90_HARD_REGIONS: RecordedRegion[] = [
-  { start: 9.66, end: 13.54, rpm: [3769, 3762, 3732, 3695, 3665, 3635, 3619, 3612, 3604, 3583, 3554, 3540, 3554, 3643, 3779, 3927, 4048, 4182, 4276, 4372, 4480, 4638, 4801, 4888, 4878, 4858, 4848, 4980, 5243, 5523, 5691, 5748, 5725, 5657, 5457, 5191, 4845, 4546, 4390] },
+const GE2_M90_GROWL_REGIONS: RecordedRegion[] = [
+  { start: 32.01, end: 34.35, rpm: Array(23).fill(700) },
+  { start: 34.47, end: 36.81, rpm: Array(23).fill(900) },
+  { start: 36.93, end: 39.27, rpm: Array(23).fill(1200) },
+  { start: 39.39, end: 41.73, rpm: Array(23).fill(1600) },
+  { start: 41.85, end: 44.19, rpm: Array(23).fill(2100) },
+  { start: 44.31, end: 46.65, rpm: Array(23).fill(2700) },
+  { start: 46.77, end: 49.11, rpm: Array(23).fill(3400) },
+  { start: 49.23, end: 51.57, rpm: Array(23).fill(4200) },
+  { start: 51.69, end: 54.03, rpm: Array(23).fill(5000) },
+  { start: 54.15, end: 56.49, rpm: Array(23).fill(5800) },
 ];
-const GE2_V8_90_CRUISE_REGIONS: RecordedRegion[] = [
-  { start: 24.8, end: 28.28, rpm: [4354, 4371, 4345, 4185, 3930, 3741, 3642, 3627, 3635, 3688, 3740, 3785, 3808, 3855, 3910, 3941, 3965, 4023, 4141, 4259, 4311, 4338, 4428, 4564, 4684, 4704, 4704, 4684, 4618, 4516, 4434, 4336, 4250, 4132, 4048] },
-  { start: 28.38, end: 30.86, rpm: [2250, 3770, 3801, 3864, 3951, 4048, 4114, 4155, 4131, 4048, 3949, 3910, 3879, 3903, 3991, 4089, 4122, 4105, 4048, 3959, 3886, 3886, 3918, 4024, 4174] },
+const GE2_M90_HARD_REGIONS: RecordedRegion[] = [
+  { start: 56.61, end: 58.95, rpm: Array(23).fill(700) },
+  { start: 59.07, end: 61.41, rpm: Array(23).fill(900) },
+  { start: 61.53, end: 63.87, rpm: Array(23).fill(1200) },
+  { start: 63.99, end: 66.33, rpm: Array(23).fill(1600) },
+  { start: 66.45, end: 68.79, rpm: Array(23).fill(2100) },
+  { start: 68.91, end: 71.25, rpm: Array(23).fill(2700) },
+  { start: 71.37, end: 73.71, rpm: Array(23).fill(3400) },
+  { start: 73.83, end: 76.17, rpm: Array(23).fill(4200) },
+  { start: 76.29, end: 78.63, rpm: Array(23).fill(5000) },
+  { start: 78.75, end: 81.09, rpm: Array(23).fill(5800) },
 ];
-const GE2_V8_90_OVERRUN_REGIONS: RecordedRegion[] = [
-  { start: 30.96, end: 34.14, rpm: [4338, 4338, 4338, 4338, 4338, 4338, 4338, 4338, 4338, 4338, 4329, 4293, 4198, 4081, 3982, 3886, 3816, 3762, 3725, 3587, 3430, 3339, 3333, 3333, 3333, 3318, 3290, 3270, 3238, 3148, 3006, 2863] },
-  { start: 34.24, end: 37.72, rpm: [5797, 5602, 5389, 5280, 5248, 5216, 5132, 5029, 4909, 4753, 4547, 4356, 4259, 4251, 4251, 4259, 4276, 4293, 4276, 4241, 4214, 4189, 4172, 4164, 4164, 4164, 4164, 4180, 4197, 4224, 4250, 4276, 4293, 4301, 4320] },
-  { start: 37.82, end: 39.5, rpm: [5205, 5205, 5153, 4972, 4697, 4480, 4263, 3989, 3727, 3599, 3525, 3496, 3489, 3496, 3518, 3614, 3717] },
+const GE2_M90_OVERRUN_REGIONS: RecordedRegion[] = [
+  { start: 81.21, end: 83.55, rpm: Array(23).fill(700) },
+  { start: 83.67, end: 86.01, rpm: Array(23).fill(900) },
+  { start: 86.13, end: 88.47, rpm: Array(23).fill(1200) },
+  { start: 88.59, end: 90.93, rpm: Array(23).fill(1600) },
+  { start: 91.05, end: 93.39, rpm: Array(23).fill(2100) },
+  { start: 93.51, end: 95.85, rpm: Array(23).fill(2700) },
+  { start: 95.97, end: 98.31, rpm: Array(23).fill(3400) },
+  { start: 98.43, end: 100.77, rpm: Array(23).fill(4200) },
+  { start: 100.89, end: 103.23, rpm: Array(23).fill(5000) },
+  { start: 103.35, end: 105.69, rpm: Array(23).fill(5800) },
 ];
-const GE2_V8_O_IDLE_REGIONS: RecordedRegion[] = [
-  { start: 0.0, end: 5.98, rpm: [780, 780, 780, 780, 780, 780, 780, 780, 780, 780, 780, 780, 780, 780, 780, 780, 780, 780, 780, 780, 780, 780, 780, 780, 780, 780, 780, 780, 780, 780, 780, 780, 780, 780, 780, 780, 780, 780, 780, 780, 780, 780, 780, 780, 780, 780, 780, 780, 780, 780, 780, 780, 780, 780, 780, 780, 780, 780, 780, 780] },
+const GE2_MO_IDLE_REGIONS: RecordedRegion[] = [
+  { start: 0.03, end: 2.37, rpm: Array(23).fill(650) },
+  { start: 2.49, end: 4.83, rpm: Array(23).fill(750) },
+  { start: 4.95, end: 7.29, rpm: Array(23).fill(900) },
 ];
-const GE2_V8_O_GROWL_REGIONS: RecordedRegion[] = [
-  { start: 6.08, end: 9.06, rpm: [2347, 2428, 2529, 2634, 2737, 2824, 2882, 2935, 3031, 3163, 3276, 3336, 3366, 3411, 3481, 3559, 3652, 3748, 3840, 3927, 3999, 4089, 4180, 4266, 4354, 4452, 4534, 4584, 4593, 4527] },
-  { start: 12.44, end: 14.12, rpm: [3749, 3533, 3480, 3499, 3559, 3639, 3721, 3812, 3912, 3984, 4059, 4158, 4258, 4346, 4419, 4459, 4450] },
-  { start: 14.22, end: 16.6, rpm: [3526, 3572, 3605, 3645, 3686, 3720, 3755, 3804, 3855, 3883, 3912, 3955, 4014, 4066, 4119, 4157, 4195, 4219, 4227, 4227, 4219, 4188, 4156, 4149] },
-  { start: 19.78, end: 22.26, rpm: [3514, 3599, 3715, 3813, 3891, 3978, 4113, 4243, 4313, 4386, 4485, 4551, 4576, 4593, 4602, 4620, 4654, 4671, 4680, 4680, 4654, 4602, 4559, 4551, 4551] },
+const GE2_MO_CRUISE_REGIONS: RecordedRegion[] = [
+  { start: 7.41, end: 9.75, rpm: Array(23).fill(700) },
+  { start: 9.87, end: 12.21, rpm: Array(23).fill(900) },
+  { start: 12.33, end: 14.67, rpm: Array(23).fill(1200) },
+  { start: 14.79, end: 17.13, rpm: Array(23).fill(1600) },
+  { start: 17.25, end: 19.59, rpm: Array(23).fill(2100) },
+  { start: 19.71, end: 22.05, rpm: Array(23).fill(2700) },
+  { start: 22.17, end: 24.51, rpm: Array(23).fill(3400) },
+  { start: 24.63, end: 26.97, rpm: Array(23).fill(4200) },
+  { start: 27.09, end: 29.43, rpm: Array(23).fill(5000) },
+  { start: 29.55, end: 31.89, rpm: Array(23).fill(5800) },
 ];
-const GE2_V8_O_HARD_REGIONS: RecordedRegion[] = [
-  { start: 9.16, end: 12.34, rpm: [4020, 4006, 3984, 3970, 3963, 3948, 3934, 3927, 3927, 3927, 3927, 3934, 3993, 4176, 4431, 4672, 4829, 4929, 5002, 5095, 5161, 5219, 5277, 5367, 5447, 5498, 5518, 5529, 5438, 5280, 5124, 5002] },
-  { start: 16.7, end: 19.68, rpm: [3775, 3818, 3869, 3919, 3963, 4006, 4066, 4112, 4150, 4195, 4250, 4298, 4338, 4347, 4347, 4362, 4378, 4469, 4798, 5229, 5498, 5518, 5467, 5377, 5287, 5238, 5258, 5388, 5539, 5663] },
+const GE2_MO_GROWL_REGIONS: RecordedRegion[] = [
+  { start: 32.01, end: 34.35, rpm: Array(23).fill(700) },
+  { start: 34.47, end: 36.81, rpm: Array(23).fill(900) },
+  { start: 36.93, end: 39.27, rpm: Array(23).fill(1200) },
+  { start: 39.39, end: 41.73, rpm: Array(23).fill(1600) },
+  { start: 41.85, end: 44.19, rpm: Array(23).fill(2100) },
+  { start: 44.31, end: 46.65, rpm: Array(23).fill(2700) },
+  { start: 46.77, end: 49.11, rpm: Array(23).fill(3400) },
+  { start: 49.23, end: 51.57, rpm: Array(23).fill(4200) },
+  { start: 51.69, end: 54.03, rpm: Array(23).fill(5000) },
+  { start: 54.15, end: 56.49, rpm: Array(23).fill(5800) },
 ];
-const GE2_V8_O_CRUISE_REGIONS: RecordedRegion[] = [
-  { start: 22.36, end: 25.14, rpm: [4436, 4371, 4330, 4313, 4305, 4305, 4305, 4305, 4305, 4305, 4305, 4289, 4258, 4234, 4219, 4195, 4164, 4149, 4149, 4149, 4134, 4120, 4105, 4089, 4074, 4066, 4050, 4035] },
-  { start: 25.24, end: 29.72, rpm: [4551, 4534, 4517, 4500, 4476, 4411, 4363, 4347, 4347, 4338, 4306, 4258, 4234, 4227, 4227, 4227, 4242, 4266, 4297, 4330, 4362, 4395, 4419, 4443, 4492, 4577, 4654, 4671, 4611, 4477, 4345, 4281, 4258, 4242, 4227, 4211, 4180, 4156, 4141, 4127, 4105, 4089, 4074, 4074, 4074] },
+const GE2_MO_HARD_REGIONS: RecordedRegion[] = [
+  { start: 56.61, end: 58.95, rpm: Array(23).fill(700) },
+  { start: 59.07, end: 61.41, rpm: Array(23).fill(900) },
+  { start: 61.53, end: 63.87, rpm: Array(23).fill(1200) },
+  { start: 63.99, end: 66.33, rpm: Array(23).fill(1600) },
+  { start: 66.45, end: 68.79, rpm: Array(23).fill(2100) },
+  { start: 68.91, end: 71.25, rpm: Array(23).fill(2700) },
+  { start: 71.37, end: 73.71, rpm: Array(23).fill(3400) },
+  { start: 73.83, end: 76.17, rpm: Array(23).fill(4200) },
+  { start: 76.29, end: 78.63, rpm: Array(23).fill(5000) },
+  { start: 78.75, end: 81.09, rpm: Array(23).fill(5800) },
 ];
-const GE2_V8_O_OVERRUN_REGIONS: RecordedRegion[] = [
-  { start: 29.82, end: 35.0, rpm: [5812, 5930, 5952, 5952, 5941, 5908, 5761, 5427, 5052, 4893, 4857, 4821, 4785, 4767, 4803, 4857, 4901, 4883, 4866, 4830, 4794, 4767, 4758, 4740, 4722, 4722, 4722, 4731, 4749, 4767, 4767, 4767, 4767, 4767, 4758, 4689, 4577, 4476, 4411, 4354, 4297, 4273, 4273, 4306, 4346, 4436, 4552, 4629, 4638, 4638, 4638, 4611] },
-  { start: 35.1, end: 37.08, rpm: [4273, 4305, 4235, 4120, 3978, 3862, 3769, 3622, 3391, 3158, 2987, 2867, 2768, 2712, 2688, 2644, 2518, 2371, 2304, 2304] },
-  { start: 37.18, end: 41.16, rpm: [4089, 4105, 4113, 4113, 4113, 4113, 4113, 4113, 4113, 4097, 4081, 4074, 4074, 4074, 4074, 4104, 4134, 4126, 4066, 4006, 3977, 3948, 3927, 3927, 3919, 3891, 3847, 3826, 3811, 3797, 3783, 3769, 3721, 3666, 3645, 3645, 3645, 3638, 3612, 2869] },
+const GE2_MO_OVERRUN_REGIONS: RecordedRegion[] = [
+  { start: 81.21, end: 83.55, rpm: Array(23).fill(700) },
+  { start: 83.67, end: 86.01, rpm: Array(23).fill(900) },
+  { start: 86.13, end: 88.47, rpm: Array(23).fill(1200) },
+  { start: 88.59, end: 90.93, rpm: Array(23).fill(1600) },
+  { start: 91.05, end: 93.39, rpm: Array(23).fill(2100) },
+  { start: 93.51, end: 95.85, rpm: Array(23).fill(2700) },
+  { start: 95.97, end: 98.31, rpm: Array(23).fill(3400) },
+  { start: 98.43, end: 100.77, rpm: Array(23).fill(4200) },
+  { start: 100.89, end: 103.23, rpm: Array(23).fill(5000) },
+  { start: 103.35, end: 105.69, rpm: Array(23).fill(5800) },
 ];
 
 const src = (
@@ -737,15 +801,15 @@ export const RECORDED_LOOP_BANKS_BY_PROFILE: Record<string, RecordedLoopBank> = 
     handover: RAW_HANDOVER,
     eq: { lowShelfDb: 4, midDb: 3, midHz: 900, highShelfDb: 1, highShelfHz: 3000, lowpassHz: 10000 },
   },
-  // '90: relaxed older V8, smooth deep burble, gentle pull. Recordings only, no synth tone.
+  // '90: classic relaxed V8, deep muted burble, gentle pull. Modelled loops, no recordings.
   "ge-squared-90": {
     personalityId: "ge-squared-90",
     sources: [
-      src("ge2c-idle", "ge2_90_v8.m4a", GE2_V8_90_IDLE_REGIONS, "idle", 0.8, 1.5),
-      src("ge2c-cruise", "ge2_90_v8.m4a", [...GE2_V8_90_CRUISE_REGIONS, ...GE2_V8_90_GROWL_REGIONS], "cruise", 0.6, 1.2, 0.9),
-      src("ge2c-growl", "ge2_90_v8.m4a", GE2_V8_90_GROWL_REGIONS, "growl", 0.6, 1.2, 1.2),
-      src("ge2c-hard", "ge2_90_v8.m4a", [...GE2_V8_90_HARD_REGIONS, ...GE2_V8_90_GROWL_REGIONS], "hard", 0.6, 1.2, 1.3),
-      src("ge2c-overrun", "ge2_90_v8.m4a", GE2_V8_90_OVERRUN_REGIONS, "overrun", 0.6, 1.25, 0.9),
+      src("ge2c-idle", "ge2_90_model.m4a", GE2_M90_IDLE_REGIONS, "idle", 0.8, 1.5),
+      src("ge2c-cruise", "ge2_90_model.m4a", GE2_M90_CRUISE_REGIONS, "cruise", 0.8, 1.25, 0.9),
+      src("ge2c-growl", "ge2_90_model.m4a", GE2_M90_GROWL_REGIONS, "growl", 0.8, 1.25, 1.2),
+      src("ge2c-hard", "ge2_90_model.m4a", GE2_M90_HARD_REGIONS, "hard", 0.8, 1.25, 1.3),
+      src("ge2c-overrun", "ge2_90_model.m4a", GE2_M90_OVERRUN_REGIONS, "overrun", 0.8, 1.25, 0.9),
     ],
     level: 0.45,
     synthDuck: 1.05,
@@ -753,15 +817,15 @@ export const RECORDED_LOOP_BANKS_BY_PROFILE: Record<string, RecordedLoopBank> = 
     handover: RAW_HANDOVER,
     eq: { lowShelfDb: 5, midDb: -1, midHz: 1200, highShelfDb: -5, highShelfHz: 2200, lowpassHz: 4500 },
   },
-  // O))): modern biturbo V8, brutal fast pull, slight hiss, lift-off crackle. Recordings only.
+  // O))): modern biturbo V8, deep harsh boom, light whoosh, lift-off crackle. Modelled loops.
   "ge-squared": {
     personalityId: "ge-squared",
     sources: [
-      src("ge2b-idle", "ge2_o_v8.m4a", GE2_V8_O_IDLE_REGIONS, "idle", 0.8, 1.5),
-      src("ge2b-cruise", "ge2_o_v8.m4a", [...GE2_V8_O_CRUISE_REGIONS, ...GE2_V8_O_GROWL_REGIONS], "cruise", 0.6, 1.2, 0.9),
-      src("ge2b-growl", "ge2_o_v8.m4a", GE2_V8_O_GROWL_REGIONS, "growl", 0.6, 1.2, 1.2),
-      src("ge2b-hard", "ge2_o_v8.m4a", [...GE2_V8_O_HARD_REGIONS, ...GE2_V8_O_GROWL_REGIONS], "hard", 0.6, 1.2, 1.4),
-      src("ge2b-overrun", "ge2_o_v8.m4a", GE2_V8_O_OVERRUN_REGIONS, "overrun", 0.6, 1.25, 1),
+      src("ge2b-idle", "ge2_o_model.m4a", GE2_MO_IDLE_REGIONS, "idle", 0.8, 1.5),
+      src("ge2b-cruise", "ge2_o_model.m4a", GE2_MO_CRUISE_REGIONS, "cruise", 0.8, 1.25, 0.9),
+      src("ge2b-growl", "ge2_o_model.m4a", GE2_MO_GROWL_REGIONS, "growl", 0.8, 1.25, 1.2),
+      src("ge2b-hard", "ge2_o_model.m4a", GE2_MO_HARD_REGIONS, "hard", 0.8, 1.25, 1.4),
+      src("ge2b-overrun", "ge2_o_model.m4a", GE2_MO_OVERRUN_REGIONS, "overrun", 0.8, 1.25, 1),
     ],
     level: 0.42,
     synthDuck: 1.05,
@@ -1031,24 +1095,6 @@ export const RECORDED_LOOP_CREDITS: RecordedCredit[] = [
       "F1practice3MelbGP2012DR066 by Ears68 (Freesound #150337), CC0 1.0, edited (short pass-by clips, filtered, granular).",
   },
 
-  {
-    title: "Classic V8 saloon engine and exhaust sound",
-    author: "MEC DESIGN (via Wikimedia Commons)",
-    licence: "CC BY 3.0",
-    licenceUrl: "https://creativecommons.org/licenses/by/3.0/",
-    sourceUrl: "https://commons.wikimedia.org/?curid=202319130",
-    usedIn: "Ge-Squared '90 (idle, cruise, pulls under load, lift-off)",
-    attribution: "Classic V8 recording by MEC DESIGN (Wikimedia Commons), CC BY 3.0, edited (trimmed, filtered, loudness-set, granular).",
-  },
-  {
-    title: "Modern biturbo V8 off-roader engine and exhaust sound",
-    author: "FiExhaust (via Wikimedia Commons)",
-    licence: "CC BY 3.0",
-    licenceUrl: "https://creativecommons.org/licenses/by/3.0/",
-    sourceUrl: "https://commons.wikimedia.org/?curid=202319137",
-    usedIn: "Ge-Squared O))) (idle, cruise, pulls under load, lift-off crackle)",
-    attribution: "Biturbo V8 recording by FiExhaust (Wikimedia Commons), CC BY 3.0, edited (trimmed, hum-notched, filtered, loudness-set, granular).",
-  },
   {
     title: "Two-stroke twin car engine (Freesound #412819)",
     author: "blukotek",
