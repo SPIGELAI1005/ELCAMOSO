@@ -65,7 +65,7 @@ const STRINGS: Record<Locale, Record<string, string>> = {
       "Boats and aircraft show knots (1 kn = 1.852 km/h). Space Ship, UFO and Space Drive show a fraction of light speed, like 5.6 × 10⁻⁸ c. Turn off to keep km/h or mph.",
     "pricing.earlyAccessTitle": "Early access — test drive ELCAMOSO for free",
     "pricing.earlyAccessBody":
-      "We're fine-tuning every sound profile on real roads before launch. Racing V10, American Muscle V8 and GT V8 are free to drive now. Help shape the final experience. Drive+ and individual sound purchases open on 9.11.2026.",
+      "We're fine-tuning every sound profile on real roads before launch. Racing V10, American Muscle V8 and GT V8 are free to drive now. Help shape the final experience.",
     "pricing.founders.title": "Founders Pack — 458 seats, sign up before 27.11.",
     "pricing.founders.body":
       "Sign in with a verified email before 27.11.2026 23:59 (Berlin, Black Friday) and claim one of 458 Founder seats.",
@@ -139,7 +139,7 @@ const STRINGS: Record<Locale, Record<string, string>> = {
       "Boote und Flugzeuge zeigen Knoten (1 kn = 1,852 km/h). Space Ship, UFO und Space Drive zeigen einen Bruchteil der Lichtgeschwindigkeit, z. B. 5,6 × 10⁻⁸ c. Ausschalten fuer km/h oder mph.",
     "pricing.earlyAccessTitle": "Early Access — ELCAMOSO kostenlos testen",
     "pricing.earlyAccessBody":
-      "Wir feilen noch an jedem Soundprofil auf echten Strassen vor dem Launch. Racing V10, American Muscle V8 und GT V8 sind kostenlos. Hilf mit, das finale Erlebnis zu formen. Drive+ und einzelne Sound-Kaeufe starten am 9.11.2026.",
+      "Wir feilen noch an jedem Soundprofil auf echten Strassen vor dem Launch. Racing V10, American Muscle V8 und GT V8 sind kostenlos. Hilf mit, das finale Erlebnis zu formen.",
     "pricing.founders.title": "Founders Pack — 458 Plätze, anmelden bis 27.11.",
     "pricing.founders.body":
       "Melde dich bis 27.11.2026 23:59 (Berlin, Black Friday) mit bestätigter E-Mail an und sichere dir einen von 458 Founder-Plätzen.",
@@ -214,7 +214,7 @@ const STRINGS: Record<Locale, Record<string, string>> = {
       "Barcile si avioanele afiseaza noduri (1 kn = 1,852 km/h). Space Ship, UFO si Space Drive afiseaza o fractiune din viteza luminii, de ex. 5,6 × 10⁻⁸ c. Dezactiveaza pentru km/h sau mph.",
     "pricing.earlyAccessTitle": "Acces early — testeaza ELCAMOSO gratuit",
     "pricing.earlyAccessBody":
-      "Rafinam fiecare profil de sunet pe drumuri reale inainte de lansare. Racing V10, American Muscle V8 si GT V8 sunt gratuite. Ajuta-ne sa modelam experienta finala. Drive+ si achizitiile individuale de sunete se deschid pe 9.11.2026.",
+      "Rafinam fiecare profil de sunet pe drumuri reale inainte de lansare. Racing V10, American Muscle V8 si GT V8 sunt gratuite. Ajuta-ne sa modelam experienta finala.",
     "pricing.founders.title": "Founders Pack — 458 locuri, inscrie-te pana pe 27.11.",
     "pricing.founders.body":
       "Conecteaza-te cu un email verificat pana pe 27.11.2026 23:59 (Berlin, Black Friday) si ocupa unul din cele 458 de locuri Founder.",
