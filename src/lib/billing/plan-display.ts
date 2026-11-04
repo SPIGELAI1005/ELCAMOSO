@@ -47,8 +47,8 @@ export const DRIVE_UNLIMITED_PRICING = {
   currency: "EUR",
   yearly: {
     commercialPlanId: "drive_unlimited_yearly" satisfies CommercialPlanId,
-    /** Charged annual price = €4.90 × 12. */
-    amountCents: 5880,
+    /** Charged annual price = €4.99 × 12. */
+    amountCents: 5988,
     /** Full (struck-through) annual price = (€3.29 + €3.29) × 12. */
     listAmountCents: 7896,
   },

@@ -86,7 +86,7 @@ export function softwareApplicationJsonLd(description: string): Record<string, u
       {
         "@type": "Offer",
         name: "Drive Unlimited",
-        price: "58.80",
+        price: "59.88",
         priceCurrency: "EUR",
         description: "Yearly package: Drive+ and Drive the Music together. Opens on 2026-11-09.",
         availability: "https://schema.org/PreOrder",

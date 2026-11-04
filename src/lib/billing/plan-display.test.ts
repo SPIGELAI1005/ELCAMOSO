@@ -50,14 +50,14 @@ describe("plan display", () => {
     expect(getDriveMusicDisplay("yearly").listAmount).toBe("€39.48");
   });
 
-  it("Drive Unlimited: €4.90 (full €6.58) per month, €58.80 (full €78.96) per year", () => {
+  it("Drive Unlimited: €4.99 (full €6.58) per month, €59.88 (full €78.96) per year", () => {
     const m = getDriveUnlimitedDisplay("monthly");
-    expect(m.amount).toBe("€4.90");
+    expect(m.amount).toBe("€4.99");
     expect(m.listAmount).toBe("€6.58");
     const y = getDriveUnlimitedDisplay("yearly");
-    expect(y.amount).toBe("€58.80");
+    expect(y.amount).toBe("€59.88");
     expect(y.listAmount).toBe("€78.96");
-    expect(y.badge).toBe("-26%");
+    expect(y.badge).toBe("-24%");
   });
 
   it("Drive Unlimited checkout grants both packages", () => {
