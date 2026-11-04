@@ -5,6 +5,8 @@ import { qrOrigin, SCANNABLE_QR_OPTIONS } from "@/lib/qr";
 import { useDriveRelay, relayStatusLabel } from "@/lib/drive-relay/client";
 import { formatPairingCode, pairPagePath } from "@/lib/drive-relay/protocol";
 import { createDriveRelaySessionFn } from "@/lib/drive-relay/server-fns";
+import { randomKey } from "@/lib/drive-relay/realtime-link";
+import { hostDrivePairingLobby } from "@/lib/drive-relay/realtime-pairing";
 import { setClientRelaySessionId } from "@/lib/dynamic-drive-session/client-relay-id";
 import { getSession } from "@/lib/drive/session";
 import { useSettings } from "@/lib/drive/useSettings";
@@ -60,6 +62,14 @@ export function DriveSessionPanel({
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [expanded, setExpanded] = useState(!compact);
+  const lobbyStopRef = useRef<(() => void) | null>(null);
+  useEffect(
+    () => () => {
+      lobbyStopRef.current?.();
+      lobbyStopRef.current = null;
+    },
+    [],
+  );
 
   const pairUrl = useMemo(() => {
     if (!pairPath || typeof window === "undefined") return "";
@@ -171,9 +181,20 @@ export function DriveSessionPanel({
       const created = await createDriveRelaySessionFn({
         data: { sessionToken: null },
       });
+      // Car and phone meet on a Supabase Realtime channel keyed by a fresh random key
+      // (Vercel has no WebSocket relay). The car answers the QR / code claim itself.
+      const channelKey = randomKey(16);
+      lobbyStopRef.current?.();
+      lobbyStopRef.current = await hostDrivePairingLobby({
+        sessionId: created.sessionId,
+        channelKey,
+        claimToken: created.claimToken,
+        pairingCode: created.pairingCode,
+        claimExpiresAt: created.claimExpiresAt,
+      });
       setSessionId(created.sessionId);
       setPairingCode(created.pairingCode);
-      setJoinSecret(created.joinSecret);
+      setJoinSecret(channelKey);
       setPairPath(created.pairPath ?? pairPagePath(created.claimToken));
       setExpiresAt(created.expiresAt);
       setClaimExpiresAt(created.claimExpiresAt);
@@ -188,6 +209,8 @@ export function DriveSessionPanel({
   };
 
   const resetPairing = () => {
+    lobbyStopRef.current?.();
+    lobbyStopRef.current = null;
     setSessionId(null);
     setPairingCode(null);
     setJoinSecret(null);

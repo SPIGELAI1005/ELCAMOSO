@@ -1,7 +1,7 @@
 import type { MotionSample } from "@/lib/motion/types";
 
-/** Target relay rate - keep within server cap (~22/s) and network budget. */
-export const PHONE_SENSOR_TARGET_HZ = 15;
+/** Phone sensor tick; the realtime link sends ~10 Hz moving, ~4 Hz parked (free-plan budget). */
+export const PHONE_SENSOR_TARGET_HZ = 10;
 export const PHONE_SENSOR_TICK_MS = Math.round(1000 / PHONE_SENSOR_TARGET_HZ);
 export const PHONE_SENSOR_CALIBRATION_MS = 2500;
 

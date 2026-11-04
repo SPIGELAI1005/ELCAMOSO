@@ -8,7 +8,7 @@ import {
   writeStoredRelayCred,
   readStoredRelayCred,
 } from "@/components/PhonePairSession";
-import { claimDriveRelayTokenFn, peekDriveRelayClaimFn } from "@/lib/drive-relay/server-fns";
+import { claimDrivePairToken, peekDrivePairToken } from "@/lib/drive-relay/realtime-pairing";
 import { createSeoHeadFromPath } from "@/lib/seo";
 import { useSettings } from "@/lib/drive/useSettings";
 import { useAccount } from "@/lib/account/AccountProvider";
@@ -57,14 +57,14 @@ function PairTokenScreen() {
 
   useEffect(() => {
     let cancelled = false;
-    void peekDriveRelayClaimFn({ data: { claimToken: token } }).then((peek) => {
+    void peekDrivePairToken(token).then((peek) => {
       if (cancelled) return;
       if (!peek.ok) {
         setPhase("invalid");
         return;
       }
       if (peek.expired) setPhase("expired");
-      else if (peek.used || peek.phoneConnected) setPhase("used");
+      else if (peek.used) setPhase("used");
       else setPhase("ready");
     });
     return () => {
@@ -99,7 +99,7 @@ function PairTokenScreen() {
     setClaiming(true);
     setError(null);
     try {
-      const result = await claimDriveRelayTokenFn({ data: { claimToken: token } });
+      const result = await claimDrivePairToken(token);
       if (!result.ok) {
         setError("This link expired or was already used.");
         setPhase("expired");
