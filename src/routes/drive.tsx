@@ -547,12 +547,8 @@ function DriveScreen() {
               }
               onStart={() => void handleStart()}
             />
-            <ShareSoundButton
-              profileId={settings.profileId}
-              locale={settings.language}
-              className="-mt-6"
-            />
-            <div className="w-full max-w-md">
+            <div className="flex w-full max-w-md flex-col items-center gap-4">
+              <ShareSoundButton profileId={settings.profileId} locale={settings.language} />
               <DriveModePicker
                 value={settings.driveOutputMode}
                 onChange={(driveOutputMode) => update({ driveOutputMode })}
