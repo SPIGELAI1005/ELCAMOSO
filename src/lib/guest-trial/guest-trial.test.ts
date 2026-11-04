@@ -38,8 +38,8 @@ describe("guest trial window", () => {
     expect(isGuestTrialWindow(Date.parse("2026-12-09T00:00:00+01:00"))).toBe(false);
   });
 
-  it("covers exactly the ten trial sounds", () => {
-    for (const id of ["american-muscle-v8", "racing-v10", "symphony-latino-fiesta", "fusion-midnight-boost", "genre:waltz", "genre:house", "wild-west-carriage", "romanian-85-carriage", "dracula-carriage", "police-patrol"])
+  it("covers exactly the eleven trial sounds", () => {
+    for (const id of ["american-muscle-v8", "racing-v10", "symphony-latino-fiesta", "fusion-midnight-boost", "genre:waltz", "genre:house", "wild-west-carriage", "romanian-85-carriage", "dracula-carriage", "police-patrol", "gt-v8"])
       expect(isGuestTrialProfile(id)).toBe(true);
     expect(isGuestTrialProfile("symphony-motion-orchestra", "waltz")).toBe(true);
     expect(isGuestTrialProfile("symphony-motion-orchestra", "house")).toBe(true);
@@ -149,6 +149,8 @@ describe("client: guest access", () => {
     }
     tickGuestTrial(420, IN);
     for (const id of ids) expect(guestTrialAllows(id, false, IN, null)).toBe(false);
-    expect(guestTrialGoverns("gt-v8", false, IN, null)).toBe(false);
+    expect(guestTrialGoverns("gt-v8", false, IN, null)).toBe(true);
+    expect(guestTrialAllows("gt-v8", false, IN, null)).toBe(false);
+    expect(guestTrialGoverns("gt-v8", true, IN, null)).toBe(false);
   });
 });

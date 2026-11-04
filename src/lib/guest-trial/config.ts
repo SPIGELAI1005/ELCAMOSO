@@ -33,6 +33,7 @@ export const GUEST_TRIAL_PROFILE_IDS: readonly string[] = [
   "romanian-85-carriage", // Romanian '85 Carriage
   "dracula-carriage", // Dracula Carriage
   "police-patrol", // Police Patrol
+  "gt-v8", // GT V8
 ];
 /**
  * Genres without their own profile: they play through the genre host profile
