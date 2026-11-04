@@ -68,6 +68,36 @@ export interface SongShareCard {
 const CHAPTER_ALPHA: Record<string, number> = { INTRO: 0.04, BUILD: 0.07, GROOVE: 0.1, RISE: 0.13, PEAK: 0.2, RELEASE: 0.1, OUTRO: 0.05 };
 const RED = "#e53935";
 
+/**
+ * The O))) mark from public/icon.svg (same geometry, 512 viewBox, no black tile),
+ * drawn as vectors so it stays sharp at any size.
+ */
+export function drawElcamosoMark(ctx: CanvasRenderingContext2D, x: number, y: number, size: number): void {
+  const k = size / 512;
+  ctx.save();
+  ctx.translate(x - 60 * k, y);
+  ctx.scale(k, k);
+  ctx.strokeStyle = "#fff";
+  ctx.lineCap = "round";
+  ctx.lineWidth = 26;
+  ctx.beginPath();
+  ctx.arc(168, 256, 88, 0, Math.PI * 2);
+  ctx.stroke();
+  const waves: [number, number, number, number, number, number, number, number, number][] = [
+    [278, 148, 340, 200, 340, 312, 278, 364, 24],
+    [348, 122, 426, 186, 426, 326, 348, 390, 22],
+    [418, 98, 512, 176, 512, 336, 418, 414, 20],
+  ];
+  for (const [x0, y0, c1x, c1y, c2x, c2y, x1, y1, lw] of waves) {
+    ctx.lineWidth = lw;
+    ctx.beginPath();
+    ctx.moveTo(x0, y0);
+    ctx.bezierCurveTo(c1x, c1y, c2x, c2y, x1, y1);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
 /** Draws the share card. Pure canvas calls so it also runs in tests with a mock context. */
 export function drawSongShareCard(ctx: CanvasRenderingContext2D, w: number, h: number, card: SongShareCard): void {
   const ui = SONG_SHARE_UI[card.locale ?? "en"] ?? SONG_SHARE_UI.en;
@@ -96,8 +126,10 @@ export function drawSongShareCard(ctx: CanvasRenderingContext2D, w: number, h: n
   const pad = 64 * u;
   ctx.textBaseline = "alphabetic";
   ctx.fillStyle = "#fff";
+  const markH = 52 * u;
+  drawElcamosoMark(ctx, pad - 6 * u, pad - 12 * u, markH);
   ctx.font = `300 ${34 * u}px sans-serif`;
-  ctx.fillText("ELCAMOSO", pad, pad + 30 * u);
+  ctx.fillText("ELCAMOSO", pad + markH * 0.95, pad + 30 * u);
   ctx.fillStyle = "rgba(255,255,255,0.75)";
   ctx.font = `400 ${(wide ? 22 : 26) * u}px sans-serif`;
   ctx.fillText(ui.headline, pad, pad + (wide ? 72 : 84) * u);

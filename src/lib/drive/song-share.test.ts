@@ -31,6 +31,7 @@ describe("song share", () => {
       genreName: "Latino Fiesta", durationSec: 100, topSpeedKmh: 109,
     });
     expect(calls.some((c) => c.startsWith("fillText:ELCAMOSO"))).toBe(true);
+    expect(calls.filter((c) => c.startsWith("bezierCurveTo")).length).toBe(3);
     expect(calls.some((c) => c.startsWith("fillText:Latino Fiesta"))).toBe(true);
     expect(calls.some((c) => c.startsWith("fillText:www.elcamoso.com"))).toBe(true);
   });
