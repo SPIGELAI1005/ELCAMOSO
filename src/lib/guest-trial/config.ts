@@ -29,6 +29,10 @@ export const GUEST_TRIAL_PROFILE_IDS: readonly string[] = [
   "racing-v10",
   "symphony-latino-fiesta", // Latino
   "fusion-midnight-boost", // Midnight Boost
+  "wild-west-carriage", // Wild West Carriage
+  "romanian-85-carriage", // Romanian '85 Carriage
+  "dracula-carriage", // Dracula Carriage
+  "police-patrol", // Police Patrol
 ];
 /**
  * Genres without their own profile: they play through the genre host profile

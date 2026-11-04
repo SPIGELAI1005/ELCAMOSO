@@ -134,7 +134,7 @@ export function currentTrialGenre(): string | null {
  */
 /**
  * True when the guest trial (not the normal free/paid rules) decides access:
- * signed-out visitor, inside the window, one of the six trial sounds. In that
+ * signed-out visitor, inside the window, one of the trial sounds. In that
  * case even the normally free V8 / V10 share the 7-minute daily allowance.
  */
 export function guestTrialGoverns(

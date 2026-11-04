@@ -38,8 +38,8 @@ describe("guest trial window", () => {
     expect(isGuestTrialWindow(Date.parse("2026-12-09T00:00:00+01:00"))).toBe(false);
   });
 
-  it("covers exactly the six sounds", () => {
-    for (const id of ["american-muscle-v8", "racing-v10", "symphony-latino-fiesta", "fusion-midnight-boost", "genre:waltz", "genre:house"])
+  it("covers exactly the ten trial sounds", () => {
+    for (const id of ["american-muscle-v8", "racing-v10", "symphony-latino-fiesta", "fusion-midnight-boost", "genre:waltz", "genre:house", "wild-west-carriage", "romanian-85-carriage", "dracula-carriage", "police-patrol"])
       expect(isGuestTrialProfile(id)).toBe(true);
     expect(isGuestTrialProfile("symphony-motion-orchestra", "waltz")).toBe(true);
     expect(isGuestTrialProfile("symphony-motion-orchestra", "house")).toBe(true);
@@ -138,5 +138,17 @@ describe("client: guest access", () => {
     expect(guestTrialGoverns("american-muscle-v8", false, OUT, null)).toBe(false);
     expect(guestTrialGoverns("racing-v10", true, IN, null)).toBe(false);
     expect(guestTrialGoverns("symphony-motion-orchestra", false, IN, null)).toBe(false); // Auto DJ
+  });
+
+  it("carriages and Police Patrol share the same 7 minutes", () => {
+    const ids = ["wild-west-carriage", "romanian-85-carriage", "dracula-carriage", "police-patrol"];
+    for (const id of ids) {
+      expect(guestTrialGoverns(id, false, IN, null)).toBe(true);
+      expect(guestTrialAllows(id, false, IN, null)).toBe(true);
+      expect(guestTrialGoverns(id, true, IN, null)).toBe(false);
+    }
+    tickGuestTrial(420, IN);
+    for (const id of ids) expect(guestTrialAllows(id, false, IN, null)).toBe(false);
+    expect(guestTrialGoverns("gt-v8", false, IN, null)).toBe(false);
   });
 });
