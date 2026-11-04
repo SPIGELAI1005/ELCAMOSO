@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 import { AccountSignInDialog } from "@/components/AccountSignInDialog";
+import { getSession } from "@/lib/drive/session";
 import { useSettings } from "@/lib/drive/useSettings";
 import { useFeatureAccess } from "@/lib/entitlements/selectors";
 import {
@@ -44,8 +45,7 @@ async function sendHeartbeat(seconds: number) {
 /**
  * Guest trial runtime: counts free seconds while a signed-out visitor drives a
  * trial sound, sends heartbeats, shows the remaining-time pill and the time-up
- * notice. When time runs out, canDriveWithProfile turns false and the
- * EntitlementEnforcer crossfades quietly to the free fallback sound.
+ * notice. When time runs out the drive fades out and ends (no fallback sound).
  */
 export function GuestTrialBridge() {
   const { settings } = useSettings();
@@ -60,9 +60,17 @@ export function GuestTrialBridge() {
     access.isLiveDrive &&
     !access.isSignedIn &&
     isGuestTrialWindow(now) &&
-    !access.canDriveWithoutGuestTrial(settings.profileId) &&
     isGuestTrialProfile(settings.profileId, currentTrialGenre());
   const remaining = guestRemainingSeconds(now);
+
+  // Time up (or a switch to another trial sound with nothing left): fade the
+  // sound out by ending the drive and show the log-in / sign-up notice.
+  useEffect(() => {
+    if (!usingTrial || remaining > 0) return;
+    wasUsing.current = true;
+    setTimeUp(true);
+    void getSession().stop();
+  }, [usingTrial, remaining]);
 
   useEffect(() => {
     if (!usingTrial) return;

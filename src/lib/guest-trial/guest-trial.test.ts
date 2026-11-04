@@ -15,6 +15,7 @@ import {
   applyServerUsage,
   guestRemainingSeconds,
   guestTrialAllows,
+  guestTrialGoverns,
   resetGuestTrialForTests,
   tickGuestTrial,
 } from "@/lib/guest-trial/client-store";
@@ -118,5 +119,24 @@ describe("client: guest access", () => {
     expect(guestTrialAllows("symphony-latino-fiesta", true, IN, null)).toBe(false);
     expect(guestTrialAllows("symphony-latino-fiesta", false, Date.parse("2026-12-10T12:00:00+01:00"), null)).toBe(false);
     expect(guestTrialAllows("traby", false, IN, null)).toBe(false);
+  });
+
+  it("V8 and V10 share the same 7 minutes for guests in the window", () => {
+    expect(guestTrialGoverns("american-muscle-v8", false, IN, null)).toBe(true);
+    expect(guestTrialGoverns("racing-v10", false, IN, null)).toBe(true);
+    tickGuestTrial(300, IN); // e.g. 5 min on V8
+    tickGuestTrial(120, IN); // then 2 min on Latino
+    for (const id of ["american-muscle-v8", "racing-v10", "symphony-latino-fiesta", "fusion-midnight-boost"]) {
+      expect(guestTrialAllows(id, false, IN, null)).toBe(false);
+    }
+    expect(guestTrialAllows("symphony-motion-orchestra", false, IN, "waltz")).toBe(false);
+    expect(guestTrialAllows("symphony-motion-orchestra", false, IN, "house")).toBe(false);
+  });
+
+  it("V8 / V10 are not governed by the trial outside the window or when signed in", () => {
+    const OUT = Date.parse("2026-12-10T12:00:00+01:00");
+    expect(guestTrialGoverns("american-muscle-v8", false, OUT, null)).toBe(false);
+    expect(guestTrialGoverns("racing-v10", true, IN, null)).toBe(false);
+    expect(guestTrialGoverns("symphony-motion-orchestra", false, IN, null)).toBe(false); // Auto DJ
   });
 });

@@ -132,6 +132,20 @@ export function currentTrialGenre(): string | null {
  * Whether a signed-out visitor may drive `profileId` right now through the trial.
  * Signed-in accounts never use this path (their access is unchanged).
  */
+/**
+ * True when the guest trial (not the normal free/paid rules) decides access:
+ * signed-out visitor, inside the window, one of the six trial sounds. In that
+ * case even the normally free V8 / V10 share the 7-minute daily allowance.
+ */
+export function guestTrialGoverns(
+  profileId: string,
+  signedIn: boolean,
+  now = guestTrialNow(),
+  genre: string | null = currentTrialGenre(),
+): boolean {
+  return !signedIn && isGuestTrialWindow(now) && isGuestTrialProfile(profileId, genre);
+}
+
 export function guestTrialAllows(
   profileId: string,
   signedIn: boolean,

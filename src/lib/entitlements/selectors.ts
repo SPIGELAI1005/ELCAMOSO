@@ -18,6 +18,7 @@ import { useSyncExternalStore } from "react";
 import {
   getGuestTrialState,
   guestTrialAllows,
+  guestTrialGoverns,
   subscribeGuestTrial,
 } from "@/lib/guest-trial/client-store";
 import { isLiveSessionStatus } from "@/lib/ui/chrome";
@@ -64,7 +65,10 @@ export function useFeatureAccess() {
   );
   void guestTrialVersion;
   const canDriveWithProfile = (profileId: string) =>
-    canDriveWithoutGuestTrial(profileId) || guestTrialAllows(profileId, signedIn);
+    guestTrialGoverns(profileId, signedIn)
+      ? guestTrialAllows(profileId, signedIn)
+      : canDriveWithoutGuestTrial(profileId);
+  const isGuestTrialGoverned = (profileId: string) => guestTrialGoverns(profileId, signedIn);
 
   const canPreviewProfile = (profileId: string) => isSoundProfilePreviewAllowed(profileId);
 
@@ -103,6 +107,7 @@ export function useFeatureAccess() {
     canDriveWithProfile,
     canDriveWithoutGuestTrial,
     isSignedIn: signedIn,
+    isGuestTrialGoverned,
     canPreviewProfile,
     previewDurationForProfile,
     /** @deprecated Prefer canDriveWithProfile - preview vs drive semantics differ. */
