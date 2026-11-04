@@ -340,7 +340,7 @@ function DriveScreen() {
         </>
       ) : null}
       {status === "idle" && !sessionSnap.nativeCapture.active ? (
-        <IncompleteJourneyRecovery />
+        <IncompleteJourneyRecovery onRecover={(id) => setPostCaptureTraceId(id)} />
       ) : null}
       {status === "idle" ? <LockedSoundNotice className="mb-4" /> : null}
       {status === "idle" && sessionSnap.journeyRecovered ? (

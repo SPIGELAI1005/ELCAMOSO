@@ -29,8 +29,15 @@ export interface AdaptiveSamplerOptions {
   startedAt: number;
   outputMode: JourneyTraceV1["outputMode"];
   captureProfileId: string | null;
-  onChunk?: (chunkIndex: number, samples: JourneyTraceSampleV1[]) => void;
+  onChunk?: (
+    chunkIndex: number,
+    samples: JourneyTraceSampleV1[],
+    extras: { events: JourneyTraceSemanticEventV1[]; gaps: JourneyTraceGapV1[] },
+  ) => void;
 }
+
+/** Two consecutive samples further apart than this are recorded as a gap. */
+export const AUTO_GAP_MS = 3000;
 
 /**
  * Adaptive 8–15 Hz motion sampler. Personality-independent raw motion only.
@@ -57,6 +64,10 @@ export class AdaptiveTraceSampler {
   private onChunk?: AdaptiveSamplerOptions["onChunk"];
   private distanceM = 0;
   private smiles = { nearRedlineMs: 0, raceModeMs: 0, peakRpmFrac: 0 };
+  private flushedSamples = 0;
+  private flushedEvents = 0;
+  private flushedGaps = 0;
+  private lastSampleT = -1;
 
   /** Record Smiles-per-Mile metrics. Read-only w.r.t. sound/gears. */
   noteSmiles(rpmFrac: number, raceMode: boolean, wallDtSec: number) {
@@ -122,6 +133,7 @@ export class AdaptiveTraceSampler {
     this.lastSampleAt = nowMs;
 
     const t = Math.max(0, Date.now() - this.startedAt);
+    this.detectAutoGap(t);
     const jerk = clamp01(Math.abs(accel - this.prevAccel) / Math.max(0.008, wallDtSec) / 28);
     const sample: JourneyTraceSampleV1 = {
       t,
@@ -136,7 +148,11 @@ export class AdaptiveTraceSampler {
       primarySource: mapSource(motion.primarySource),
     };
     this.samples.push(sample);
-    this.distanceM += (speedKmh / 3.6) * Math.max(0, wallDtSec);
+    // Distance from wall-clock sample spacing (robust when frames are throttled);
+    // spans across a gap are not integrated.
+    const dtSec = this.lastSampleT >= 0 ? (t - this.lastSampleT) / 1000 : Math.max(0, wallDtSec);
+    if (dtSec > 0 && dtSec * 1000 <= AUTO_GAP_MS) this.distanceM += (speedKmh / 3.6) * dtSec;
+    this.lastSampleT = t;
     this.detectSemantics(sample, Date.now());
     this.prevAccel = accel;
     this.prevSpeed = speedKmh;
@@ -145,6 +161,21 @@ export class AdaptiveTraceSampler {
       this.flushChunk();
       this.lastFlushAt = nowMs;
     }
+  }
+
+  /** Record a gap when samples stopped arriving (hidden tab, frozen timers, lost sensor). */
+  private detectAutoGap(t: number) {
+    if (this.lastSampleT < 0 || this.gapOpen) return;
+    const prevT = this.lastSampleT;
+    if (t - prevT <= AUTO_GAP_MS) return;
+    const covered = this.gaps.some((g) => g.startT <= prevT + AUTO_GAP_MS && g.endT >= t - AUTO_GAP_MS);
+    if (covered) return;
+    const hidden = typeof document !== "undefined" && document.visibilityState === "hidden";
+    const reason: JourneyTraceGapV1["reason"] =
+      hidden || this.browserPaused ? "browser_suspend" : "sensor_loss";
+    if (reason === "browser_suspend") this.browserPaused = true;
+    this.gaps.push({ startT: prevT, endT: t, reason });
+    this.events.push({ t: prevT, type: "data_gap" });
   }
 
   /** True when stationary long enough to ask "Still driving?" */
@@ -199,13 +230,23 @@ export class AdaptiveTraceSampler {
     }
   }
 
+  /** Persist everything recorded since the previous flush (no sample is ever skipped). */
   flushChunk() {
-    if (!this.samples.length) return;
-    const start = this.chunkIndex === 0 ? 0 : Math.max(0, this.samples.length - 48);
-    // Only notify about new tail for incremental persist
-    const slice = this.samples.slice(start);
-    this.onChunk?.(this.chunkIndex, slice);
+    const samples = this.samples.slice(this.flushedSamples);
+    const events = this.events.slice(this.flushedEvents);
+    const gaps = this.gaps.slice(this.flushedGaps);
+    if (!samples.length && !events.length && !gaps.length) return;
+    this.flushedSamples = this.samples.length;
+    this.flushedEvents = this.events.length;
+    this.flushedGaps = this.gaps.length;
+    this.onChunk?.(this.chunkIndex, samples, { events, gaps });
     this.chunkIndex += 1;
+  }
+
+  /** Force a flush now (e.g. when the page is being hidden). */
+  flushNow(nowMs = performance.now()) {
+    this.flushChunk();
+    this.lastFlushAt = nowMs;
   }
 
   finalize(opts?: { unexpected?: boolean }): JourneyTraceV1 {

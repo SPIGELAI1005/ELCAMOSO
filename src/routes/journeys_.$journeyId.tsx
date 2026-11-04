@@ -6,7 +6,7 @@ import { ElcamosoMark } from "@/components/ElcamosoLogo";
 import { listSymphonyPacks } from "@/lib/symphony";
 import {
   buildJourneySharePayload,
-  createDriveSongForJourney,
+  createDriveSongWithAudio,
   deleteJourney,
   encodeJourneyShare,
   getJourney,
@@ -95,8 +95,8 @@ function JourneyDetailPage() {
     setNote("Composing…");
     try {
       let sourceJourney = journey;
+      const sourceTrace = trace ?? (await getJourneyRepository().loadJourney(journeyId));
       if (!sourceJourney) {
-        const sourceTrace = trace ?? (await getJourneyRepository().loadJourney(journeyId));
         if (!sourceTrace?.samples.length) {
           setNote("Drive Song needs motion samples from a finished drive.");
           return;
@@ -105,13 +105,20 @@ function JourneyDetailPage() {
         await saveJourney(sourceJourney);
         setJourney(sourceJourney);
       }
-      const next = await createDriveSongForJourney(journeyId, { symphonyPackId: packId });
-      if (next) {
-        setJourney(next);
-        setNote(next.song?.audioBlobId ? "Drive Song ready." : "Structure ready (render skipped).");
-        const blob = await getSongAudio(journeyId);
-        if (blob) {
-          const url = URL.createObjectURL(blob);
+      setNote("Creating the song from your drive…");
+      const result = await createDriveSongWithAudio(journeyId, {
+        symphonyPackId: packId,
+        trace: sourceTrace?.samples.length ? sourceTrace : null,
+      });
+      if (result) {
+        setJourney(result.journey);
+        setNote(
+          result.audio
+            ? "Drive Song ready. Press play."
+            : `The song could not be created: ${result.renderError ?? "unknown error"}`,
+        );
+        if (result.audio) {
+          const url = URL.createObjectURL(result.audio);
           setAudioUrl((prev) => {
             if (prev) URL.revokeObjectURL(prev);
             return url;

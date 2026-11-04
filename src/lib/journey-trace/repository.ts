@@ -81,28 +81,43 @@ class IndexedDbJourneyRepository implements JourneyRepository {
     await this.setActiveJourneyId(trace.journeyId);
   }
 
-  async appendChunk(chunk: JourneyTraceChunkV1): Promise<void> {
-    await withStore(CHUNK_STORE, "readwrite", (s) => s.put(chunk));
-    // Merge into working trace for crash recovery
-    const existing = await this.loadJourney(chunk.journeyId);
-    if (!existing) return;
-    const mergedSamples = existing.samples.concat(chunk.samples);
-    // Deduplicate by t
-    const byT = new Map<number, (typeof mergedSamples)[0]>();
-    for (const s of mergedSamples) byT.set(s.t, s);
-    const samples = [...byT.values()].sort((a, b) => a.t - b.t);
-    const next: JourneyTraceV1 = {
-      ...existing,
-      samples,
-      semanticEvents: existing.semanticEvents.concat(chunk.events).slice(0, 400),
-      gaps: existing.gaps.concat(chunk.gaps),
-      durationMs: Math.max(existing.durationMs, samples[samples.length - 1]?.t ?? 0),
-    };
-    if (!assertTracePrivacy(next)) return;
-    await withStore(TRACE_STORE, "readwrite", (s) => s.put(next));
+  /** Writes are serialized so a chunk can never overwrite a newer one (or the final trace). */
+  private writeQueue: Promise<unknown> = Promise.resolve();
+
+  private enqueue<T>(fn: () => Promise<T>): Promise<T> {
+    const run = this.writeQueue.then(fn, fn);
+    this.writeQueue = run.catch(() => undefined);
+    return run;
+  }
+
+  appendChunk(chunk: JourneyTraceChunkV1): Promise<void> {
+    // Only the chunk is written (cheap, constant size). The working trace is rebuilt from
+    // chunks on load, so a crash / tab kill loses at most the last few seconds.
+    return this.enqueue(async () => {
+      if (!assertTracePrivacy({ samples: chunk.samples } as unknown as JourneyTraceV1)) return;
+      await withStore(CHUNK_STORE, "readwrite", (s) => s.put(chunk));
+    });
+  }
+
+  private async loadChunks(id: string): Promise<JourneyTraceChunkV1[]> {
+    try {
+      const db = await openDb();
+      return await new Promise((resolve, reject) => {
+        const tx = db.transaction(CHUNK_STORE, "readonly");
+        const req = tx.objectStore(CHUNK_STORE).index("byJourney").getAll(id);
+        req.onsuccess = () => resolve(req.result as JourneyTraceChunkV1[]);
+        req.onerror = () => reject(req.error);
+      });
+    } catch {
+      return [];
+    }
   }
 
   async finalizeJourney(trace: JourneyTraceV1): Promise<void> {
+    await this.enqueue(() => this.finalizeNow(trace));
+  }
+
+  private async finalizeNow(trace: JourneyTraceV1): Promise<void> {
     if (!assertTracePrivacy(trace)) throw new Error("JourneyTrace rejected: privacy fields");
     const complete: JourneyTraceV1 = {
       ...trace,
@@ -117,7 +132,9 @@ class IndexedDbJourneyRepository implements JourneyRepository {
   async loadJourney(id: string): Promise<JourneyTraceV1 | null> {
     try {
       const row = await withStore<JourneyTraceV1>(TRACE_STORE, "readonly", (s) => s.get(id));
-      return (row as JourneyTraceV1 | undefined) ?? null;
+      const trace = (row as JourneyTraceV1 | undefined) ?? null;
+      if (!trace || trace.status !== "recording") return trace;
+      return mergeChunksIntoTrace(trace, await this.loadChunks(id));
     } catch {
       return null;
     }
@@ -222,6 +239,60 @@ class IndexedDbJourneyRepository implements JourneyRepository {
       .slice(0, complete.length - MAX_TRACES);
     for (const t of extra) await this.deleteJourney(t.journeyId);
   }
+}
+
+/** Rebuild a recording trace from its persisted chunks (pure, exported for tests). */
+export function mergeChunksIntoTrace(
+  trace: JourneyTraceV1,
+  chunks: JourneyTraceChunkV1[],
+): JourneyTraceV1 {
+  if (!chunks.length) return trace;
+  const ordered = [...chunks].sort((a, b) => a.chunkIndex - b.chunkIndex);
+  const byT = new Map<number, JourneyTraceV1["samples"][number]>();
+  for (const s of trace.samples) byT.set(s.t, s);
+  for (const c of ordered) for (const s of c.samples) byT.set(s.t, s);
+  const samples = [...byT.values()].sort((a, b) => a.t - b.t);
+  const eventKey = (e: { t: number; type: string }) => `${e.t}:${e.type}`;
+  const events = new Map(trace.semanticEvents.map((e) => [eventKey(e), e]));
+  for (const c of ordered) for (const e of c.events) events.set(eventKey(e), e);
+  const gapKey = (g: { startT: number }) => g.startT;
+  const gaps = new Map(trace.gaps.map((g) => [gapKey(g), g]));
+  for (const c of ordered) for (const g of c.gaps) gaps.set(gapKey(g), g);
+  const gapList = [...gaps.values()].sort((a, b) => a.startT - b.startT);
+  let distanceM = 0;
+  let speedSum = 0;
+  let maxSpeed = 0;
+  let moving = 0;
+  for (let i = 0; i < samples.length; i++) {
+    const s = samples[i]!;
+    speedSum += s.speedKmh;
+    maxSpeed = Math.max(maxSpeed, s.speedKmh);
+    if (s.speedKmh > 3) moving++;
+    const prev = samples[i - 1];
+    if (prev) {
+      const dt = (s.t - prev.t) / 1000;
+      if (dt > 0 && dt < 10) distanceM += ((s.speedKmh + prev.speedKmh) / 2 / 3.6) * dt;
+    }
+  }
+  const durationMs = Math.max(trace.durationMs, samples[samples.length - 1]?.t ?? 0);
+  return {
+    ...trace,
+    samples,
+    semanticEvents: [...events.values()].sort((a, b) => a.t - b.t).slice(0, 400),
+    gaps: gapList,
+    durationMs,
+    summary: {
+      ...trace.summary,
+      sampleCount: samples.length,
+      durationMs,
+      distanceM: Math.max(trace.summary.distanceM, distanceM),
+      meanSpeedKmh: samples.length ? speedSum / samples.length : 0,
+      maxSpeedKmh: maxSpeed,
+      movingShare: samples.length ? moving / samples.length : 0,
+      gapCount: gapList.length,
+      gapMs: gapList.reduce((a, g) => a + Math.max(0, g.endT - g.startT), 0),
+    },
+  };
 }
 
 let singleton: JourneyRepository | null = null;
