@@ -4,6 +4,8 @@ import { DriveSpecialBanner } from "@/components/DriveSpecialBanner";
 import { HalloweenBanner } from "@/components/HalloweenBanner";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { createSeoHeadFromPath } from "@/lib/seo";
+import { parseSharedSoundParam, soundShareSocialMeta } from "@/lib/drive/sound-share";
+import { ShareSoundButton } from "@/components/drive/ShareSoundButton";
 import { ElcamosoMark } from "@/components/ElcamosoLogo";
 import { BrandLoader } from "@/components/BrandLoader";
 import { StartDriveMarkControl } from "@/components/StartDriveMarkControl";
@@ -66,6 +68,7 @@ export const Route = createFileRoute("/drive")({
     start?: boolean;
     googleAuth?: string;
     pair?: string;
+    sound?: string;
   } => {
     const raw = search["cockpit"];
     const debugRaw = search["debug"];
@@ -83,6 +86,7 @@ export const Route = createFileRoute("/drive")({
       start?: boolean;
       googleAuth?: string;
       pair?: string;
+      sound?: string;
     } = {};
     if (raw === true || raw === "1" || raw === 1) out.cockpit = true;
     if (debugRaw === true || debugRaw === "1" || debugRaw === 1) out.debug = true;
@@ -92,10 +96,25 @@ export const Route = createFileRoute("/drive")({
     if (upgrade) out.upgrade = upgrade;
     if (googleAuth) out.googleAuth = googleAuth;
     if (search["pair"] === "expired" || search["pair"] === "linked") out.pair = search["pair"];
+    const sound = parseSharedSoundParam(search["sound"]);
+    if (sound) out.sound = sound;
     return out;
   },
   component: DriveScreen,
-  head: () => createSeoHeadFromPath("/drive"),
+  head: ({ match }) => {
+    const sound = (match?.search as { sound?: string } | undefined)?.sound;
+    if (!sound) return createSeoHeadFromPath("/drive");
+    const social = soundShareSocialMeta(sound);
+    return createSeoHeadFromPath("/drive", {
+      title: social.title,
+      description: social.description,
+      ogTitle: social.title,
+      ogDescription: social.description,
+      path: social.path,
+      imageAlt: social.imageAlt,
+      ...(social.image ? { image: social.image } : {}),
+    });
+  },
 });
 
 function googleAuthMessage(code: string | undefined): string | null {
@@ -121,6 +140,7 @@ function DriveScreen() {
     start: autostart,
     googleAuth,
     pair,
+    sound: sharedSound,
   } = Route.useSearch();
   const navigate = useNavigate();
   const autostartHandled = useRef(false);
@@ -172,6 +192,16 @@ function DriveScreen() {
       setShowTeslaUpgrade(true);
     }
   }, [monetizationEnabled, plan, upgrade]);
+
+  // Shared deep link (/drive?sound=<id>): select that sound once settings load.
+  // Locked sounds go through EntitlementEnforcer, which shows the package notice.
+  const sharedSoundHandled = useRef(false);
+  useEffect(() => {
+    if (!sharedSound || !loaded || sharedSoundHandled.current) return;
+    sharedSoundHandled.current = true;
+    if (settings.profileId !== sharedSound) update({ profileId: sharedSound });
+    track("share_visit", { kind: "drive-sound", profileId: sharedSound });
+  }, [loaded, settings.profileId, sharedSound, update]);
 
   useEffect(() => {
     if (!activateTrial) return;
@@ -505,6 +535,9 @@ function DriveScreen() {
               >
                 Change experience
               </button>
+              <div className="mt-3 flex justify-center">
+                <ShareSoundButton profileId={settings.profileId} locale={settings.language} />
+              </div>
             </div>
             <StartDriveMarkControl
               reducedMotion={reducedMotion}
