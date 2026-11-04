@@ -234,17 +234,6 @@ export function PlansOverview({
               <li key={feature}>{feature}</li>
             ))}
           </ul>
-          {!monetizationEnabled && billingNoticeTone !== "danger" ? (
-            <p
-              className={cn(
-                "mt-6 text-sm",
-                billingNoticeTone === "danger" ? "text-[#e53935]" : "text-muted-foreground",
-              )}
-            >
-              All purchases (Drive+, Drive the Music, Drive Unlimited, Lifetime and individual sounds) open on
-              9.11.2026. Until then, ELCAMOSO is free of charge.
-            </p>
-          ) : null}
         </div>
         <div className={compact ? "py-8" : "py-12"} id="drive-music" data-testid="plan-drive-music">
           <div className="flex flex-wrap items-center gap-3">
@@ -364,6 +353,11 @@ export function LandingPlansSection() {
         <h2 className="text-3xl font-light">Plans</h2>
         <PlansBillingIntervalToggle value={interval} onChange={setInterval} />
       </div>
+      {!monetizationEnabled ? (
+        <p className="mt-4 text-sm font-medium text-red-500" data-testid="home-purchases-note">
+          All purchases (Drive+, Drive the Music, Drive Unlimited, Lifetime and individual sounds) open on 9.11.2026.
+        </p>
+      ) : null}
       <div className="mt-10">
         <PlansOverview
           monetizationEnabled={monetizationEnabled}
