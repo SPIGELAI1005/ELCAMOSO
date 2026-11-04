@@ -525,3 +525,18 @@ export const smilesCards = pgTable(
     index("smiles_cards_user_created_idx").on(table.userId, table.createdAt),
   ],
 );
+
+/**
+ * Guest trial minutes (7 free minutes/day for logged-out visitors). Keyed by a
+ * salted HMAC of the IP (never the raw IP) per Berlin day; old days are deleted.
+ */
+export const guestTrialUsage = pgTable(
+  "guest_trial_usage",
+  {
+    ipHash: text("ip_hash").notNull(),
+    day: text("day").notNull(),
+    usedSeconds: integer("used_seconds").notNull().default(0),
+    lastSeenAt: timestamp("last_seen_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+  },
+  (table) => [uniqueIndex("guest_trial_usage_hash_day_unique").on(table.ipHash, table.day)],
+);

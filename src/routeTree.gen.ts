@@ -46,6 +46,7 @@ import { Route as ApiAnalyticsRouteImport } from './routes/api/analytics'
 import { Route as ApiBroadcastRouteImport } from './routes/api/broadcast'
 import { Route as ApiDriveLogsRouteImport } from './routes/api/drive-logs'
 import { Route as ApiFeedbackRouteImport } from './routes/api/feedback'
+import { Route as ApiGuestTrialRouteImport } from './routes/api/guest-trial'
 import { Route as ApiOgRouteImport } from './routes/api/og'
 import { Route as ConnectSessionIdRouteImport } from './routes/connect.$sessionId'
 import { Route as DebugAudioLabRouteImport } from './routes/debug.audio-lab'
@@ -272,6 +273,11 @@ const ApiDriveLogsRoute = ApiDriveLogsRouteImport.update({
 const ApiFeedbackRoute = ApiFeedbackRouteImport.update({
   id: '/api/feedback',
   path: '/api/feedback',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiGuestTrialRoute = ApiGuestTrialRouteImport.update({
+  id: '/api/guest-trial',
+  path: '/api/guest-trial',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiOgRoute = ApiOgRouteImport.update({
@@ -524,6 +530,7 @@ export interface FileRoutesByFullPath {
   '/api/broadcast': typeof ApiBroadcastRoute
   '/api/drive-logs': typeof ApiDriveLogsRoute
   '/api/feedback': typeof ApiFeedbackRoute
+  '/api/guest-trial': typeof ApiGuestTrialRoute
   '/api/og': typeof ApiOgRouteWithChildren
   '/connect/$sessionId': typeof ConnectSessionIdRoute
   '/debug/audio-lab': typeof DebugAudioLabRoute
@@ -604,6 +611,7 @@ export interface FileRoutesByTo {
   '/api/broadcast': typeof ApiBroadcastRoute
   '/api/drive-logs': typeof ApiDriveLogsRoute
   '/api/feedback': typeof ApiFeedbackRoute
+  '/api/guest-trial': typeof ApiGuestTrialRoute
   '/api/og': typeof ApiOgRouteWithChildren
   '/connect/$sessionId': typeof ConnectSessionIdRoute
   '/debug/audio-lab': typeof DebugAudioLabRoute
@@ -686,6 +694,7 @@ export interface FileRoutesById {
   '/api/broadcast': typeof ApiBroadcastRoute
   '/api/drive-logs': typeof ApiDriveLogsRoute
   '/api/feedback': typeof ApiFeedbackRoute
+  '/api/guest-trial': typeof ApiGuestTrialRoute
   '/api/og': typeof ApiOgRouteWithChildren
   '/connect/$sessionId': typeof ConnectSessionIdRoute
   '/debug/audio-lab': typeof DebugAudioLabRoute
@@ -769,6 +778,7 @@ export interface FileRouteTypes {
     | '/api/broadcast'
     | '/api/drive-logs'
     | '/api/feedback'
+    | '/api/guest-trial'
     | '/api/og'
     | '/connect/$sessionId'
     | '/debug/audio-lab'
@@ -849,6 +859,7 @@ export interface FileRouteTypes {
     | '/api/broadcast'
     | '/api/drive-logs'
     | '/api/feedback'
+    | '/api/guest-trial'
     | '/api/og'
     | '/connect/$sessionId'
     | '/debug/audio-lab'
@@ -930,6 +941,7 @@ export interface FileRouteTypes {
     | '/api/broadcast'
     | '/api/drive-logs'
     | '/api/feedback'
+    | '/api/guest-trial'
     | '/api/og'
     | '/connect/$sessionId'
     | '/debug/audio-lab'
@@ -1012,6 +1024,7 @@ export interface RootRouteChildren {
   ApiBroadcastRoute: typeof ApiBroadcastRoute
   ApiDriveLogsRoute: typeof ApiDriveLogsRoute
   ApiFeedbackRoute: typeof ApiFeedbackRoute
+  ApiGuestTrialRoute: typeof ApiGuestTrialRoute
   ApiOgRoute: typeof ApiOgRouteWithChildren
   ConnectSessionIdRoute: typeof ConnectSessionIdRoute
   DebugCockpitRoute: typeof DebugCockpitRoute
@@ -1298,6 +1311,13 @@ declare module '@tanstack/react-router' {
       path: '/api/feedback'
       fullPath: '/api/feedback'
       preLoaderRoute: typeof ApiFeedbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/guest-trial': {
+      id: '/api/guest-trial'
+      path: '/api/guest-trial'
+      fullPath: '/api/guest-trial'
+      preLoaderRoute: typeof ApiGuestTrialRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/og': {
@@ -1703,6 +1723,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiBroadcastRoute: ApiBroadcastRoute,
   ApiDriveLogsRoute: ApiDriveLogsRoute,
   ApiFeedbackRoute: ApiFeedbackRoute,
+  ApiGuestTrialRoute: ApiGuestTrialRoute,
   ApiOgRoute: ApiOgRouteWithChildren,
   ConnectSessionIdRoute: ConnectSessionIdRoute,
   DebugCockpitRoute: DebugCockpitRoute,

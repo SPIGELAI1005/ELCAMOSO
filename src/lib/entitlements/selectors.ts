@@ -14,6 +14,12 @@ import {
 import { getProfile } from "@/lib/sound/profiles";
 import { lockedProfilePreviewSeconds } from "@/lib/sound/profile-access";
 import { useSessionStore } from "@/lib/store/session-store";
+import { useSyncExternalStore } from "react";
+import {
+  getGuestTrialState,
+  guestTrialAllows,
+  subscribeGuestTrial,
+} from "@/lib/guest-trial/client-store";
 import { isLiveSessionStatus } from "@/lib/ui/chrome";
 
 /** Single entitlement check - prefer over plan comparisons. */
@@ -24,7 +30,7 @@ export function useEntitlement(entitlement: Entitlement): boolean {
 
 /** Centralized feature access derived from entitlements only. */
 export function useFeatureAccess() {
-  const { hasEntitlement, isTrialActive } = useEntitlements();
+  const { hasEntitlement, isTrialActive, user } = useEntitlements();
   const session = useSessionStore();
   const isLiveDrive = session.kind === "drive" && isLiveSessionStatus(session.status);
 
@@ -40,13 +46,25 @@ export function useFeatureAccess() {
     ]),
   ];
 
-  const canDriveWithProfile = (profileId: string) =>
+  const canDriveWithoutGuestTrial = (profileId: string) =>
     canDriveProfileWithAccess({
       profileId,
       hasAllSoundProfiles,
       grantedProfileIds,
       hasEntitlement: effectiveHas,
     });
+
+  // Guest trial: signed-out visitors get 7 free minutes/day on a few sounds
+  // (only inside its window). Signed-in accounts are never routed through it.
+  const signedIn = Boolean(user?.accountId);
+  const guestTrialVersion = useSyncExternalStore(
+    subscribeGuestTrial,
+    () => getGuestTrialState().version,
+    () => 0,
+  );
+  void guestTrialVersion;
+  const canDriveWithProfile = (profileId: string) =>
+    canDriveWithoutGuestTrial(profileId) || guestTrialAllows(profileId, signedIn);
 
   const canPreviewProfile = (profileId: string) => isSoundProfilePreviewAllowed(profileId);
 
@@ -83,6 +101,8 @@ export function useFeatureAccess() {
     isTrialActive,
     isLiveDrive,
     canDriveWithProfile,
+    canDriveWithoutGuestTrial,
+    isSignedIn: signedIn,
     canPreviewProfile,
     previewDurationForProfile,
     /** @deprecated Prefer canDriveWithProfile - preview vs drive semantics differ. */

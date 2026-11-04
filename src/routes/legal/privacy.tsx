@@ -74,6 +74,21 @@ function Privacy() {
           local account identifier you create. Do not put secrets in free-text fields.
         </p>
         <p>
+          <strong className="font-normal text-foreground">Free guest minutes.</strong> If you drive
+          without logging in during a free guest period, we use an anonymised hash of your IP
+          address only to count your free guest minutes. It is deleted daily.
+          <br />
+          <span lang="de">
+            Kostenlose Gast-Minuten: Ein anonymisierter Hash deiner IP-Adresse wird nur verwendet,
+            um deine kostenlosen Gast-Minuten zu zählen, und täglich gelöscht.
+          </span>
+          <br />
+          <span lang="ro">
+            Minute gratuite pentru vizitatori: un hash anonimizat al adresei tale IP este folosit
+            doar pentru a număra minutele gratuite și este șters zilnic.
+          </span>
+        </p>
+        <p>
           <strong className="font-normal text-foreground">Usage insights (opt-in).</strong> If you
           enable Usage insights in Settings, we may process aggregate, product-level events (for
           example feature use or crash reports without raw GPS trails). See Settings for the current

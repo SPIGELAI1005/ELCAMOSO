@@ -25,6 +25,7 @@ import { CookieConsent } from "@/components/CookieConsent";
 import { DynamicDriveSessionBridge } from "@/components/DynamicDriveSessionBridge";
 import { DynamicDriveTrialBridge } from "@/components/DynamicDriveTrialBridge";
 import { EntitlementEnforcer } from "@/components/EntitlementEnforcer";
+import { GuestTrialBridge } from "@/components/GuestTrialBridge";
 import { AccountProvider } from "@/lib/account/AccountProvider";
 import { EntitlementsProvider } from "@/lib/entitlements/EntitlementsProvider";
 import { useSessionSelector } from "@/lib/store/session-store";
@@ -189,6 +190,7 @@ function RootComponent() {
             <SessionBridge />
             <DeviceLinkBridge />
             <EntitlementEnforcer />
+            <GuestTrialBridge />
             <DynamicDriveSessionBridge />
             <DynamicDriveTrialBridge />
             <VehicleTelemetryBridge />

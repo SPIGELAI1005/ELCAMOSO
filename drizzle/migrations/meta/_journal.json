@@ -92,6 +92,13 @@
       "when": 1798000000000,
       "tag": "0012_music_package",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1799000000000,
+      "tag": "0013_guest_trial",
+      "breakpoints": true
     }
   ]
 }
