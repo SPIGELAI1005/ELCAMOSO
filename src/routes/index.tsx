@@ -5,7 +5,7 @@ import { DriveSpecialBanner } from "@/components/DriveSpecialBanner";
 import { HalloweenBanner } from "@/components/HalloweenBanner";
 import { LandingHero } from "@/components/LandingHero";
 import { LandingPlansSection } from "@/components/LandingPlansSection";
-import { MODE_DEMO_SRC, ModeDemoButton } from "@/components/experiences/ModeDemoButton";
+import { MODE_DEMO_SRC, ModeDemoButton, SILENT_CAPTURE_DEMO_SRC } from "@/components/experiences/ModeDemoButton";
 import { ExperienceFamilyGrid } from "@/components/experiences/ExperienceFamilyGrid";
 import { ElcamosoMark } from "@/components/ElcamosoLogo";
 import { EXPERIENCE_FAMILIES, isDriveSongEnabled } from "@/lib/experiences";
@@ -86,6 +86,10 @@ function Landing() {
                 Record the motion without cabin audio. When you arrive, hear the real journey
                 through the experience you choose.
               </p>
+              <p className="mt-4 text-[10px] tracking-[0.2em] text-muted-foreground uppercase">
+                Example: a 2-minute drive as Latino Fiesta
+              </p>
+              <ModeDemoButton src={SILENT_CAPTURE_DEMO_SRC} className="mt-2" />
             </div>
           </div>
         </div>

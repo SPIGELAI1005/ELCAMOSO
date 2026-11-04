@@ -1,7 +1,7 @@
 import { listSymphonyPacks } from "@/lib/symphony/experience-pack";
 
 const KEY = "elcamoso.silentCapture.packId";
-export const DEFAULT_SILENT_CAPTURE_PACK = "symphony-cinematic-rock";
+export const DEFAULT_SILENT_CAPTURE_PACK = "symphony-latino-fiesta";
 
 export interface SilentCaptureGenre {
   id: string;

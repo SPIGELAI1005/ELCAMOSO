@@ -12,6 +12,9 @@ import {
   type JourneySummary,
 } from "@/lib/journey";
 import { downloadBlob } from "@/lib/sound/render";
+import { SongShareButton } from "@/components/drive/SongShareButton";
+import { profileHeroImageSrc } from "@/lib/sound/profile-hero-image";
+import type { Locale } from "@/lib/i18n";
 import {
   getSilentCaptureGenre,
   listSilentCaptureGenres,
@@ -36,7 +39,11 @@ export function PostSilentCaptureExperience({
   capturePausedByBrowser,
   onDismiss,
   onDelete,
+  carProfileId,
+  locale = "en",
 }: {
+  carProfileId?: string | null;
+  locale?: Locale;
   journeyTraceId: string;
   capturePausedByBrowser?: boolean;
   onDismiss: () => void;
@@ -240,6 +247,18 @@ export function PostSilentCaptureExperience({
                 >
                   Download
                 </button>
+                {chart && trace ? (
+                  <SongShareButton
+                    key={renderedPackId ?? "x"}
+                    className="mt-2"
+                    chart={chart}
+                    genreName={genreName(renderedPackId)}
+                    durationSec={trace.durationMs / 1000}
+                    topSpeedKmh={chart.maxSpeedKmh}
+                    carImageSrc={profileHeroImageSrc(carProfileId) ?? profileHeroImageSrc(renderedPackId)}
+                    locale={locale}
+                  />
+                ) : null}
               </div>
             ) : null}
 

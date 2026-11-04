@@ -23,6 +23,10 @@ import { downloadBlob } from "@/lib/sound/render";
 import { createSeoHeadFromPath } from "@/lib/seo";
 import { SmilesCard } from "@/components/smiles/SmilesCard";
 import { getProfile } from "@/lib/sound/profiles";
+import { DriveChart } from "@/components/drive/DriveChart";
+import { SongShareButton } from "@/components/drive/SongShareButton";
+import { buildDriveChart } from "@/lib/journey/drive-chart";
+import { profileHeroImageSrc } from "@/lib/sound/profile-hero-image";
 
 export const Route = createFileRoute("/journeys_/$journeyId")({
   validateSearch: (search: Record<string, unknown>): { create?: string } => {
@@ -390,6 +394,24 @@ function JourneyDetailPage() {
               Delete
             </button>
           </div>
+          {journey?.song && trace?.samples.length ? (() => {
+            const chart = buildDriveChart(trace, journey.song);
+            const pid = journey.profileId ?? trace.captureProfileId;
+            return (
+              <div className="mx-auto mt-8 w-full max-w-md border border-foreground/10 px-4 py-5" data-testid="journey-drive-chart">
+                <p className="mb-3 text-[10px] tracking-[0.22em] text-muted-foreground uppercase">How your drive shaped the song</p>
+                <DriveChart chart={chart} />
+                <SongShareButton
+                  className="mt-4"
+                  chart={chart}
+                  genreName={listSymphonyPacks().find((p) => p.id === journey.song?.symphonyPackId)?.name ?? "Drive Song"}
+                  durationSec={trace.durationMs / 1000}
+                  topSpeedKmh={chart.maxSpeedKmh}
+                  carImageSrc={profileHeroImageSrc(pid) ?? profileHeroImageSrc(journey.song.symphonyPackId)}
+                />
+              </div>
+            );
+          })() : null}
         </section>
 
         {isDriveReelEnabled() && journey?.reel ? (

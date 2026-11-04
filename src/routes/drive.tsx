@@ -382,6 +382,8 @@ function DriveScreen() {
         <PostSilentCaptureExperience
           journeyTraceId={postCaptureTraceId}
           capturePausedByBrowser={captureHadBrowserPause}
+          carProfileId={settings.profileId}
+          locale={settings.language}
           onDismiss={() => setPostCaptureTraceId(null)}
         />
       ) : null}
