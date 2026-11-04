@@ -83,7 +83,7 @@ function PricingFooterNotes({ showCancel = true }: { showCancel?: boolean }) {
         }
       >
         Racing V10, American Muscle V8 and GT V8 are free. Every other engine sound is Drive+, every
-        music profile is Drive the Music. All purchases open 09.11.2026. Drive Unlimited and Lifetime include both.
+        music profile is Drive the Music. Drive Unlimited and Lifetime include both.
       </p>
     </section>
   );
@@ -140,7 +140,8 @@ function Pricing() {
             Make every drive yours.
           </h1>
           <p className="mt-6 max-w-md text-sm leading-relaxed text-muted-foreground">
-            Start with essential motion sound — free during early access. All purchases (Drive+, Drive the Music, Drive Unlimited, Lifetime and individual sounds) open on 9.11.2026.
+            Start with essential motion sound — free during early access.{" "}
+            <span className="font-medium text-red-500">All purchases (Drive+, Drive the Music, Drive Unlimited, Lifetime and individual sounds) open on 9.11.2026.</span>
           </p>
         </section>
         <section className="mx-auto w-full max-w-2xl px-6 sm:px-10">
@@ -179,7 +180,8 @@ function Pricing() {
           Make every drive yours.
         </h1>
         <p className="mt-6 max-w-md text-sm leading-relaxed text-muted-foreground">
-          Start with essential motion sound. All purchases (Drive+, Drive the Music, Drive Unlimited, Lifetime and individual sounds) open on 9.11.2026.
+          Start with essential motion sound.{" "}
+          <span className="font-medium text-red-500">All purchases (Drive+, Drive the Music, Drive Unlimited, Lifetime and individual sounds) open on 9.11.2026.</span>
         </p>
       </section>
 

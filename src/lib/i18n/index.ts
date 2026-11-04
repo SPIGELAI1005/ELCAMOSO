@@ -80,7 +80,6 @@ const STRINGS: Record<Locale, Record<string, string>> = {
     "pricing.lifetimeBody":
       "Both packages: every engine sound and every music profile, with no subscription and no renewals.",
     "pricing.lifetimeCta": "Lifetime · €59.67 once",
-    "pricing.newPricesNote": "All purchases are available from 09.11.",
     "pricing.lifetimeSeatsLeft": "Launch price: {left} of {limit} seats left",
     "pricing.lifetimeSoldOut": "Sold out · all {limit} seats taken",
     "pricing.lifetimePayback": "Pays for itself in about a year, then it's free forever.",
@@ -155,7 +154,6 @@ const STRINGS: Record<Locale, Record<string, string>> = {
     "pricing.lifetimeBody":
       "Beide Pakete: alle Motor-Sounds und alle Musikprofile, ohne Abo und ohne Verlängerung.",
     "pricing.lifetimeCta": "Lifetime · €59.67 einmalig",
-    "pricing.newPricesNote": "Alle Käufe sind ab 09.11. verfügbar.",
     "pricing.lifetimeSeatsLeft": "Einführungspreis: noch {left} von {limit} Plätzen frei",
     "pricing.lifetimeSoldOut": "Ausverkauft · alle {limit} Plätze vergeben",
     "pricing.lifetimePayback":
@@ -231,7 +229,6 @@ const STRINGS: Record<Locale, Record<string, string>> = {
     "pricing.lifetimeBody":
       "Ambele pachete: toate sunetele de motor si toate profilurile muzicale, fara abonament si fara reinnoiri.",
     "pricing.lifetimeCta": "Lifetime · €59.67 o singura data",
-    "pricing.newPricesNote": "Toate achizițiile sunt disponibile din 09.11.",
     "pricing.lifetimeSeatsLeft": "Preț de lansare: {left} din {limit} locuri disponibile",
     "pricing.lifetimeSoldOut": "Epuizat · toate cele {limit} locuri au fost ocupate",
     "pricing.lifetimePayback":

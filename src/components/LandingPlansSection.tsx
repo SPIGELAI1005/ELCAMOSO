@@ -188,12 +188,6 @@ export function PlansOverview({
 
   return (
     <>
-      <p
-        data-testid="new-prices-note"
-        className="mb-4 text-sm font-medium text-red-500"
-      >
-        {t(language, "pricing.newPricesNote")}
-      </p>
       <div className="divide-y divide-border border-y border-border">
         <div className={compact ? "py-8" : "border-b border-border py-12"}>
           <p className="text-xs tracking-[0.2em] text-muted-foreground uppercase">Free</p>
@@ -240,7 +234,7 @@ export function PlansOverview({
               <li key={feature}>{feature}</li>
             ))}
           </ul>
-          {!monetizationEnabled ? (
+          {!monetizationEnabled && billingNoticeTone !== "danger" ? (
             <p
               className={cn(
                 "mt-6 text-sm",
