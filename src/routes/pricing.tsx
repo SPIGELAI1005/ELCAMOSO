@@ -77,7 +77,7 @@ function PricingFooterNotes({ showCancel = true }: { showCancel?: boolean }) {
         }
       >
         Racing V10, American Muscle V8 and GT V8 are free. Every other engine sound is Drive+, every
-        music profile is Drive the Music. All purchases open 09.11.2026. Lifetime includes both.
+        music profile is Drive the Music. All purchases open 09.11.2026. Drive Unlimited and Lifetime include both.
       </p>
     </section>
   );
@@ -97,6 +97,7 @@ function Pricing() {
   const billingAvailable = billingQuery.data?.available ?? false;
   const lifetimeAvailable = billingQuery.data?.lifetimeAvailable ?? false;
   const musicAvailable = billingQuery.data?.musicAvailable ?? false;
+  const unlimitedAvailable = billingQuery.data?.unlimitedAvailable ?? false;
   const hasDrivePlus = plan !== "FREE";
   const viewedRef = useRef(false);
 
@@ -124,7 +125,7 @@ function Pricing() {
             Make every drive yours.
           </h1>
           <p className="mt-6 max-w-md text-sm leading-relaxed text-muted-foreground">
-            Start with essential motion sound — free during early access. All purchases (Drive+, Drive the Music, Lifetime and individual sounds) open on 9.11.2026.
+            Start with essential motion sound — free during early access. All purchases (Drive+, Drive the Music, Drive Unlimited, Lifetime and individual sounds) open on 9.11.2026.
           </p>
         </section>
         <section className="mx-auto w-full max-w-2xl px-6 sm:px-10">
@@ -155,7 +156,7 @@ function Pricing() {
           Make every drive yours.
         </h1>
         <p className="mt-6 max-w-md text-sm leading-relaxed text-muted-foreground">
-          Start with essential motion sound. All purchases (Drive+, Drive the Music, Lifetime and individual sounds) open on 9.11.2026.
+          Start with essential motion sound. All purchases (Drive+, Drive the Music, Drive Unlimited, Lifetime and individual sounds) open on 9.11.2026.
         </p>
       </section>
 
@@ -191,6 +192,15 @@ function Pricing() {
                   className="inline-flex h-14 w-full items-center justify-center rounded-full bg-primary px-10 text-sm tracking-[0.22em] text-primary-foreground uppercase transition-opacity hover:opacity-90 sm:ml-4 sm:w-auto"
                 />
               ) : null}
+              {unlimitedAvailable ? (
+                <DrivePlusCheckoutButton
+                  plan="drive_unlimited"
+                  interval="yearly"
+                  label="Drive Unlimited · annual"
+                  source="pricing"
+                  className="inline-flex h-14 w-full items-center justify-center rounded-full bg-primary px-10 text-sm tracking-[0.22em] text-primary-foreground uppercase transition-opacity hover:opacity-90 sm:ml-4 sm:w-auto"
+                />
+              ) : null}
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-6">
                 {lifetimeAvailable ? (
                 <DrivePlusCheckoutButton
@@ -209,7 +219,7 @@ function Pricing() {
             </>
           ) : (
             <p className="text-sm text-muted-foreground">
-              All purchases (Drive+, Drive the Music, Lifetime and individual sounds) open on 9.11.2026. Until then, ELCAMOSO is free
+              All purchases (Drive+, Drive the Music, Drive Unlimited, Lifetime and individual sounds) open on 9.11.2026. Until then, ELCAMOSO is free
               of charge.
             </p>
           )}

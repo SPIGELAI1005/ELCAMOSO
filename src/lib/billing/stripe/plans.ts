@@ -6,6 +6,7 @@ export type CommercialPlanId =
   | "drive_plus_monthly"
   | "drive_plus_yearly"
   | "drive_music_yearly"
+  | "drive_unlimited_yearly"
   | "drive_plus_lifetime";
 
 /** Stripe Checkout mode for a commercial plan. */
@@ -15,6 +16,7 @@ export const COMMERCIAL_PLAN_IDS: readonly CommercialPlanId[] = [
   "drive_plus_monthly",
   "drive_plus_yearly",
   "drive_music_yearly",
+  "drive_unlimited_yearly",
   "drive_plus_lifetime",
 ] as const;
 
@@ -51,6 +53,14 @@ export const COMMERCIAL_PLANS: readonly CommercialPlan[] = [
     label: "Drive the Music Yearly",
   },
   {
+    // Drive Unlimited (George, 4 Nov 2026): Drive+ AND Drive the Music as one yearly subscription.
+    id: "drive_unlimited_yearly",
+    plan: "DRIVE_COMPLETE",
+    interval: "year",
+    mode: "subscription",
+    label: "Drive Unlimited Yearly",
+  },
+  {
     // Id kept for env/back-compat; Lifetime now includes Drive+ AND Drive the Music.
     id: "drive_plus_lifetime",
     plan: "DRIVE_COMPLETE",
@@ -85,6 +95,8 @@ export function stripePriceEnvKeyForPlan(id: CommercialPlanId): string {
       return "STRIPE_PRICE_DRIVE_PLUS_YEARLY";
     case "drive_music_yearly":
       return "STRIPE_PRICE_DRIVE_MUSIC_YEARLY";
+    case "drive_unlimited_yearly":
+      return "STRIPE_PRICE_DRIVE_UNLIMITED_YEARLY";
     case "drive_plus_lifetime":
       return "STRIPE_PRICE_DRIVE_PLUS_LIFETIME";
   }

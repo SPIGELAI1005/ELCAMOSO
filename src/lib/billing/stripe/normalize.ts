@@ -35,6 +35,8 @@ export function resolveIntervalFromStripePrice(priceId: string): BillingInterval
   if (priceId === config.prices.drive_plus_yearly) return "year";
   if (config.prices.drive_music_yearly && priceId === config.prices.drive_music_yearly)
     return "year";
+  if (config.prices.drive_unlimited_yearly && priceId === config.prices.drive_unlimited_yearly)
+    return "year";
   return null;
 }
 
@@ -42,6 +44,7 @@ export function resolvePlanFromMetadata(metadata: Stripe.Metadata | null | undef
   const raw = metadata?.["elcamosoPlan"]?.toUpperCase();
   if (raw === "DRIVE_PLUS") return "DRIVE_PLUS";
   if (raw === "DRIVE_MUSIC") return "DRIVE_MUSIC";
+  if (raw === "DRIVE_COMPLETE") return "DRIVE_COMPLETE";
   return null;
 }
 
@@ -51,6 +54,8 @@ export function resolvePlanFromStripePrice(priceId: string): Plan | null {
   const config = readStripeConfig();
   if (config.prices.drive_music_yearly && priceId === config.prices.drive_music_yearly)
     return "DRIVE_MUSIC";
+  if (config.prices.drive_unlimited_yearly && priceId === config.prices.drive_unlimited_yearly)
+    return "DRIVE_COMPLETE";
   return resolveIntervalFromStripePrice(priceId) ? "DRIVE_PLUS" : null;
 }
 

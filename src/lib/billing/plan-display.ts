@@ -12,12 +12,16 @@ export const DRIVE_PLUS_PRICING = {
   monthly: {
     commercialPlanId: "drive_plus_monthly" satisfies CommercialPlanId,
     /** Charged monthly price after early adopter discount. */
-    amountCents: 299,
+    amountCents: 280,
+    /** Full (struck-through) monthly price (George, 4 Nov 2026). */
+    listAmountCents: 329,
   },
   yearly: {
     commercialPlanId: "drive_plus_yearly" satisfies CommercialPlanId,
-    /** Charged annual price after early adopter discount (George, 2 Nov 2026). */
-    amountCents: 2736,
+    /** Charged annual price = €2.80 × 12 (George, 4 Nov 2026). */
+    amountCents: 3360,
+    /** Full (struck-through) annual price = €3.29 × 12. */
+    listAmountCents: 3948,
   },
   lifetime: {
     commercialPlanId: "drive_plus_lifetime" satisfies CommercialPlanId,
@@ -31,8 +35,22 @@ export const DRIVE_MUSIC_PRICING = {
   currency: "EUR",
   yearly: {
     commercialPlanId: "drive_music_yearly" satisfies CommercialPlanId,
-    /** Charged annual price after early adopter discount. */
-    amountCents: 2736,
+    /** Charged annual price = €2.80 × 12 (George, 4 Nov 2026). */
+    amountCents: 3360,
+    /** Full (struck-through) annual price = €3.29 × 12. */
+    listAmountCents: 3948,
+  },
+} as const;
+
+/** "Drive Unlimited" package - Drive+ AND Drive the Music together, yearly (George, 4 Nov 2026). */
+export const DRIVE_UNLIMITED_PRICING = {
+  currency: "EUR",
+  yearly: {
+    commercialPlanId: "drive_unlimited_yearly" satisfies CommercialPlanId,
+    /** Charged annual price = €4.90 × 12. */
+    amountCents: 5880,
+    /** Full (struck-through) annual price = (€3.29 + €3.29) × 12. */
+    listAmountCents: 7896,
   },
 } as const;
 
@@ -66,9 +84,18 @@ export const DRIVE_MUSIC_FEATURES = [
   "Symphony and Fusion Studio",
 ] as const;
 
+/** Shipped "Drive Unlimited" capabilities: both packages. */
+export const DRIVE_UNLIMITED_FEATURES = [
+  "Everything in Drive+",
+  "Everything in Drive the Music",
+  "One subscription, one yearly bill",
+] as const;
+
 export interface PlanPriceDisplay {
   amount: string;
   listAmount: string;
+  /** Rounded discount vs. the struck-through price, e.g. "-15%". */
+  badge?: string;
   cadence: string;
   equivalentMonthly?: string;
 }
@@ -92,23 +119,18 @@ export function getFreePlanDisplay(): { amount: string; listAmount: string } {
 }
 
 export function getDrivePlusMonthlyDisplay(): PlanPriceDisplay {
-  const amountCents = DRIVE_PLUS_PRICING.monthly.amountCents;
+  const { amountCents, listAmountCents } = DRIVE_PLUS_PRICING.monthly;
   return {
     amount: formatEuroAmount(amountCents),
-    listAmount: formatEuroAmount(listPriceBeforeEarlyAdopterDiscount(amountCents)),
+    listAmount: formatEuroAmount(listAmountCents),
+    badge: discountBadge(amountCents, listAmountCents),
     cadence: "month",
   };
 }
 
 export function getDrivePlusYearlyDisplay(): PlanPriceDisplay {
-  const amountCents = DRIVE_PLUS_PRICING.yearly.amountCents;
-  const equivalentCents = Math.round(amountCents / 12);
-  return {
-    amount: formatEuroAmount(amountCents),
-    listAmount: formatEuroAmount(listPriceBeforeEarlyAdopterDiscount(amountCents)),
-    cadence: "year",
-    equivalentMonthly: formatEuroAmount(equivalentCents),
-  };
+  const { amountCents, listAmountCents } = DRIVE_PLUS_PRICING.yearly;
+  return yearlyDisplay(amountCents, listAmountCents);
 }
 
 /**
@@ -116,36 +138,66 @@ export function getDrivePlusYearlyDisplay(): PlanPriceDisplay {
  * monthly billing plan in the cards; "Monthly" shows the yearly price / 12,
  * billed yearly. List price = full yearly list price / 12.
  */
-export function yearlyAsMonthlyDisplay(yearlyCents: number): PlanPriceDisplay {
+export function yearlyAsMonthlyDisplay(
+  yearlyCents: number,
+  yearlyListCents: number = listPriceBeforeEarlyAdopterDiscount(yearlyCents),
+): PlanPriceDisplay {
   return {
     amount: formatEuroAmount(Math.round(yearlyCents / 12)),
-    listAmount: formatEuroAmount(
-      Math.round(listPriceBeforeEarlyAdopterDiscount(yearlyCents) / 12),
-    ),
+    listAmount: formatEuroAmount(Math.round(yearlyListCents / 12)),
+    badge: discountBadge(yearlyCents, yearlyListCents),
     cadence: "month",
   };
 }
 
+/** "-15%" style badge from charged vs. full price. */
+export function discountBadge(amountCents: number, listCents: number): string {
+  return `-${Math.round((1 - amountCents / listCents) * 100)}%`;
+}
+
+function yearlyDisplay(amountCents: number, listCents: number): PlanPriceDisplay {
+  return {
+    amount: formatEuroAmount(amountCents),
+    listAmount: formatEuroAmount(listCents),
+    badge: discountBadge(amountCents, listCents),
+    cadence: "year",
+    equivalentMonthly: formatEuroAmount(Math.round(amountCents / 12)),
+  };
+}
+
+export function getDriveUnlimitedYearlyDisplay(): PlanPriceDisplay {
+  const { amountCents, listAmountCents } = DRIVE_UNLIMITED_PRICING.yearly;
+  return yearlyDisplay(amountCents, listAmountCents);
+}
+
+export function getDriveUnlimitedDisplay(interval: BillingDisplayInterval): PlanPriceDisplay {
+  const { amountCents, listAmountCents } = DRIVE_UNLIMITED_PRICING.yearly;
+  return interval === "monthly"
+    ? yearlyAsMonthlyDisplay(amountCents, listAmountCents)
+    : yearlyDisplay(amountCents, listAmountCents);
+}
+
 export function getDrivePlusDisplay(interval: BillingDisplayInterval): PlanPriceDisplay {
   return interval === "monthly"
-    ? yearlyAsMonthlyDisplay(DRIVE_PLUS_PRICING.yearly.amountCents)
+    ? yearlyAsMonthlyDisplay(
+        DRIVE_PLUS_PRICING.yearly.amountCents,
+        DRIVE_PLUS_PRICING.yearly.listAmountCents,
+      )
     : getDrivePlusYearlyDisplay();
 }
 
 export function getDriveMusicDisplay(interval: BillingDisplayInterval): PlanPriceDisplay {
   return interval === "monthly"
-    ? yearlyAsMonthlyDisplay(DRIVE_MUSIC_PRICING.yearly.amountCents)
+    ? yearlyAsMonthlyDisplay(
+        DRIVE_MUSIC_PRICING.yearly.amountCents,
+        DRIVE_MUSIC_PRICING.yearly.listAmountCents,
+      )
     : getDriveMusicYearlyDisplay();
 }
 
 export function getDriveMusicYearlyDisplay(): PlanPriceDisplay {
-  const amountCents = DRIVE_MUSIC_PRICING.yearly.amountCents;
-  return {
-    amount: formatEuroAmount(amountCents),
-    listAmount: formatEuroAmount(listPriceBeforeEarlyAdopterDiscount(amountCents)),
-    cadence: "year",
-    equivalentMonthly: formatEuroAmount(Math.round(amountCents / 12)),
-  };
+  const { amountCents, listAmountCents } = DRIVE_MUSIC_PRICING.yearly;
+  return yearlyDisplay(amountCents, listAmountCents);
 }
 
 /** One-time Drive+ Lifetime - same early adopter struck-through list price logic. */

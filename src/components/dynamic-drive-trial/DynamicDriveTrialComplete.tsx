@@ -50,7 +50,7 @@ export function DynamicDriveTrialComplete({ className = "" }: DynamicDriveTrialC
           returnTo="/drive"
         />
         <p className="text-center text-xs text-muted-foreground">
-          {yearly.equivalentMonthly} per month, billed yearly · 14% off {yearly.listAmount}
+          {yearly.equivalentMonthly} per month, billed yearly · {yearly.badge?.slice(1)} off {yearly.listAmount}
         </p>
         <DrivePlusCheckoutButton
           interval="lifetime"
