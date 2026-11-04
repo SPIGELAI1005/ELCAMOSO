@@ -1,9 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { buildRelayWsUrl, parseRelayMessage } from "@/lib/drive-relay/protocol";
+import type { RealtimeChannel } from "@supabase/supabase-js";
+import { parseRelayMessage } from "@/lib/drive-relay/protocol";
 import {
-  createBrowserWebSocketTransport,
-  type DriveRelayTransport,
-} from "@/lib/drive-relay/transport";
+  createMotionSendGate,
+  createPeerTracker,
+  DRIVE_CHANNEL_PREFIX,
+  isSafeKey,
+  PEER_HEARTBEAT_MS,
+  reconnectDelayMs,
+} from "@/lib/drive-relay/realtime-link";
+import { getRealtimeClient } from "@/lib/phone-sync/channel";
 import type {
   RelayConnectionState,
   RelayMessage,
@@ -14,8 +20,12 @@ import { toRelayMotionPayload, type RelayMotionMessage } from "@/lib/motion/rela
 import type { RelayTelemetryMessage } from "@/lib/motion/relay-telemetry";
 import type { MotionSample } from "@/lib/motion/types";
 
-const HEARTBEAT_MS = 15_000;
-const RECONNECT_BASE_MS = 900;
+/** Live link to the peer (Supabase Realtime broadcast channel). */
+interface LinkHandle {
+  open: boolean;
+  send: (message: RelayMessage) => void;
+  close: () => void;
+}
 
 export interface UseDriveRelayOptions {
   sessionId: string;
@@ -60,7 +70,9 @@ export function useDriveRelay({
   const [lastAction, setLastAction] = useState<RelayMessage | null>(null);
   const [roundTripMs, setRoundTripMs] = useState<number | null>(null);
 
-  const transportRef = useRef<DriveRelayTransport | null>(null);
+  const transportRef = useRef<LinkHandle | null>(null);
+  const attemptRef = useRef(0);
+  const motionGateRef = useRef(createMotionSendGate());
   const seqRef = useRef(0);
   const reconnectRef = useRef<number | null>(null);
   const heartbeatRef = useRef<number | null>(null);
@@ -99,7 +111,7 @@ export function useDriveRelay({
 
   const disconnect = useCallback(() => {
     clearTimers();
-    transportRef.current?.close(1000, "client-disconnect");
+    transportRef.current?.close();
     transportRef.current = null;
     setStatus("disconnected");
   }, [clearTimers]);
@@ -163,40 +175,116 @@ export function useDriveRelay({
   );
 
   const connect = useCallback(() => {
-    if (!enabledRef.current || !sessionId || !token) return;
+    if (!enabledRef.current || !sessionId || !token || !isSafeKey(token)) return;
     clearTimers();
-    transportRef.current?.close(1000, "reconnect");
+    transportRef.current?.close();
+    transportRef.current = null;
+    setStatus((prev) => (prev === "reconnecting" ? prev : "connecting"));
 
-    setStatus("connecting");
-    const url = buildRelayWsUrl(window.location.origin, sessionId, role, token);
-    const transport = createBrowserWebSocketTransport();
-    transportRef.current = transport;
+    let closed = false;
+    const tracker = createPeerTracker();
+    const pushPeers = () => {
+      setPeers((prev) => {
+        const next = tracker.flags(Date.now());
+        return prev.display === next.display &&
+          prev.phone === next.phone &&
+          prev.telemetry === next.telemetry
+          ? prev
+          : next;
+      });
+    };
 
-    transport.connect(url, {
-      onOpen: () => {
-        setStatus("connected");
-        heartbeatRef.current = window.setInterval(() => {
-          transport.send({ type: "heartbeat", at: Date.now() });
-        }, HEARTBEAT_MS);
+    const scheduleReconnect = () => {
+      if (closed || !enabledRef.current) return;
+      closed = true;
+      clearTimers();
+      handle.close();
+      transportRef.current = null;
+      setStatus("reconnecting");
+      const delay = reconnectDelayMs(attemptRef.current);
+      attemptRef.current += 1;
+      reconnectRef.current = window.setTimeout(() => connect(), delay);
+    };
+
+    let channel: RealtimeChannel | null = null;
+    let release: (() => void) | null = null;
+    const handle: LinkHandle = {
+      open: false,
+      send: (message) => {
+        if (!channel || !handle.open) return;
+        void channel.send({ type: "broadcast", event: "msg", payload: message });
       },
-      onMessage: handleMessage,
-      onClose: (code) => {
-        clearTimers();
-        transportRef.current = null;
-        if (!enabledRef.current) {
-          setStatus("disconnected");
-          return;
-        }
-        if (code === 1008 || code === 4401) {
-          setStatus("expired");
-          return;
-        }
-        setStatus("reconnecting");
-        reconnectRef.current = window.setTimeout(() => connect(), RECONNECT_BASE_MS);
+      close: () => {
+        handle.open = false;
+        release?.();
+        release = null;
       },
-      onError: () => {
+    };
+    transportRef.current = handle;
+
+    void getRealtimeClient().then((client) => {
+      if (closed || transportRef.current !== handle) return;
+      if (!client) {
         setStatus("error");
-      },
+        scheduleReconnect();
+        return;
+      }
+      const ch = client.channel(DRIVE_CHANNEL_PREFIX + token, {
+        config: { broadcast: { self: false, ack: false } },
+      });
+      channel = ch;
+      release = () => void client.removeChannel(ch);
+      ch.on("broadcast", { event: "peer" }, (msg) => {
+        const p = (msg["payload"] ?? {}) as { role?: unknown; bye?: unknown; hello?: unknown };
+        if (p.role !== "display" && p.role !== "phone" && p.role !== "telemetry") return;
+        if (p.role === role) return;
+        if (p.bye === true) tracker.forget(p.role);
+        else tracker.seen(p.role, Date.now());
+        pushPeers();
+        // Answer a newcomer right away so both sides see each other within one round trip.
+        if (p.hello === true) {
+          void ch.send({ type: "broadcast", event: "peer", payload: { role, at: Date.now() } });
+        }
+      });
+      ch.on("broadcast", { event: "msg" }, (msg) => {
+        const payload = msg["payload"];
+        const from = (payload as { from?: unknown } | null)?.from;
+        if (from === "phone" || from === "display" || from === "telemetry") {
+          if (from !== role) {
+            tracker.seen(from, Date.now());
+          }
+        }
+        handleMessage(JSON.stringify(payload));
+      });
+      ch.subscribe((s) => {
+        if (closed || transportRef.current !== handle) return;
+        if (s === "SUBSCRIBED") {
+          attemptRef.current = 0;
+          handle.open = true;
+          setStatus("connected");
+          void ch.send({
+            type: "broadcast",
+            event: "peer",
+            payload: { role, at: Date.now(), hello: true },
+          });
+          heartbeatRef.current = window.setInterval(() => {
+            void ch.send({ type: "broadcast", event: "peer", payload: { role, at: Date.now() } });
+            pushPeers();
+          }, PEER_HEARTBEAT_MS);
+          return;
+        }
+        if (s === "CHANNEL_ERROR" || s === "TIMED_OUT" || s === "CLOSED") {
+          handle.open = false;
+          scheduleReconnect();
+        }
+      });
+      const origClose = handle.close;
+      handle.close = () => {
+        if (handle.open && channel) {
+          void channel.send({ type: "broadcast", event: "peer", payload: { role, bye: true } });
+        }
+        origClose();
+      };
     });
   }, [clearTimers, handleMessage, role, sessionId, token]);
 
@@ -212,7 +300,7 @@ export function useDriveRelay({
   const sendAction = useCallback(
     (kind: string, payload?: unknown) => {
       const transport = transportRef.current;
-      if (!transport || transport.state !== "open") return;
+      if (!transport || !transport.open) return;
       const message: RelayMessage = {
         type: "action",
         id: crypto.randomUUID(),
@@ -229,7 +317,9 @@ export function useDriveRelay({
   const sendMotion = useCallback(
     (sample: MotionSample) => {
       const transport = transportRef.current;
-      if (!transport || transport.state !== "open" || role !== "phone") return;
+      if (!transport || !transport.open || role !== "phone") return;
+      // Free-plan budget: ~10 msg/s while moving, ~4 msg/s when parked and still.
+      if (!motionGateRef.current(performance.now(), sample)) return;
       seqRef.current += 1;
       transport.send({
         type: "motion",
@@ -244,7 +334,7 @@ export function useDriveRelay({
 
   const runLatencyTest = useCallback(() => {
     const transport = transportRef.current;
-    if (!transport || transport.state !== "open") return;
+    if (!transport || !transport.open) return;
     const id = crypto.randomUUID();
     pendingLatencyRef.current.set(id, Date.now());
     setRoundTripMs(null);

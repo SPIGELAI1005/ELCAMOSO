@@ -8,7 +8,7 @@ import {
   readStoredRelayCred,
   writeStoredRelayCred,
 } from "@/components/PhonePairSession";
-import { joinDriveRelayByCodeFn } from "@/lib/drive-relay/server-fns";
+import { joinDrivePairByCode } from "@/lib/drive-relay/realtime-pairing";
 import { createSeoHeadFromPath } from "@/lib/seo";
 
 export const Route = createFileRoute("/pair")({
@@ -28,9 +28,7 @@ function PairManualScreen() {
     setJoining(true);
     setError(null);
     try {
-      const result = await joinDriveRelayByCodeFn({
-        data: { pairingCode: pairingInput.replace(/\s/g, "") },
-      });
+      const result = await joinDrivePairByCode(pairingInput.replace(/\s/g, ""));
       if (!result.ok) {
         setError("Invalid or expired code. Check the car display and try again.");
         return;
