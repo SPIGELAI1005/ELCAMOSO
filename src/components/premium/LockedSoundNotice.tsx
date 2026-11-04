@@ -10,6 +10,7 @@ import {
 import { useSettings } from "@/lib/drive/useSettings";
 import { getProfile } from "@/lib/sound/profiles";
 import { cn } from "@/lib/utils";
+import { packageForProfile, pricingSearchForSound, SOUND_PACKAGE_LABEL } from "@/lib/drive/sound-share";
 import { LockGlyph } from "@/components/premium/PremiumBadge";
 
 /** Explains that a picked Drive+ sound is replaced by the free V10 for now. */
@@ -21,6 +22,7 @@ export function LockedSoundNotice({ className }: { className?: string }) {
   if (settings.profileId !== FALLBACK_SOUND_PROFILE_ID) return null;
   const name = getProfile(requested).name;
   const clip = demoClipForProfile(requested);
+  const pkg = SOUND_PACKAGE_LABEL[packageForProfile(requested)];
   return (
     <div
       role="status"
@@ -32,7 +34,7 @@ export function LockedSoundNotice({ className }: { className?: string }) {
     >
       <p>
         <LockGlyph className="mr-1.5 inline-block align-[-1px]" />
-        <strong className="font-medium">{name}</strong> is part of Drive+. You&apos;re hearing the
+        <strong className="font-medium">{name}</strong> is part of {pkg}. You&apos;re hearing the
         free V10 for now.
       </p>
       {clip ? (
@@ -43,9 +45,11 @@ export function LockedSoundNotice({ className }: { className?: string }) {
       <div className="mt-3 flex flex-wrap items-center gap-3">
         <Link
           to="/pricing"
+          search={pricingSearchForSound(requested)}
+          data-testid="locked-sound-upgrade"
           className="inline-flex h-10 items-center rounded-full bg-foreground px-5 text-[10px] tracking-[0.2em] text-background uppercase"
         >
-          Upgrade to Drive+
+          Get {pkg}
         </Link>
         <button
           type="button"

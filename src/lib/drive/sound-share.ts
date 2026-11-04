@@ -151,3 +151,26 @@ export function shouldApplySharedSound(opts: {
   // Entitlements resolved after the enforcer clamped the shared sound: restore it.
   return current === fallbackId && lockedFallback === shared && canDrive(shared);
 }
+
+export type SoundPackage = "drive-plus" | "drive-music";
+
+/** Package that unlocks a sound: music profiles are Drive the Music, other engines Drive+. */
+export function packageForProfile(profileId: string): SoundPackage {
+  return profileId.startsWith("symphony-") || profileId.startsWith("fusion-")
+    ? "drive-music"
+    : "drive-plus";
+}
+
+export const SOUND_PACKAGE_LABEL: Record<SoundPackage, string> = {
+  "drive-plus": "Drive+",
+  "drive-music": "Drive the Music",
+};
+
+/** Pricing deep link with the package containing this sound preselected. */
+export function pricingSearchForSound(profileId: string): { plan: SoundPackage; sound: string } {
+  return { plan: packageForProfile(profileId), sound: profileId };
+}
+
+export function parsePricingPlanParam(v: unknown): SoundPackage | undefined {
+  return v === "drive-plus" || v === "drive-music" ? v : undefined;
+}

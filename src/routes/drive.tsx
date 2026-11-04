@@ -6,7 +6,12 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { createSeoHeadFromPath } from "@/lib/seo";
 import { parseSharedSoundParam, soundShareSocialMeta } from "@/lib/drive/sound-share";
 import { ShareSoundButton } from "@/components/drive/ShareSoundButton";
-import { resolveDisplayedProfileId, shouldApplySharedSound } from "@/lib/drive/sound-share";
+import {
+  packageForProfile,
+  resolveDisplayedProfileId,
+  shouldApplySharedSound,
+  SOUND_PACKAGE_LABEL,
+} from "@/lib/drive/sound-share";
 import { useLockedFallback } from "@/lib/entitlements/locked-fallback-notice";
 import { useFeatureAccess as useSharedSoundAccess } from "@/lib/entitlements/selectors";
 import { FALLBACK_SOUND_PROFILE_ID as SHARED_FALLBACK_ID } from "@/lib/sound/profile-access-config";
@@ -518,7 +523,7 @@ function DriveScreen() {
         )
       ) : (
         <>
-          <DriveProfileBackdrop profileId={settings.profileId} className="z-0" />
+          <DriveProfileBackdrop profileId={displayed.id} className="z-0" />
           <div className="relative z-[1] flex flex-1 flex-col items-center justify-center gap-10 text-center">
             {googleAuthNotice ? (
               <p
@@ -555,7 +560,7 @@ function DriveScreen() {
                   data-testid="shared-sound-locked"
                   className="mt-2 text-[10px] tracking-[0.22em] text-muted-foreground uppercase"
                 >
-                  Drive+ sound · playing free V10 until you upgrade
+                  {SOUND_PACKAGE_LABEL[packageForProfile(displayed.id)]} sound · playing free V10 until you upgrade
                 </p>
               ) : null}
               <p className="mt-3 text-sm text-muted-foreground">

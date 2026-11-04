@@ -17,3 +17,14 @@ describe("shared sound selection", () => {
     expect(shouldApplySharedSound({ ...base, current: "gt-v8", shared: "traby", alreadyApplied: true, lockedFallback: null, canDrive: () => true })).toBe(false);
   });
 });
+import { packageForProfile, pricingSearchForSound, parsePricingPlanParam } from "./sound-share";
+describe("package for sound", () => {
+  it("maps engine and music sounds", () => {
+    expect(packageForProfile("traby")).toBe("drive-plus");
+    expect(packageForProfile("symphony-latino-fiesta")).toBe("drive-music");
+    expect(packageForProfile("fusion-x")).toBe("drive-music");
+    expect(pricingSearchForSound("traby")).toEqual({ plan: "drive-plus", sound: "traby" });
+    expect(parsePricingPlanParam("drive-music")).toBe("drive-music");
+    expect(parsePricingPlanParam("x")).toBeUndefined();
+  });
+});

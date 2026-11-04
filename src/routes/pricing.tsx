@@ -13,9 +13,15 @@ import { MUSIC_TRIAL_MONTHS, isMusicTrialOfferActive } from "@/lib/billing/black
 import { trackMonetizationEvent } from "@/lib/telemetry/monetization-analytics";
 import { useSettings } from "@/lib/drive/useSettings";
 import { t } from "@/lib/i18n";
+import { SoundPackageCallout } from "@/components/pricing/SoundPackageCallout";
+import { parsePricingPlanParam, parseSharedSoundParam, type SoundPackage } from "@/lib/drive/sound-share";
 
 export const Route = createFileRoute("/pricing")({
   component: Pricing,
+  validateSearch: (search: Record<string, unknown>): { plan?: SoundPackage | undefined; sound?: string | undefined } => ({
+    plan: parsePricingPlanParam(search["plan"]),
+    sound: parseSharedSoundParam(search["sound"]) ?? undefined,
+  }),
   head: () => createSeoHeadFromPath("/pricing"),
 });
 
@@ -87,6 +93,7 @@ function Pricing() {
   const yearly = getDrivePlusYearlyDisplay();
   const { plan } = useEntitlements();
   const { settings } = useSettings();
+  const { plan: highlightPlan, sound: highlightSound } = Route.useSearch();
   const [interval, setInterval] = useState<BillingDisplayInterval>("monthly");
   const billingQuery = useQuery({
     queryKey: ["billing-public-config"],
@@ -113,6 +120,14 @@ function Pricing() {
     return (
       <main className="min-h-screen">
         <EarlyAccessBanner />
+        {highlightPlan ? (
+          <SoundPackageCallout
+            plan={highlightPlan}
+            sound={highlightSound}
+            billingAvailable={false}
+            lifetimeAvailable={lifetimeAvailable}
+          />
+        ) : null}
         <section className="mx-auto w-full max-w-2xl px-6 pt-10 pb-10 sm:px-10 sm:pt-12">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <p className="text-[11px] tracking-[0.28em] text-muted-foreground uppercase">Plans</p>
@@ -144,6 +159,14 @@ function Pricing() {
   return (
     <main className="min-h-screen">
       <EarlyAccessBanner />
+      {highlightPlan ? (
+        <SoundPackageCallout
+          plan={highlightPlan}
+          sound={highlightSound}
+          billingAvailable={billingAvailable}
+          lifetimeAvailable={lifetimeAvailable}
+        />
+      ) : null}
       <section className="mx-auto w-full max-w-2xl px-6 pt-10 pb-10 sm:px-10 sm:pt-12">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <p className="text-[11px] tracking-[0.28em] text-muted-foreground uppercase">Plans</p>
