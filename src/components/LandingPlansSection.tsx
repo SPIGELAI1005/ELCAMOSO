@@ -190,7 +190,7 @@ export function PlansOverview({
     <>
       <p
         data-testid="new-prices-note"
-        className="mb-4 text-xs tracking-[0.08em] text-muted-foreground"
+        className="mb-4 text-sm font-medium text-red-500"
       >
         {t(language, "pricing.newPricesNote")}
       </p>
