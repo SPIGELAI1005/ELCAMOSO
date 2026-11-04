@@ -188,6 +188,12 @@ export function PlansOverview({
 
   return (
     <>
+      <p
+        data-testid="new-prices-note"
+        className="mb-4 text-xs tracking-[0.08em] text-muted-foreground"
+      >
+        {t(language, "pricing.newPricesNote")}
+      </p>
       <div className="divide-y divide-border border-y border-border">
         <div className={compact ? "py-8" : "border-b border-border py-12"}>
           <p className="text-xs tracking-[0.2em] text-muted-foreground uppercase">Free</p>
