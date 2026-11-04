@@ -535,9 +535,6 @@ function DriveScreen() {
               >
                 Change experience
               </button>
-              <div className="mt-3 flex justify-center">
-                <ShareSoundButton profileId={settings.profileId} locale={settings.language} />
-              </div>
             </div>
             <StartDriveMarkControl
               reducedMotion={reducedMotion}
@@ -547,6 +544,11 @@ function DriveScreen() {
                 settings.driveOutputMode === "capture" ? ["Silent", "Capture"] : ["Start", "Drive"]
               }
               onStart={() => void handleStart()}
+            />
+            <ShareSoundButton
+              profileId={settings.profileId}
+              locale={settings.language}
+              className="-mt-6"
             />
             <div className="w-full max-w-md">
               <DriveModePicker
