@@ -69,8 +69,19 @@ const berlinDay = new Intl.DateTimeFormat("en-CA", {
 });
 
 /** Berlin calendar day "YYYY-MM-DD" — the counter resets at Berlin midnight. */
+// Memoized per wall-clock minute: Berlin midnight always falls on a minute
+// boundary, and this runs from render-time store snapshots (many times per
+// frame while driving), where Intl formatting is costly on the car's CPU.
+let lastDayMinute = Number.NaN;
+let lastDayKey = "";
+
 export function berlinDayKey(now: number = Date.now()): string {
-  return berlinDay.format(new Date(now));
+  const minute = Math.floor(now / 60_000);
+  if (minute !== lastDayMinute) {
+    lastDayKey = berlinDay.format(new Date(now));
+    lastDayMinute = minute;
+  }
+  return lastDayKey;
 }
 
 export function remainingGuestSeconds(usedSeconds: number): number {

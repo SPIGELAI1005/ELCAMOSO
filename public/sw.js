@@ -1,4 +1,4 @@
-const CACHE = "elcamoso-shell-v74";
+const CACHE = "elcamoso-shell-v75";
 // Bump CACHE whenever a file under /sample-packs/recorded/ is replaced at the same URL.
 const WORKLET = "/audio/combustion-processor.js";
 // Keep in sync with COMBUSTION_WORKLET_VERSION (checked by src/lib/sound/sw-precache.test.ts).
@@ -116,6 +116,22 @@ function isDevModuleRequest(url) {
   );
 }
 
+const PRECACHE_CONCURRENCY = 2;
+
+function precacheAudio(cache) {
+  const queue = AUDIO.filter((u) => u !== undefined);
+  const worker = () => {
+    const u = queue.shift();
+    if (u === undefined) return Promise.resolve();
+    return cache
+      .match(u)
+      .then((hit) => (hit ? undefined : cache.add(u)))
+      .catch(() => undefined)
+      .then(worker);
+  };
+  return Promise.all(Array.from({ length: PRECACHE_CONCURRENCY }, worker));
+}
+
 self.addEventListener("install", (event) => {
   event.waitUntil(
     caches
@@ -123,11 +139,9 @@ self.addEventListener("install", (event) => {
       .then((cache) =>
         cache.addAll(SHELL).then(() =>
           // Best effort: one failed file must not block the install; it is fetched on demand.
-          Promise.all(
-            AUDIO.filter((u) => u !== undefined).map((u) =>
-              cache.match(u).then((hit) => (hit ? undefined : cache.add(u).catch(() => undefined))),
-            ),
-          ),
+          // At most PRECACHE_CONCURRENCY downloads at a time: a burst of ~90 parallel
+          // fetches + cache writes starves the car's CPU and glitches a running drive.
+          precacheAudio(cache),
         ),
       )
       .then(() => self.skipWaiting()),

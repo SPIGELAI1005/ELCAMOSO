@@ -10,7 +10,7 @@ import { useFeatureAccess } from "@/lib/entitlements/selectors";
 import { noteLockedFallback } from "@/lib/entitlements/locked-fallback-notice";
 import { useSettings } from "@/lib/drive/useSettings";
 import { DEFAULT_SHIFT_FEEL } from "@/lib/drive/types-extra";
-import { useSessionStore } from "@/lib/store/session-store";
+import { useSessionSelector } from "@/lib/store/session-store";
 import { isLiveSessionStatus } from "@/lib/ui/chrome";
 
 function isEntitlementDowngradePatch(
@@ -31,7 +31,7 @@ function isEntitlementDowngradePatch(
 export function EntitlementEnforcer() {
   const { settings, update } = useSettings();
   const access = useFeatureAccess();
-  const session = useSessionStore();
+  const session = useSessionSelector((s) => ({ kind: s.kind, status: s.status }));
   const isLiveDrive = session.kind === "drive" && isLiveSessionStatus(session.status);
 
   useEffect(() => {

@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { getSession } from "@/lib/drive/session";
-import { useSessionSelector, useSessionStore } from "@/lib/store/session-store";
+import { useSessionSelector } from "@/lib/store/session-store";
 import { useSettings } from "@/lib/drive/useSettings";
 import { getProfileGain, getTuning } from "@/lib/drive/settings";
 import { useFeatureAccess } from "@/lib/entitlements/selectors";
@@ -16,7 +16,7 @@ export function SessionBridge() {
   const { settings, update } = useSettings();
   const access = useFeatureAccess();
   const { entitlements, snapshot } = useEntitlements();
-  const sessionSnap = useSessionStore();
+  const sessionSnap = useSessionSelector((s) => ({ kind: s.kind, status: s.status }));
   const sessionUi = useSessionSelector((snap) => ({
     kind: snap.kind,
     status: snap.status,

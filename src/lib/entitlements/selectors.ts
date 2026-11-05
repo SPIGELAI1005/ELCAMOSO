@@ -13,7 +13,7 @@ import {
 } from "@/lib/entitlements/live-drive-access";
 import { getProfile } from "@/lib/sound/profiles";
 import { lockedProfilePreviewSeconds } from "@/lib/sound/profile-access";
-import { useSessionStore } from "@/lib/store/session-store";
+import { useSessionSelector } from "@/lib/store/session-store";
 import { useSyncExternalStore } from "react";
 import {
   getGuestTrialState,
@@ -32,7 +32,9 @@ export function useEntitlement(entitlement: Entitlement): boolean {
 /** Centralized feature access derived from entitlements only. */
 export function useFeatureAccess() {
   const { hasEntitlement, isTrialActive, user } = useEntitlements();
-  const session = useSessionStore();
+  // Only kind/status: subscribing to the whole snapshot re-rendered every consumer
+  // (root bridges, enforcer, menus) on each RPM tick and starved the car's CPU.
+  const session = useSessionSelector((s) => ({ kind: s.kind, status: s.status }));
   const isLiveDrive = session.kind === "drive" && isLiveSessionStatus(session.status);
 
   const effectiveHas = (entitlement: Entitlement) =>
