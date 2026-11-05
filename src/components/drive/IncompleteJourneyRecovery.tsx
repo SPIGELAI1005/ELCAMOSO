@@ -14,10 +14,16 @@ export function IncompleteJourneyRecovery({
     let cancelled = false;
     void (async () => {
       const repo = getJourneyRepository();
+      // Recordings left over from the retired "live + capture" mode came from normal engine
+      // drives. Remove them quietly instead of offering a song nobody asked for.
+      const isStaleLiveRecording = (t: JourneyTraceV1) => t.outputMode === "live-and-capture";
       const activeId = await repo.getActiveJourneyId();
       if (activeId) {
         const t = await repo.loadJourney(activeId);
-        if (!cancelled && t && t.status === "recording") {
+        if (t && isStaleLiveRecording(t) && t.status !== "complete") {
+          await repo.cleanupIncompleteJourney(t.journeyId).catch(() => undefined);
+          await repo.setActiveJourneyId(null).catch(() => undefined);
+        } else if (!cancelled && t && t.status === "recording") {
           const finalized = {
             ...t,
             status: "incomplete" as const,
@@ -30,7 +36,14 @@ export function IncompleteJourneyRecovery({
         }
       }
       const list = await repo.listJourneys();
-      const hit = list.find((j) => j.status === "incomplete" || j.status === "recording");
+      for (const j of list) {
+        if (isStaleLiveRecording(j) && j.status !== "complete") {
+          await repo.cleanupIncompleteJourney(j.journeyId).catch(() => undefined);
+        }
+      }
+      const hit = list.find(
+        (j) => !isStaleLiveRecording(j) && (j.status === "incomplete" || j.status === "recording"),
+      );
       if (!cancelled && hit) setIncomplete(hit);
     })();
     return () => {

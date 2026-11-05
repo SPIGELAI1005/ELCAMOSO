@@ -205,6 +205,11 @@ function DriveScreen() {
     status === "driving" && !shouldPlayLiveAudio(sessionSnap.driveOutputMode ?? "live");
   const resumedNativeCapture = status === "idle" && sessionSnap.nativeCapture.active;
 
+  // A new drive closes any song screen, so song building never runs next to engine audio.
+  useEffect(() => {
+    if (status !== "idle") setPostCaptureTraceId(null);
+  }, [status]);
+
   useEffect(() => {
     if (monetizationEnabled && upgrade === "drive-plus" && plan === "FREE") {
       setShowTeslaUpgrade(true);
@@ -329,7 +334,7 @@ function DriveScreen() {
 
   const handleStop = async () => {
     const before = getSession().snapshot();
-    const hadCapture = shouldCaptureTrace(before.driveOutputMode ?? "live");
+    const hadCapture = before.driveOutputMode === "capture";
     const paused = before.capturePausedByBrowser;
     await stop();
     const snap = getSession().snapshot();

@@ -75,7 +75,7 @@ export function SessionBridge() {
       dynamicDrive,
       virtualTransmission: access.virtualTransmission,
       teslaFleetTelemetry: settings.teslaFleetTelemetry,
-      driveOutputMode: settings.driveOutputMode,
+      driveOutputMode: settings.driveOutputMode === "capture" ? "capture" : "live",
       captureQuality: settings.captureQuality,
     });
   }, [

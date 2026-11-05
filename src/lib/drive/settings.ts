@@ -862,10 +862,9 @@ export function sanitizeSettings(input: unknown): {
     bodyCharacter: num(p["bodyCharacter"], DEFAULT_SETTINGS.bodyCharacter, 0, 1),
     mechanicalCharacter: num(p["mechanicalCharacter"], DEFAULT_SETTINGS.mechanicalCharacter, 0, 1),
     demoMotion: bool(p["demoMotion"], false),
-    driveOutputMode:
-      p["driveOutputMode"] === "capture" || p["driveOutputMode"] === "live-and-capture"
-        ? p["driveOutputMode"]
-        : "live",
+    // Every visit starts in Live sound. Silent capture must be picked on purpose each time,
+    // so a saved capture mode (or the retired live-and-capture mode) never records a normal drive.
+    driveOutputMode: "live",
     captureQuality: p["captureQuality"] === "high-detail" ? "high-detail" : "balanced",
     safetyAcknowledged,
     onboarded,

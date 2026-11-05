@@ -6,7 +6,8 @@ import {
   setSilentCaptureGenre,
 } from "@/lib/drive/silent-capture-genre";
 
-const MODES: DriveOutputMode[] = ["live", "capture", "live-and-capture"];
+// Silent capture is its own mode. Live drives never record or build a song in the background.
+const MODES: DriveOutputMode[] = ["live", "capture"];
 
 export function DriveModePicker({
   value,
@@ -42,7 +43,7 @@ export function DriveModePicker({
           );
         })}
       </div>
-      {value === "capture" || value === "live-and-capture" ? <SilentCaptureGenrePicker /> : null}
+      {value === "capture" ? <SilentCaptureGenrePicker /> : null}
       {value === "capture" ? (
         <p className="mt-4 text-center text-[11px] leading-relaxed text-muted-foreground">
           ELCAMOSO records how the drive moved, not where you went. Stop at the end of the trip to
