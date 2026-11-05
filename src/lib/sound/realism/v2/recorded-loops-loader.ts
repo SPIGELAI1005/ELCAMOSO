@@ -24,15 +24,21 @@ export async function loadRecordedLoopBuffers(
   const items = bank.backfire
     ? [...bank.sources, { id: BACKFIRE_BUFFER_ID, url: bank.backfire.url }]
     : bank.sources;
+  // Several sources often cut regions from one file (Ge-Squared: five loads, one 106 s file).
+  // Decode each file once and share the AudioBuffer: decoding it per source cost ~100 MB of
+  // decoded audio and five parallel decodes on drive start, too much for a car browser.
+  const byUrl = new Map<string, string[]>();
+  for (const loop of items) byUrl.set(loop.url, [...(byUrl.get(loop.url) ?? []), loop.id]);
   await Promise.all(
-    items.map(async (loop) => {
+    [...byUrl].map(async ([url, ids]) => {
       try {
-        const bytes = await fetchBytes(loop.url);
+        const bytes = await fetchBytes(url);
         if (signal?.aborted) return;
         // decodeAudioData detaches the buffer; decode a copy so the cache stays reusable.
-        out.set(loop.id, await ctx.decodeAudioData(bytes.slice(0)));
+        const buffer = await ctx.decodeAudioData(bytes.slice(0));
+        for (const id of ids) out.set(id, buffer);
       } catch (error) {
-        console.warn("[elcamoso] recorded loop unavailable", loop.id, error);
+        console.warn("[elcamoso] recorded loop unavailable", ids.join(","), error);
       }
     }),
   );

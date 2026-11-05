@@ -114,6 +114,7 @@ class CombustionExcitationProcessor extends AudioWorkletProcessor {
     this.delayWrite = null;
     this.delaySamples = null;
     this.collectorAcc = null;
+    this.parked = false;
     this.port.onmessage = (event) => {
       const data = event.data;
       if (!data || typeof data !== "object") return;
@@ -124,6 +125,8 @@ class CombustionExcitationProcessor extends AudioWorkletProcessor {
         this.installTopology(data.topology);
       } else if (data.type === "clearTopology") {
         this.clearTopology();
+      } else if (data.type === "park") {
+        this.parked = Boolean(data.parked);
       }
     };
   }
@@ -338,6 +341,11 @@ class CombustionExcitationProcessor extends AudioWorkletProcessor {
     if (!output || !output[0]) return true;
     const ch0 = output[0];
     const ch1 = output[1] || null;
+    // Parked: the layer is fully ducked under recordings, so skip the per-sample model.
+    if (this.parked) {
+      for (let c = 0; c < output.length; c += 1) output[c].fill(0);
+      return true;
+    }
 
     // Zero semantics (deliberate):
     // - firingHz 0: no new fires; pressure tails continue to decay.

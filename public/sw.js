@@ -1,8 +1,8 @@
-const CACHE = "elcamoso-shell-v76";
+const CACHE = "elcamoso-shell-v77";
 // Bump CACHE whenever a file under /sample-packs/recorded/ is replaced at the same URL.
 const WORKLET = "/audio/combustion-processor.js";
 // Keep in sync with COMBUSTION_WORKLET_VERSION (checked by src/lib/sound/sw-precache.test.ts).
-const WORKLET_URL = WORKLET + "?v=2026-10-15a";
+const WORKLET_URL = WORKLET + "?v=2026-11-05a";
 // Everything the sound engine fetches at drive start. Cached on install so a drive never
 // depends on the network (checked against the folder by sw-precache.test.ts).
 const AUDIO = [

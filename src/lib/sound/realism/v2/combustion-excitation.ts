@@ -7,7 +7,7 @@
 import { getNoiseBuffer } from "@/lib/sound/dsp/noise";
 
 /** Bump whenever public/audio/combustion-processor.js changes. */
-export const COMBUSTION_WORKLET_VERSION = "2026-10-15a";
+export const COMBUSTION_WORKLET_VERSION = "2026-11-05a";
 
 export interface CombustionExcitationParams {
   firingHz: number;
@@ -26,6 +26,8 @@ export interface CombustionExcitationHandle {
   setSeed?: (seed: number) => void;
   /** Install validated cylinder topology (worklet only; no-op on fallback). */
   setTopology?: (topology: unknown | null) => void;
+  /** Park: the worklet skips its per-sample work and outputs silence (worklet only). */
+  setParked?: (parked: boolean) => void;
   dispose: () => void;
   mode: "worklet" | "fallback";
 }
@@ -270,6 +272,9 @@ function createWorkletExcitation(ctx: BaseAudioContext): CombustionExcitationHan
         const tau = (topology as { pulseTauScale?: number }).pulseTauScale;
         maxFiringHz = Number.isFinite(tau) && (tau as number) < 1 ? 2000 : 800;
         node.port.postMessage({ type: "topology", topology });
+      },
+      setParked(parked: boolean) {
+        node.port.postMessage({ type: "park", parked });
       },
       dispose() {
         node.disconnect();

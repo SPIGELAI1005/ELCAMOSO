@@ -50,6 +50,9 @@ export interface LabCaptureResult {
   /** Optional mono magnitude spectrum for UI (not written to WAV sidecar by default). */
   spectrum?: { hz: number; db: number }[];
   renderElapsedMs: number;
+  /** Offline path: wall time of the audio render alone, and of the per-tick engine updates. */
+  audioRenderMs?: number;
+  updateLoopMs?: number;
 }
 
 export const DEFAULT_LAB_LIMITATIONS = [

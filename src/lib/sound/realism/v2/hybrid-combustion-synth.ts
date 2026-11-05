@@ -210,6 +210,12 @@ function targetParam(param: AudioParam, value: number, t: number, tau: number) {
 
 const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
 
+/** Recorded bank that mutes the synth under every load (recordings carry the whole sound). */
+export function bankFullyDucksSynth(bank: RecordedLoopBank | null | undefined): boolean {
+  if (!bank || bank.synthDuck == null) return false;
+  return bank.synthDuck >= 1 && (bank.loadSynthDuck ?? bank.synthDuck) >= 1;
+}
+
 interface FormantBand {
   filter: BiquadFilterNode;
   gain: GainNode;
@@ -1250,8 +1256,34 @@ export class HybridCombustionSynth {
       this.diagnostics.sampleAssisted = true;
       this.diagnostics.sampleState = "ready";
       this.diagnostics.sampleFallbackReason = "none";
+      if (bankFullyDucksSynth(this.recordedBank)) this.parkProceduralCombustion();
     }
   }
+
+  /**
+   * Banks that duck the synth fully (synthDuck and loadSynthDuck >= 1, e.g. Ge-Squared) leave the
+   * combustion excitation and everything it feeds at zero level once the recordings play. Stop
+   * that work instead of rendering silence: the worklet idles, its filters see no input (the
+   * browser then skips them) and update() stops automating them. Low-power car browsers only
+   * have a few ms per audio block, so this silent work was enough to glitch.
+   */
+  private parkProceduralCombustion() {
+    if (this.procParked || !this.excitation) return;
+    this.procParked = true;
+    this.excitation.setParked?.(true);
+    try {
+      this.excitation.node.disconnect();
+    } catch {
+      /* already disconnected */
+    }
+  }
+
+  /** True while the fully ducked procedural combustion layer is parked (see above). */
+  isProceduralCombustionParked(): boolean {
+    return this.procParked;
+  }
+
+  private procParked = false;
 
   getRecordedSampleWeight(): number {
     return this.recordedWeight;
@@ -1409,7 +1441,7 @@ export class HybridCombustionSynth {
       cfg.combustionSharpness * (0.55 + load * 0.55 + demand * 0.25 + bark * 0.4),
     );
 
-    this.excitation.setParams({
+    if (!this.procParked) this.excitation.setParams({
       firingHz,
       intensity: Math.min(1, intensity * cfg.exhaustPulse),
       irregularity,
@@ -1451,7 +1483,7 @@ export class HybridCombustionSynth {
       targetParam(this.highRpmVoicing.pres.gain, v.presenceDb * amount, audioTime, 0.08);
     }
 
-    this.exhaustFormants.forEach((band, i) => {
+    if (!this.procParked) this.exhaustFormants.forEach((band, i) => {
       const base = 0.26 / (1 + i * 0.48);
       // Root-cause §2: Near-constant loadLift with small loadContrast influence.
       // The base is 0.82 + load*0.18 (~2 dB cruise-to-pull contribution).
@@ -1474,7 +1506,7 @@ export class HybridCombustionSynth {
       }
     });
 
-    this.bodyResonances.forEach((band, i) => {
+    if (!this.procParked) this.bodyResonances.forEach((band, i) => {
       const excite = 0.28 + load * 0.22 + demand * 0.12;
       targetParam(band.gain.gain, (0.16 / (1 + i * 0.35)) * excite, audioTime, 0.08);
       // Keep centers nearly stationary
@@ -1482,7 +1514,7 @@ export class HybridCombustionSynth {
       targetParam(band.filter.frequency, hz, audioTime, 0.18);
     });
 
-    this.intakeFormants.forEach((band, i) => {
+    if (!this.procParked) this.intakeFormants.forEach((band, i) => {
       const base = (0.16 * cfg.intakePresence) / (1 + i * 0.42);
       let intake =
         demand * (0.62 + cfg.intakeLoadResponse * 0.46) +
@@ -1540,7 +1572,7 @@ export class HybridCombustionSynth {
     // Recent-peak demand (decays slowly: GPS throttle eases off over seconds) so a smoothed throttle lift is still detected.
     this.popPrevDemand = Math.max(demand, this.popPrevDemand - dt * 0.05);
 
-    if (this.growl && cfg.growl) {
+    if (this.growl && cfg.growl && !this.procParked) {
       // Drive rises with load so the saturator turns pulse irregularity into growl on pull;
       // cruise keeps a softer burble. Overrun lets it crackle a little through the pipe.
       const drive = 0.6 + load * 1.6 + demand * 0.6 + (overrun ? 0.5 : 0);
@@ -1560,7 +1592,7 @@ export class HybridCombustionSynth {
     // Engine-order resonators track crank speed tightly; weight rises with load.
     const revHz = Math.max(0, rpm / 60);
     const orderHz: number[] = [];
-    this.orderBands.forEach((band) => {
+    if (!this.procParked) this.orderBands.forEach((band) => {
       const hz = Math.max(20, Math.min(cfg.orderBandMaxHz ?? 2400, revHz * band.order));
       orderHz.push(hz);
       targetParam(band.filter.frequency, hz, audioTime, 0.03);
@@ -1689,7 +1721,7 @@ export class HybridCombustionSynth {
       }
     }
 
-    if (raw && this.lowOrderBody.length) {
+    if (raw && this.lowOrderBody.length && !this.procParked) {
       this.lowOrderBody.forEach((band, i) => {
         const excite = 0.55 + load * 0.35 + demand * 0.12 * raw.loadBalanceBias;
         targetParam(

@@ -37,6 +37,8 @@ export interface LabRenderOptions {
   includeSpectrum?: boolean;
   /** Environment id for rendering. Defaults to "open" for accurate loudness measurement. */
   environmentId?: string;
+  /** Wait for recorded loops to decode before driving the fixture (offline path only). */
+  waitForSamples?: boolean;
 }
 
 function resolveSettings(partial?: Partial<LabCaptureSettings>): LabCaptureSettings {
@@ -240,10 +242,12 @@ export async function renderLabOffline(options: LabRenderOptions): Promise<LabCa
   );
   const engine = new SoundEngine();
   await configureEngine(engine, options.profileId, settings, context, options.environmentId ?? "open");
+  if (options.waitForSamples) await engine.whenSamplesReady();
   let simulator = createSimulator(options.profileId, fixture);
   let prevSpeed = 0;
   let switched = false;
   const switchAt = duration * 0.5;
+  const updateStarted = performance.now();
 
   for (let time = 0; time < duration; time += LAB_STEP_SECONDS) {
     if (
@@ -269,9 +273,12 @@ export async function renderLabOffline(options: LabRenderOptions): Promise<LabCa
     engine.update(state);
   }
 
+  const updateLoopMs = performance.now() - updateStarted;
   const backend = engine.getActiveBackend();
   const hybrid = engine.getHybridCombustionDiagnostics();
+  const renderStarted = performance.now();
   const rendered = await context.startRendering();
+  const audioRenderMs = performance.now() - renderStarted;
   const raw = [rendered.getChannelData(0).slice(), rendered.getChannelData(1).slice()];
   const channels = applyMeasurementGain(raw, settings.measurementGain);
   const metrics = analyseLabSignal(channels, LAB_SAMPLE_RATE);
@@ -299,6 +306,8 @@ export async function renderLabOffline(options: LabRenderOptions): Promise<LabCa
       ? { spectrum: magnitudeSpectrumDb(mono, LAB_SAMPLE_RATE) }
       : {}),
     renderElapsedMs: performance.now() - started,
+    audioRenderMs,
+    updateLoopMs,
   };
 }
 
