@@ -816,15 +816,15 @@ export const EXPANSION_PROFILES: SoundProfile[] = [
   },
   {
     id: "ge-squared",
-    name: "Ge-Squared",
+    name: "Ge-Squared O)))",
     category: "Classic",
-    traits: ["Biturbo", "Off-Road", "Brutal"],
+    traits: ["Double Big Twin", "Modern", "Brutal"],
     description:
-      "A boxy 4x4 with a biturbo V8: lumpy cross-plane idle, twin turbos spooling up under load, blow-off sighs between gears and crackles when you lift.",
+      "The modern boxy 4x4, voiced like two big twins bolted together: a deep uneven lope at idle, hard thumping hits under load, a fast aggressive build and a raw crackle when you lift.",
     drivetrainMode: "virtual-transmission",
     motionModel: "virtual-transmission",
     sourceMode: "procedural",
-    drivetrainPersonalityId: "turbo-inline-6",
+    drivetrainPersonalityId: "v-twin-cruiser",
     voice: {
       baseFrequency: 23,
       // cross-plane V8: uneven pulse pattern gives the burble
@@ -851,7 +851,42 @@ export const EXPANSION_PROFILES: SoundProfile[] = [
     transmission: {
       gearRatios: [13.8, 8.6, 6.2, 4.8, 3.9, 3.3, 2.9],
       idleRpm: 700,
-      redlineRpm: 6200,
+      redlineRpm: 5000,
+      shiftSmoothing: 0.18,
+    },
+  },  {
+    id: "ge-squared-90",
+    name: "Ge-Squared '90",
+    category: "Classic",
+    traits: ["Double Big Twin", "Off-Road", "Relaxed"],
+    description:
+      "The classic 1990s boxy 4x4, voiced like two big twins side by side: a slow, soft potato-potato lope, relaxed torque and unhurried, mechanical acceleration.",
+    drivetrainMode: "virtual-transmission",
+    motionModel: "virtual-transmission",
+    sourceMode: "procedural",
+    drivetrainPersonalityId: "v-twin-cruiser",
+    voice: {
+      baseFrequency: 23,
+      // cross-plane V8: uneven pulse pattern gives the burble
+      harmonics: [1, 1.5, 2, 2.98, 4, 5.02],
+      waveResponse: 0.85,
+      filterBase: 200,
+      filterRange: 2600,
+      noise: 0.15,
+      detune: 13,
+      wave: "sawtooth",
+      lfoRate: 3.4,
+      lfoDepth: 6,
+      lfoTarget: "amp",
+      textures: [
+        { kind: "rumble", level: 0.34, tone: 90, speedScale: 0.55, surge: 0.5 },
+        { kind: "wind", level: 0.14, tone: 1500, speedScale: 1 },
+      ],
+    },
+    transmission: {
+      gearRatios: [12.4, 7.4, 4.9, 3.6],
+      idleRpm: 700,
+      redlineRpm: 4300,
       shiftSmoothing: 0.18,
     },
   },

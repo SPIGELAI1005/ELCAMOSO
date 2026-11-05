@@ -338,8 +338,46 @@ export interface RecordedHandover {
 
 export const DEFAULT_HANDOVER: RecordedHandover = { rpmStart: 2400, rpmSpan: 900, accelKeep: 0.15 };
 
+/** One modelled overrun afterfire one-shot inside a backfire file (seconds). */
+export interface BackfireShot {
+  start: number;
+  end: number;
+  kind: "bang" | "crackle" | "burble";
+}
+
+/** Buffer map key of a bank's backfire file. */
+export const BACKFIRE_BUFFER_ID = "__backfire";
+
+/**
+ * Lift-off afterfire: one-shots (already filtered through the profile's exhaust) fired on the
+ * firing grid. A sudden lift at high rpm gives up to `bangs` bangs, then a crackle/burble tail
+ * that thins out and softens as rpm falls toward `minRpm`.
+ */
+export interface BackfireConfig {
+  url: string;
+  shots: BackfireShot[];
+  /** Chance a lift lights anything at all (scaled by how sudden the lift is). */
+  chance: number;
+  /** Max bangs per lift (0 = none) and their chance at full rpm / full suddenness. */
+  bangs: number;
+  bangChance: number;
+  /** Shot gain at full strength, and the hard per-shot cap. */
+  level: number;
+  maxLevel: number;
+  /** Tail: events per second at full rpm, length (s), share of crackles (rest burbles), relative level. */
+  tailRate: number;
+  tailS: number;
+  crackleShare: number;
+  tailLevel: number;
+  /** Nothing below minRpm; full strength from fullRpm. */
+  minRpm: number;
+  fullRpm: number;
+}
+
 export interface RecordedLoopBank {
   personalityId: string;
+  /** Optional modelled lift-off afterfire (replaces the generic synth pops for this bank). */
+  backfire?: BackfireConfig;
   sources: RecordedSource[];
   /** Overall sample-layer level at full sample weight. */
   level: number;
@@ -655,6 +693,158 @@ const TRABY_REV_HARD_REGIONS: RecordedRegion[] = [
   { start: 11.1, end: 18.36, rpm: [1845, 2056, 1810, 1774, 1880, 2109, 2162, 1845, 1827, 1810, 1863, 1898, 2022, 2162, 2179, 2126, 2074, 2074, 1986, 2004, 2004, 2038, 2337, 2250, 2250, 2162, 2022, 2022, 2056, 2091, 1827, 1845, 1810, 1546, 1564, 1687, 1723, 1845, 1916, 2004, 2109, 2284, 2390, 2530, 2689, 2953, 3111, 3093, 3638, 3674, 3638, 3603, 3445, 3445, 3339, 3902, 3778, 3762, 3621, 3568, 3532, 3480, 3357, 3322, 3234, 3709, 3691, 3480, 3480, 3955, 3709, 3638, 3621] },
 ];
 
+/**
+ * Ge-Squared (v11): no recordings. Loops rendered offline from a physical model of a cross-plane
+ * V8 (uneven left/right bank firing, per-cylinder blowdown pulses with combustion noise, jitter,
+ * lossy pipe waveguides, muffler/side-pipe filtering, intake roar; O))) adds a light turbo
+ * whoosh and lift-off crackle). One loop per rpm point and load, so rate stays near 1.
+ */
+const GE2_M90_IDLE_REGIONS: RecordedRegion[] = [
+  { start: 0.03, end: 2.37, rpm: Array(23).fill(650) },
+  { start: 2.49, end: 4.83, rpm: Array(23).fill(750) },
+  { start: 4.95, end: 7.29, rpm: Array(23).fill(900) },
+];
+const GE2_M90_CRUISE_REGIONS: RecordedRegion[] = [
+  { start: 7.41, end: 9.75, rpm: Array(23).fill(700) },
+  { start: 9.87, end: 12.21, rpm: Array(23).fill(900) },
+  { start: 12.33, end: 14.67, rpm: Array(23).fill(1200) },
+  { start: 14.79, end: 17.13, rpm: Array(23).fill(1600) },
+  { start: 17.25, end: 19.59, rpm: Array(23).fill(2100) },
+  { start: 19.71, end: 22.05, rpm: Array(23).fill(2700) },
+  { start: 22.17, end: 24.51, rpm: Array(23).fill(3400) },
+  { start: 24.63, end: 26.97, rpm: Array(23).fill(4200) },
+  { start: 27.09, end: 29.43, rpm: Array(23).fill(5000) },
+  { start: 29.55, end: 31.89, rpm: Array(23).fill(5800) },
+];
+const GE2_M90_GROWL_REGIONS: RecordedRegion[] = [
+  { start: 32.01, end: 34.35, rpm: Array(23).fill(700) },
+  { start: 34.47, end: 36.81, rpm: Array(23).fill(900) },
+  { start: 36.93, end: 39.27, rpm: Array(23).fill(1200) },
+  { start: 39.39, end: 41.73, rpm: Array(23).fill(1600) },
+  { start: 41.85, end: 44.19, rpm: Array(23).fill(2100) },
+  { start: 44.31, end: 46.65, rpm: Array(23).fill(2700) },
+  { start: 46.77, end: 49.11, rpm: Array(23).fill(3400) },
+  { start: 49.23, end: 51.57, rpm: Array(23).fill(4200) },
+  { start: 51.69, end: 54.03, rpm: Array(23).fill(5000) },
+  { start: 54.15, end: 56.49, rpm: Array(23).fill(5800) },
+];
+const GE2_M90_HARD_REGIONS: RecordedRegion[] = [
+  { start: 56.61, end: 58.95, rpm: Array(23).fill(700) },
+  { start: 59.07, end: 61.41, rpm: Array(23).fill(900) },
+  { start: 61.53, end: 63.87, rpm: Array(23).fill(1200) },
+  { start: 63.99, end: 66.33, rpm: Array(23).fill(1600) },
+  { start: 66.45, end: 68.79, rpm: Array(23).fill(2100) },
+  { start: 68.91, end: 71.25, rpm: Array(23).fill(2700) },
+  { start: 71.37, end: 73.71, rpm: Array(23).fill(3400) },
+  { start: 73.83, end: 76.17, rpm: Array(23).fill(4200) },
+  { start: 76.29, end: 78.63, rpm: Array(23).fill(5000) },
+  { start: 78.75, end: 81.09, rpm: Array(23).fill(5800) },
+];
+const GE2_M90_OVERRUN_REGIONS: RecordedRegion[] = [
+  { start: 81.21, end: 83.55, rpm: Array(23).fill(700) },
+  { start: 83.67, end: 86.01, rpm: Array(23).fill(900) },
+  { start: 86.13, end: 88.47, rpm: Array(23).fill(1200) },
+  { start: 88.59, end: 90.93, rpm: Array(23).fill(1600) },
+  { start: 91.05, end: 93.39, rpm: Array(23).fill(2100) },
+  { start: 93.51, end: 95.85, rpm: Array(23).fill(2700) },
+  { start: 95.97, end: 98.31, rpm: Array(23).fill(3400) },
+  { start: 98.43, end: 100.77, rpm: Array(23).fill(4200) },
+  { start: 100.89, end: 103.23, rpm: Array(23).fill(5000) },
+  { start: 103.35, end: 105.69, rpm: Array(23).fill(5800) },
+];
+const GE2_MO_IDLE_REGIONS: RecordedRegion[] = [
+  { start: 0.03, end: 2.37, rpm: Array(23).fill(650) },
+  { start: 2.49, end: 4.83, rpm: Array(23).fill(750) },
+  { start: 4.95, end: 7.29, rpm: Array(23).fill(900) },
+];
+const GE2_MO_CRUISE_REGIONS: RecordedRegion[] = [
+  { start: 7.41, end: 9.75, rpm: Array(23).fill(700) },
+  { start: 9.87, end: 12.21, rpm: Array(23).fill(900) },
+  { start: 12.33, end: 14.67, rpm: Array(23).fill(1200) },
+  { start: 14.79, end: 17.13, rpm: Array(23).fill(1600) },
+  { start: 17.25, end: 19.59, rpm: Array(23).fill(2100) },
+  { start: 19.71, end: 22.05, rpm: Array(23).fill(2700) },
+  { start: 22.17, end: 24.51, rpm: Array(23).fill(3400) },
+  { start: 24.63, end: 26.97, rpm: Array(23).fill(4200) },
+  { start: 27.09, end: 29.43, rpm: Array(23).fill(5000) },
+  { start: 29.55, end: 31.89, rpm: Array(23).fill(5800) },
+];
+const GE2_MO_GROWL_REGIONS: RecordedRegion[] = [
+  { start: 32.01, end: 34.35, rpm: Array(23).fill(700) },
+  { start: 34.47, end: 36.81, rpm: Array(23).fill(900) },
+  { start: 36.93, end: 39.27, rpm: Array(23).fill(1200) },
+  { start: 39.39, end: 41.73, rpm: Array(23).fill(1600) },
+  { start: 41.85, end: 44.19, rpm: Array(23).fill(2100) },
+  { start: 44.31, end: 46.65, rpm: Array(23).fill(2700) },
+  { start: 46.77, end: 49.11, rpm: Array(23).fill(3400) },
+  { start: 49.23, end: 51.57, rpm: Array(23).fill(4200) },
+  { start: 51.69, end: 54.03, rpm: Array(23).fill(5000) },
+  { start: 54.15, end: 56.49, rpm: Array(23).fill(5800) },
+];
+const GE2_MO_HARD_REGIONS: RecordedRegion[] = [
+  { start: 56.61, end: 58.95, rpm: Array(23).fill(700) },
+  { start: 59.07, end: 61.41, rpm: Array(23).fill(900) },
+  { start: 61.53, end: 63.87, rpm: Array(23).fill(1200) },
+  { start: 63.99, end: 66.33, rpm: Array(23).fill(1600) },
+  { start: 66.45, end: 68.79, rpm: Array(23).fill(2100) },
+  { start: 68.91, end: 71.25, rpm: Array(23).fill(2700) },
+  { start: 71.37, end: 73.71, rpm: Array(23).fill(3400) },
+  { start: 73.83, end: 76.17, rpm: Array(23).fill(4200) },
+  { start: 76.29, end: 78.63, rpm: Array(23).fill(5000) },
+  { start: 78.75, end: 81.09, rpm: Array(23).fill(5800) },
+];
+const GE2_MO_OVERRUN_REGIONS: RecordedRegion[] = [
+  { start: 81.21, end: 83.55, rpm: Array(23).fill(700) },
+  { start: 83.67, end: 86.01, rpm: Array(23).fill(900) },
+  { start: 86.13, end: 88.47, rpm: Array(23).fill(1200) },
+  { start: 88.59, end: 90.93, rpm: Array(23).fill(1600) },
+  { start: 91.05, end: 93.39, rpm: Array(23).fill(2100) },
+  { start: 93.51, end: 95.85, rpm: Array(23).fill(2700) },
+  { start: 95.97, end: 98.31, rpm: Array(23).fill(3400) },
+  { start: 98.43, end: 100.77, rpm: Array(23).fill(4200) },
+  { start: 100.89, end: 103.23, rpm: Array(23).fill(5000) },
+  { start: 103.35, end: 105.69, rpm: Array(23).fill(5800) },
+];
+
+const GE2_BF90_SHOTS: BackfireShot[] = [
+  { start: 0, end: 0.45, kind: "burble" },
+  { start: 0.5, end: 0.95, kind: "burble" },
+  { start: 1.0, end: 1.45, kind: "burble" },
+  { start: 1.5, end: 1.95, kind: "burble" },
+  { start: 2.0, end: 2.45, kind: "burble" },
+  { start: 2.5, end: 2.95, kind: "burble" },
+  { start: 3.0, end: 3.45, kind: "burble" },
+  { start: 3.5, end: 3.95, kind: "burble" },
+];
+const GE2_BFO_SHOTS: BackfireShot[] = [
+  { start: 0, end: 0.45, kind: "bang" },
+  { start: 0.5, end: 0.95, kind: "bang" },
+  { start: 1.0, end: 1.45, kind: "bang" },
+  { start: 1.5, end: 1.95, kind: "bang" },
+  { start: 2.0, end: 2.45, kind: "bang" },
+  { start: 2.5, end: 2.95, kind: "bang" },
+  { start: 3.0, end: 3.45, kind: "bang" },
+  { start: 3.5, end: 3.95, kind: "bang" },
+  { start: 4.0, end: 4.45, kind: "crackle" },
+  { start: 4.5, end: 4.95, kind: "crackle" },
+  { start: 5.0, end: 5.45, kind: "crackle" },
+  { start: 5.5, end: 5.95, kind: "crackle" },
+  { start: 6.0, end: 6.45, kind: "crackle" },
+  { start: 6.5, end: 6.95, kind: "crackle" },
+  { start: 7.0, end: 7.45, kind: "crackle" },
+  { start: 7.5, end: 7.95, kind: "crackle" },
+  { start: 8.0, end: 8.45, kind: "crackle" },
+  { start: 8.5, end: 8.95, kind: "crackle" },
+  { start: 9.0, end: 9.45, kind: "burble" },
+  { start: 9.5, end: 9.95, kind: "burble" },
+  { start: 10.0, end: 10.45, kind: "burble" },
+  { start: 10.5, end: 10.95, kind: "burble" },
+  { start: 11.0, end: 11.45, kind: "burble" },
+  { start: 11.5, end: 11.95, kind: "burble" },
+  { start: 12.0, end: 12.45, kind: "burble" },
+  { start: 12.5, end: 12.95, kind: "burble" },
+];
+
 const src = (
   id: string,
   file: string,
@@ -668,6 +858,7 @@ const src = (
 // Recordings carry these three across the whole rev range (rate-capped grains, several rev-band
 // clips per load), the synth is ducked to a little sub and continuity underneath.
 const RAW_HANDOVER: RecordedHandover = { rpmStart: 0, rpmSpan: 1, accelKeep: 1, rpmKeep: 0.96, topRpm: 20000, topSpan: 1000 };
+
 
 export const RECORDED_LOOP_BANKS_BY_PROFILE: Record<string, RecordedLoopBank> = {
   // Small two-stroke twin: ring-ding idle, buzzy rattly revs. Idle clip for idle, the revving
@@ -686,6 +877,70 @@ export const RECORDED_LOOP_BANKS_BY_PROFILE: Record<string, RecordedLoopBank> = 
     loadSynthDuck: 1.05,
     handover: RAW_HANDOVER,
     eq: { lowShelfDb: 4, midDb: 3, midHz: 900, highShelfDb: 1, highShelfHz: 3000, lowpassHz: 10000 },
+  },
+  // '90: classic relaxed V8, deep muted burble, gentle pull. Modelled loops, no recordings.
+  "ge-squared-90": {
+    personalityId: "ge-squared-90",
+    sources: [
+      src("ge2c-idle", "ge2_90_model.m4a", GE2_M90_IDLE_REGIONS, "idle", 0.8, 1.5),
+      src("ge2c-cruise", "ge2_90_model.m4a", GE2_M90_CRUISE_REGIONS, "cruise", 0.8, 1.25, 0.9),
+      src("ge2c-growl", "ge2_90_model.m4a", GE2_M90_GROWL_REGIONS, "growl", 0.8, 1.25, 1.2),
+      src("ge2c-hard", "ge2_90_model.m4a", GE2_M90_HARD_REGIONS, "hard", 0.8, 1.25, 1.3),
+      src("ge2c-overrun", "ge2_90_model.m4a", GE2_M90_OVERRUN_REGIONS, "overrun", 0.8, 1.25, 0.9),
+    ],
+    level: 0.45,
+    synthDuck: 1.05,
+    loadSynthDuck: 1.05,
+    handover: RAW_HANDOVER,
+    eq: { lowShelfDb: 5, midDb: -1, midHz: 1200, highShelfDb: -5, highShelfHz: 2200, lowpassHz: 4500 },
+    // Stock fuel cut: only a very soft, occasional burble on a lift.
+    backfire: {
+      url: `${PROFILE_BASE}/ge2_90_afterfire.m4a`,
+      shots: GE2_BF90_SHOTS,
+      chance: 0.5,
+      bangs: 0,
+      bangChance: 0,
+      level: 0.3,
+      maxLevel: 0.36,
+      tailRate: 1,
+      tailS: 1.2,
+      crackleShare: 0,
+      tailLevel: 1,
+      minRpm: 2000,
+      fullRpm: 4500,
+    },
+  },
+  // O))): modern biturbo V8, deep harsh boom, light whoosh, lift-off crackle. Modelled loops.
+  "ge-squared": {
+    personalityId: "ge-squared",
+    sources: [
+      src("ge2b-idle", "ge2_o_model.m4a", GE2_MO_IDLE_REGIONS, "idle", 0.8, 1.5),
+      src("ge2b-cruise", "ge2_o_model.m4a", GE2_MO_CRUISE_REGIONS, "cruise", 0.8, 1.25, 0.9),
+      src("ge2b-growl", "ge2_o_model.m4a", GE2_MO_GROWL_REGIONS, "growl", 0.8, 1.25, 1.2),
+      src("ge2b-hard", "ge2_o_model.m4a", GE2_MO_HARD_REGIONS, "hard", 0.8, 1.25, 1.4),
+      src("ge2b-overrun", "ge2_o_model.m4a", GE2_MO_OVERRUN_REGIONS, "overrun", 0.8, 1.25, 1),
+    ],
+    level: 0.42,
+    synthDuck: 1.05,
+    loadSynthDuck: 1.05,
+    handover: RAW_HANDOVER,
+    eq: { lowShelfDb: 5, midDb: 2, midHz: 500, highShelfDb: -2, highShelfHz: 2500, lowpassHz: 7000 },
+    // Overrun map with flaps open: bangs on a hard high-rpm lift, then crackle and burble.
+    backfire: {
+      url: `${PROFILE_BASE}/ge2_o_afterfire.m4a`,
+      shots: GE2_BFO_SHOTS,
+      chance: 1,
+      bangs: 4,
+      bangChance: 0.9,
+      level: 0.9,
+      maxLevel: 1.1,
+      tailRate: 14,
+      tailS: 2.2,
+      crackleShare: 0.6,
+      tailLevel: 0.6,
+      minRpm: 1800,
+      fullRpm: 4500,
+    },
   },
 };
 
@@ -876,7 +1131,7 @@ export const RECORDED_LOOP_CREDITS: RecordedCredit[] = [
     licence: "CC0 1.0",
     licenceUrl: "https://creativecommons.org/publicdomain/zero/1.0/",
     sourceUrl: "https://freesound.org/s/743981/",
-    usedIn: "Big Twin (steady cruise, rev growl, hard acceleration, engine braking)",
+    usedIn: "Big Twin (cruise, rev growl, hard acceleration, engine braking)",
     attribution:
       "Big V-twin recording by BranCorvus (Freesound #743981), CC0 1.0, edited (trimmed, filtered, re-sequenced, granular).",
   },

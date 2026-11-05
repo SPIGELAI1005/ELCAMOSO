@@ -666,6 +666,79 @@ const TWO_STROKE_TWIN: AcousticEngineConfig = {
   liftPops: { probability: 0.7, level: 0.18, rate: 1.2 },
 };
 
+/**
+ * Ge-Squared: boxy 4x4 with a biturbo cross-plane V8. Deep, lumpy burble (voiced against
+ * a CC BY twin-turbo SUV recording: energy 70-110 Hz), turbo whistle on boost, a soft
+ * blow-off sigh between gears and crackle when you lift.
+ */
+const BITURBO_V8_4X4: AcousticEngineConfig = {
+  cylinders: 8,
+  stroke: "four-stroke",
+  architecture: "cross-plane-v8-lope",
+  banks: "v90",
+  architectureCode: 1,
+  idleIrregularity: 0.42,
+  exhaustPulse: 0.92,
+  intakePresence: 0.36,
+  mechanicalIntensity: 0.24,
+  combustionSharpness: 0.5,
+  highLoadEnrichment: 0.7,
+  loadContrast: 0.8,
+  upperRpmEnergy: 0.4,
+  intakeLoadResponse: 0.6,
+  overrunCharacter: 0.6,
+  exhaustFormantsHz: [72, 145, 290, 560],
+  intakeFormantsHz: [420, 900, 1600],
+  bodyResonanceHz: [80, 160, 360],
+  supportRatios: [1, 2, 3, 4, 6],
+  supportWeights: [0.9, 0.7, 0.3, 0.5, 0.3],
+  forcedInduction: true,
+  bodyBrightness: 0.36,
+  redlineRpm: 6200,
+  outputTrimDb: 16.6,
+  throttleGapDb: 2.2,
+  idleLife: { wanderRpm: 60, wanderTauS: 0.5, blipRpm: [350, 900], blipEveryS: [4, 9], blipIntensity: 0.15, breathDb: 1.2, turboHiss: 0.006 },
+  accelCharacter: { gentleGainDb: -1, hardGainDb: 2.5, hardTiltDb: 2.5, gentleTiltDb: -1.5 },
+  growl: { centersHz: [200, 420], q: 0.9, drive: 0.8, level: 0.045, lowpassHz: 2600 },
+  // Short, soft blow-off sigh (fewer, gentler chirps than the rally car).
+  turboFlutter: { chirps: 5, rateHz: 16, depth: 0.7, hz: 1500, q: 2, level: 0.9 },
+  liftPops: { probability: 0.8, level: 0.32 },
+  whistleSettle: { holdS: 0.6, tauS: 0.9, floor: 0.3 },
+  whistleRange: { baseHz: 2800, spanHz: 3200 },
+};
+
+/**
+ * Ge-Squared '90: the classic 1990s boxy 4x4 with a naturally aspirated V8. Smooth, soft
+ * burble, relaxed torque, gentle acceleration (no turbo, no aggressive rasp).
+ */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const { growl: _g, turboFlutter: _tf, whistleSettle: _ws, whistleRange: _wr, ...BITURBO_V8_4X4_BASE } = BITURBO_V8_4X4;
+const CLASSIC_V8_4X4: AcousticEngineConfig = {
+  ...BITURBO_V8_4X4_BASE,
+  idleIrregularity: 0.3,
+  exhaustPulse: 0.8,
+  intakePresence: 0.3,
+  mechanicalIntensity: 0.2,
+  combustionSharpness: 0.36,
+  highLoadEnrichment: 0.5,
+  loadContrast: 0.5,
+  upperRpmEnergy: 0.3,
+  intakeLoadResponse: 0.45,
+  overrunCharacter: 0.4,
+  exhaustFormantsHz: [80, 160, 310, 600],
+  intakeFormantsHz: [400, 860, 1500],
+  bodyResonanceHz: [90, 180, 380],
+  supportWeights: [0.95, 0.55, 0.28, 0.42, 0.18],
+  forcedInduction: false,
+  bodyBrightness: 0.3,
+  redlineRpm: 5200,
+  outputTrimDb: 17.2,
+  throttleGapDb: 1.2,
+  idleLife: { wanderRpm: 50, wanderTauS: 0.6, blipRpm: [250, 600], blipEveryS: [5, 10], blipIntensity: 0.1, breathDb: 1 },
+  accelCharacter: { gentleGainDb: -1, hardGainDb: 1, hardTiltDb: 1, gentleTiltDb: -2 },
+  liftPops: { probability: 0.4, level: 0.16 },
+};
+
 /** Sound profile id → acoustic config for Realism V2 combustion. */
 export const ACOUSTIC_ENGINE_BY_PROFILE: Record<string, AcousticEngineConfig> = {
   "gt-v8": GT_V8,
@@ -679,6 +752,8 @@ export const ACOUSTIC_ENGINE_BY_PROFILE: Record<string, AcousticEngineConfig> = 
   "motorcycle-superbike": INLINE_4,
   "big-twin": V_TWIN,
   "traby": TWO_STROKE_TWIN,
+  "ge-squared": BITURBO_V8_4X4,
+  "ge-squared-90": CLASSIC_V8_4X4,
 };
 
 /** Drivetrain personality id → acoustic config. */

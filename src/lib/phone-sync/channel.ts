@@ -5,7 +5,7 @@ import { channelNameForCode } from "./protocol";
 
 let clientPromise: Promise<SupabaseClient | null> | null = null;
 
-async function getClient(): Promise<SupabaseClient | null> {
+export async function getRealtimeClient(): Promise<SupabaseClient | null> {
   if (!clientPromise) {
     clientPromise = (async () => {
       const cfg = await getPhoneSyncConfigFn();
@@ -31,7 +31,7 @@ export async function openSyncChannel(
   handlers: Record<string, (payload: unknown) => void>,
   onStatus?: (status: string) => void,
 ): Promise<SyncChannel | null> {
-  const client = await getClient();
+  const client = await getRealtimeClient();
   if (!client) return null;
   const ch: RealtimeChannel = client.channel(channelNameForCode(code), {
     config: { broadcast: { self: false, ack: false } },

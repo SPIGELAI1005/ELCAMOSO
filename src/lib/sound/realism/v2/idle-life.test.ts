@@ -3,12 +3,12 @@ import { ACOUSTIC_ENGINE_BY_PROFILE } from "@/lib/sound/realism/v2/acoustic-engi
 import { getBassEnhancerConfig } from "@/lib/sound/dsp/bass-enhancer";
 import { combustionTopologyForProfile } from "@/lib/sound/realism/v2/combustion-topology";
 
-const ALIVE_IDLE = ["racing-v10", "f1-v10", "race-car", "flat-six-sport", "turbo-inline-6", "rally-car", "motorcycle-superbike", "traby"];
-const PETROL = ["race-car", "flat-six-sport", "turbo-inline-6", "rally-car", "traby"];
+const ALIVE_IDLE = ["racing-v10", "f1-v10", "race-car", "flat-six-sport", "turbo-inline-6", "rally-car", "motorcycle-superbike", "traby", "ge-squared", "ge-squared-90"];
+const PETROL = ["race-car", "flat-six-sport", "turbo-inline-6", "rally-car", "traby", "ge-squared", "ge-squared-90"];
 const UNTOUCHED = ["american-muscle-v8", "gt-v8", "big-twin"];
 
 describe("idleLife (alive idle)", () => {
-  it("is set only on the V10s, the petrol cars and the superbike, within ±50-150 rpm wander", () => {
+  it("is set only on the V10s, the petrol cars, the superbike and the heritage cars, within ±50-150 rpm wander", () => {
     for (const [id, cfg] of Object.entries(ACOUSTIC_ENGINE_BY_PROFILE)) {
       if (ALIVE_IDLE.includes(id)) {
         expect(cfg.idleLife, id).toBeDefined();

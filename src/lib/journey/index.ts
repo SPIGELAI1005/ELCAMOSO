@@ -20,7 +20,25 @@ export {
 } from "./summarise";
 export { composeDriveSong, composeDriveReel } from "./composer";
 export { generateSongTitle } from "./titles";
-export { renderDriveSong, buildSongDriveStates, encodeWav } from "./render";
+export {
+  renderDriveSong,
+  buildSongDriveStates,
+  buildSongDriveStatesFromTrace,
+  songToSourceSec,
+  sampleTraceAt,
+  bufferPeak,
+  SilentRenderError,
+  SILENT_RENDER_PEAK,
+  encodeWav,
+} from "./render";
+export {
+  buildDriveChart,
+  sourceToSongSec,
+  formatClock,
+  type DriveChart,
+  type DriveChartMoment,
+  type DriveChartPoint,
+} from "./drive-chart";
 export {
   saveJourney,
   listJourneys,
@@ -36,4 +54,8 @@ export {
   journeyShareUrl,
   SHARE_DISCLOSURE,
 } from "./share";
-export { createDriveSongForJourney } from "./create-song";
+export {
+  createDriveSongForJourney,
+  createDriveSongWithAudio,
+  type CreateDriveSongResult,
+} from "./create-song";

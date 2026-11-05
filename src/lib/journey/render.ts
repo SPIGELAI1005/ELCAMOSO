@@ -3,7 +3,119 @@ import { IDLE_STATE } from "@/lib/drive/model";
 import { SoundEngine } from "@/lib/sound/engine";
 import { getProfile } from "@/lib/sound/profiles";
 import { DEFAULT_CABIN_EQ } from "@/lib/drive/types-extra";
+import { preloadMusicBank } from "@/lib/symphony/adaptive";
+import type { JourneyTraceSampleV1, JourneyTraceV1 } from "@/lib/journey-trace/types";
 import type { DriveSongMeta, JourneySummary, TimelinePoint } from "./types";
+
+/** Peak below this is treated as a silent (failed) render. */
+export const SILENT_RENDER_PEAK = 0.0005;
+
+export class SilentRenderError extends Error {
+  constructor() {
+    super("The song came out silent. Please try again or pick another genre.");
+    this.name = "SilentRenderError";
+  }
+}
+
+/** Map a song position (s) to the drive position (s) using the composition sections. */
+export function songToSourceSec(song: DriveSongMeta, songT: number): number {
+  const sections = song.sections;
+  if (!sections.length) return songT;
+  const section =
+    sections.find((s) => songT >= s.songStartSec && songT < s.songEndSec) ??
+    sections[sections.length - 1]!;
+  const local = Math.min(
+    1,
+    Math.max(
+      0,
+      (songT - section.songStartSec) / Math.max(0.01, section.songEndSec - section.songStartSec),
+    ),
+  );
+  return section.sourceStartSec + local * (section.sourceEndSec - section.sourceStartSec);
+}
+
+/** Linear interpolation of the recorded samples at drive time tMs. */
+export function sampleTraceAt(
+  samples: JourneyTraceSampleV1[],
+  tMs: number,
+): Pick<
+  JourneyTraceSampleV1,
+  "speedKmh" | "acceleration" | "driverDemandEstimate" | "regenEstimate" | "jerk"
+> {
+  if (!samples.length) {
+    return { speedKmh: 0, acceleration: 0, driverDemandEstimate: 0, regenEstimate: 0, jerk: 0 };
+  }
+  let lo = 0;
+  let hi = samples.length - 1;
+  if (tMs <= samples[0]!.t) return samples[0]!;
+  if (tMs >= samples[hi]!.t) return samples[hi]!;
+  while (hi - lo > 1) {
+    const mid = (lo + hi) >> 1;
+    if (samples[mid]!.t <= tMs) lo = mid;
+    else hi = mid;
+  }
+  const a = samples[lo]!;
+  const b = samples[hi]!;
+  const f = (tMs - a.t) / Math.max(1, b.t - a.t);
+  const mix = (x: number, y: number) => x + (y - x) * f;
+  return {
+    speedKmh: mix(a.speedKmh, b.speedKmh),
+    acceleration: mix(a.acceleration, b.acceleration),
+    driverDemandEstimate: mix(a.driverDemandEstimate, b.driverDemandEstimate),
+    regenEstimate: mix(a.regenEstimate, b.regenEstimate),
+    jerk: mix(a.jerk, b.jerk),
+  };
+}
+
+/**
+ * DriveState sequence for the condensed song, driven by the REAL recorded motion
+ * (speed, acceleration, braking) of each chosen drive moment.
+ */
+export function buildSongDriveStatesFromTrace(
+  song: DriveSongMeta,
+  trace: Pick<JourneyTraceV1, "samples">,
+  fps = 30,
+): DriveState[] {
+  const frames = Math.max(1, Math.floor(song.durationSec * fps));
+  const out: DriveState[] = [];
+  for (let i = 0; i < frames; i++) {
+    const songT = (i / frames) * song.durationSec;
+    const s = sampleTraceAt(trace.samples, songToSourceSec(song, songT) * 1000);
+    const speed = Math.max(0, s.speedKmh / 3.6);
+    const accel = s.acceleration;
+    const throttle = Math.min(1, Math.max(0, s.driverDemandEstimate || (accel > 0 ? accel / 3 : 0)));
+    const regen = Math.min(1, Math.max(0, s.regenEstimate));
+    const load = Math.min(1, throttle * 0.65 + Math.min(1, speed / 45) * 0.25);
+    out.push({
+      ...IDLE_STATE,
+      speed,
+      acceleration: accel,
+      throttle,
+      regen,
+      load,
+      rpm: 900 + Math.min(1, speed / 40) * 3000 + throttle * 1500,
+      gear: speed < 8 ? 1 : speed < 15 ? 2 : speed < 22 ? 3 : 4,
+      jerk: Math.max(-1, Math.min(1, s.jerk)),
+      timestamp: i * (1000 / fps),
+      speedNormalized: Math.min(1, speed / 44),
+      accelerationNormalized: Math.min(1, Math.abs(accel) / 4.5),
+      isShifting: false,
+    });
+  }
+  return out;
+}
+
+export function bufferPeak(buffer: AudioBuffer): number {
+  let peak = 0;
+  for (let c = 0; c < buffer.numberOfChannels; c++) {
+    const d = buffer.getChannelData(c);
+    for (let i = 0; i < d.length; i += 7) {
+      const v = Math.abs(d[i]!);
+      if (v > peak) peak = v;
+    }
+  }
+  return peak;
+}
 
 function encodeWav(buffer: AudioBuffer): Blob {
   const channels = buffer.numberOfChannels;
@@ -103,7 +215,11 @@ function sampleEnergy(timeline: TimelinePoint[], t: number) {
  * OfflineAudioContext render of a Drive Song via Symphony (or fusion music pack) profile.
  * Client-side only - does not upload telemetry.
  */
-export async function renderDriveSong(journey: JourneySummary, song: DriveSongMeta): Promise<Blob> {
+export async function renderDriveSong(
+  journey: JourneySummary,
+  song: DriveSongMeta,
+  opts?: { trace?: Pick<JourneyTraceV1, "samples"> | null },
+): Promise<Blob> {
   const duration = Math.min(180, Math.max(30, song.durationSec));
   const sampleRate = 44100;
   const OfflineCtx =
@@ -116,6 +232,10 @@ export async function renderDriveSong(journey: JourneySummary, song: DriveSongMe
   }
 
   const ctx = new OfflineCtx(2, Math.floor(sampleRate * duration), sampleRate);
+  // Root cause of silent Drive Songs: the music packs play pre-recorded note sprites that
+  // are fetched in the background. An offline render finishes in ~2 s, before they arrive,
+  // so every note was skipped and the file was pure silence. Load them first.
+  await preloadMusicBank(ctx).catch(() => undefined);
   const engine = new SoundEngine();
   engine.setRenderTime(0);
   await engine.start(getProfile(song.symphonyPackId), {
@@ -125,8 +245,12 @@ export async function renderDriveSong(journey: JourneySummary, song: DriveSongMe
   });
   engine.setCabinEq(DEFAULT_CABIN_EQ);
   engine.setVolume(0.55);
+  await engine.whenSamplesReady().catch(() => undefined);
 
-  const states = buildSongDriveStates(song, journey.energyTimeline);
+  const renderSong = { ...song, durationSec: duration };
+  const states = opts?.trace?.samples.length
+    ? buildSongDriveStatesFromTrace(renderSong, opts.trace)
+    : buildSongDriveStates(renderSong, journey.energyTimeline);
   const step = duration / Math.max(1, states.length);
   states.forEach((state, i) => {
     engine.setRenderTime(i * step);
@@ -134,7 +258,8 @@ export async function renderDriveSong(journey: JourneySummary, song: DriveSongMe
   });
 
   const buffer = await ctx.startRendering();
-  await engine.stop();
+  await engine.stop().catch(() => undefined);
+  if (bufferPeak(buffer) < SILENT_RENDER_PEAK) throw new SilentRenderError();
   return encodeWav(buffer);
 }
 

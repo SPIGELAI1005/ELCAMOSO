@@ -1,5 +1,5 @@
 import { fetchBytesWithRetry } from "@/lib/sound/fetch-bytes";
-import type { RecordedLoopBank } from "./recorded-loops";
+import { BACKFIRE_BUFFER_ID, type RecordedLoopBank } from "./recorded-loops";
 
 const cache = new Map<string, Promise<ArrayBuffer>>();
 
@@ -21,8 +21,11 @@ export async function loadRecordedLoopBuffers(
   signal?: AbortSignal,
 ): Promise<Map<string, AudioBuffer>> {
   const out = new Map<string, AudioBuffer>();
+  const items = bank.backfire
+    ? [...bank.sources, { id: BACKFIRE_BUFFER_ID, url: bank.backfire.url }]
+    : bank.sources;
   await Promise.all(
-    bank.sources.map(async (loop) => {
+    items.map(async (loop) => {
       try {
         const bytes = await fetchBytes(loop.url);
         if (signal?.aborted) return;

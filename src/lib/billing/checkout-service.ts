@@ -105,8 +105,8 @@ export async function beginDrivePlusCheckout(
       message: ownsLifetime
         ? "You already own Lifetime (Drive+ and Drive the Music)."
         : otherPackage
-          ? `You already have an active ${activePlan === "DRIVE_MUSIC" ? "Drive the Music" : "Drive+"} subscription. Choose Lifetime to get both packages.`
-          : `You already have an active ${described.entitlementPlan === "DRIVE_MUSIC" ? "Drive the Music" : "Drive+"} subscription.`,
+          ? `You already have an active ${packageLabel(activePlan)} subscription. Choose Drive Unlimited or Lifetime to get both packages.`
+          : `You already have an active ${packageLabel(described.entitlementPlan)} subscription.`,
     };
   }
 
@@ -272,4 +272,10 @@ export function resolveCheckoutOrigin(request: Request): string {
   if (origin) return origin;
   const url = new URL(request.url);
   return `${url.protocol}//${url.host}`;
+}
+
+function packageLabel(plan: string): string {
+  if (plan === "DRIVE_MUSIC") return "Drive the Music";
+  if (plan === "DRIVE_COMPLETE") return "Drive Unlimited";
+  return "Drive+";
 }

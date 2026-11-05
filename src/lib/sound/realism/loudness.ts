@@ -10,6 +10,7 @@ export const PROFILE_LOUDNESS: Record<string, number> = {
   "f1-v10": 0.95,
   traby: 1.0,
   "ge-squared": 1.0,
+  "ge-squared-90": 1.0,
   "police-patrol": 0.98,
   "race-car": 0.98,
   "rally-car": 0.96,

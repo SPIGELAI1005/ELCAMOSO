@@ -79,6 +79,9 @@ import {
   synthMatchAt,
   type LoadCharacter,
   type RecordedLoopBank,
+  type BackfireConfig,
+  type BackfireShot,
+  BACKFIRE_BUFFER_ID,
   type RecordedSource,
 } from "@/lib/sound/realism/v2/recorded-loops";
 import { GranularStream } from "@/lib/sound/realism/v2/recorded-grains";
@@ -344,6 +347,12 @@ export class HybridCombustionSynth {
   private popPrevDemand = 0;
   private popPrevDownshift = false;
   private popLastAt = -10;
+  private bfOut: GainNode | null = null;
+  private bfLastLift = -10;
+  private bfRpm = 0;
+  private bfTail = { start: -10, until: -10, strength: 0, next: -10 };
+  /** Lab diagnostics: modelled afterfire shots fired. */
+  backfireShots = 0;
   /** Race shift mode only (cut / crack / limiter pops); idle for every other mode. */
   private raceLastShiftSeq = -1;
   private raceLastLimiterCut = false;
@@ -1512,7 +1521,10 @@ export class HybridCombustionSynth {
       const downshift =
         shifting && pt?.shiftDirection === "down" && !this.popPrevDownshift && rpm > 2000;
       // Never while parked/idling (idleLife blips would otherwise read as crackle).
-      if ((lift || downshift) && this.ilGate < 0.5 && audioTime - this.popLastAt > 1.6) {
+      if ((lift || downshift) && this.ilGate < 0.5 && this.backfireReady()) {
+        this.fireBackfireLift(lift ? (this.popPrevDemand - demand) / 0.55 : 0.6, rpm, audioTime);
+        if (lift) this.popPrevDemand = 0;
+      } else if ((lift || downshift) && this.ilGate < 0.5 && audioTime - this.popLastAt > 1.6) {
         if (this.popRand() < liftPops.probability) {
           this.popEvents += 1;
           this.popLastAt = audioTime;
@@ -1523,6 +1535,8 @@ export class HybridCombustionSynth {
       }
       this.popPrevDownshift = shifting && pt?.shiftDirection === "down";
     }
+    this.bfRpm = rpm;
+    this.updateBackfireTail(rpm, demand, audioTime);
     // Recent-peak demand (decays slowly: GPS throttle eases off over seconds) so a smoothed throttle lift is still detected.
     this.popPrevDemand = Math.max(demand, this.popPrevDemand - dt * 0.05);
 
@@ -2625,6 +2639,11 @@ export class HybridCombustionSynth {
 
   /** One or more exhaust pops (randomised pitch / level), then a short crackle tail. */
   private firePopSequence(kind: TransientKind, peak: number, audioTime: number) {
+    if (this.backfireReady()) {
+      // Modelled afterfire bank: transient pops become a lift-off event on the firing grid.
+      if (kind === "overrun") this.fireBackfireLift(0.6, this.bfRpm, audioTime);
+      return;
+    }
     const chain = this.popChain;
     const ctx = this.ctx;
     if (!chain || !ctx) return;
@@ -2665,6 +2684,95 @@ export class HybridCombustionSynth {
       play(chain.crackleBuf, t, cl * (0.5 + this.popRand() * 0.7), 0.8 + this.popRand() * 0.5);
       cl *= 0.8;
     }
+  }
+
+  private backfireReady(): { bf: BackfireConfig; buf: AudioBuffer } | null {
+    const bf = this.recordedBank?.backfire;
+    const buf = this.recordedBuffers.get(BACKFIRE_BUFFER_ID);
+    return bf && buf && this.ctx && this.popChain ? { bf, buf } : null;
+  }
+
+  /** Play one afterfire shot (already exhaust-filtered) straight into the pop output. */
+  private playBackfireShot(kind: BackfireShot["kind"], at: number, level: number) {
+    const ready = this.backfireReady();
+    const ctx = this.ctx;
+    if (!ready || !ctx || !this.popChain) return;
+    const pool = ready.bf.shots.filter((s) => s.kind === kind);
+    if (!pool.length) return;
+    const shot = pool[Math.floor(this.popRand() * pool.length) % pool.length]!;
+    if (!this.bfOut) {
+      this.bfOut = ctx.createGain();
+      this.bfOut.gain.value = 1;
+      this.bfOut.connect(this.popChain.out);
+    }
+    const src = ctx.createBufferSource();
+    src.buffer = ready.buf;
+    src.playbackRate.value = 0.92 + this.popRand() * 0.16;
+    const g = ctx.createGain();
+    g.gain.value = Math.min(ready.bf.maxLevel, Math.max(0, level));
+    src.connect(g);
+    g.connect(this.bfOut);
+    src.start(Math.max(at, ctx.currentTime), shot.start, shot.end - shot.start);
+    this.backfireShots += 1;
+    src.onended = () => {
+      src.disconnect();
+      g.disconnect();
+    };
+  }
+
+  /** Lift-off: bangs scaled by rpm and how sudden the lift was, then arm the burble tail. */
+  private fireBackfireLift(sudden: number, rpm: number, audioTime: number) {
+    const ready = this.backfireReady();
+    if (!ready || audioTime - this.bfLastLift < 1.0) return;
+    const { bf } = ready;
+    const rf = clamp01((rpm - bf.minRpm) / Math.max(1, bf.fullRpm - bf.minRpm));
+    const s = clamp01(sudden);
+    if (rf <= 0 || this.popRand() > bf.chance * (0.4 + 0.6 * s)) return;
+    this.bfLastLift = audioTime;
+    this.popEvents += 1;
+    const T = 15 / Math.max(600, rpm); // V8 firing interval
+    let t = Math.max(audioTime, this.lastUpdateTime) + 0.03;
+    let n = 0;
+    if (bf.bangs > 0 && this.popRand() < bf.bangChance * s * rf) {
+      n = Math.min(bf.bangs, 1 + Math.floor(this.popRand() * (1 + bf.bangs * s * rf)));
+    }
+    let lv = bf.level * (0.55 + 0.45 * rf) * (0.7 + 0.3 * s);
+    for (let k = 0; k < n; k += 1) {
+      t += T * (2 + Math.floor(this.popRand() * 10));
+      this.playBackfireShot("bang", t, lv * (0.85 + this.popRand() * 0.3));
+      lv *= 0.7 + this.popRand() * 0.2;
+    }
+    this.bfTail = {
+      start: audioTime,
+      until: audioTime + bf.tailS * (0.5 + 0.5 * rf),
+      strength: 0.4 + 0.6 * s,
+      next: t + 0.04,
+    };
+  }
+
+  /** Crackle / burble tail while rpm falls on a closed throttle, thinning with rpm and time. */
+  private updateBackfireTail(rpm: number, demand: number, audioTime: number) {
+    const ready = this.backfireReady();
+    const tail = this.bfTail;
+    if (!ready || audioTime > tail.until) return;
+    if (demand > 0.08) {
+      tail.until = -10;
+      return;
+    }
+    if (audioTime < tail.next) return;
+    const { bf } = ready;
+    const rf = clamp01((rpm - bf.minRpm) / Math.max(1, bf.fullRpm - bf.minRpm));
+    const fade = clamp01((tail.until - audioTime) / Math.max(0.1, tail.until - tail.start));
+    const rate = bf.tailRate * rf * fade * tail.strength;
+    if (rate < 0.2) {
+      tail.until = -10;
+      return;
+    }
+    const T = 15 / Math.max(600, rpm);
+    const at = audioTime + 0.03 + T * Math.floor(this.popRand() * 3);
+    const kind = this.popRand() < bf.crackleShare ? "crackle" : "burble";
+    this.playBackfireShot(kind, at, bf.level * bf.tailLevel * Math.pow(rf, 0.7) * (0.4 + 0.6 * fade) * (0.6 + this.popRand() * 0.5));
+    tail.next = at + Math.max(0.035, -Math.log(1 - this.popRand() * 0.999) / rate);
   }
 
   /** Blow-off / wastegate "pssh" with a short flutter, soft edges (no clicks). */

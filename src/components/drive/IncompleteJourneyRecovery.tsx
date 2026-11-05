@@ -2,7 +2,12 @@ import { useEffect, useState } from "react";
 import { getJourneyRepository, type JourneyTraceV1 } from "@/lib/journey-trace";
 
 /** On launch: offer recover / discard for incomplete Silent Capture journeys. */
-export function IncompleteJourneyRecovery() {
+export function IncompleteJourneyRecovery({
+  onRecover,
+}: {
+  /** Open the result screen (song + chart) for the recovered journey. */
+  onRecover?: (journeyId: string) => void;
+} = {}) {
   const [incomplete, setIncomplete] = useState<JourneyTraceV1 | null>(null);
 
   useEffect(() => {
@@ -47,7 +52,10 @@ export function IncompleteJourneyRecovery() {
         <button
           type="button"
           className="flex-1 border border-foreground/30 py-3 text-[10px] tracking-[0.2em] uppercase"
-          onClick={() => setIncomplete(null)}
+          onClick={() => {
+            onRecover?.(incomplete.journeyId);
+            setIncomplete(null);
+          }}
         >
           Recover journey
         </button>

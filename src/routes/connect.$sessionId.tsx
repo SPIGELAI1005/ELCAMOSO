@@ -10,7 +10,7 @@ import { useDriveRelay } from "@/lib/drive-relay/client";
 
 import { RELAY_MOTION_STREAM_ENABLED } from "@/lib/drive-relay/config";
 
-import { joinDriveRelaySessionFn } from "@/lib/drive-relay/server-fns";
+import { joinDrivePairByCode } from "@/lib/drive-relay/realtime-pairing";
 
 import { phoneSensorAttentionMessage } from "@/lib/motion/phone-sensor-status";
 import { usePhoneSensorClient } from "@/lib/motion/phone-sensor-client";
@@ -74,9 +74,7 @@ function ConnectSessionScreen() {
     setJoining(true);
     setJoinError(null);
     try {
-      const result = await joinDriveRelaySessionFn({
-        data: { sessionId, pairingCode: pairingInput.trim() },
-      });
+      const result = await joinDrivePairByCode(pairingInput.trim());
       if (!result.ok) {
         setJoinError("Invalid code or expired link.");
         return;

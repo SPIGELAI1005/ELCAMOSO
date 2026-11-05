@@ -54,9 +54,9 @@ const EXPECTED_NEW_IDS = [
 ];
 
 describe("built-in sound profiles", () => {
-  it("has 67 built-in profiles (54 engines/worlds + 6 Symphony + 3 World engine + 4 Fusion)", () => {
-    expect(SOUND_PROFILES).toHaveLength(67);
-    expect(EXPANSION_PROFILES).toHaveLength(31);
+  it("has 68 built-in profiles (55 engines/worlds + 6 Symphony + 3 World engine + 4 Fusion)", () => {
+    expect(SOUND_PROFILES).toHaveLength(68);
+    expect(EXPANSION_PROFILES).toHaveLength(32);
   });
 
   it("has unique ids and names", () => {

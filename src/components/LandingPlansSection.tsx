@@ -11,8 +11,10 @@ import type { Locale } from "@/lib/i18n";
 import {
   DRIVE_MUSIC_FEATURES,
   DRIVE_PLUS_FEATURES,
+  DRIVE_UNLIMITED_FEATURES,
   FREE_PLAN_FEATURES,
   getDriveMusicDisplay,
+  getDriveUnlimitedDisplay,
   getDrivePlusDisplay,
   getDrivePlusLifetimeDisplay,
   getFreePlanDisplay,
@@ -61,7 +63,7 @@ function PlanPrice({
   suffix?: string;
   size?: "large" | "compact";
   /** e.g. "-14%" next to the struck-through full price. */
-  badge?: string;
+  badge?: string | undefined;
 }) {
   const priceClass = size === "compact" ? "text-2xl" : "text-3xl";
   const listClass = size === "compact" ? "text-lg" : "text-xl";
@@ -178,6 +180,8 @@ export function PlansOverview({
   const lifetimeSeats = useBillingPublicConfig().data?.lifetimeSeats ?? null;
   const music = getDriveMusicDisplay(interval);
   const musicYearly = getDriveMusicDisplay("yearly");
+  const unlimited = getDriveUnlimitedDisplay(interval);
+  const unlimitedYearly = getDriveUnlimitedDisplay("yearly");
   const musicTrial = isMusicTrialOfferActive();
   const { settings } = useSettings();
   const language = settings.language;
@@ -215,10 +219,10 @@ export function PlansOverview({
             amount={drivePlus.amount}
             suffix={drivePlusSuffix}
             size={compact ? "compact" : "large"}
-            badge="-14%"
+            badge={drivePlus.badge}
           />
           <p className="mt-2 text-xs tracking-[0.12em] text-muted-foreground uppercase">
-            14% off for early adopters
+            {drivePlus.badge?.slice(1)} off for early adopters
           </p>
           <p className="mt-2 text-sm text-muted-foreground">
             {interval === "monthly"
@@ -230,17 +234,6 @@ export function PlansOverview({
               <li key={feature}>{feature}</li>
             ))}
           </ul>
-          {!monetizationEnabled ? (
-            <p
-              className={cn(
-                "mt-6 text-sm",
-                billingNoticeTone === "danger" ? "text-[#e53935]" : "text-muted-foreground",
-              )}
-            >
-              All purchases (Drive+, Drive the Music, Lifetime and individual sounds) open on
-              9.11.2026. Until then, ELCAMOSO is free of charge.
-            </p>
-          ) : null}
         </div>
         <div className={compact ? "py-8" : "py-12"} id="drive-music" data-testid="plan-drive-music">
           <div className="flex flex-wrap items-center gap-3">
@@ -262,10 +255,10 @@ export function PlansOverview({
             amount={music.amount}
             suffix={drivePlusSuffix}
             size={compact ? "compact" : "large"}
-            badge="-14%"
+            badge={music.badge}
           />
           <p className="mt-2 text-xs tracking-[0.12em] text-muted-foreground uppercase">
-            14% off for early adopters
+            {music.badge?.slice(1)} off for early adopters
           </p>
           {musicTrial ? (
             <p className="mt-2 text-sm text-muted-foreground">
@@ -283,6 +276,38 @@ export function PlansOverview({
             {(compact ? DRIVE_MUSIC_FEATURES.slice(0, 3) : DRIVE_MUSIC_FEATURES).map((feature) => (
               <li key={feature}>{feature}</li>
             ))}
+          </ul>
+        </div>
+        <div
+          className={compact ? "py-8" : "py-12"}
+          id="drive-unlimited"
+          data-testid="plan-drive-unlimited"
+        >
+          <p className="text-xs tracking-[0.2em] text-muted-foreground uppercase">
+            Drive Unlimited
+          </p>
+          <p className="mt-3 text-2xl font-light">Every engine. Every song.</p>
+          <PlanPrice
+            listAmount={unlimited.listAmount}
+            amount={unlimited.amount}
+            suffix={drivePlusSuffix}
+            size={compact ? "compact" : "large"}
+            badge={unlimited.badge}
+          />
+          <p className="mt-2 text-xs tracking-[0.12em] text-muted-foreground uppercase">
+            Drive+ and Drive the Music together
+          </p>
+          <p className="mt-2 text-sm text-muted-foreground">
+            {interval === "monthly"
+              ? `Billed yearly at ${unlimitedYearly.amount}`
+              : `${unlimitedYearly.equivalentMonthly} per month, billed yearly`}
+          </p>
+          <ul className={`space-y-3 text-sm text-muted-foreground ${compact ? "mt-4" : "mt-10"}`}>
+            {(compact ? DRIVE_UNLIMITED_FEATURES.slice(0, 2) : DRIVE_UNLIMITED_FEATURES).map(
+              (feature) => (
+                <li key={feature}>{feature}</li>
+              ),
+            )}
           </ul>
         </div>
         <div className={compact ? "py-8" : "py-12"} data-testid="plan-lifetime">
@@ -328,6 +353,11 @@ export function LandingPlansSection() {
         <h2 className="text-3xl font-light">Plans</h2>
         <PlansBillingIntervalToggle value={interval} onChange={setInterval} />
       </div>
+      {!monetizationEnabled ? (
+        <p className="mt-4 text-sm font-medium text-red-500" data-testid="home-purchases-note">
+          All purchases (Drive+, Drive the Music, Drive Unlimited, Lifetime and individual sounds) open on 9.11.2026.
+        </p>
+      ) : null}
       <div className="mt-10">
         <PlansOverview
           monetizationEnabled={monetizationEnabled}

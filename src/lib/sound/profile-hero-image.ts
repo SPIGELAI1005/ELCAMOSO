@@ -70,6 +70,7 @@ const PROFILE_IDS_WITH_HERO = [
   "symphony-jazz-cruise",
   "traby",
   "ge-squared",
+  "ge-squared-90",
   "police-patrol",
 ] as const;
 

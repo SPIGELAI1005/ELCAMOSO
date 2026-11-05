@@ -152,6 +152,8 @@ export const TOPOLOGY_PILOT_PROFILE_IDS = [
   "motorcycle-superbike",
   "big-twin",
   "traby",
+  "ge-squared",
+  "ge-squared-90",
 ] as const;
 export type TopologyPilotProfileId = (typeof TOPOLOGY_PILOT_PROFILE_IDS)[number];
 
@@ -586,6 +588,25 @@ export const TWO_STROKE_TWIN_TOPOLOGY: CombustionTopologyV1 = {
   organic: { crankJitter: 0.006, crankWander: 0.005, wanderHz: 1.4 },
 };
 
+/** Ge-Squared: cross-plane biturbo V8, two banks into two turbos, lumpy burble. */
+export const BITURBO_V8_4X4_TOPOLOGY: CombustionTopologyV1 = {
+  version: 1,
+  cycleDegrees: 720,
+  cylinderCount: 8,
+  noiseScale: 0.3,
+  collectors: [{ id: 0 }, { id: 1 }],
+  soundSpeedMetresPerSecond: TOPOLOGY_SOUND_SPEED_DEFAULT,
+  cylinders: [1, 5, 4, 2, 6, 3, 7, 8].map((cylId, i) => ({
+    id: cylId,
+    firingAngleDegrees: i * 90,
+    collectorId: cylId <= 4 ? 0 : 1,
+    pulseWeight: PETROL_CYLINDER_SPREAD[i]!,
+    primaryLengthMetres: 0.05 + (i % 4) * 0.03,
+  })),
+  cycleLope: 0.55,
+  organic: { crankJitter: 0.004, crankWander: 0.004, wanderHz: 1.1 },
+};
+
 export const TOPOLOGY_BY_PILOT_PROFILE: Record<TopologyPilotProfileId, CombustionTopologyV1> = {
   "american-muscle-v8": MUSCLE_V8_TOPOLOGY,
   "race-car": FLAT_PLANE_V8_TOPOLOGY,
@@ -598,6 +619,8 @@ export const TOPOLOGY_BY_PILOT_PROFILE: Record<TopologyPilotProfileId, Combustio
   "motorcycle-superbike": SUPERBIKE_I4_TOPOLOGY,
   "big-twin": V_TWIN_TOPOLOGY,
   "traby": TWO_STROKE_TWIN_TOPOLOGY,
+  "ge-squared": BITURBO_V8_4X4_TOPOLOGY,
+  "ge-squared-90": { ...BITURBO_V8_4X4_TOPOLOGY, cycleLope: 0.4, noiseScale: 0.22 },
 };
 
 export function combustionTopologyForProfile(profileId: string): CombustionTopologyV1 | null {

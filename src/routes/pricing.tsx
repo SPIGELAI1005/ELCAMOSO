@@ -13,9 +13,15 @@ import { MUSIC_TRIAL_MONTHS, isMusicTrialOfferActive } from "@/lib/billing/black
 import { trackMonetizationEvent } from "@/lib/telemetry/monetization-analytics";
 import { useSettings } from "@/lib/drive/useSettings";
 import { t } from "@/lib/i18n";
+import { SoundPackageCallout } from "@/components/pricing/SoundPackageCallout";
+import { parsePricingPlanParam, parseSharedSoundParam, type SoundPackage } from "@/lib/drive/sound-share";
 
 export const Route = createFileRoute("/pricing")({
   component: Pricing,
+  validateSearch: (search: Record<string, unknown>): { plan?: SoundPackage | undefined; sound?: string | undefined } => ({
+    plan: parsePricingPlanParam(search["plan"]),
+    sound: parseSharedSoundParam(search["sound"]) ?? undefined,
+  }),
   head: () => createSeoHeadFromPath("/pricing"),
 });
 
@@ -77,7 +83,7 @@ function PricingFooterNotes({ showCancel = true }: { showCancel?: boolean }) {
         }
       >
         Racing V10, American Muscle V8 and GT V8 are free. Every other engine sound is Drive+, every
-        music profile is Drive the Music. All purchases open 09.11.2026. Lifetime includes both.
+        music profile is Drive the Music. Drive Unlimited and Lifetime include both.
       </p>
     </section>
   );
@@ -87,6 +93,7 @@ function Pricing() {
   const yearly = getDrivePlusYearlyDisplay();
   const { plan } = useEntitlements();
   const { settings } = useSettings();
+  const { plan: highlightPlan, sound: highlightSound } = Route.useSearch();
   const [interval, setInterval] = useState<BillingDisplayInterval>("monthly");
   const billingQuery = useQuery({
     queryKey: ["billing-public-config"],
@@ -97,6 +104,7 @@ function Pricing() {
   const billingAvailable = billingQuery.data?.available ?? false;
   const lifetimeAvailable = billingQuery.data?.lifetimeAvailable ?? false;
   const musicAvailable = billingQuery.data?.musicAvailable ?? false;
+  const unlimitedAvailable = billingQuery.data?.unlimitedAvailable ?? false;
   const hasDrivePlus = plan !== "FREE";
   const viewedRef = useRef(false);
 
@@ -113,6 +121,14 @@ function Pricing() {
     return (
       <main className="min-h-screen">
         <EarlyAccessBanner />
+        {highlightPlan ? (
+          <SoundPackageCallout
+            plan={highlightPlan}
+            sound={highlightSound}
+            billingAvailable={false}
+            lifetimeAvailable={lifetimeAvailable}
+          />
+        ) : null}
         <section className="mx-auto w-full max-w-2xl px-6 pt-10 pb-10 sm:px-10 sm:pt-12">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <p className="text-[11px] tracking-[0.28em] text-muted-foreground uppercase">Plans</p>
@@ -124,7 +140,8 @@ function Pricing() {
             Make every drive yours.
           </h1>
           <p className="mt-6 max-w-md text-sm leading-relaxed text-muted-foreground">
-            Start with essential motion sound — free during early access. All purchases (Drive+, Drive the Music, Lifetime and individual sounds) open on 9.11.2026.
+            Start with essential motion sound — free during early access.{" "}
+            <span className="font-medium text-red-500">All purchases (Drive+, Drive the Music, Drive Unlimited, Lifetime and individual sounds) open on 9.11.2026.</span>
           </p>
         </section>
         <section className="mx-auto w-full max-w-2xl px-6 sm:px-10">
@@ -144,6 +161,14 @@ function Pricing() {
   return (
     <main className="min-h-screen">
       <EarlyAccessBanner />
+      {highlightPlan ? (
+        <SoundPackageCallout
+          plan={highlightPlan}
+          sound={highlightSound}
+          billingAvailable={billingAvailable}
+          lifetimeAvailable={lifetimeAvailable}
+        />
+      ) : null}
       <section className="mx-auto w-full max-w-2xl px-6 pt-10 pb-10 sm:px-10 sm:pt-12">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <p className="text-[11px] tracking-[0.28em] text-muted-foreground uppercase">Plans</p>
@@ -155,7 +180,8 @@ function Pricing() {
           Make every drive yours.
         </h1>
         <p className="mt-6 max-w-md text-sm leading-relaxed text-muted-foreground">
-          Start with essential motion sound. All purchases (Drive+, Drive the Music, Lifetime and individual sounds) open on 9.11.2026.
+          Start with essential motion sound.{" "}
+          <span className="font-medium text-red-500">All purchases (Drive+, Drive the Music, Drive Unlimited, Lifetime and individual sounds) open on 9.11.2026.</span>
         </p>
       </section>
 
@@ -191,6 +217,15 @@ function Pricing() {
                   className="inline-flex h-14 w-full items-center justify-center rounded-full bg-primary px-10 text-sm tracking-[0.22em] text-primary-foreground uppercase transition-opacity hover:opacity-90 sm:ml-4 sm:w-auto"
                 />
               ) : null}
+              {unlimitedAvailable ? (
+                <DrivePlusCheckoutButton
+                  plan="drive_unlimited"
+                  interval="yearly"
+                  label="Drive Unlimited · annual"
+                  source="pricing"
+                  className="inline-flex h-14 w-full items-center justify-center rounded-full bg-primary px-10 text-sm tracking-[0.22em] text-primary-foreground uppercase transition-opacity hover:opacity-90 sm:ml-4 sm:w-auto"
+                />
+              ) : null}
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-6">
                 {lifetimeAvailable ? (
                 <DrivePlusCheckoutButton
@@ -209,7 +244,7 @@ function Pricing() {
             </>
           ) : (
             <p className="text-sm text-muted-foreground">
-              All purchases (Drive+, Drive the Music, Lifetime and individual sounds) open on 9.11.2026. Until then, ELCAMOSO is free
+              All purchases (Drive+, Drive the Music, Drive Unlimited, Lifetime and individual sounds) open on 9.11.2026. Until then, ELCAMOSO is free
               of charge.
             </p>
           )}

@@ -2,6 +2,9 @@ import { useEffect, useState } from "react";
 import type { ExperienceKind } from "@/lib/experiences";
 import { cn } from "@/lib/utils";
 
+/** Example Silent capture result: a real (simulated) drive rendered in Latino Fiesta. */
+export const SILENT_CAPTURE_DEMO_SRC = "/demos/silent-capture-latino.m4a";
+
 export const MODE_DEMO_SRC: Partial<Record<ExperienceKind, string>> = {
   engine: "/demos/feel-a-machine.m4a",
   symphony: "/demos/drive-the-music.m4a",

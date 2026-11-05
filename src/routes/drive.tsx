@@ -4,6 +4,17 @@ import { DriveSpecialBanner } from "@/components/DriveSpecialBanner";
 import { HalloweenBanner } from "@/components/HalloweenBanner";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { createSeoHeadFromPath } from "@/lib/seo";
+import { parseSharedSoundParam, soundShareSocialMeta } from "@/lib/drive/sound-share";
+import { ShareSoundButton } from "@/components/drive/ShareSoundButton";
+import {
+  packageForProfile,
+  resolveDisplayedProfileId,
+  shouldApplySharedSound,
+  SOUND_PACKAGE_LABEL,
+} from "@/lib/drive/sound-share";
+import { useLockedFallback } from "@/lib/entitlements/locked-fallback-notice";
+import { useFeatureAccess as useSharedSoundAccess } from "@/lib/entitlements/selectors";
+import { FALLBACK_SOUND_PROFILE_ID as SHARED_FALLBACK_ID } from "@/lib/sound/profile-access-config";
 import { ElcamosoMark } from "@/components/ElcamosoLogo";
 import { BrandLoader } from "@/components/BrandLoader";
 import { StartDriveMarkControl } from "@/components/StartDriveMarkControl";
@@ -66,6 +77,7 @@ export const Route = createFileRoute("/drive")({
     start?: boolean;
     googleAuth?: string;
     pair?: string;
+    sound?: string;
   } => {
     const raw = search["cockpit"];
     const debugRaw = search["debug"];
@@ -83,6 +95,7 @@ export const Route = createFileRoute("/drive")({
       start?: boolean;
       googleAuth?: string;
       pair?: string;
+      sound?: string;
     } = {};
     if (raw === true || raw === "1" || raw === 1) out.cockpit = true;
     if (debugRaw === true || debugRaw === "1" || debugRaw === 1) out.debug = true;
@@ -92,10 +105,25 @@ export const Route = createFileRoute("/drive")({
     if (upgrade) out.upgrade = upgrade;
     if (googleAuth) out.googleAuth = googleAuth;
     if (search["pair"] === "expired" || search["pair"] === "linked") out.pair = search["pair"];
+    const sound = parseSharedSoundParam(search["sound"]);
+    if (sound) out.sound = sound;
     return out;
   },
   component: DriveScreen,
-  head: () => createSeoHeadFromPath("/drive"),
+  head: ({ match }) => {
+    const sound = (match?.search as { sound?: string } | undefined)?.sound;
+    if (!sound) return createSeoHeadFromPath("/drive");
+    const social = soundShareSocialMeta(sound);
+    return createSeoHeadFromPath("/drive", {
+      title: social.title,
+      description: social.description,
+      ogTitle: social.title,
+      ogDescription: social.description,
+      path: social.path,
+      imageAlt: social.imageAlt,
+      ...(social.image ? { image: social.image } : {}),
+    });
+  },
 });
 
 function googleAuthMessage(code: string | undefined): string | null {
@@ -121,6 +149,7 @@ function DriveScreen() {
     start: autostart,
     googleAuth,
     pair,
+    sound: sharedSound,
   } = Route.useSearch();
   const navigate = useNavigate();
   const autostartHandled = useRef(false);
@@ -162,7 +191,16 @@ function DriveScreen() {
   const [postCaptureTraceId, setPostCaptureTraceId] = useState<string | null>(null);
   const [captureHadBrowserPause, setCaptureHadBrowserPause] = useState(false);
   const monetizationEnabled = useMonetizationEnabled();
-  const selectedExperience = experienceForProfileId(settings.profileId);
+  const lockedFallbackId = useLockedFallback();
+  const sharedAccess = useSharedSoundAccess();
+  const displayed = resolveDisplayedProfileId({
+    current: settings.profileId,
+    shared: sharedSound,
+    lockedFallback: lockedFallbackId,
+    fallbackId: SHARED_FALLBACK_ID,
+    canDrive: sharedAccess.canDriveWithProfile,
+  });
+  const selectedExperience = experienceForProfileId(displayed.id);
   const isSilentCapture =
     status === "driving" && !shouldPlayLiveAudio(sessionSnap.driveOutputMode ?? "live");
   const resumedNativeCapture = status === "idle" && sessionSnap.nativeCapture.active;
@@ -172,6 +210,26 @@ function DriveScreen() {
       setShowTeslaUpgrade(true);
     }
   }, [monetizationEnabled, plan, upgrade]);
+
+  // Shared deep link (/drive?sound=<id>): select that sound once settings load.
+  // Locked sounds go through EntitlementEnforcer, which shows the package notice.
+  const sharedSoundHandled = useRef(false);
+  useEffect(() => {
+    if (!sharedSound || !loaded) return;
+    const apply = shouldApplySharedSound({
+      current: settings.profileId,
+      shared: sharedSound,
+      alreadyApplied: sharedSoundHandled.current,
+      lockedFallback: lockedFallbackId,
+      fallbackId: SHARED_FALLBACK_ID,
+      canDrive: sharedAccess.canDriveWithProfile,
+    });
+    if (!sharedSoundHandled.current) {
+      sharedSoundHandled.current = true;
+      track("share_visit", { kind: "drive-sound", profileId: sharedSound });
+    }
+    if (apply) update({ profileId: sharedSound });
+  }, [loaded, settings.profileId, sharedSound, update, lockedFallbackId, sharedAccess]);
 
   useEffect(() => {
     if (!activateTrial) return;
@@ -340,7 +398,7 @@ function DriveScreen() {
         </>
       ) : null}
       {status === "idle" && !sessionSnap.nativeCapture.active ? (
-        <IncompleteJourneyRecovery />
+        <IncompleteJourneyRecovery onRecover={(id) => setPostCaptureTraceId(id)} />
       ) : null}
       {status === "idle" ? <LockedSoundNotice className="mb-4" /> : null}
       {status === "idle" && sessionSnap.journeyRecovered ? (
@@ -352,6 +410,8 @@ function DriveScreen() {
         <PostSilentCaptureExperience
           journeyTraceId={postCaptureTraceId}
           capturePausedByBrowser={captureHadBrowserPause}
+          carProfileId={settings.profileId}
+          locale={settings.language}
           onDismiss={() => setPostCaptureTraceId(null)}
         />
       ) : null}
@@ -463,7 +523,7 @@ function DriveScreen() {
         )
       ) : (
         <>
-          <DriveProfileBackdrop profileId={settings.profileId} className="z-0" />
+          <DriveProfileBackdrop profileId={displayed.id} className="z-0" />
           <div className="relative z-[1] flex flex-1 flex-col items-center justify-center gap-10 text-center">
             {googleAuthNotice ? (
               <p
@@ -495,6 +555,14 @@ function DriveScreen() {
               >
                 {selectedExperience.name}
               </button>
+              {displayed.lockedPreview ? (
+                <p
+                  data-testid="shared-sound-locked"
+                  className="mt-2 text-[10px] tracking-[0.22em] text-muted-foreground uppercase"
+                >
+                  {SOUND_PACKAGE_LABEL[packageForProfile(displayed.id)]} sound · playing free V10 until you upgrade
+                </p>
+              ) : null}
               <p className="mt-3 text-sm text-muted-foreground">
                 {selectedExperience.tagline || profile.traits.join(" · ")}
               </p>
@@ -515,7 +583,8 @@ function DriveScreen() {
               }
               onStart={() => void handleStart()}
             />
-            <div className="w-full max-w-md">
+            <div className="flex w-full max-w-md flex-col items-center gap-4">
+              <ShareSoundButton profileId={displayed.id} locale={settings.language} />
               <DriveModePicker
                 value={settings.driveOutputMode}
                 onChange={(driveOutputMode) => update({ driveOutputMode })}

@@ -109,7 +109,7 @@ export function LandingHero() {
   const { phase, reducedMotion } = useHeroWavePhase();
 
   return (
-    <section className="relative flex min-h-0 flex-col overflow-x-clip px-6 pt-[calc(0.75rem+5svh)] pb-10 sm:px-12 sm:pt-[calc(1.5rem+5svh)] sm:pb-12 lg:min-h-[calc(100svh-4.5rem)] lg:px-10 lg:pt-16 lg:pb-16 xl:px-16">
+    <section className="relative flex min-h-0 flex-col overflow-x-clip px-6 pt-2 pb-10 sm:px-12 sm:pt-[calc(1.5rem+5svh)] sm:pb-12 lg:min-h-[calc(100svh-4.5rem)] lg:px-10 lg:pt-16 lg:pb-16 xl:px-16">
       <HeroSoundBackdrop phase={phase} reducedMotion={reducedMotion} />
 
       <div className="relative z-10 mx-auto flex w-full max-w-6xl flex-1 flex-col items-center justify-center">

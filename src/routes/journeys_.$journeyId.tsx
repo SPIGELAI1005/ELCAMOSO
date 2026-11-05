@@ -6,7 +6,7 @@ import { ElcamosoMark } from "@/components/ElcamosoLogo";
 import { listSymphonyPacks } from "@/lib/symphony";
 import {
   buildJourneySharePayload,
-  createDriveSongForJourney,
+  createDriveSongWithAudio,
   deleteJourney,
   encodeJourneyShare,
   getJourney,
@@ -23,6 +23,10 @@ import { downloadBlob } from "@/lib/sound/render";
 import { createSeoHeadFromPath } from "@/lib/seo";
 import { SmilesCard } from "@/components/smiles/SmilesCard";
 import { getProfile } from "@/lib/sound/profiles";
+import { DriveChart } from "@/components/drive/DriveChart";
+import { SongShareButton } from "@/components/drive/SongShareButton";
+import { buildDriveChart } from "@/lib/journey/drive-chart";
+import { profileHeroImageSrc } from "@/lib/sound/profile-hero-image";
 
 export const Route = createFileRoute("/journeys_/$journeyId")({
   validateSearch: (search: Record<string, unknown>): { create?: string } => {
@@ -95,8 +99,8 @@ function JourneyDetailPage() {
     setNote("Composing…");
     try {
       let sourceJourney = journey;
+      const sourceTrace = trace ?? (await getJourneyRepository().loadJourney(journeyId));
       if (!sourceJourney) {
-        const sourceTrace = trace ?? (await getJourneyRepository().loadJourney(journeyId));
         if (!sourceTrace?.samples.length) {
           setNote("Drive Song needs motion samples from a finished drive.");
           return;
@@ -105,13 +109,20 @@ function JourneyDetailPage() {
         await saveJourney(sourceJourney);
         setJourney(sourceJourney);
       }
-      const next = await createDriveSongForJourney(journeyId, { symphonyPackId: packId });
-      if (next) {
-        setJourney(next);
-        setNote(next.song?.audioBlobId ? "Drive Song ready." : "Structure ready (render skipped).");
-        const blob = await getSongAudio(journeyId);
-        if (blob) {
-          const url = URL.createObjectURL(blob);
+      setNote("Creating the song from your drive…");
+      const result = await createDriveSongWithAudio(journeyId, {
+        symphonyPackId: packId,
+        trace: sourceTrace?.samples.length ? sourceTrace : null,
+      });
+      if (result) {
+        setJourney(result.journey);
+        setNote(
+          result.audio
+            ? "Drive Song ready. Press play."
+            : `The song could not be created: ${result.renderError ?? "unknown error"}`,
+        );
+        if (result.audio) {
+          const url = URL.createObjectURL(result.audio);
           setAudioUrl((prev) => {
             if (prev) URL.revokeObjectURL(prev);
             return url;
@@ -383,6 +394,24 @@ function JourneyDetailPage() {
               Delete
             </button>
           </div>
+          {journey?.song && trace?.samples.length ? (() => {
+            const chart = buildDriveChart(trace, journey.song);
+            const pid = journey.profileId ?? trace.captureProfileId;
+            return (
+              <div className="mx-auto mt-8 w-full max-w-md border border-foreground/10 px-4 py-5" data-testid="journey-drive-chart">
+                <p className="mb-3 text-[10px] tracking-[0.22em] text-muted-foreground uppercase">How your drive shaped the song</p>
+                <DriveChart chart={chart} />
+                <SongShareButton
+                  className="mt-4"
+                  chart={chart}
+                  genreName={listSymphonyPacks().find((p) => p.id === journey.song?.symphonyPackId)?.name ?? "Drive Song"}
+                  durationSec={trace.durationMs / 1000}
+                  topSpeedKmh={chart.maxSpeedKmh}
+                  carImageSrc={profileHeroImageSrc(pid) ?? profileHeroImageSrc(journey.song.symphonyPackId)}
+                />
+              </div>
+            );
+          })() : null}
         </section>
 
         {isDriveReelEnabled() && journey?.reel ? (

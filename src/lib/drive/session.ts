@@ -846,15 +846,17 @@ class DriveSession {
           startedAt: this.driveStartedAt,
           outputMode: this.config.driveOutputMode,
           captureProfileId: this.config.profileId,
-          onChunk: (chunkIndex, samples) => {
-            void getJourneyRepository().appendChunk({
-              journeyId,
-              chunkIndex,
-              samples,
-              events: [],
-              gaps: [],
-              writtenAt: Date.now(),
-            });
+          onChunk: (chunkIndex, samples, extras) => {
+            void getJourneyRepository()
+              .appendChunk({
+                journeyId,
+                chunkIndex,
+                samples,
+                events: extras.events,
+                gaps: extras.gaps,
+                writtenAt: Date.now(),
+              })
+              .catch(() => undefined);
           },
         });
         void getJourneyRepository()
@@ -1232,6 +1234,7 @@ class DriveSession {
       // A persisted partial trace will be recovered by syncNativeJourneys().
     }
     this.detachIdle();
+    this.stopHiddenTicker();
     void this.releaseWake();
     if (this.raf !== null) cancelAnimationFrame(this.raf);
     this.raf = null;
@@ -1255,7 +1258,8 @@ class DriveSession {
         const jt = this.journeySampler.finalize();
         this.lastJourneyTraceId = jt.journeyId;
         this.recordingDistanceM = jt.summary.distanceM;
-        void getJourneyRepository()
+        // Awaited: the result screen reads this trace right after stop() resolves.
+        await getJourneyRepository()
           .finalizeJourney(jt)
           .catch(() => undefined);
       } catch {
@@ -1529,7 +1533,7 @@ class DriveSession {
         this.recorder.push(next);
         this.noteLiveSmiles(next, dt);
       }
-      if (this.kind === "drive" && this.journeySampler) {
+      if (this.kind === "drive" && this.journeySampler && this.hasLiveMotionWhileHidden()) {
         this.journeySampler.pushMotion(this.lastVehicleMotion, dt);
         const smRpm = next.powertrain?.rpm ?? next.rpm;
         this.journeySampler.noteSmiles(
@@ -1761,9 +1765,47 @@ class DriveSession {
     window.removeEventListener("pageshow", this.onPageShow);
   }
 
+  /**
+   * Hidden pages get no animation frames, so the capture loop would stop. Timers still fire
+   * (throttled to about once a second) in many browsers, so keep sampling from a timer.
+   */
+  private hiddenTicker: ReturnType<typeof setInterval> | null = null;
+
+  private startHiddenTicker() {
+    if (this.hiddenTicker || this.kind !== "drive" || !this.journeySampler) return;
+    this.hiddenTicker = setInterval(() => {
+      if (this.kind !== "drive" || !this.journeySampler) {
+        this.stopHiddenTicker();
+        return;
+      }
+      // Only step when animation frames have actually stopped arriving
+      if (performance.now() - this.lastTick < 900) return;
+      if (this.raf !== null) cancelAnimationFrame(this.raf);
+      this.raf = null;
+      try {
+        this.loop();
+      } catch {
+        /* keep ticking */
+      }
+    }, 1000);
+  }
+
+  private stopHiddenTicker() {
+    if (this.hiddenTicker) clearInterval(this.hiddenTicker);
+    this.hiddenTicker = null;
+  }
+
+  /** While hidden, only record when a sensor is still delivering (never invent motion). */
+  private hasLiveMotionWhileHidden(): boolean {
+    if (typeof document === "undefined" || !document.hidden) return true;
+    const h = this.lastVehicleMotion?.sourceHealth;
+    return Boolean(h && (h.phone || h.browser || h.vehicleTelemetry));
+  }
+
   private onPageHide = () => {
     this.clearHideTimer();
     this.persistPendingDrive();
+    this.journeySampler?.flushNow();
     if (this.kind === "drive" && this.journeySampler) {
       this.capturePausedByBrowser = true;
       this.journeySampler.markBrowserPaused("browser_suspend");
@@ -1786,17 +1828,15 @@ class DriveSession {
   private onVisibility = () => {
     if (document.hidden) {
       this.persistPendingDrive();
+      this.journeySampler?.flushNow();
       if (this.kind === "drive" && this.status === "running") {
         this.clearHideTimer();
+        this.startHiddenTicker();
         this.hideTimer = setTimeout(() => {
           this.hideTimer = null;
-          if (document.hidden) {
-            if (this.journeySampler) {
-              this.capturePausedByBrowser = true;
-              this.journeySampler.markBrowserPaused("visibility");
-            }
-            void this.suspend();
-          }
+          // No gap is marked here: if samples really stop, the sampler records the gap
+          // with exact start/end times when they resume.
+          if (document.hidden) void this.suspend();
         }, DRIVE_HIDE_GRACE_MS);
         return;
       }
@@ -1804,6 +1844,7 @@ class DriveSession {
       return;
     }
     this.clearHideTimer();
+    this.stopHiddenTicker();
     if (this.kind === "drive" && this.journeySampler && this.capturePausedByBrowser) {
       this.journeySampler.markBrowserResumed();
     }
