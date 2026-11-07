@@ -193,6 +193,19 @@ export const INDEXABLE_ROUTE_POLICIES: SeoRoutePolicy[] = [
     ],
   },
   {
+    path: "/faq",
+    indexable: true,
+    title: "Frequently Asked Questions | ELCAMOSO",
+    description:
+      "Common questions about ELCAMOSO: what it is, who it's for, phone and browser compatibility, Live sound vs Silent Capture, free access, plans, and vehicle safety.",
+    image: IMG,
+    imageAlt: ALT,
+    breadcrumbs: [
+      { name: "Home", path: "/" },
+      { name: "FAQ", path: "/faq" },
+    ],
+  },
+  {
     path: "/legal",
     indexable: true,
     title: "Legal | ELCAMOSO",
