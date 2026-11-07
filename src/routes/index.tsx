@@ -32,7 +32,13 @@ function Landing() {
       <LandingHero />
 
       <section className="mx-auto w-full max-w-5xl px-6 py-20 sm:px-12">
-        <h2 className="text-3xl font-light tracking-tight sm:text-4xl">Choose your experience</h2>
+        <p className="text-sm text-muted-foreground">
+          Explore 79+ sound experiences—from powerful engines to music, immersive worlds and playful
+          surprises.
+        </p>
+        <h2 className="mt-4 text-3xl font-light tracking-tight sm:text-4xl">
+          Choose your experience
+        </h2>
         <p className="mt-3 max-w-lg text-muted-foreground">
           Machine. Music. Another world. Turn motion into sound.
         </p>

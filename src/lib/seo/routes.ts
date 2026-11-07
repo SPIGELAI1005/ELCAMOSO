@@ -37,11 +37,11 @@ export const INDEXABLE_ROUTE_POLICIES: SeoRoutePolicy[] = [
   {
     path: "/sounds",
     indexable: true,
-    title: "Engine Sound Profiles for EVs | ELCAMOSO",
+    title: "Sound Experiences - Engines, Music & Worlds | ELCAMOSO",
     description:
-      "Browse Engine Sound Profiles that lock sound to motion. Early access includes American Muscle V8, GT V8, Racing V10, and Rocket Car.",
+      "Browse motion-responsive sound experiences: engine profiles, music genres, and immersive worlds. Free access includes Racing V10, American Muscle V8, Dracula Carriage and Latino Fiesta.",
     image: "/og/engine.png",
-    imageAlt: "ELCAMOSO Engine sound experiences",
+    imageAlt: "ELCAMOSO sound experiences",
     breadcrumbs: [
       { name: "Home", path: "/" },
       { name: "Explore", path: "/explore" },
@@ -177,6 +177,19 @@ export const INDEXABLE_ROUTE_POLICIES: SeoRoutePolicy[] = [
     breadcrumbs: [
       { name: "Home", path: "/" },
       { name: "News", path: "/news" },
+    ],
+  },
+  {
+    path: "/instructions",
+    indexable: true,
+    title: "How to Use ELCAMOSO | Setup & Drive Guide",
+    description:
+      "Step-by-step guide: set up while parked, choose your sound, start Live or Silent Capture mode, pair your phone, and hear your drive.",
+    image: IMG,
+    imageAlt: ALT,
+    breadcrumbs: [
+      { name: "Home", path: "/" },
+      { name: "Instructions", path: "/instructions" },
     ],
   },
   {

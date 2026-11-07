@@ -54,6 +54,9 @@ export function SiteFooter() {
           <Link to="/news" className="underline-offset-4 hover:underline">
             News
           </Link>
+          <Link to="/instructions" className="underline-offset-4 hover:underline">
+            Instructions
+          </Link>
         </nav>
 
         <p className="mt-8 max-w-xl text-[11px] leading-relaxed text-muted-foreground">

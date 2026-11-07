@@ -21,6 +21,7 @@ import { Route as DriveRouteImport } from './routes/drive'
 import { Route as ExploreRouteImport } from './routes/explore'
 import { Route as FusionRouteImport } from './routes/fusion'
 import { Route as GarageRouteImport } from './routes/garage'
+import { Route as InstructionsRouteImport } from './routes/instructions'
 import { Route as JourneysRouteImport } from './routes/journeys'
 import { Route as LegalRouteRouteImport } from './routes/legal/route'
 import { Route as MyCardsRouteImport } from './routes/my-cards'
@@ -148,6 +149,11 @@ const FusionRoute = FusionRouteImport.update({
 const GarageRoute = GarageRouteImport.update({
   id: '/garage',
   path: '/garage',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InstructionsRoute = InstructionsRouteImport.update({
+  id: '/instructions',
+  path: '/instructions',
   getParentRoute: () => rootRouteImport,
 } as any)
 const JourneysRoute = JourneysRouteImport.update({
@@ -506,6 +512,7 @@ export interface FileRoutesByFullPath {
   '/explore': typeof ExploreRoute
   '/fusion': typeof FusionRoute
   '/garage': typeof GarageRoute
+  '/instructions': typeof InstructionsRoute
   '/journeys': typeof JourneysRoute
   '/my-cards': typeof MyCardsRoute
   '/news': typeof NewsRoute
@@ -587,6 +594,7 @@ export interface FileRoutesByTo {
   '/explore': typeof ExploreRoute
   '/fusion': typeof FusionRoute
   '/garage': typeof GarageRoute
+  '/instructions': typeof InstructionsRoute
   '/journeys': typeof JourneysRoute
   '/my-cards': typeof MyCardsRoute
   '/news': typeof NewsRoute
@@ -670,6 +678,7 @@ export interface FileRoutesById {
   '/explore': typeof ExploreRoute
   '/fusion': typeof FusionRoute
   '/garage': typeof GarageRoute
+  '/instructions': typeof InstructionsRoute
   '/journeys': typeof JourneysRoute
   '/my-cards': typeof MyCardsRoute
   '/news': typeof NewsRoute
@@ -754,6 +763,7 @@ export interface FileRouteTypes {
     | '/explore'
     | '/fusion'
     | '/garage'
+    | '/instructions'
     | '/journeys'
     | '/my-cards'
     | '/news'
@@ -835,6 +845,7 @@ export interface FileRouteTypes {
     | '/explore'
     | '/fusion'
     | '/garage'
+    | '/instructions'
     | '/journeys'
     | '/my-cards'
     | '/news'
@@ -917,6 +928,7 @@ export interface FileRouteTypes {
     | '/explore'
     | '/fusion'
     | '/garage'
+    | '/instructions'
     | '/journeys'
     | '/my-cards'
     | '/news'
@@ -1000,6 +1012,7 @@ export interface RootRouteChildren {
   ExploreRoute: typeof ExploreRoute
   FusionRoute: typeof FusionRoute
   GarageRoute: typeof GarageRoute
+  InstructionsRoute: typeof InstructionsRoute
   JourneysRoute: typeof JourneysRoute
   MyCardsRoute: typeof MyCardsRoute
   NewsRoute: typeof NewsRoute
@@ -1136,6 +1149,13 @@ declare module '@tanstack/react-router' {
       path: '/garage'
       fullPath: '/garage'
       preLoaderRoute: typeof GarageRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/instructions': {
+      id: '/instructions'
+      path: '/instructions'
+      fullPath: '/instructions'
+      preLoaderRoute: typeof InstructionsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/journeys': {
@@ -1699,6 +1719,7 @@ const rootRouteChildren: RootRouteChildren = {
   ExploreRoute: ExploreRoute,
   FusionRoute: FusionRoute,
   GarageRoute: GarageRoute,
+  InstructionsRoute: InstructionsRoute,
   JourneysRoute: JourneysRoute,
   MyCardsRoute: MyCardsRoute,
   NewsRoute: NewsRoute,
