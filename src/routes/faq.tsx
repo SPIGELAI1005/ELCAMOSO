@@ -44,13 +44,12 @@ const FAQ_ENTRIES: FaqEntry[] = [
     answer: (
       <>
         <p>
-          ELCAMOSO works for anyone who wants motion-responsive sound while driving. It works in
-          electric vehicles with built-in browsers (such as Tesla, Rivian, or other EVs), but also
-          on any phone browser—so petrol-engine, hybrid, or older vehicles can use it too.
+          ELCAMOSO is for anyone who wants motion-responsive sound while driving. It runs in
+          compatible in-car or phone browsers, subject to permissions and browser support.
         </p>
         <p className="mt-3">
-          If your car has a web browser or you can mount a phone, ELCAMOSO can create a soundtrack
-          for your drive.
+          Electric vehicles, petrol-engine cars, hybrids, and older vehicles can all use ELCAMOSO
+          if you have a compatible browser—either built into the car or on a mounted phone.
         </p>
       </>
     ),
@@ -63,7 +62,7 @@ const FAQ_ENTRIES: FaqEntry[] = [
         <p>
           Yes. Open elcamoso.com/drive in your phone's browser and connect the phone to your car's
           audio system via Bluetooth (or a cable). The sound plays through the car speakers while
-          motion data comes from your phone's sensors.
+          motion data comes from your phone.
         </p>
         <p className="mt-3 font-medium text-foreground">Important caveats:</p>
         <ul className="mt-2 ml-4 list-disc space-y-2">
@@ -73,25 +72,23 @@ const FAQ_ENTRIES: FaqEntry[] = [
             operating system, and browser. ELCAMOSO cannot guarantee universal compatibility.
           </li>
           <li>
-            <strong className="font-medium text-foreground">Permissions required.</strong> The
-            browser needs location and motion permissions to detect your driving. Grant them when
+            <strong className="font-medium text-foreground">Permissions.</strong> The browser may
+            request location or motion permissions to detect your driving. Grant them when
             prompted.
           </li>
           <li>
-            <strong className="font-medium text-foreground">Keep the browser visible.</strong> On
-            most phones, minimising the browser or switching apps may pause audio or stop motion
-            detection.
+            <strong className="font-medium text-foreground">Keep the browser visible.</strong>{" "}
+            Minimising the browser or switching apps may pause audio or stop motion detection on
+            some devices.
           </li>
           <li>
-            <strong className="font-medium text-foreground">Bluetooth latency.</strong> Some
-            Bluetooth connections introduce a slight audio delay. This does not affect the sound
-            quality, but the response to motion may feel fractionally slower than a wired
-            connection.
+            <strong className="font-medium text-foreground">Bluetooth audio.</strong> Bluetooth
+            connections may add audio delay or compression depending on your device and codec.
           </li>
         </ul>
         <p className="mt-3">
-          Bluetooth audio to the car's infotainment is a playback transport—it does not control the
-          vehicle in any way.
+          Bluetooth audio transmits playback only. It does not by itself grant ELCAMOSO access to
+          vehicle controls.
         </p>
       </>
     ),
@@ -132,9 +129,8 @@ const FAQ_ENTRIES: FaqEntry[] = [
       <>
         <p>
           <strong className="font-medium text-foreground">Phone sensor pairing</strong> connects
-          your phone's motion sensors (accelerometer, gyroscope, GPS) to an ELCAMOSO session
-          running in your car's browser. Motion data flows from the phone to the car over the
-          network—sound plays on the car browser.
+          your phone's motion sensors to an ELCAMOSO session running in your car's browser. Motion
+          data flows from the phone to the car over the network—sound plays on the car browser.
         </p>
         <p className="mt-3">
           <strong className="font-medium text-foreground">Bluetooth audio</strong> is a separate
@@ -143,9 +139,8 @@ const FAQ_ENTRIES: FaqEntry[] = [
         </p>
         <p className="mt-3">
           These are independent features. You can use phone sensor pairing without Bluetooth audio
-          (sound plays on the car browser). You can use Bluetooth audio without sensor pairing
-          (motion comes from phone GPS). Or you can use neither and run ELCAMOSO entirely in the
-          car's browser with GPS only.
+          (sound plays on the car browser). You can use Bluetooth audio without sensor pairing. Or
+          you can run ELCAMOSO entirely in the car's browser.
         </p>
       </>
     ),
@@ -156,20 +151,12 @@ const FAQ_ENTRIES: FaqEntry[] = [
     answer: (
       <>
         <p>
-          <strong className="font-medium text-foreground">
-            Minimising or navigating away from the browser stops audio playback.
-          </strong>{" "}
-          This has been confirmed in testing on Tesla's in-car browser and applies to most in-car
-          and phone browsers.
+          In our in-car test, collapsing the browser stopped playback. Other browsers and devices
+          may vary.
         </p>
         <p className="mt-3">
-          ELCAMOSO runs as a standard website. It has no special background playback privileges.
-          When the browser tab loses focus or visibility, the browser suspends audio output.
-        </p>
-        <p className="mt-3">
-          Phone sensor pairing does not change this—it provides richer motion data, but it does not
-          enable background playback. Keep the browser visible throughout your drive for
-          uninterrupted sound.
+          Keep the app visible. Background playback and motion capture are not guaranteed. Sensor
+          pairing is not a confirmed remedy.
         </p>
       </>
     ),
@@ -180,25 +167,11 @@ const FAQ_ENTRIES: FaqEntry[] = [
     answer: (
       <>
         <p>
-          <strong className="font-medium text-foreground">Free</strong> includes four sound
-          experiences:
-        </p>
-        <ul className="mt-2 ml-4 list-disc space-y-1">
-          <li>Racing V10 (sharp, high-rev engine)</li>
-          <li>American Muscle V8 (raw, thunderous V8)</li>
-          <li>Dracula Carriage (gothic horse-drawn atmosphere)</li>
-          <li>Latino Fiesta (reggaeton-style music shaped by motion)</li>
-        </ul>
-        <p className="mt-3">
-          Free also includes Tesla or browser Drive with phone pairing, Drive DNA, and local
-          journey history.
-        </p>
-        <p className="mt-3">
-          See the{" "}
+          Free access and promotional offers change over time. See the{" "}
           <Link to="/pricing" className="text-foreground underline underline-offset-4">
             Pricing
           </Link>{" "}
-          page for current plans and availability.
+          page for current plans, free experiences, and availability.
         </p>
       </>
     ),
@@ -240,24 +213,13 @@ const FAQ_ENTRIES: FaqEntry[] = [
     answer: (
       <>
         <p>
-          <strong className="font-medium text-foreground">ELCAMOSO is a website.</strong> It runs
-          in your car's browser, like any other page you open there.
+          <strong className="font-medium text-foreground">ELCAMOSO runs as a website.</strong> It
+          does not install vehicle firmware or change vehicle settings, and does not connect to
+          steering, braking, or propulsion controls or vehicle diagnostic interfaces.
         </p>
         <p className="mt-3">
-          There is nothing to install. ELCAMOSO puts no software on your car and does not change
-          any vehicle settings. Close the tab and it is gone.
-        </p>
-        <p className="mt-3 font-medium text-foreground">It cannot reach your car's controls</p>
-        <p className="mt-2">
-          Your car's browser is kept separate from the systems that drive the car. A website has no
-          way to steer, brake, unlock doors, or communicate with the car's internal network.
-          ELCAMOSO does not attempt to. All it does is play sound through the speakers, like a
-          music or video site.
-        </p>
-        <p className="mt-3">
-          If you connect your phone via Bluetooth to play audio through the car's speakers, that
-          Bluetooth connection carries only audio—it does not grant ELCAMOSO access to vehicle
-          controls or systems.
+          Bluetooth audio transmits playback only and does not by itself grant ELCAMOSO access to
+          vehicle controls.
         </p>
         <p className="mt-3 font-medium text-foreground">Driver responsibility</p>
         <p className="mt-2">
