@@ -1,4 +1,9 @@
-/** Dynamic Drive preview trial - ELCAMOSO-native, not Stripe. */
+/**
+ * Dynamic Drive preview trial - ELCAMOSO-native, not Stripe.
+ * Closed for new starts. A preview that already began keeps its remaining time.
+ */
+export const DYNAMIC_DRIVE_TRIAL_OFFER_ENABLED = false;
+
 export const DYNAMIC_DRIVE_TRIAL_ALLOCATED_SECONDS = 1800;
 export const DYNAMIC_DRIVE_TRIAL_MAX_SESSIONS = 3;
 export const DYNAMIC_DRIVE_TRIAL_EXPIRY_DAYS = 14;

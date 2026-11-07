@@ -18,8 +18,9 @@ export const getDynamicDriveTrialStatusFn = createServerFn({ method: "POST" })
 export const startDynamicDriveTrialFn = createServerFn({ method: "POST" })
   .inputValidator((data: { sessionToken?: string | null }) => data)
   .handler(async ({ data }) => {
+    const { DYNAMIC_DRIVE_TRIAL_OFFER_ENABLED } = await import("@/lib/dynamic-drive-trial/config");
     const { isMonetizationEnabled } = await import("@/lib/billing/monetization-flag");
-    if (!isMonetizationEnabled()) {
+    if (!DYNAMIC_DRIVE_TRIAL_OFFER_ENABLED || !isMonetizationEnabled()) {
       throw new Error("Dynamic Drive preview is not available");
     }
     const { getDynamicDriveTrialService } = await import("@/lib/dynamic-drive-trial/service");

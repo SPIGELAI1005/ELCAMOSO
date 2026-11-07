@@ -1,7 +1,11 @@
-import { useState, type ReactNode } from "react";
+import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 
 import { DynamicDriveTrialOffer } from "@/components/dynamic-drive-trial/DynamicDriveTrialOffer";
+import {
+  usePlanPurchaseActions,
+  type PlanPurchaseActions,
+} from "@/components/pricing/plan-purchase-actions";
 import {
   useBillingPublicConfig,
   useMonetizationEnabled,
@@ -25,17 +29,10 @@ import {
   MUSIC_TRIAL_MONTHS,
   isMusicTrialOfferActive,
 } from "@/lib/billing/black-friday";
+import { DYNAMIC_DRIVE_TRIAL_OFFER_ENABLED } from "@/lib/dynamic-drive-trial/config";
 import { cn } from "@/lib/utils";
 import { useSettings } from "@/lib/drive/useSettings";
 import { t } from "@/lib/i18n";
-
-export interface PlanPurchaseActions {
-  free?: ReactNode;
-  drivePlus?: ReactNode;
-  music?: ReactNode;
-  unlimited?: ReactNode;
-  lifetime?: ReactNode;
-}
 
 interface PlansOverviewProps {
   /** When false, show prices and features only - no checkout or trial activation. */
@@ -354,8 +351,8 @@ export function PlansOverview({
           {purchaseActions?.lifetime}
         </div>
       </div>
-      {monetizationEnabled ? (
-        <div className={`flex flex-col items-start gap-4 ${compact ? "mt-10" : "mt-10"}`}>
+      {monetizationEnabled && DYNAMIC_DRIVE_TRIAL_OFFER_ENABLED ? (
+        <div className="mt-10 flex flex-col items-start gap-4">
           <DynamicDriveTrialOffer returnTo={returnTo} />
         </div>
       ) : null}
@@ -366,6 +363,7 @@ export function PlansOverview({
 export function LandingPlansSection() {
   const monetizationEnabled = useMonetizationEnabled();
   const [interval, setInterval] = useState<BillingDisplayInterval>("monthly");
+  const purchaseActions = usePlanPurchaseActions(interval, "home");
 
   return (
     <section className="mx-auto w-full max-w-3xl px-6 py-16 sm:px-12">
@@ -385,6 +383,7 @@ export function LandingPlansSection() {
           returnTo="/"
           interval={interval}
           billingNoticeTone="danger"
+          purchaseActions={purchaseActions}
         />
       </div>
       <Link

@@ -3,13 +3,11 @@ import { createSeoHeadFromPath } from "@/lib/seo";
 import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 
-import { DrivePlusCheckoutButton } from "@/components/DrivePlusCheckoutButton";
 import { PlansBillingIntervalToggle, PlansOverview } from "@/components/LandingPlansSection";
+import { usePlanPurchaseActions } from "@/components/pricing/plan-purchase-actions";
 import { getBillingPublicConfigFn } from "@/lib/billing/public-config-server-fn";
 import type { BillingDisplayInterval } from "@/lib/billing/plan-display";
-import { getDrivePlusYearlyDisplay } from "@/lib/billing/plan-display";
 import { useEntitlements } from "@/lib/entitlements/useEntitlements";
-import { MUSIC_TRIAL_MONTHS, isMusicTrialOfferActive } from "@/lib/billing/black-friday";
 import { trackMonetizationEvent } from "@/lib/telemetry/monetization-analytics";
 import { useSettings } from "@/lib/drive/useSettings";
 import { t } from "@/lib/i18n";
@@ -75,37 +73,14 @@ function EarlyAccessBanner() {
   );
 }
 
-const purchaseButtonClass =
-  "mt-8 inline-flex h-12 w-full items-center justify-center rounded-full bg-primary px-8 text-[11px] tracking-[0.2em] text-primary-foreground uppercase transition-opacity hover:opacity-90 sm:w-auto";
-
-const openDriveClass =
-  "mt-8 inline-flex h-12 min-w-[11.5rem] items-center justify-center rounded-full border border-foreground/20 px-8 text-[11px] tracking-[0.2em] text-foreground uppercase transition hover:border-foreground/40";
-
-function OpenDriveLink({ className = "mt-10 inline-flex h-12 min-w-[11.5rem] items-center justify-center rounded-full border border-foreground/20 px-8 text-[11px] tracking-[0.2em] text-foreground uppercase transition hover:border-foreground/40" }: { className?: string }) {
-  return (
-    <Link to="/drive" className={className}>
-      Open Drive
-    </Link>
-  );
-}
-
-function ManagePlanLink() {
+function OpenDriveLink() {
   return (
     <Link
-      to="/settings"
-      search={{ workspace: "plan" }}
-      className={purchaseButtonClass}
+      to="/drive"
+      className="mt-10 inline-flex h-12 min-w-[11.5rem] items-center justify-center rounded-full border border-foreground/20 px-8 text-[11px] tracking-[0.2em] text-foreground uppercase transition hover:border-foreground/40"
     >
-      Manage plan
+      Open Drive
     </Link>
-  );
-}
-
-function PackageNotReady() {
-  return (
-    <p className="mt-8 text-sm text-muted-foreground">
-      Checkout for this package is not connected yet.
-    </p>
   );
 }
 
@@ -127,11 +102,10 @@ function PricingFooterNotes({ showCancel = true }: { showCancel?: boolean }) {
 }
 
 function Pricing() {
-  const yearly = getDrivePlusYearlyDisplay();
   const { plan } = useEntitlements();
-  const { settings } = useSettings();
   const { plan: highlightPlan, sound: highlightSound } = Route.useSearch();
   const [interval, setInterval] = useState<BillingDisplayInterval>("monthly");
+  const purchaseActions = usePlanPurchaseActions(interval, "pricing");
   const billingQuery = useQuery({
     queryKey: ["billing-public-config"],
     queryFn: () => getBillingPublicConfigFn(),
@@ -140,18 +114,6 @@ function Pricing() {
   const monetizationEnabled = billingQuery.data?.monetizationEnabled ?? false;
   const billingAvailable = billingQuery.data?.available ?? false;
   const lifetimeAvailable = billingQuery.data?.lifetimeAvailable ?? false;
-  const musicReady =
-    interval === "monthly"
-      ? (billingQuery.data?.musicMonthlyAvailable ?? billingQuery.data?.musicAvailable ?? false)
-      : (billingQuery.data?.musicYearlyAvailable ?? billingQuery.data?.musicAvailable ?? false);
-  const unlimitedReady =
-    interval === "monthly"
-      ? (billingQuery.data?.unlimitedMonthlyAvailable ??
-        billingQuery.data?.unlimitedAvailable ??
-        false)
-      : (billingQuery.data?.unlimitedYearlyAvailable ??
-        billingQuery.data?.unlimitedAvailable ??
-        false);
   const hasDrivePlus = plan !== "FREE";
   const viewedRef = useRef(false);
 
@@ -236,72 +198,7 @@ function Pricing() {
           monetizationEnabled
           returnTo="/pricing"
           interval={interval}
-          purchaseActions={{
-            free: <OpenDriveLink className={openDriveClass} />,
-            drivePlus: hasDrivePlus ? (
-              <ManagePlanLink />
-            ) : billingAvailable ? (
-              <DrivePlusCheckoutButton
-                interval={interval}
-                label={interval === "monthly" ? "Drive+ · monthly" : "Drive+ · annual"}
-                source="pricing"
-                className={purchaseButtonClass}
-              />
-            ) : null,
-            music: hasDrivePlus ? null : billingAvailable ? (
-              musicReady ? (
-                <DrivePlusCheckoutButton
-                  plan="drive_music"
-                  interval={interval}
-                  label={
-                    isMusicTrialOfferActive()
-                      ? `Drive the Music · ${MUSIC_TRIAL_MONTHS} months free`
-                      : interval === "monthly"
-                        ? "Drive the Music · monthly"
-                        : "Drive the Music · annual"
-                  }
-                  source="pricing"
-                  className={purchaseButtonClass}
-                />
-              ) : (
-                <PackageNotReady />
-              )
-            ) : null,
-            unlimited: hasDrivePlus ? null : billingAvailable ? (
-              unlimitedReady ? (
-                <DrivePlusCheckoutButton
-                  plan="drive_unlimited"
-                  interval={interval}
-                  label={
-                    interval === "monthly"
-                      ? "Drive Unlimited · monthly"
-                      : "Drive Unlimited · annual"
-                  }
-                  source="pricing"
-                  className={purchaseButtonClass}
-                />
-              ) : (
-                <PackageNotReady />
-              )
-            ) : null,
-            lifetime: hasDrivePlus ? null : billingAvailable ? (
-              lifetimeAvailable ? (
-                <div className="w-full">
-                  <DrivePlusCheckoutButton
-                    interval="lifetime"
-                    label={t(settings.language, "pricing.lifetimeCta")}
-                    source="pricing"
-                    className={purchaseButtonClass}
-                  />
-                  <p className="mt-3 text-xs text-muted-foreground">
-                    {t(settings.language, "pricing.lifetimeSubscriptionNote")}
-                  </p>
-                </div>
-              ) : (
-                <PackageNotReady />
-              )
-            ) : null,
-          }}
+          purchaseActions={purchaseActions}
         />
         {!hasDrivePlus && !billingAvailable ? (
           <p className="mt-8 text-sm text-muted-foreground">

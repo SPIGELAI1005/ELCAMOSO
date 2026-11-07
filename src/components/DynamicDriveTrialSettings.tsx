@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { DynamicDriveTrialOffer } from "@/components/dynamic-drive-trial/DynamicDriveTrialOffer";
 import { useAccount } from "@/lib/account/AccountProvider";
 import { useMonetizationEnabled } from "@/lib/billing/use-billing-public-config";
+import { DYNAMIC_DRIVE_TRIAL_OFFER_ENABLED } from "@/lib/dynamic-drive-trial/config";
 import { formatTrialRemainingMinutes } from "@/lib/dynamic-drive-trial/display";
 import { getDynamicDriveTrialStatusFn } from "@/lib/dynamic-drive-trial/server-fns";
 import type { DynamicDriveTrialSnapshot } from "@/lib/dynamic-drive-trial/types";
@@ -26,6 +27,7 @@ export function DynamicDriveTrialSettings({ settings }: DynamicDriveTrialSetting
   if (!monetizationEnabled || settings.dynamicDriveTrialConverted) return null;
 
   if (!settings.dynamicDriveTrialActivated) {
+    if (!DYNAMIC_DRIVE_TRIAL_OFFER_ENABLED) return null;
     return (
       <div className="rounded-2xl border border-border/60 bg-card/40 p-4">
         <DynamicDriveTrialOffer returnTo="/settings?workspace=advanced" />

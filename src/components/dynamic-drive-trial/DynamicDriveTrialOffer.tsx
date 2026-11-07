@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 
 import { TryDynamicDriveButton } from "@/components/TryDynamicDriveButton";
 import { useMonetizationEnabled } from "@/lib/billing/use-billing-public-config";
+import { DYNAMIC_DRIVE_TRIAL_OFFER_ENABLED } from "@/lib/dynamic-drive-trial/config";
 import { TRIAL_OFFER_POINTS } from "@/lib/dynamic-drive-trial/display";
 import { trackMonetizationEvent } from "@/lib/telemetry/monetization-analytics";
 
@@ -23,7 +24,7 @@ export function DynamicDriveTrialOffer({
   const offeredRef = useRef(false);
 
   useEffect(() => {
-    if (!monetizationEnabled || offeredRef.current) return;
+    if (!DYNAMIC_DRIVE_TRIAL_OFFER_ENABLED || !monetizationEnabled || offeredRef.current) return;
     offeredRef.current = true;
     trackMonetizationEvent("dynamic_trial_offered", {
       source,
@@ -31,7 +32,7 @@ export function DynamicDriveTrialOffer({
     });
   }, [monetizationEnabled, source]);
 
-  if (!monetizationEnabled) return null;
+  if (!DYNAMIC_DRIVE_TRIAL_OFFER_ENABLED || !monetizationEnabled) return null;
 
   return (
     <div className={`space-y-4 ${className}`}>

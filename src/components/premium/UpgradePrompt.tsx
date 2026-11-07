@@ -5,6 +5,7 @@ import {
   useBillingAvailable,
   useMonetizationEnabled,
 } from "@/lib/billing/use-billing-public-config";
+import { DYNAMIC_DRIVE_TRIAL_OFFER_ENABLED } from "@/lib/dynamic-drive-trial/config";
 import { getPremiumContext, type PremiumContext } from "@/lib/premium/contexts";
 import { usePremiumPromptDismiss } from "@/lib/premium/use-premium-prompt-dismiss";
 import { useSessionSelector } from "@/lib/store/session-store";
@@ -83,7 +84,7 @@ export function UpgradePrompt({
       </div>
 
       <div className="mt-4 flex flex-wrap items-center gap-3">
-        {context === "dynamic_drive" && billingAvailable ? (
+        {DYNAMIC_DRIVE_TRIAL_OFFER_ENABLED && context === "dynamic_drive" && billingAvailable ? (
           <TryDynamicDriveButton
             className="inline-flex h-10 items-center justify-center rounded-full border border-foreground/20 px-5 text-[10px] tracking-[0.18em] uppercase transition hover:border-foreground/40 disabled:opacity-50"
             label="Try preview"
