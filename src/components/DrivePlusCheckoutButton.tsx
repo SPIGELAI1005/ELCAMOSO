@@ -4,6 +4,7 @@ import { useAccount } from "@/lib/account/AccountProvider";
 import { AccountSignInDialog } from "@/components/AccountSignInDialog";
 import type { CheckoutIntervalSlug, CheckoutPlanSlug } from "@/lib/billing/checkout-request";
 import { openDrivePlusCheckout } from "@/lib/billing/checkout-client";
+import { checkoutResumeReturnTo } from "@/lib/billing/checkout-resume";
 import { trackMonetizationEvent } from "@/lib/telemetry/monetization-analytics";
 
 function checkoutFailureMessage(error: unknown): string {
@@ -39,6 +40,7 @@ export function DrivePlusCheckoutButton({
 }: DrivePlusCheckoutButtonProps) {
   const { session, isAuthenticated, isLoading } = useAccount();
   const [showSignIn, setShowSignIn] = useState(false);
+  const signInReturnTo = checkoutResumeReturnTo(returnTo, { plan, interval, source });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -95,7 +97,7 @@ export function DrivePlusCheckoutButton({
         {busy ? "One moment…" : label}
       </button>
       {error ? <p className="mt-3 text-sm text-muted-foreground">{error}</p> : null}
-      <AccountSignInDialog open={showSignIn} onOpenChange={setShowSignIn} returnTo={returnTo} />
+      <AccountSignInDialog open={showSignIn} onOpenChange={setShowSignIn} returnTo={signInReturnTo} />
     </>
   );
 }

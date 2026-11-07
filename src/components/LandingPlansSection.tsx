@@ -363,7 +363,7 @@ export function PlansOverview({
 export function LandingPlansSection() {
   const monetizationEnabled = useMonetizationEnabled();
   const [interval, setInterval] = useState<BillingDisplayInterval>("monthly");
-  const purchaseActions = usePlanPurchaseActions(interval, "home");
+  const purchaseActions = usePlanPurchaseActions(interval, "home", "/");
 
   return (
     <section className="mx-auto w-full max-w-3xl px-6 py-16 sm:px-12">

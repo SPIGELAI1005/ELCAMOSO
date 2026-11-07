@@ -6,6 +6,7 @@ import { writePersistedAccountSession } from "@/lib/account/persist";
 import { verifyAccountMagicLinkFn } from "@/lib/account/server-fns";
 import { useSettings } from "@/lib/drive/useSettings";
 import { sanitizeReturnTo } from "@/lib/account/return-to";
+import { readCheckoutResume } from "@/lib/billing/checkout-resume";
 import { takePendingPair } from "@/lib/drive-relay/pair-intent";
 
 function parseSearch(search: Record<string, unknown>): {
@@ -49,6 +50,10 @@ function AccountCallbackPage() {
         await activateDynamicDriveTrialForSession(update, verified.email);
         // Magic link may open in a new tab without returnTo: fall back to a pending QR pair.
         const next = sanitizeReturnTo(returnTo ?? takePendingPair() ?? "/drive");
+        if (readCheckoutResume(next)) {
+          window.location.assign(next);
+          return;
+        }
         if (next === "/drive" || next.startsWith("/drive?")) {
           await navigate({ to: "/drive", search: { activateTrial: true } });
           return;

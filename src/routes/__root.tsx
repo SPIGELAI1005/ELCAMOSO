@@ -33,6 +33,7 @@ import { useSessionSelector } from "@/lib/store/session-store";
 import appCss from "../styles.css?url";
 import { reportRuntimeError } from "../lib/runtime-error-reporting";
 import { SEO_CONFIG, isSeoPreviewDeployment, seoHtmlLang } from "@/lib/seo";
+import { ResumePendingCheckout } from "@/components/billing/ResumePendingCheckout";
 import { SmileReferralBridge } from "@/components/smiles/SmileRewards";
 
 function NotFoundComponent() {
@@ -188,6 +189,7 @@ function RootComponent() {
             data-hydrated={hydrated ? "true" : "false"}
           >
             <SessionBridge />
+            <ResumePendingCheckout />
             <DeviceLinkBridge />
             <EntitlementEnforcer />
             <GuestTrialBridge />

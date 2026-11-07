@@ -49,6 +49,7 @@ function PackageNotReady() {
 export function usePlanPurchaseActions(
   interval: BillingDisplayInterval,
   source: string,
+  returnTo = "/pricing",
 ): PlanPurchaseActions | undefined {
   const billingQuery = useBillingPublicConfig();
   const { plan } = useEntitlements();
@@ -81,6 +82,7 @@ export function usePlanPurchaseActions(
         interval={interval}
         label={interval === "monthly" ? "Drive+ · monthly" : "Drive+ · annual"}
         source={source}
+        returnTo={returnTo}
         className={purchaseButtonClass}
       />
     ) : null,
@@ -89,6 +91,7 @@ export function usePlanPurchaseActions(
         <DrivePlusCheckoutButton
           plan="drive_music"
           interval={interval}
+          returnTo={returnTo}
           label={
             isMusicTrialOfferActive()
               ? `Drive the Music · ${MUSIC_TRIAL_MONTHS} months free`
@@ -108,6 +111,7 @@ export function usePlanPurchaseActions(
         <DrivePlusCheckoutButton
           plan="drive_unlimited"
           interval={interval}
+          returnTo={returnTo}
           label={
             interval === "monthly" ? "Drive Unlimited · monthly" : "Drive Unlimited · annual"
           }
@@ -125,6 +129,7 @@ export function usePlanPurchaseActions(
             interval="lifetime"
             label={t(settings.language, "pricing.lifetimeCta")}
             source={source}
+            returnTo={returnTo}
             className={purchaseButtonClass}
           />
           <p className="mt-3 text-xs text-muted-foreground">
