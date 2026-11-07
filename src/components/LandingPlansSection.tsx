@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
 
 import { DynamicDriveTrialOffer } from "@/components/dynamic-drive-trial/DynamicDriveTrialOffer";
@@ -29,6 +29,14 @@ import { cn } from "@/lib/utils";
 import { useSettings } from "@/lib/drive/useSettings";
 import { t } from "@/lib/i18n";
 
+export interface PlanPurchaseActions {
+  free?: ReactNode;
+  drivePlus?: ReactNode;
+  music?: ReactNode;
+  unlimited?: ReactNode;
+  lifetime?: ReactNode;
+}
+
 interface PlansOverviewProps {
   /** When false, show prices and features only - no checkout or trial activation. */
   monetizationEnabled: boolean;
@@ -37,6 +45,8 @@ interface PlansOverviewProps {
   interval?: BillingDisplayInterval;
   /** When "danger", billing-disabled notice uses red (pricing page). */
   billingNoticeTone?: "muted" | "danger";
+  /** Purchase controls rendered inside each plan, under that plan's features. */
+  purchaseActions?: PlanPurchaseActions;
 }
 
 function StrikethroughPrice({ amount, className }: { amount: string; className?: string }) {
@@ -172,6 +182,7 @@ export function PlansOverview({
   returnTo = "/",
   interval = "yearly",
   billingNoticeTone = "muted",
+  purchaseActions,
 }: PlansOverviewProps) {
   const free = getFreePlanDisplay();
   const drivePlus = getDrivePlusDisplay(interval);
@@ -210,6 +221,7 @@ export function PlansOverview({
               A complete first journey from motion to music. No card required.
             </p>
           ) : null}
+          {purchaseActions?.free}
         </div>
         <div className={compact ? "py-8" : "py-12"} id="drive-plus" data-testid="plan-drive-plus">
           <p className="text-xs tracking-[0.2em] text-muted-foreground uppercase">Drive+</p>
@@ -234,6 +246,7 @@ export function PlansOverview({
               <li key={feature}>{feature}</li>
             ))}
           </ul>
+          {purchaseActions?.drivePlus}
         </div>
         <div className={compact ? "py-8" : "py-12"} id="drive-music" data-testid="plan-drive-music">
           <div className="flex flex-wrap items-center gap-3">
@@ -281,6 +294,7 @@ export function PlansOverview({
               <li key={feature}>{feature}</li>
             ))}
           </ul>
+          {purchaseActions?.music}
         </div>
         <div
           className={compact ? "py-8" : "py-12"}
@@ -313,6 +327,7 @@ export function PlansOverview({
               ),
             )}
           </ul>
+          {purchaseActions?.unlimited}
         </div>
         <div className={compact ? "py-8" : "py-12"} data-testid="plan-lifetime">
           <p className="text-xs tracking-[0.2em] text-muted-foreground uppercase">
@@ -336,6 +351,7 @@ export function PlansOverview({
             {t(language, "pricing.lifetimePayback")}
           </p>
           <LifetimeSeatsCounter seats={lifetimeSeats} language={language} />
+          {purchaseActions?.lifetime}
         </div>
       </div>
       {monetizationEnabled ? (

@@ -75,14 +75,37 @@ function EarlyAccessBanner() {
   );
 }
 
-function OpenDriveLink() {
+const purchaseButtonClass =
+  "mt-8 inline-flex h-12 w-full items-center justify-center rounded-full bg-primary px-8 text-[11px] tracking-[0.2em] text-primary-foreground uppercase transition-opacity hover:opacity-90 sm:w-auto";
+
+const openDriveClass =
+  "mt-8 inline-flex h-12 min-w-[11.5rem] items-center justify-center rounded-full border border-foreground/20 px-8 text-[11px] tracking-[0.2em] text-foreground uppercase transition hover:border-foreground/40";
+
+function OpenDriveLink({ className = "mt-10 inline-flex h-12 min-w-[11.5rem] items-center justify-center rounded-full border border-foreground/20 px-8 text-[11px] tracking-[0.2em] text-foreground uppercase transition hover:border-foreground/40" }: { className?: string }) {
   return (
-    <Link
-      to="/drive"
-      className="mt-10 inline-flex h-12 min-w-[11.5rem] items-center justify-center rounded-full border border-foreground/20 px-8 text-[11px] tracking-[0.2em] text-foreground uppercase transition hover:border-foreground/40"
-    >
+    <Link to="/drive" className={className}>
       Open Drive
     </Link>
+  );
+}
+
+function ManagePlanLink() {
+  return (
+    <Link
+      to="/settings"
+      search={{ workspace: "plan" }}
+      className={purchaseButtonClass}
+    >
+      Manage plan
+    </Link>
+  );
+}
+
+function PackageNotReady() {
+  return (
+    <p className="mt-8 text-sm text-muted-foreground">
+      Checkout for this package is not connected yet.
+    </p>
   );
 }
 
@@ -117,8 +140,18 @@ function Pricing() {
   const monetizationEnabled = billingQuery.data?.monetizationEnabled ?? false;
   const billingAvailable = billingQuery.data?.available ?? false;
   const lifetimeAvailable = billingQuery.data?.lifetimeAvailable ?? false;
-  const musicAvailable = billingQuery.data?.musicAvailable ?? false;
-  const unlimitedAvailable = billingQuery.data?.unlimitedAvailable ?? false;
+  const musicReady =
+    interval === "monthly"
+      ? (billingQuery.data?.musicMonthlyAvailable ?? billingQuery.data?.musicAvailable ?? false)
+      : (billingQuery.data?.musicYearlyAvailable ?? billingQuery.data?.musicAvailable ?? false);
+  const unlimitedReady =
+    interval === "monthly"
+      ? (billingQuery.data?.unlimitedMonthlyAvailable ??
+        billingQuery.data?.unlimitedAvailable ??
+        false)
+      : (billingQuery.data?.unlimitedYearlyAvailable ??
+        billingQuery.data?.unlimitedAvailable ??
+        false);
   const hasDrivePlus = plan !== "FREE";
   const viewedRef = useRef(false);
 
@@ -199,25 +232,24 @@ function Pricing() {
       </section>
 
       <section className="mx-auto w-full max-w-2xl px-6 sm:px-10">
-        <PlansOverview monetizationEnabled returnTo="/pricing" interval={interval} />
-        <div className="mt-12 space-y-4 border-t border-border pt-12">
-          {hasDrivePlus ? (
-            <Link
-              to="/settings"
-              search={{ workspace: "plan" }}
-              className="inline-flex h-14 items-center justify-center rounded-full bg-primary px-10 text-sm tracking-[0.22em] text-primary-foreground uppercase transition-opacity hover:opacity-90"
-            >
-              Manage plan
-            </Link>
-          ) : billingAvailable ? (
-            <>
+        <PlansOverview
+          monetizationEnabled
+          returnTo="/pricing"
+          interval={interval}
+          purchaseActions={{
+            free: <OpenDriveLink className={openDriveClass} />,
+            drivePlus: hasDrivePlus ? (
+              <ManagePlanLink />
+            ) : billingAvailable ? (
               <DrivePlusCheckoutButton
                 interval={interval}
                 label={interval === "monthly" ? "Drive+ · monthly" : "Drive+ · annual"}
                 source="pricing"
-                className="inline-flex h-14 w-full items-center justify-center rounded-full bg-primary px-10 text-sm tracking-[0.22em] text-primary-foreground uppercase transition-opacity hover:opacity-90 sm:w-auto"
+                className={purchaseButtonClass}
               />
-              {musicAvailable ? (
+            ) : null,
+            music: hasDrivePlus ? null : billingAvailable ? (
+              musicReady ? (
                 <DrivePlusCheckoutButton
                   plan="drive_music"
                   interval={interval}
@@ -229,46 +261,56 @@ function Pricing() {
                         : "Drive the Music · annual"
                   }
                   source="pricing"
-                  className="inline-flex h-14 w-full items-center justify-center rounded-full bg-primary px-10 text-sm tracking-[0.22em] text-primary-foreground uppercase transition-opacity hover:opacity-90 sm:ml-4 sm:w-auto"
+                  className={purchaseButtonClass}
                 />
-              ) : null}
-              {unlimitedAvailable ? (
+              ) : (
+                <PackageNotReady />
+              )
+            ) : null,
+            unlimited: hasDrivePlus ? null : billingAvailable ? (
+              unlimitedReady ? (
                 <DrivePlusCheckoutButton
                   plan="drive_unlimited"
                   interval={interval}
                   label={
-                    interval === "monthly" ? "Drive Unlimited · monthly" : "Drive Unlimited · annual"
+                    interval === "monthly"
+                      ? "Drive Unlimited · monthly"
+                      : "Drive Unlimited · annual"
                   }
                   source="pricing"
-                  className="inline-flex h-14 w-full items-center justify-center rounded-full bg-primary px-10 text-sm tracking-[0.22em] text-primary-foreground uppercase transition-opacity hover:opacity-90 sm:ml-4 sm:w-auto"
+                  className={purchaseButtonClass}
                 />
-              ) : null}
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-6">
-                {lifetimeAvailable ? (
-                <DrivePlusCheckoutButton
-                  interval="lifetime"
-                  label={t(settings.language, "pricing.lifetimeCta")}
-                  source="pricing"
-                  className="inline-flex h-11 items-center justify-center rounded-full border border-foreground/20 px-6 text-[11px] tracking-[0.18em] text-foreground uppercase transition hover:border-foreground/40"
-                />
-                ) : null}
-              </div>
-              {lifetimeAvailable ? (
-                <p className="text-xs text-muted-foreground">
-                  {t(settings.language, "pricing.lifetimeSubscriptionNote")}
-                </p>
-              ) : null}
-            </>
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              Purchase buttons need the live Stripe settings on the server.
-              {missingCheckoutSettings(billingQuery.data?.checkoutRequirements).length
-                ? ` Missing: ${missingCheckoutSettings(billingQuery.data?.checkoutRequirements).join(", ")}.`
-                : null}
-            </p>
-          )}
-        </div>
-        <OpenDriveLink />
+              ) : (
+                <PackageNotReady />
+              )
+            ) : null,
+            lifetime: hasDrivePlus ? null : billingAvailable ? (
+              lifetimeAvailable ? (
+                <>
+                  <DrivePlusCheckoutButton
+                    interval="lifetime"
+                    label={t(settings.language, "pricing.lifetimeCta")}
+                    source="pricing"
+                    className={purchaseButtonClass}
+                  />
+                  <p className="mt-3 text-xs text-muted-foreground">
+                    {t(settings.language, "pricing.lifetimeSubscriptionNote")}
+                  </p>
+                </>
+              ) : (
+                <PackageNotReady />
+              )
+            ) : null,
+          }}
+        />
+        {!hasDrivePlus && !billingAvailable ? (
+          <p className="mt-8 text-sm text-muted-foreground">
+            Purchase buttons need the live Stripe settings on the server.
+            {missingCheckoutSettings(billingQuery.data?.checkoutRequirements).length
+              ? ` Missing: ${missingCheckoutSettings(billingQuery.data?.checkoutRequirements).join(", ")}.`
+              : null}
+          </p>
+        ) : null}
       </section>
 
       <PricingFooterNotes />

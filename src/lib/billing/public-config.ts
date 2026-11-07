@@ -6,6 +6,7 @@ import {
   isLifetimePriceConfigured,
   isMusicPriceConfigured,
   isUnlimitedPriceConfigured,
+  readStripeConfig,
   stripeCheckoutRequirements,
 } from "@/lib/billing/stripe/config";
 import { isMonetizationEnabled } from "@/lib/billing/monetization-flag";
@@ -40,8 +41,16 @@ export interface BillingPublicConfig {
   lifetimeSeats?: LifetimeSeatStatus | null;
   /** Drive the Music checkout needs monthly and yearly Price ids. */
   musicAvailable: boolean;
+  /** True when the monthly Drive the Music price is set, even if yearly is not. */
+  musicMonthlyAvailable: boolean;
+  /** True when the yearly Drive the Music price is set, even if monthly is not. */
+  musicYearlyAvailable: boolean;
   /** Drive Unlimited checkout needs monthly and yearly Price ids. */
   unlimitedAvailable: boolean;
+  /** True when the monthly Drive Unlimited price is set, even if yearly is not. */
+  unlimitedMonthlyAvailable: boolean;
+  /** True when the yearly Drive Unlimited price is set, even if monthly is not. */
+  unlimitedYearlyAvailable: boolean;
   /** Which Stripe settings the server can see. Values are booleans, never secrets. */
   checkoutRequirements: {
     secretKey: boolean;
@@ -75,13 +84,19 @@ function displayPriceForPlan(id: CommercialPlanId): string {
 
 export function getBillingPublicConfig(): BillingPublicConfig {
   const yearly = getDrivePlusYearlyDisplay();
+  const billing = isBillingAvailable();
+  const prices = readStripeConfig().prices;
 
   return {
     monetizationEnabled: isMonetizationEnabled(),
-    available: isBillingAvailable(),
-    lifetimeAvailable: isBillingAvailable() && isLifetimePriceConfigured(),
-    musicAvailable: isBillingAvailable() && isMusicPriceConfigured(),
-    unlimitedAvailable: isBillingAvailable() && isUnlimitedPriceConfigured(),
+    available: billing,
+    lifetimeAvailable: billing && isLifetimePriceConfigured(),
+    musicAvailable: billing && isMusicPriceConfigured(),
+    musicMonthlyAvailable: billing && Boolean(prices.drive_music_monthly),
+    musicYearlyAvailable: billing && Boolean(prices.drive_music_yearly),
+    unlimitedAvailable: billing && isUnlimitedPriceConfigured(),
+    unlimitedMonthlyAvailable: billing && Boolean(prices.drive_unlimited_monthly),
+    unlimitedYearlyAvailable: billing && Boolean(prices.drive_unlimited_yearly),
     checkoutRequirements: stripeCheckoutRequirements(),
     freePrice: formatEuroAmount(0),
     yearlyEquivalentMonthly: yearly.equivalentMonthly ?? "",

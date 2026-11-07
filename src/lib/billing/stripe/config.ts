@@ -45,22 +45,33 @@ export interface StripeConfig {
   prices: StripePriceConfig;
 }
 
+const PRICE_ENV_ALIASES: Partial<Record<CommercialPlanId, readonly string[]>> = {
+  drive_music_monthly: ["STRIPE_PRICE_DRIVE_THE_MUSIC_MONTHLY"],
+  drive_music_yearly: ["STRIPE_PRICE_DRIVE_THE_MUSIC_YEARLY"],
+  drive_plus_lifetime: ["STRIPE_PRICE_LIFETIME", "STRIPE_PRICE_DRIVE_LIFETIME"],
+};
+
+function readPriceEnv(planId: CommercialPlanId, deploy: ElcamosoDeployEnv): string {
+  const primary = readScopedEnv(stripePriceEnvKeyForPlan(planId), deploy);
+  if (primary) return primary;
+  for (const alias of PRICE_ENV_ALIASES[planId] ?? []) {
+    const value = readScopedEnv(alias, deploy);
+    if (value) return value;
+  }
+  return "";
+}
+
 export function readStripeConfig(deploy = resolveDeployEnv()): StripeConfig {
   const secretKey = readScopedEnv("STRIPE_SECRET_KEY", deploy) ?? "";
   const webhookSecret = readScopedEnv("STRIPE_WEBHOOK_SECRET", deploy) ?? "";
   const prices: StripePriceConfig = {
-    drive_plus_monthly: readScopedEnv(stripePriceEnvKeyForPlan("drive_plus_monthly"), deploy) ?? "",
-    drive_plus_yearly: readScopedEnv(stripePriceEnvKeyForPlan("drive_plus_yearly"), deploy) ?? "",
-    drive_music_monthly:
-      readScopedEnv(stripePriceEnvKeyForPlan("drive_music_monthly"), deploy) ?? "",
-    drive_music_yearly:
-      readScopedEnv(stripePriceEnvKeyForPlan("drive_music_yearly"), deploy) ?? "",
-    drive_unlimited_monthly:
-      readScopedEnv(stripePriceEnvKeyForPlan("drive_unlimited_monthly"), deploy) ?? "",
-    drive_unlimited_yearly:
-      readScopedEnv(stripePriceEnvKeyForPlan("drive_unlimited_yearly"), deploy) ?? "",
-    drive_plus_lifetime:
-      readScopedEnv(stripePriceEnvKeyForPlan("drive_plus_lifetime"), deploy) ?? "",
+    drive_plus_monthly: readPriceEnv("drive_plus_monthly", deploy),
+    drive_plus_yearly: readPriceEnv("drive_plus_yearly", deploy),
+    drive_music_monthly: readPriceEnv("drive_music_monthly", deploy),
+    drive_music_yearly: readPriceEnv("drive_music_yearly", deploy),
+    drive_unlimited_monthly: readPriceEnv("drive_unlimited_monthly", deploy),
+    drive_unlimited_yearly: readPriceEnv("drive_unlimited_yearly", deploy),
+    drive_plus_lifetime: readPriceEnv("drive_plus_lifetime", deploy),
   };
 
   const configured = Boolean(

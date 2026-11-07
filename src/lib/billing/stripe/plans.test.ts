@@ -22,6 +22,12 @@ const ENV_KEYS = [
   "STRIPE_WEBHOOK_SECRET_PRODUCTION",
   "STRIPE_PRICE_DRIVE_PLUS_MONTHLY_PRODUCTION",
   "STRIPE_PRICE_DRIVE_PLUS_YEARLY_PRODUCTION",
+  "STRIPE_PRICE_DRIVE_THE_MUSIC_MONTHLY",
+  "STRIPE_PRICE_DRIVE_THE_MUSIC_YEARLY",
+  "STRIPE_PRICE_LIFETIME",
+  "STRIPE_PRICE_DRIVE_MUSIC_MONTHLY",
+  "STRIPE_PRICE_DRIVE_MUSIC_YEARLY",
+  "STRIPE_PRICE_DRIVE_PLUS_LIFETIME",
   "ELCAMOSO_ENV",
   "VERCEL_ENV",
 ] as const;
@@ -123,6 +129,20 @@ describe("stripe config", () => {
       drivePlusMonthly: true,
       drivePlusYearly: true,
     });
+  });
+
+  it("accepts Drive the Music and Lifetime prices under their alternate env names", () => {
+    delete process.env.STRIPE_PRICE_DRIVE_MUSIC_MONTHLY;
+    delete process.env.STRIPE_PRICE_DRIVE_MUSIC_YEARLY;
+    delete process.env.STRIPE_PRICE_DRIVE_PLUS_LIFETIME;
+    process.env.STRIPE_PRICE_DRIVE_THE_MUSIC_MONTHLY = "price_music_month";
+    process.env.STRIPE_PRICE_DRIVE_THE_MUSIC_YEARLY = "price_music_year";
+    process.env.STRIPE_PRICE_LIFETIME = "price_lifetime";
+
+    const config = readStripeConfig();
+    expect(resolveStripePriceId("drive_music_monthly", config)).toBe("price_music_month");
+    expect(resolveStripePriceId("drive_music_yearly", config)).toBe("price_music_year");
+    expect(resolveStripePriceId("drive_plus_lifetime", config)).toBe("price_lifetime");
   });
 
   it("resolves Stripe Price ids only from env via internal plan ids", () => {

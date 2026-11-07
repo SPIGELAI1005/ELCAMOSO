@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { useAccount } from "@/lib/account/AccountProvider";
 import { AccountSignInDialog } from "@/components/AccountSignInDialog";
@@ -41,6 +41,12 @@ export function DrivePlusCheckoutButton({
   const [showSignIn, setShowSignIn] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const restoreLabel = () => setBusy(false);
+    window.addEventListener("pageshow", restoreLabel);
+    return () => window.removeEventListener("pageshow", restoreLabel);
+  }, []);
 
   async function startCheckout() {
     if (!session) return;
