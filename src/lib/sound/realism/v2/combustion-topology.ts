@@ -571,21 +571,24 @@ export const V_TWIN_TOPOLOGY: CombustionTopologyV1 = {
   ],
 };
 
-/** Traby: two-stroke parallel twin, both cylinders fire every revolution (180° apart). */
+/**
+ * Traby: two-stroke parallel twin, both cylinders fire every revolution (180° apart).
+ * Sound: nasal "ring-ding" buzz from expansion pipe with continuous crackling character
+ * throughout idle, cruise and transitions - authentic uneven two-stroke combustion.
+ */
 export const TWO_STROKE_TWIN_TOPOLOGY: CombustionTopologyV1 = {
   version: 1,
   cycleDegrees: 360,
   cylinderCount: 2,
-  noiseScale: 0.4,
+  noiseScale: 0.55,
   collectors: [{ id: 0 }],
   soundSpeedMetresPerSecond: TOPOLOGY_SOUND_SPEED_DEFAULT,
   cylinders: [
-    { id: 1, firingAngleDegrees: 0, collectorId: 0, pulseWeight: 1.08, primaryLengthMetres: 0.07 },
-    { id: 2, firingAngleDegrees: 180, collectorId: 0, pulseWeight: 0.92, primaryLengthMetres: 0.09 },
+    { id: 1, firingAngleDegrees: 0, collectorId: 0, pulseWeight: 1.12, primaryLengthMetres: 0.07 },
+    { id: 2, firingAngleDegrees: 180, collectorId: 0, pulseWeight: 0.88, primaryLengthMetres: 0.09 },
   ],
-  // Ring-ding idle: clearly uneven cycles and a wandering crank.
-  cycleLope: 0.7,
-  organic: { crankJitter: 0.006, crankWander: 0.005, wanderHz: 1.4 },
+  cycleLope: 0.78,
+  organic: { crankJitter: 0.009, crankWander: 0.007, wanderHz: 1.6 },
 };
 
 /** Ge-Squared: cross-plane biturbo V8, two banks into two turbos, lumpy burble. */
