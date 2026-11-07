@@ -194,6 +194,22 @@ const SYMPHONY_SHELLS: readonly ExperienceDescriptor[] = [
       requiredEntitlement: "symphony_all",
     },
   },
+  {
+    id: "symphony-viral-mix",
+    kind: "symphony",
+    name: "Viral Mix",
+    tagline: "Bells · Pads · Sub · Plucks",
+    description: "Ethereal electronic with crystal bells and motion-responsive plucks.",
+    artworkStyle: "score",
+    entitlement: "drive_plus",
+    previewMode: "playable",
+    capabilities: {
+      profileId: "symphony-viral-mix",
+      stems: ["Bells", "Pads", "Sub", "Plucks"],
+      selectableInDrive: true,
+      requiredEntitlement: "symphony_all",
+    },
+  },
 ];
 
 function engineFromProfile(profile: SoundProfile): ExperienceDescriptor {

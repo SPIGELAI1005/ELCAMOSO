@@ -135,4 +135,27 @@ export const SYMPHONY_SOUND_PROFILES: SoundProfile[] = [
       coreLevel: 0.5,
     },
   },
+  {
+    id: "symphony-viral-mix",
+    name: "Viral Mix",
+    category: "Musical",
+    traits: ["Electronic", "Ethereal", "Dreamy"],
+    description:
+      "An original 140 bpm electronic piece: stationary is spacious bells over ethereal pads, cruising adds sub-bass and staccato plucks, and real pace brings the full groove while keeping the synth-led character.",
+    drivetrainMode: "continuous",
+    motionModel: "ambient",
+    sourceMode: "hybrid",
+    access: "drive_plus",
+    voice: {
+      baseFrequency: 110,
+      harmonics: [1],
+      waveResponse: 0.7,
+      filterBase: 400,
+      filterRange: 1400,
+      noise: 0,
+      wave: "sine",
+      detune: 0,
+      coreLevel: 0.5,
+    },
+  },
 ];

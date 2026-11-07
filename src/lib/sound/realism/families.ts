@@ -78,6 +78,7 @@ const FAMILY_BY_ID: Record<string, ProfileFamily> = {
   "symphony-latino-fiesta": "musical",
   "symphony-piano-flow": "musical",
   "symphony-jazz-cruise": "musical",
+  "symphony-viral-mix": "musical",
   "world-space-drive": "designed",
   "world-cyber-city": "designed",
   "world-storm-run": "environmental",
