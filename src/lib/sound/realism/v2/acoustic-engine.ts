@@ -629,7 +629,8 @@ const V_TWIN: AcousticEngineConfig = {
 /**
  * Traby: small two-stroke parallel twin (fires every revolution). Voiced against a
  * public-domain two-stroke recording (energy 100-200 Hz, steep top roll-off): nasal
- * "ring-ding" buzz from the expansion pipe, a dry rattle and a light misfiring idle.
+ * "ring-ding" buzz from the expansion pipe with continuous crackling character
+ * throughout all operating conditions - authentic uneven two-stroke combustion.
  */
 const TWO_STROKE_TWIN: AcousticEngineConfig = {
   cylinders: 2,
@@ -637,33 +638,30 @@ const TWO_STROKE_TWIN: AcousticEngineConfig = {
   architecture: "v-twin",
   banks: "inline",
   architectureCode: 0,
-  idleIrregularity: 0.5,
-  exhaustPulse: 0.84,
-  intakePresence: 0.3,
-  mechanicalIntensity: 0.55,
-  combustionSharpness: 0.74,
-  highLoadEnrichment: 0.6,
-  loadContrast: 0.7,
-  upperRpmEnergy: 0.7,
-  intakeLoadResponse: 0.5,
-  overrunCharacter: 0.62,
+  idleIrregularity: 0.62,
+  exhaustPulse: 0.86,
+  intakePresence: 0.32,
+  mechanicalIntensity: 0.58,
+  combustionSharpness: 0.78,
+  highLoadEnrichment: 0.62,
+  loadContrast: 0.72,
+  upperRpmEnergy: 0.72,
+  intakeLoadResponse: 0.52,
+  overrunCharacter: 0.68,
   exhaustFormantsHz: [140, 290, 600, 1150],
   intakeFormantsHz: [520, 1100, 2100],
   bodyResonanceHz: [150, 320, 680],
   supportRatios: [1, 2, 3, 4, 5],
-  supportWeights: [0.9, 0.62, 0.42, 0.24, 0.12],
+  supportWeights: [0.92, 0.65, 0.45, 0.26, 0.14],
   forcedInduction: false,
-  bodyBrightness: 0.5,
+  bodyBrightness: 0.52,
   redlineRpm: 4200,
   outputTrimDb: 18.0,
-  throttleGapDb: 2.4,
-  // Ring-ding idle: uneven hunt and the odd soft stumble.
-  idleLife: { wanderRpm: 90, wanderTauS: 0.3, blipRpm: [200, 600], blipEveryS: [3, 7], blipIntensity: 0.14, breathDb: 1.6 },
-  accelCharacter: { gentleGainDb: -1, hardGainDb: 2, hardTiltDb: 3, gentleTiltDb: -1 },
-  // Nasal buzz under load.
-  growl: { centersHz: [300, 640], q: 1.1, drive: 0.8, level: 0.05, lowpassHz: 2800 },
-  // Overrun: soft "ring-ding" crackle, not big bangs.
-  liftPops: { probability: 0.7, level: 0.18, rate: 1.2 },
+  throttleGapDb: 2.2,
+  idleLife: { wanderRpm: 100, wanderTauS: 0.28, blipRpm: [200, 650], blipEveryS: [3, 6.5], blipIntensity: 0.16, breathDb: 1.8 },
+  accelCharacter: { gentleGainDb: -0.8, hardGainDb: 2.2, hardTiltDb: 3.2, gentleTiltDb: -0.8 },
+  growl: { centersHz: [280, 620], q: 1.0, drive: 0.85, level: 0.06, lowpassHz: 2600 },
+  liftPops: { probability: 0.75, level: 0.2, rate: 1.15 },
 };
 
 /**
