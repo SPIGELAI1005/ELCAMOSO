@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import { NEWS_ITEMS, getVisibleNewsItems } from "./items";
 
 describe("news items", () => {
-  it("has 28 week posts plus the safety and 7-day special items with Berlin offsets", () => {
-    expect(NEWS_ITEMS).toHaveLength(30);
+  it("has 28 week posts plus the safety, 7-day special and 50+ sounds items with Berlin offsets", () => {
+    expect(NEWS_ITEMS).toHaveLength(31);
     for (const item of NEWS_ITEMS) expect(item.publishAt).toMatch(/\+01:00$/);
   });
   it("hides everything before the first slot", () => {

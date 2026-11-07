@@ -193,6 +193,13 @@ export const NEWS_ITEMS: NewsItem[] = [
     image: "/news/drive-special/7day-drive-special-logo.png",
     link: { href: "/sounds", label: "Open sounds" },
   },
+  {
+    id: "50-plus-sounds",
+    publishAt: "2026-11-07T23:30:00+01:00",
+    text: "50+ sounds. More ways to make the drive your own. I don't always want the same sound for a drive. Sometimes an engine, sometimes music, sometimes something completely different. That's what I'm building with ELCAMOSO: 50+ sounds to choose from—from engine soundtracks to music, immersive worlds and playful surprises. I like driving electric. I still enjoy an engine soundtrack. Racing V10 is one option for that side of the experience. ELCAMOSO isn't only about engine sounds. I'm also exploring music that responds to the drive. Jazz Cruise is one of those experiences. Choose your sound and set up while parked.",
+    image: "/news/50-plus-sounds/01-50-plus-sounds-v10-car.png",
+    link: { href: "/sounds", label: "Explore sounds" },
+  },
 ];
 
 /** Items already published at `now`, newest first. */
