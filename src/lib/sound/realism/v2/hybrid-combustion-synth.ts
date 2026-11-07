@@ -1056,14 +1056,6 @@ export class HybridCombustionSynth {
       bg.connect(buses.accents);
       bsrc.start();
       this.bov = { src: bsrc, filter: bf, gain: bg };
-      let flutterSend: GainNode | null = null;
-      if (this.turboEcho && cfg.turboReverb) {
-        flutterSend = ctx.createGain();
-        flutterSend.gain.value = 1;
-        bg.connect(flutterSend);
-        flutterSend.connect(this.turboEcho.input);
-        this.turboEcho.nodes.push(flutterSend);
-      }
       if (cfg.turboFlutter?.toneQ) {
         // Tuned ring layer for the percussion flutter (same noise, narrow bandpass).
         const tf = ctx.createBiquadFilter();
@@ -1075,7 +1067,6 @@ export class HybridCombustionSynth {
         bsrc.connect(tf);
         tf.connect(tg);
         tg.connect(buses.accents);
-        if (flutterSend) tg.connect(flutterSend);
         this.bovTone = { filter: tf, gain: tg };
         nodes += 2;
       }
