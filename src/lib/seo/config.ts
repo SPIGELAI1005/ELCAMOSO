@@ -10,9 +10,9 @@ export const SEO_CONFIG = {
   /** Hard production canonical host (www). */
   productionOrigin: "https://www.elcamoso.com",
   /** Lead with proposition; EV discovery second. See docs/SEO.md. */
-  defaultTitle: "ELCAMOSO - Turn Motion Into Sound | EV Sound Experiences",
+  defaultTitle: "ELCAMOSO | EV Engine Sounds, Music & Immersive Worlds",
   defaultDescription:
-    "Your EV. Your Sound. More Emotion. ELCAMOSO turns motion into sound: Engine, Symphony, World, and Fusion experiences for electric drivers. Early access is free.",
+    "Explore motion-responsive engine sounds, music and immersive worlds for electric driving. Choose Live sound or Silent capture for listening later.",
   defaultImage: "/og/elcamoso-default.png",
   defaultImageAlt: "ELCAMOSO - Turn motion into sound for electric vehicles",
   ogImageWidth: 1200,

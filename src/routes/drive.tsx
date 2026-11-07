@@ -58,6 +58,7 @@ import { PostSilentCaptureExperience } from "@/components/drive/PostSilentCaptur
 import { IncompleteJourneyRecovery } from "@/components/drive/IncompleteJourneyRecovery";
 import { shouldCaptureTrace, shouldPlayLiveAudio } from "@/lib/journey-trace";
 import { DEMO_PAGE_ENABLED } from "@/lib/feature-flags";
+import { GettingStartedButton } from "@/components/onboarding/GettingStartedButton";
 
 const TeslaDrivePlusUpgrade = lazy(() =>
   import("@/components/TeslaDrivePlusUpgrade").then((m) => ({
@@ -625,6 +626,7 @@ function DriveScreen() {
           </div>
         </>
       )}
+      <GettingStartedButton hidden={status !== "idle"} />
     </main>
   );
 }
