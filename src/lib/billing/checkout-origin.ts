@@ -27,16 +27,7 @@ export function assertAllowedCheckoutOrigin(origin: string, trustedHost?: string
   const sanitized = sanitizeCheckoutOrigin(origin);
   const allowlist = readAllowedCheckoutOrigins();
 
-  if (allowlist.length > 0) {
-    if (!allowlist.includes(sanitized)) {
-      throw new Error("Checkout origin not allowed");
-    }
-    return sanitized;
-  }
-
-  if (!isProductionDeploy() && LOCALHOST_ORIGIN_RE.test(sanitized)) {
-    return sanitized;
-  }
+  if (allowlist.includes(sanitized)) return sanitized;
 
   if (trustedHost) {
     try {
@@ -44,6 +35,14 @@ export function assertAllowedCheckoutOrigin(origin: string, trustedHost?: string
     } catch {
       /* invalid URL handled above */
     }
+  }
+
+  if (allowlist.length > 0) {
+    throw new Error("Checkout origin not allowed");
+  }
+
+  if (!isProductionDeploy() && LOCALHOST_ORIGIN_RE.test(sanitized)) {
+    return sanitized;
   }
 
   if (isProductionDeploy()) {

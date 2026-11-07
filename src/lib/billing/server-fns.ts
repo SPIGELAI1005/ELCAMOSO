@@ -16,6 +16,15 @@ import { getSubscriptionForUser } from "@/lib/billing/subscription-store";
 import { getUserBillingRepository } from "@/lib/billing/user-billing-store";
 import { getDynamicDriveTrialService } from "@/lib/dynamic-drive-trial/service";
 
+async function requestHost(): Promise<string | null> {
+  try {
+    const { getRequestHeader } = await import("@tanstack/react-start/server");
+    return getRequestHeader("host")?.trim() || null;
+  } catch {
+    return null;
+  }
+}
+
 export const getSubscriptionSummaryFn = createServerFn({ method: "POST" })
   .inputValidator((data: { sessionToken?: string | null }) => data)
   .handler(async ({ data }) => {
@@ -104,6 +113,7 @@ export const createCheckoutSessionFn = createServerFn({ method: "POST" })
       userId: session.userId,
       email: session.email,
       origin: data.origin,
+      trustedHost: await requestHost(),
       request: {
         plan: data.plan,
         interval: data.interval,
@@ -132,6 +142,7 @@ export const createBillingPortalSessionFn = createServerFn({ method: "POST" })
     return createStripePortalSession({
       stripeCustomerId,
       origin: data.origin,
+      trustedHost: await requestHost(),
       ...(data.returnPath ? { returnPath: data.returnPath } : {}),
     });
   });

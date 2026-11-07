@@ -6,6 +6,18 @@ import type { CheckoutIntervalSlug, CheckoutPlanSlug } from "@/lib/billing/check
 import { openDrivePlusCheckout } from "@/lib/billing/checkout-client";
 import { trackMonetizationEvent } from "@/lib/telemetry/monetization-analytics";
 
+function checkoutFailureMessage(error: unknown): string {
+  const raw =
+    error instanceof Error
+      ? error.message
+      : error && typeof error === "object" && "message" in error && typeof error.message === "string"
+        ? error.message
+        : "";
+  const message = raw.replace(/sk_(live|test)_[A-Za-z0-9]+/g, "sk_…").trim();
+  if (!message || message.length > 240) return "Payment is unavailable right now.";
+  return message;
+}
+
 interface DrivePlusCheckoutButtonProps {
   interval: CheckoutIntervalSlug;
   className?: string;
@@ -46,8 +58,8 @@ export function DrivePlusCheckoutButton({
     });
     try {
       await openDrivePlusCheckout(interval, returnTo, source, plan);
-    } catch {
-      setError("Payment is unavailable right now.");
+    } catch (error) {
+      setError(checkoutFailureMessage(error));
       setBusy(false);
     }
   }

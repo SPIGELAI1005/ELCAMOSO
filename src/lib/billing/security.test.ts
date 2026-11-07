@@ -70,6 +70,17 @@ describe("checkout origin allowlist", () => {
     expect(assertAllowedCheckoutOrigin("http://localhost:5173")).toBe("http://localhost:5173");
   });
 
+  it("accepts the request host when the allowlist does not include it", () => {
+    process.env.ELCAMOSO_ALLOWED_ORIGINS = "https://wrong.example";
+    process.env.ELCAMOSO_ENV = "production";
+    expect(
+      assertAllowedCheckoutOrigin("https://www.elcamoso.com", "www.elcamoso.com"),
+    ).toBe("https://www.elcamoso.com");
+    expect(() =>
+      assertAllowedCheckoutOrigin("https://phishing.example", "www.elcamoso.com"),
+    ).toThrow(/not allowed/i);
+  });
+
   it("requires trusted host match in production without allowlist", () => {
     delete process.env.ELCAMOSO_ALLOWED_ORIGINS;
     process.env.ELCAMOSO_ENV = "production";
