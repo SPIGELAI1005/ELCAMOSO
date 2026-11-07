@@ -185,12 +185,12 @@ function AccountProfileDialog({
               intensity={1}
               animate={!reducedMotion}
               reducedMotion={reducedMotion}
-              className="h-14 w-auto text-foreground"
+              className="h-12 w-auto text-foreground"
             />
             {founderSeat !== undefined ? (
               <span
                 data-testid="profile-founder-ribbon"
-                className="relative -mt-1 inline-flex items-center gap-1.5 rounded-full border border-[#e53935]/70 bg-background px-3 py-0.5 text-[10px] font-medium tracking-[0.28em] text-[#e53935] uppercase shadow-[0_0_12px_rgba(229,57,53,0.25)]"
+                className="mt-4 inline-flex items-center gap-1.5 rounded-full border border-[#e53935]/70 bg-background px-3 py-0.5 text-[10px] font-medium tracking-[0.28em] text-[#e53935] uppercase shadow-[0_0_12px_rgba(229,57,53,0.25)]"
               >
                 <span className="h-1 w-1 rounded-full bg-[#e53935]" aria-hidden />
                 Founder{founderSeat != null ? ` · #${founderSeat}` : ""}

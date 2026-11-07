@@ -4,7 +4,16 @@ import { useEffect, useRef, useState } from "react";
 
 import { SmileSymbol } from "@/components/smiles/SmilesSymbols";
 import { useAccount } from "@/lib/account/AccountProvider";
-import { emptySmileStatus, REF_CODE_RE, type SmileStatus } from "@/lib/smiles/rewards";
+import { listJourneys } from "@/lib/journey/store";
+import { loadLocalCards } from "@/lib/smiles/cards";
+import { listSmilesCardsFn } from "@/lib/smiles/cards-server-fns";
+import { emptySmileStatus, REF_CODE_RE, smileLevel, type SmileStatus } from "@/lib/smiles/rewards";
+import {
+  computeSmiles,
+  isTooShortDrive,
+  loadSmilesSettings,
+  readCachedSmileScores,
+} from "@/lib/smiles/smiles";
 import { applySmileReferralFn, getSmileStatusFn } from "@/lib/smiles/rewards-server-fns";
 import { type CardTheme, loadLocalTheme, resolveTheme } from "@/lib/smiles/themes";
 import { cn } from "@/lib/utils";
@@ -17,22 +26,92 @@ export function notifySmilesChanged() {
   if (typeof window !== "undefined") window.dispatchEvent(new Event(EVT));
 }
 
+function rememberScore(scores: Map<string, number>, id: string, score: number) {
+  const next = Math.max(0, Math.round(score));
+  if (!id || next <= 0) return;
+  const prev = scores.get(id) ?? 0;
+  if (next > prev) scores.set(id, next);
+}
+
+/** Smiles saved on this device or as cards, when the shop ledger is still empty. */
+async function collectUnledgeredSmiles(): Promise<number> {
+  const scores = new Map<string, number>();
+  for (const c of loadLocalCards()) {
+    rememberScore(scores, c.journeyId, Number(c.score) || Number(c.result?.score) || 0);
+  }
+  for (const [id, score] of Object.entries(readCachedSmileScores())) rememberScore(scores, id, score);
+  try {
+    const saved = await listSmilesCardsFn();
+    if (saved.cloud) {
+      for (const c of saved.cards) rememberScore(scores, c.journeyId, c.score);
+    }
+  } catch {
+    /* guest or offline */
+  }
+  try {
+    const settings = loadSmilesSettings();
+    for (const j of await listJourneys()) {
+      if (scores.has(j.id) || isTooShortDrive(j.distanceM ?? 0, j.durationMs)) continue;
+      const result = computeSmiles(
+        {
+          profileId: j.profileId,
+          distanceM: j.distanceM ?? 0,
+          durationMs: j.durationMs,
+          trace: null,
+          live: j.smiles,
+        },
+        settings,
+      );
+      rememberScore(scores, j.id, result.score);
+    }
+  } catch {
+    /* journeys stay on this device */
+  }
+  let total = 0;
+  for (const score of scores.values()) total += score;
+  return total;
+}
+
+function withCollectedSmiles(status: SmileStatus, collected: number): SmileStatus {
+  if (collected <= 0 || status.balance > 0 || status.earned > 0) return status;
+  const earned = status.earned + collected;
+  return {
+    ...status,
+    available: true,
+    balance: status.balance + collected,
+    earned,
+    level: smileLevel(earned),
+  };
+}
+
 export function useSmileStatus(enabled = true): SmileStatus {
+  const { isAuthenticated } = useAccount();
   const [s, setS] = useState<SmileStatus>(emptySmileStatus);
   useEffect(() => {
     if (!enabled) return;
     let live = true;
-    const load = () =>
-      getSmileStatusFn()
-        .then((r) => live && setS(r))
-        .catch(() => undefined);
-    void load();
+    const load = () => {
+      void (async () => {
+        let status = emptySmileStatus();
+        try {
+          status = await getSmileStatusFn();
+        } catch {
+          /* count smiles kept on this device */
+        }
+        if (!live) return;
+        if (status.balance <= 0 && status.earned <= 0) {
+          status = withCollectedSmiles(status, await collectUnledgeredSmiles());
+        }
+        if (live) setS(status);
+      })();
+    };
+    load();
     window.addEventListener(EVT, load);
     return () => {
       live = false;
       window.removeEventListener(EVT, load);
     };
-  }, [enabled]);
+  }, [enabled, isAuthenticated]);
   return s;
 }
 

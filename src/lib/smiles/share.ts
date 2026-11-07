@@ -20,6 +20,11 @@ export function smilesCardUrl(i: SmilesShareInfo): string {
   return u.toString();
 }
 
+/** Invite a friend with the signed-in referral link. */
+export function inviteShareMessage(url: string): string {
+  return `Come drive with me on ELCAMOSO. Turn motion into sound. Your EV. Your sound. More emotion. Join with my link and get 1 month of Drive+ free. ${url}`;
+}
+
 export function shareIntentLinks(text: string, url?: string) {
   const t = encodeURIComponent(text);
   return {

@@ -211,6 +211,7 @@ interface LifeEntry {
   fuelCost: number;
   evCost: number;
   co2Kg: number;
+  score?: number;
 }
 function readLife(): Record<string, LifeEntry> {
   try {
@@ -222,12 +223,22 @@ function readLife(): Record<string, LifeEntry> {
 export function rememberJourneySmiles(id: string, r: SmilesResult) {
   try {
     const all = readLife();
-    all[id] = { km: r.distanceKm, fuelCost: r.fuelCost, evCost: r.evCost, co2Kg: r.co2Kg };
+    all[id] = { km: r.distanceKm, fuelCost: r.fuelCost, evCost: r.evCost, co2Kg: r.co2Kg, score: r.score };
     localStorage.setItem(LIFE_KEY, JSON.stringify(all));
   } catch {
     /* ignore */
   }
 }
+/** Smile scores cached on this device, keyed by journey id. */
+export function readCachedSmileScores(): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const [id, e] of Object.entries(readLife())) {
+    const score = Math.round(Number(e?.score) || 0);
+    if (score > 0) out[id] = score;
+  }
+  return out;
+}
+
 /** Sum over saved journeys; cached per-journey results (current settings for uncached ones). */
 export function lifetimeSmiles(
   journeys: { id: string; distanceM: number | null; profileId: string }[],

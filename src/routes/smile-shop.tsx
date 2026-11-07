@@ -10,6 +10,7 @@ import {
   redeemSmileItemFn,
   setSmileThemeFn,
 } from "@/lib/smiles/rewards-server-fns";
+import { inviteShareMessage, shareIntentLinks } from "@/lib/smiles/share";
 import { CARD_THEMES, DEFAULT_THEME_ID, saveLocalTheme } from "@/lib/smiles/themes";
 import { cn } from "@/lib/utils";
 
@@ -25,6 +26,8 @@ function SmileShopPage() {
   const { theme: active, status } = useActiveTheme();
   const [note, setNote] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [copyError, setCopyError] = useState<string | null>(null);
 
 
   async function redeem(item: ShopItem) {
@@ -56,6 +59,60 @@ function SmileShopPage() {
 
 
   const refLink = status.refCode ? `https://www.elcamoso.com/?ref=${status.refCode}` : null;
+  const inviteText = refLink ? inviteShareMessage(refLink) : "";
+  const inviteLinks = refLink ? shareIntentLinks(inviteText, refLink) : null;
+
+  async function copyRefLink() {
+    if (!refLink) return;
+    setCopyError(null);
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(refLink);
+      } else {
+        const el = document.createElement("textarea");
+        el.value = refLink;
+        el.setAttribute("readonly", "");
+        el.style.position = "fixed";
+        el.style.left = "-9999px";
+        document.body.appendChild(el);
+        el.select();
+        const ok = document.execCommand("copy");
+        el.remove();
+        if (!ok) throw new Error("copy");
+      }
+      setCopied(true);
+    } catch {
+      try {
+        const el = document.createElement("textarea");
+        el.value = refLink;
+        el.setAttribute("readonly", "");
+        el.style.position = "fixed";
+        el.style.left = "-9999px";
+        document.body.appendChild(el);
+        el.select();
+        const ok = document.execCommand("copy");
+        el.remove();
+        if (!ok) throw new Error("copy");
+        setCopied(true);
+      } catch {
+        setCopied(false);
+        setCopyError("Could not copy. Long-press the link to copy it.");
+      }
+    }
+  }
+
+  async function shareInvite() {
+    if (!refLink) return;
+    if (typeof navigator.share === "function") {
+      try {
+        await navigator.share({ title: "Join me on ELCAMOSO", text: inviteText, url: refLink });
+        return;
+      } catch (e) {
+        if (e instanceof DOMException && e.name === "AbortError") return;
+      }
+    }
+    window.open(shareIntentLinks(inviteText, refLink).whatsapp, "_blank", "noopener,noreferrer");
+  }
 
   return (
     <main className="mx-auto w-full max-w-3xl space-y-6 px-5 py-10">
@@ -154,13 +211,57 @@ function SmileShopPage() {
           <div className="text-xs text-muted-foreground">After their first real drive. Plus +100 smiles for you, always.</div>
           <div className="mt-1 text-xs text-[#e53935]" data-testid="invite-months">{status.inviteMonths} of {INVITE_MAX_MONTHS} free months earned</div>
           <div className="mt-1 break-all text-xs text-muted-foreground">{refLink}</div>
-          <button
-            type="button"
-            onClick={() => void navigator.clipboard?.writeText(refLink).then(() => setNote("Link copied."))}
-            className="mt-3 h-10 rounded-full border border-border px-5 text-[11px] tracking-[0.2em] uppercase"
-          >
-            Copy link
-          </button>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => void copyRefLink()}
+              className="h-10 rounded-full border border-border px-5 text-[11px] tracking-[0.2em] uppercase"
+            >
+              {copied ? "Copied" : "Copy link"}
+            </button>
+            <button
+              type="button"
+              onClick={() => void shareInvite()}
+              className="h-10 rounded-full border border-border px-5 text-[11px] tracking-[0.2em] uppercase"
+            >
+              Share
+            </button>
+          </div>
+          {inviteLinks ? (
+            <div className="mt-3 flex flex-wrap gap-2">
+              <a
+                href={inviteLinks.whatsapp}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex h-10 items-center rounded-full border border-border px-5 text-[11px] tracking-[0.2em] uppercase"
+              >
+                WhatsApp
+              </a>
+              <a
+                href={inviteLinks.x}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex h-10 items-center rounded-full border border-border px-5 text-[11px] tracking-[0.2em] uppercase"
+              >
+                X
+              </a>
+              <a
+                href={inviteLinks.facebook}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex h-10 items-center rounded-full border border-border px-5 text-[11px] tracking-[0.2em] uppercase"
+              >
+                Facebook
+              </a>
+              <a
+                href={`mailto:?subject=${encodeURIComponent("Join me on ELCAMOSO")}&body=${encodeURIComponent(inviteText)}`}
+                className="inline-flex h-10 items-center rounded-full border border-border px-5 text-[11px] tracking-[0.2em] uppercase"
+              >
+                Email
+              </a>
+            </div>
+          ) : null}
+          {copyError ? <p className="mt-2 text-xs text-[#e53935]">{copyError}</p> : null}
           <div className="mt-2 text-[11px] text-muted-foreground">
             <Link to="/legal/rewards" className="underline-offset-2 hover:underline">Terms apply</Link>
           </div>

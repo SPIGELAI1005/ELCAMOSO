@@ -91,6 +91,42 @@ async function insertEntry(
   return r.length > 0;
 }
 
+/** Cards saved before a ledger award still count. Missing table must not wipe status. */
+async function backfillUnawardedCards(db: Exec, userId: string): Promise<void> {
+  try {
+    const missing = await rows<{
+      journey_id: string;
+      score: number;
+      distance_km: number;
+      profile_name: string;
+    }>(
+      db,
+      sql`select c.journey_id, c.score, c.distance_km, c.profile_name
+          from smiles_cards c
+          where c.user_id = ${userId} and c.score > 0
+            and not exists (
+              select 1 from smile_ledger l
+              where l.user_id = c.user_id and l.reason = 'card' and l.ref = c.journey_id
+            )`,
+    );
+    let wrote = false;
+    for (const c of missing) {
+      if (Number(c.distance_km) * 1000 < SMILES_MIN_DISTANCE_M) continue;
+      const ok = await insertEntry(db, {
+        userId,
+        amount: Math.max(0, Math.min(100, Math.round(Number(c.score)))),
+        reason: "card",
+        ref: c.journey_id,
+        sound: c.profile_name,
+      });
+      wrote = wrote || ok;
+    }
+    if (wrote) await refreshTotals(db, userId);
+  } catch {
+    /* smiles_cards unavailable */
+  }
+}
+
 function randomCode(): string {
   const a = "abcdefghjkmnpqrstuvwxyz23456789";
   let s = "";
@@ -114,6 +150,7 @@ export async function getSmileStatus(userId: string, now = Date.now()): Promise<
         .execute(sql`update users set smile_ref_code = ${code} where id = ${userId}::uuid and smile_ref_code is null`)
         .catch(() => (code = null));
     }
+    await backfillUnawardedCards(db, userId);
     const [r] = await rows<{ bal: number; earned: number }>(
       db,
       sql`select coalesce(sum(amount),0)::int as bal,
@@ -134,7 +171,24 @@ export async function getSmileStatus(userId: string, now = Date.now()): Promise<
       sql`select count(*)::int as n from smile_ledger where user_id = ${userId} and reason = ${INVITE_REWARD_REASON} and ref <> ${userId}`,
     );
     const invites = Number(ic?.n ?? 0);
-    const earned = Number(r?.earned ?? 0);
+    let balance = Number(r?.bal ?? 0);
+    let earned = Number(r?.earned ?? 0);
+    if (balance <= 0 && earned <= 0) {
+      try {
+        const [cards] = await rows<{ n: number }>(
+          db,
+          sql`select coalesce(sum(score),0)::int as n from smiles_cards
+              where user_id = ${userId} and score > 0 and distance_km >= ${SMILES_MIN_DISTANCE_M / 1000}`,
+        );
+        const fromCards = Number(cards?.n ?? 0);
+        if (fromCards > 0) {
+          balance = fromCards;
+          earned = fromCards;
+        }
+      } catch {
+        /* smiles_cards unavailable */
+      }
+    }
     let activeTheme: string | null = null;
     try {
       const [t] = await rows<{ t: string | null }>(db, sql`select smile_theme as t from users where id = ${userId}::uuid`);
@@ -144,7 +198,7 @@ export async function getSmileStatus(userId: string, now = Date.now()): Promise<
     }
     return {
       available: true,
-      balance: Number(r?.bal ?? 0),
+      balance,
       earned,
       level: smileLevel(earned),
       earnedToday: await earnedToday(db, userId, now),
