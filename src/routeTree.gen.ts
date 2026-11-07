@@ -19,6 +19,7 @@ import { Route as DebugRouteImport } from './routes/debug'
 import { Route as DemoRouteImport } from './routes/demo'
 import { Route as DriveRouteImport } from './routes/drive'
 import { Route as ExploreRouteImport } from './routes/explore'
+import { Route as FaqRouteImport } from './routes/faq'
 import { Route as FusionRouteImport } from './routes/fusion'
 import { Route as GarageRouteImport } from './routes/garage'
 import { Route as InstructionsRouteImport } from './routes/instructions'
@@ -139,6 +140,11 @@ const DriveRoute = DriveRouteImport.update({
 const ExploreRoute = ExploreRouteImport.update({
   id: '/explore',
   path: '/explore',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FaqRoute = FaqRouteImport.update({
+  id: '/faq',
+  path: '/faq',
   getParentRoute: () => rootRouteImport,
 } as any)
 const FusionRoute = FusionRouteImport.update({
@@ -510,6 +516,7 @@ export interface FileRoutesByFullPath {
   '/demo': typeof DemoRoute
   '/drive': typeof DriveRoute
   '/explore': typeof ExploreRoute
+  '/faq': typeof FaqRoute
   '/fusion': typeof FusionRoute
   '/garage': typeof GarageRoute
   '/instructions': typeof InstructionsRoute
@@ -592,6 +599,7 @@ export interface FileRoutesByTo {
   '/demo': typeof DemoRoute
   '/drive': typeof DriveRoute
   '/explore': typeof ExploreRoute
+  '/faq': typeof FaqRoute
   '/fusion': typeof FusionRoute
   '/garage': typeof GarageRoute
   '/instructions': typeof InstructionsRoute
@@ -676,6 +684,7 @@ export interface FileRoutesById {
   '/demo': typeof DemoRoute
   '/drive': typeof DriveRoute
   '/explore': typeof ExploreRoute
+  '/faq': typeof FaqRoute
   '/fusion': typeof FusionRoute
   '/garage': typeof GarageRoute
   '/instructions': typeof InstructionsRoute
@@ -761,6 +770,7 @@ export interface FileRouteTypes {
     | '/demo'
     | '/drive'
     | '/explore'
+    | '/faq'
     | '/fusion'
     | '/garage'
     | '/instructions'
@@ -843,6 +853,7 @@ export interface FileRouteTypes {
     | '/demo'
     | '/drive'
     | '/explore'
+    | '/faq'
     | '/fusion'
     | '/garage'
     | '/instructions'
@@ -926,6 +937,7 @@ export interface FileRouteTypes {
     | '/demo'
     | '/drive'
     | '/explore'
+    | '/faq'
     | '/fusion'
     | '/garage'
     | '/instructions'
@@ -1010,6 +1022,7 @@ export interface RootRouteChildren {
   DemoRoute: typeof DemoRoute
   DriveRoute: typeof DriveRoute
   ExploreRoute: typeof ExploreRoute
+  FaqRoute: typeof FaqRoute
   FusionRoute: typeof FusionRoute
   GarageRoute: typeof GarageRoute
   InstructionsRoute: typeof InstructionsRoute
@@ -1135,6 +1148,13 @@ declare module '@tanstack/react-router' {
       path: '/explore'
       fullPath: '/explore'
       preLoaderRoute: typeof ExploreRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/faq': {
+      id: '/faq'
+      path: '/faq'
+      fullPath: '/faq'
+      preLoaderRoute: typeof FaqRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/fusion': {
@@ -1717,6 +1737,7 @@ const rootRouteChildren: RootRouteChildren = {
   DemoRoute: DemoRoute,
   DriveRoute: DriveRoute,
   ExploreRoute: ExploreRoute,
+  FaqRoute: FaqRoute,
   FusionRoute: FusionRoute,
   GarageRoute: GarageRoute,
   InstructionsRoute: InstructionsRoute,
