@@ -286,7 +286,7 @@ function Pricing() {
             ) : null,
             lifetime: hasDrivePlus ? null : billingAvailable ? (
               lifetimeAvailable ? (
-                <>
+                <div className="w-full">
                   <DrivePlusCheckoutButton
                     interval="lifetime"
                     label={t(settings.language, "pricing.lifetimeCta")}
@@ -296,7 +296,7 @@ function Pricing() {
                   <p className="mt-3 text-xs text-muted-foreground">
                     {t(settings.language, "pricing.lifetimeSubscriptionNote")}
                   </p>
-                </>
+                </div>
               ) : (
                 <PackageNotReady />
               )

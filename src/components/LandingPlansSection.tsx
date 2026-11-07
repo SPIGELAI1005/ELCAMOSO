@@ -165,7 +165,7 @@ export function LifetimeSeatsCounter({
       data-testid="lifetime-seats"
       data-sold-out={seats.soldOut ? "true" : "false"}
       className={cn(
-        "mt-3 inline-flex rounded-full border px-3 py-1 text-[10px] tracking-[0.18em] uppercase",
+        "mt-3 flex w-fit rounded-full border px-3 py-1 text-[10px] tracking-[0.18em] uppercase",
         seats.soldOut
           ? "border-muted-foreground/40 text-muted-foreground"
           : "border-[#e53935]/60 text-[#e53935]",
