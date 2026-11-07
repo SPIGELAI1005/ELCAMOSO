@@ -6,6 +6,7 @@ import {
   isLifetimePriceConfigured,
   isMusicPriceConfigured,
   isUnlimitedPriceConfigured,
+  stripeCheckoutRequirements,
 } from "@/lib/billing/stripe/config";
 import { isMonetizationEnabled } from "@/lib/billing/monetization-flag";
 import {
@@ -41,6 +42,13 @@ export interface BillingPublicConfig {
   musicAvailable: boolean;
   /** Drive Unlimited checkout needs monthly and yearly Price ids. */
   unlimitedAvailable: boolean;
+  /** Which Stripe settings the server can see. Values are booleans, never secrets. */
+  checkoutRequirements: {
+    secretKey: boolean;
+    webhookSecret: boolean;
+    drivePlusMonthly: boolean;
+    drivePlusYearly: boolean;
+  };
   plans: BillingPublicPlan[];
   freePrice: string;
   yearlyEquivalentMonthly: string;
@@ -74,6 +82,7 @@ export function getBillingPublicConfig(): BillingPublicConfig {
     lifetimeAvailable: isBillingAvailable() && isLifetimePriceConfigured(),
     musicAvailable: isBillingAvailable() && isMusicPriceConfigured(),
     unlimitedAvailable: isBillingAvailable() && isUnlimitedPriceConfigured(),
+    checkoutRequirements: stripeCheckoutRequirements(),
     freePrice: formatEuroAmount(0),
     yearlyEquivalentMonthly: yearly.equivalentMonthly ?? "",
     plans: COMMERCIAL_PLANS.map((plan) => ({

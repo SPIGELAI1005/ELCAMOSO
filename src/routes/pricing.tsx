@@ -15,6 +15,19 @@ import { useSettings } from "@/lib/drive/useSettings";
 import { t } from "@/lib/i18n";
 import { SoundPackageCallout } from "@/components/pricing/SoundPackageCallout";
 import { parsePricingPlanParam, parseSharedSoundParam, type SoundPackage } from "@/lib/drive/sound-share";
+import type { BillingPublicConfig } from "@/lib/billing/public-config";
+
+function missingCheckoutSettings(
+  requirements: BillingPublicConfig["checkoutRequirements"] | undefined,
+): string[] {
+  if (!requirements) return [];
+  const missing: string[] = [];
+  if (!requirements.secretKey) missing.push("Stripe secret key");
+  if (!requirements.webhookSecret) missing.push("webhook signing secret");
+  if (!requirements.drivePlusMonthly) missing.push("Drive+ monthly price");
+  if (!requirements.drivePlusYearly) missing.push("Drive+ yearly price");
+  return missing;
+}
 
 export const Route = createFileRoute("/pricing")({
   component: Pricing,
@@ -248,8 +261,10 @@ function Pricing() {
             </>
           ) : (
             <p className="text-sm text-muted-foreground">
-              All purchases (Drive+, Drive the Music, Drive Unlimited, Lifetime and individual sounds) open on 9.11.2026. Until then, ELCAMOSO is free
-              of charge.
+              Purchase buttons need the live Stripe settings on the server.
+              {missingCheckoutSettings(billingQuery.data?.checkoutRequirements).length
+                ? ` Missing: ${missingCheckoutSettings(billingQuery.data?.checkoutRequirements).join(", ")}.`
+                : null}
             </p>
           )}
         </div>

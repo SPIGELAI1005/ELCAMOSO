@@ -13,6 +13,11 @@ function envSuffix(deploy: ElcamosoDeployEnv): string {
 }
 
 function readScopedEnv(baseName: string, deploy: ElcamosoDeployEnv): string | undefined {
+  // On Vercel production, live keys win even if ELCAMOSO_ENV still says development.
+  if (readEnv("VERCEL_ENV") === "production") {
+    const live = readEnv(`${baseName}_PRODUCTION`);
+    if (live) return live;
+  }
   const suffix = envSuffix(deploy);
   return readEnv(`${baseName}${suffix}`) ?? readEnv(baseName);
 }
@@ -101,4 +106,21 @@ export function isUnlimitedPriceConfigured(config: StripeConfig = readStripeConf
 /** Whether checkout and webhooks can run in the current environment. */
 export function isStripeConfigured(config: StripeConfig = readStripeConfig()): boolean {
   return config.configured;
+}
+
+/** Which server settings Checkout needs. Booleans only: never the secret values. */
+export function stripeCheckoutRequirements(
+  config: StripeConfig = readStripeConfig(),
+): {
+  secretKey: boolean;
+  webhookSecret: boolean;
+  drivePlusMonthly: boolean;
+  drivePlusYearly: boolean;
+} {
+  return {
+    secretKey: Boolean(config.secretKey),
+    webhookSecret: Boolean(config.webhookSecret),
+    drivePlusMonthly: Boolean(config.prices.drive_plus_monthly),
+    drivePlusYearly: Boolean(config.prices.drive_plus_yearly),
+  };
 }

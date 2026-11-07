@@ -18,7 +18,12 @@ const ENV_KEYS = [
   "STRIPE_WEBHOOK_SECRET",
   "STRIPE_PRICE_DRIVE_PLUS_MONTHLY",
   "STRIPE_PRICE_DRIVE_PLUS_YEARLY",
+  "STRIPE_SECRET_KEY_PRODUCTION",
+  "STRIPE_WEBHOOK_SECRET_PRODUCTION",
+  "STRIPE_PRICE_DRIVE_PLUS_MONTHLY_PRODUCTION",
+  "STRIPE_PRICE_DRIVE_PLUS_YEARLY_PRODUCTION",
   "ELCAMOSO_ENV",
+  "VERCEL_ENV",
 ] as const;
 
 function snapshotEnv(): Record<string, string | undefined> {
@@ -91,6 +96,33 @@ describe("stripe config", () => {
     delete process.env.STRIPE_PRICE_DRIVE_PLUS_YEARLY;
     expect(isStripeConfigured()).toBe(false);
     expect(getBillingPublicConfig().available).toBe(false);
+  });
+
+  it("reads production Stripe settings on Vercel even when ELCAMOSO_ENV is development", () => {
+    process.env.ELCAMOSO_ENV = "development";
+    process.env.VERCEL_ENV = "production";
+    delete process.env.STRIPE_SECRET_KEY;
+    delete process.env.STRIPE_WEBHOOK_SECRET;
+    delete process.env.STRIPE_PRICE_DRIVE_PLUS_MONTHLY;
+    delete process.env.STRIPE_PRICE_DRIVE_PLUS_YEARLY;
+    process.env.STRIPE_SECRET_KEY_PRODUCTION = "sk_live_example";
+    process.env.STRIPE_WEBHOOK_SECRET_PRODUCTION = "whsec_live_example";
+    process.env.STRIPE_PRICE_DRIVE_PLUS_MONTHLY_PRODUCTION = "price_live_month";
+    process.env.STRIPE_PRICE_DRIVE_PLUS_YEARLY_PRODUCTION = "price_live_year";
+
+    const config = readStripeConfig();
+    expect(config.configured).toBe(true);
+    expect(resolveStripePriceId("drive_plus_monthly", config)).toBe("price_live_month");
+    const serialized = JSON.stringify(getBillingPublicConfig());
+    expect(serialized).not.toContain("sk_live");
+    expect(serialized).not.toContain("whsec_live");
+    expect(serialized).not.toContain("price_live_month");
+    expect(getBillingPublicConfig().checkoutRequirements).toEqual({
+      secretKey: true,
+      webhookSecret: true,
+      drivePlusMonthly: true,
+      drivePlusYearly: true,
+    });
   });
 
   it("resolves Stripe Price ids only from env via internal plan ids", () => {
