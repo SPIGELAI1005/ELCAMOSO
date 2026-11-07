@@ -93,9 +93,9 @@ export const INDEXABLE_ROUTE_POLICIES: SeoRoutePolicy[] = [
   {
     path: "/pricing",
     indexable: true,
-    title: "Pricing - Three Free Sounds | ELCAMOSO",
+    title: "Pricing | ELCAMOSO",
     description:
-      "Racing V10, American Muscle V8 and GT V8 are free. Drive+, Drive the Music and Lifetime open on 9.11.2026.",
+      "Racing V10, American Muscle V8, Dracula Carriage and Latino Fiesta are free. Drive+, Drive the Music and Lifetime open on 9.11.2026.",
     image: IMG,
     imageAlt: ALT,
     breadcrumbs: [

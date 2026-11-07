@@ -226,7 +226,7 @@ export function PlansOverview({
           </p>
           <p className="mt-2 text-sm text-muted-foreground">
             {interval === "monthly"
-              ? `Billed yearly at ${getDrivePlusDisplay("yearly").amount}`
+              ? "Billed monthly. Cancel anytime."
               : `${drivePlus.equivalentMonthly} per month, billed yearly`}
           </p>
           <ul className={`space-y-3 text-sm text-muted-foreground ${compact ? "mt-4" : "mt-10"}`}>
@@ -263,12 +263,16 @@ export function PlansOverview({
           {musicTrial ? (
             <p className="mt-2 text-sm text-muted-foreground">
               Start before {BLACK_FRIDAY_LABEL} and the first {MUSIC_TRIAL_MONTHS} months are free.
-              Then {musicYearly.amount} per year, billed yearly. Cancel anytime during the trial.
+              Then{" "}
+              {interval === "monthly"
+                ? `${music.amount} per month`
+                : `${musicYearly.amount} per year, billed yearly`}
+              . Cancel anytime during the trial.
             </p>
           ) : (
             <p className="mt-2 text-sm text-muted-foreground">
               {interval === "monthly"
-                ? `Billed yearly at ${musicYearly.amount}`
+                ? "Billed monthly. Cancel anytime."
                 : `${musicYearly.equivalentMonthly} per month, billed yearly`}
             </p>
           )}
@@ -299,7 +303,7 @@ export function PlansOverview({
           </p>
           <p className="mt-2 text-sm text-muted-foreground">
             {interval === "monthly"
-              ? `Billed yearly at ${unlimitedYearly.amount}`
+              ? "Billed monthly. Cancel anytime."
               : `${unlimitedYearly.equivalentMonthly} per month, billed yearly`}
           </p>
           <ul className={`space-y-3 text-sm text-muted-foreground ${compact ? "mt-4" : "mt-10"}`}>

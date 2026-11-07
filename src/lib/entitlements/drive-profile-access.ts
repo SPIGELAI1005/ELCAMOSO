@@ -29,6 +29,7 @@ export function canDriveProfileWithAccess(input: {
   const profile = getProfile(input.profileId);
   // Music profiles (Drive the Music package): Drive+ (all_sound_profiles) never unlocks them.
   if (isMusicPackageProfileId(input.profileId)) {
+    if (FREE_SET.has(input.profileId)) return true;
     if (input.grantedProfileIds.includes(input.profileId)) return true;
     if (allSoundsFreeAt()) return true;
     const experience = experienceForProfileId(input.profileId);

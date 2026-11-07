@@ -26,8 +26,8 @@ function readBooleanEnv(name: string, deploy: ElcamosoDeployEnv): boolean {
 export type StripeBillingAddressCollection = "auto" | "required";
 
 /**
- * Checkout tax-related flags - all off by default.
- * Does not encode VAT rates, registrations, or legal jurisdiction logic.
+ * Checkout tax flags. Automatic tax is on unless explicitly disabled.
+ * VAT rates stay in Stripe Tax. Site prices are exclusive: VAT is added at checkout.
  */
 export interface StripeCheckoutTaxConfig {
   automaticTax: boolean;
@@ -60,8 +60,14 @@ function readCustomerUpdate(
   return null;
 }
 
+function readAutomaticTax(deploy: ElcamosoDeployEnv): boolean {
+  const raw = readScopedEnv("STRIPE_CHECKOUT_AUTOMATIC_TAX", deploy)?.toLowerCase();
+  if (raw === undefined) return true;
+  return raw === "1" || raw === "true" || raw === "yes" || raw === "on";
+}
+
 export function readStripeCheckoutTaxConfig(deploy = resolveDeployEnv()): StripeCheckoutTaxConfig {
-  const automaticTax = readBooleanEnv("STRIPE_CHECKOUT_AUTOMATIC_TAX", deploy);
+  const automaticTax = readAutomaticTax(deploy);
   const taxIdCollection = readBooleanEnv("STRIPE_CHECKOUT_TAX_ID_COLLECTION", deploy);
   const taxFeaturesEnabled = automaticTax || taxIdCollection;
 
@@ -73,21 +79,28 @@ export function readStripeCheckoutTaxConfig(deploy = resolveDeployEnv()): Stripe
   };
 }
 
-/** Maps tax config to Stripe Checkout Session params. Omits keys when features are disabled. */
+/** Maps tax config to Stripe Checkout Session params. */
 export function buildCheckoutSessionTaxParams(
   config: StripeCheckoutTaxConfig = readStripeCheckoutTaxConfig(),
 ): Pick<
   Stripe.Checkout.SessionCreateParams,
-  "automatic_tax" | "billing_address_collection" | "tax_id_collection" | "customer_update"
+  | "automatic_tax"
+  | "billing_address_collection"
+  | "tax_id_collection"
+  | "customer_update"
+  | "managed_payments"
 > {
   const params: Pick<
     Stripe.Checkout.SessionCreateParams,
-    "automatic_tax" | "billing_address_collection" | "tax_id_collection" | "customer_update"
-  > = {};
-
-  if (config.automaticTax) {
-    params.automatic_tax = { enabled: true };
-  }
+    | "automatic_tax"
+    | "billing_address_collection"
+    | "tax_id_collection"
+    | "customer_update"
+    | "managed_payments"
+  > = {
+    automatic_tax: { enabled: config.automaticTax },
+    managed_payments: { enabled: false },
+  };
   if (config.billingAddressCollection) {
     params.billing_address_collection = config.billingAddressCollection;
   }

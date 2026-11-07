@@ -175,10 +175,11 @@ export async function beginDrivePlusCheckout(
     ...buildCheckoutSessionTaxParams(),
   };
 
-  // Black Friday special: Drive the Music yearly starts with a 4-month free trial
-  // (first music subscription per account only).
+  // Black Friday special: Drive the Music starts with a 4-month free trial
+  // (first music subscription per account only), then bills the selected interval.
   if (
-    described.commercialPlanId === "drive_music_yearly" &&
+    (described.commercialPlanId === "drive_music_monthly" ||
+      described.commercialPlanId === "drive_music_yearly") &&
     isMusicTrialOfferActive() &&
     !getUnderlyingSubscriptionRecord(input.userId)
   ) {

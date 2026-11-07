@@ -14,6 +14,10 @@ describe("checkout plan request", () => {
     expect(parseCheckoutIntervalSlug("yearly")).toBe("yearly");
     expect(resolveCommercialPlanId("drive_plus", "monthly")).toBe("drive_plus_monthly");
     expect(resolveCommercialPlanId("drive_plus", "yearly")).toBe("drive_plus_yearly");
+    expect(resolveCommercialPlanId("drive_music", "monthly")).toBe("drive_music_monthly");
+    expect(resolveCommercialPlanId("drive_music", "yearly")).toBe("drive_music_yearly");
+    expect(resolveCommercialPlanId("drive_unlimited", "monthly")).toBe("drive_unlimited_monthly");
+    expect(resolveCommercialPlanId("drive_unlimited", "yearly")).toBe("drive_unlimited_yearly");
   });
 
   it("rejects Stripe price ids and unknown plans in request bodies", () => {

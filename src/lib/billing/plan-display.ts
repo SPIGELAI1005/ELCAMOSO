@@ -30,9 +30,16 @@ export const DRIVE_PLUS_PRICING = {
   },
 } as const;
 
-/** "Drive the Music" package - yearly only, same price as Drive+. */
+/** "Drive the Music" package - same monthly and yearly prices as Drive+. */
 export const DRIVE_MUSIC_PRICING = {
   currency: "EUR",
+  monthly: {
+    commercialPlanId: "drive_music_monthly" satisfies CommercialPlanId,
+    /** Charged monthly price after early adopter discount. */
+    amountCents: 280,
+    /** Full (struck-through) monthly price. */
+    listAmountCents: 329,
+  },
   yearly: {
     commercialPlanId: "drive_music_yearly" satisfies CommercialPlanId,
     /** Charged annual price = €2.80 × 12 (George, 4 Nov 2026). */
@@ -42,9 +49,16 @@ export const DRIVE_MUSIC_PRICING = {
   },
 } as const;
 
-/** "Drive Unlimited" package - Drive+ AND Drive the Music together, yearly (George, 4 Nov 2026). */
+/** "Drive Unlimited" package - Drive+ AND Drive the Music together. */
 export const DRIVE_UNLIMITED_PRICING = {
   currency: "EUR",
+  monthly: {
+    commercialPlanId: "drive_unlimited_monthly" satisfies CommercialPlanId,
+    /** Charged monthly price = €4.99. */
+    amountCents: 499,
+    /** Full (struck-through) monthly price = €3.29 + €3.29. */
+    listAmountCents: 658,
+  },
   yearly: {
     commercialPlanId: "drive_unlimited_yearly" satisfies CommercialPlanId,
     /** Charged annual price = €4.99 × 12. */
@@ -59,10 +73,11 @@ export type BillingDisplayInterval = "monthly" | "yearly";
 export const FREE_PLAN_FEATURES = [
   "Essential Engine profiles",
   "Tesla or browser Drive with phone pairing",
-  "Cinematic Rock Symphony experience",
-  "Space Drive Worlds sampler",
+  "Latino Fiesta experience",
+  "Dracula Carriage",
+  "Racing V10 Engine Sound",
+  "American Muscle V8 Engine Sound",
   "Drive DNA and local Journey history",
-  "One basic Drive Song with sharing",
 ] as const;
 
 /** Shipped Drive+ (engine package) capabilities - omit speculative or unreleased entitlements. */
@@ -88,7 +103,7 @@ export const DRIVE_MUSIC_FEATURES = [
 export const DRIVE_UNLIMITED_FEATURES = [
   "Everything in Drive+",
   "Everything in Drive the Music",
-  "One subscription, one yearly bill",
+  "One subscription for both packages",
 ] as const;
 
 export interface PlanPriceDisplay {
@@ -133,19 +148,11 @@ export function getDrivePlusYearlyDisplay(): PlanPriceDisplay {
   return yearlyDisplay(amountCents, listAmountCents);
 }
 
-/**
- * Per-month view of a yearly price (George, 2 Nov 2026): there is no separate
- * monthly billing plan in the cards; "Monthly" shows the yearly price / 12,
- * billed yearly. List price = full yearly list price / 12.
- */
-export function yearlyAsMonthlyDisplay(
-  yearlyCents: number,
-  yearlyListCents: number = listPriceBeforeEarlyAdopterDiscount(yearlyCents),
-): PlanPriceDisplay {
+function monthlyDisplay(amountCents: number, listCents: number): PlanPriceDisplay {
   return {
-    amount: formatEuroAmount(Math.round(yearlyCents / 12)),
-    listAmount: formatEuroAmount(Math.round(yearlyListCents / 12)),
-    badge: discountBadge(yearlyCents, yearlyListCents),
+    amount: formatEuroAmount(amountCents),
+    listAmount: formatEuroAmount(listCents),
+    badge: discountBadge(amountCents, listCents),
     cadence: "month",
   };
 }
@@ -171,28 +178,23 @@ export function getDriveUnlimitedYearlyDisplay(): PlanPriceDisplay {
 }
 
 export function getDriveUnlimitedDisplay(interval: BillingDisplayInterval): PlanPriceDisplay {
-  const { amountCents, listAmountCents } = DRIVE_UNLIMITED_PRICING.yearly;
-  return interval === "monthly"
-    ? yearlyAsMonthlyDisplay(amountCents, listAmountCents)
-    : yearlyDisplay(amountCents, listAmountCents);
+  if (interval === "monthly") {
+    const { amountCents, listAmountCents } = DRIVE_UNLIMITED_PRICING.monthly;
+    return monthlyDisplay(amountCents, listAmountCents);
+  }
+  return getDriveUnlimitedYearlyDisplay();
 }
 
 export function getDrivePlusDisplay(interval: BillingDisplayInterval): PlanPriceDisplay {
-  return interval === "monthly"
-    ? yearlyAsMonthlyDisplay(
-        DRIVE_PLUS_PRICING.yearly.amountCents,
-        DRIVE_PLUS_PRICING.yearly.listAmountCents,
-      )
-    : getDrivePlusYearlyDisplay();
+  return interval === "monthly" ? getDrivePlusMonthlyDisplay() : getDrivePlusYearlyDisplay();
 }
 
 export function getDriveMusicDisplay(interval: BillingDisplayInterval): PlanPriceDisplay {
-  return interval === "monthly"
-    ? yearlyAsMonthlyDisplay(
-        DRIVE_MUSIC_PRICING.yearly.amountCents,
-        DRIVE_MUSIC_PRICING.yearly.listAmountCents,
-      )
-    : getDriveMusicYearlyDisplay();
+  if (interval === "monthly") {
+    const { amountCents, listAmountCents } = DRIVE_MUSIC_PRICING.monthly;
+    return monthlyDisplay(amountCents, listAmountCents);
+  }
+  return getDriveMusicYearlyDisplay();
 }
 
 export function getDriveMusicYearlyDisplay(): PlanPriceDisplay {

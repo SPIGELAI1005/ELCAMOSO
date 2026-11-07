@@ -18,11 +18,8 @@ describe("plan entitlements", () => {
         "basic_sound_profiles",
         "phone_sensor",
         "symphony_essential",
-        "worlds_sampler",
         "drive_dna",
-        "drive_song_basic",
         "journey_history_local",
-        "basic_share",
       ]),
     );
     expect(entitlementsForPlan("FREE")).toEqual(FREE_ENTITLEMENTS);

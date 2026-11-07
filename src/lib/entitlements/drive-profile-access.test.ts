@@ -21,7 +21,26 @@ describe("canDriveProfileWithAccess", () => {
     ).toBe(true);
   });
 
-  it("free tier drives no Symphony / World / Fusion profiles after the gate", () => {
+  it("includes Latino Fiesta and locks GT V8 on the free plan", () => {
+    expect(
+      canDriveProfileWithAccess({
+        profileId: "symphony-latino-fiesta",
+        hasAllSoundProfiles: false,
+        grantedProfileIds: [],
+        hasEntitlement: hasFromPlan("FREE"),
+      }),
+    ).toBe(true);
+    expect(
+      canDriveProfileWithAccess({
+        profileId: "gt-v8",
+        hasAllSoundProfiles: false,
+        grantedProfileIds: [],
+        hasEntitlement: hasFromPlan("FREE"),
+      }),
+    ).toBe(false);
+  });
+
+  it("free tier drives no other Symphony / World / Fusion profiles after the gate", () => {
     expect(
       canDriveProfileWithAccess({
         profileId: "symphony-cinematic-rock",

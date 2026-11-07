@@ -264,6 +264,7 @@ describe("beginDrivePlusCheckout", () => {
     expect(checkoutCreate).toHaveBeenCalledWith(
       expect.objectContaining({
         automatic_tax: { enabled: true },
+        managed_payments: { enabled: false },
         billing_address_collection: "auto",
         tax_id_collection: { enabled: true },
         customer_update: { address: "auto", name: "auto" },

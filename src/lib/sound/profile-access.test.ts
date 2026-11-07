@@ -46,7 +46,8 @@ describe("sound profile access", () => {
   it("limits locked profile previews to a short window", () => {
     expect(lockedProfilePreviewSeconds(getProfile("dragon"), false)).toBe(20);
     expect(lockedProfilePreviewSeconds(getProfile("american-muscle-v8"), false)).toBeNull();
-    expect(lockedProfilePreviewSeconds(getProfile("gt-v8"), false)).toBeNull();
+    expect(lockedProfilePreviewSeconds(getProfile("gt-v8"), false)).toBe(20);
+    expect(lockedProfilePreviewSeconds(getProfile("symphony-latino-fiesta"), false)).toBeNull();
     expect(lockedProfilePreviewSeconds(getProfile("racing-v10"), false)).toBeNull();
     expect(lockedProfilePreviewSeconds(getProfile("flat-six-sport"), false)).toBe(20);
     expect(lockedProfilePreviewSeconds(getProfile("cyber-pulse"), false)).toBe(20);

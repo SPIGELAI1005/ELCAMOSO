@@ -44,11 +44,8 @@ export const FREE_ENTITLEMENTS: readonly Entitlement[] = [
   /** Basic Tesla ↔ phone QR pairing + sensor relay (not premium telemetry). */
   "phone_sensor",
   "symphony_essential",
-  "worlds_sampler",
   "drive_dna",
-  "drive_song_basic",
   "journey_history_local",
-  "basic_share",
   "studio_sound",
 ] as const;
 

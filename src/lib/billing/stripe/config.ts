@@ -20,9 +20,13 @@ function readScopedEnv(baseName: string, deploy: ElcamosoDeployEnv): string | un
 export interface StripePriceConfig {
   drive_plus_monthly: string;
   drive_plus_yearly: string;
-  /** Drive the Music yearly price; music checkout is unavailable when empty. */
+  /** Drive the Music monthly price. */
+  drive_music_monthly: string;
+  /** Drive the Music yearly price. Music checkout needs both monthly and yearly. */
   drive_music_yearly: string;
-  /** Drive Unlimited yearly price; Unlimited checkout is unavailable when empty. */
+  /** Drive Unlimited monthly price. */
+  drive_unlimited_monthly: string;
+  /** Drive Unlimited yearly price. Unlimited checkout needs both monthly and yearly. */
   drive_unlimited_yearly: string;
   /** Optional one-time price; lifetime checkout is unavailable when empty. */
   drive_plus_lifetime: string;
@@ -42,8 +46,12 @@ export function readStripeConfig(deploy = resolveDeployEnv()): StripeConfig {
   const prices: StripePriceConfig = {
     drive_plus_monthly: readScopedEnv(stripePriceEnvKeyForPlan("drive_plus_monthly"), deploy) ?? "",
     drive_plus_yearly: readScopedEnv(stripePriceEnvKeyForPlan("drive_plus_yearly"), deploy) ?? "",
+    drive_music_monthly:
+      readScopedEnv(stripePriceEnvKeyForPlan("drive_music_monthly"), deploy) ?? "",
     drive_music_yearly:
       readScopedEnv(stripePriceEnvKeyForPlan("drive_music_yearly"), deploy) ?? "",
+    drive_unlimited_monthly:
+      readScopedEnv(stripePriceEnvKeyForPlan("drive_unlimited_monthly"), deploy) ?? "",
     drive_unlimited_yearly:
       readScopedEnv(stripePriceEnvKeyForPlan("drive_unlimited_yearly"), deploy) ?? "",
     drive_plus_lifetime:
@@ -80,14 +88,14 @@ export function isLifetimePriceConfigured(config: StripeConfig = readStripeConfi
   return Boolean(config.prices.drive_plus_lifetime);
 }
 
-/** Whether the Drive the Music yearly price is configured. */
+/** Whether Drive the Music monthly and yearly prices are configured. */
 export function isMusicPriceConfigured(config: StripeConfig = readStripeConfig()): boolean {
-  return Boolean(config.prices.drive_music_yearly);
+  return Boolean(config.prices.drive_music_monthly && config.prices.drive_music_yearly);
 }
 
-/** Whether the Drive Unlimited yearly price is configured. */
+/** Whether Drive Unlimited monthly and yearly prices are configured. */
 export function isUnlimitedPriceConfigured(config: StripeConfig = readStripeConfig()): boolean {
-  return Boolean(config.prices.drive_unlimited_yearly);
+  return Boolean(config.prices.drive_unlimited_monthly && config.prices.drive_unlimited_yearly);
 }
 
 /** Whether checkout and webhooks can run in the current environment. */

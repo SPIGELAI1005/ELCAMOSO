@@ -9,15 +9,16 @@ import {
 } from "@/lib/billing/stripe/config";
 import { isMonetizationEnabled } from "@/lib/billing/monetization-flag";
 import {
-  DRIVE_MUSIC_PRICING,
-  DRIVE_PLUS_PRICING,
-  DRIVE_UNLIMITED_PRICING,
+  getDriveMusicDisplay,
   getDriveMusicYearlyDisplay,
+  getDriveUnlimitedDisplay,
   getDriveUnlimitedYearlyDisplay,
   formatEuroAmount,
+  getDrivePlusMonthlyDisplay,
   getDrivePlusYearlyDisplay,
   getDrivePlusLifetimeDisplay,
 } from "@/lib/billing/plan-display";
+import type { CommercialPlanId } from "@/lib/billing/stripe/plans";
 
 /** Client-safe billing catalog - no Stripe secrets or Price ids. */
 export interface BillingPublicPlan {
@@ -36,13 +37,32 @@ export interface BillingPublicConfig {
   lifetimeAvailable: boolean;
   /** Real seat count from completed Lifetime purchases; null/absent when unknown. */
   lifetimeSeats?: LifetimeSeatStatus | null;
-  /** Drive the Music checkout needs STRIPE_PRICE_DRIVE_MUSIC_YEARLY. */
+  /** Drive the Music checkout needs monthly and yearly Price ids. */
   musicAvailable: boolean;
-  /** Drive Unlimited checkout needs STRIPE_PRICE_DRIVE_UNLIMITED_YEARLY. */
+  /** Drive Unlimited checkout needs monthly and yearly Price ids. */
   unlimitedAvailable: boolean;
   plans: BillingPublicPlan[];
   freePrice: string;
   yearlyEquivalentMonthly: string;
+}
+
+function displayPriceForPlan(id: CommercialPlanId): string {
+  switch (id) {
+    case "drive_plus_monthly":
+      return getDrivePlusMonthlyDisplay().amount;
+    case "drive_plus_yearly":
+      return getDrivePlusYearlyDisplay().amount;
+    case "drive_music_monthly":
+      return getDriveMusicDisplay("monthly").amount;
+    case "drive_music_yearly":
+      return getDriveMusicYearlyDisplay().amount;
+    case "drive_unlimited_monthly":
+      return getDriveUnlimitedDisplay("monthly").amount;
+    case "drive_unlimited_yearly":
+      return getDriveUnlimitedYearlyDisplay().amount;
+    case "drive_plus_lifetime":
+      return getDrivePlusLifetimeDisplay().amount;
+  }
 }
 
 export function getBillingPublicConfig(): BillingPublicConfig {
@@ -56,20 +76,12 @@ export function getBillingPublicConfig(): BillingPublicConfig {
     unlimitedAvailable: isBillingAvailable() && isUnlimitedPriceConfigured(),
     freePrice: formatEuroAmount(0),
     yearlyEquivalentMonthly: yearly.equivalentMonthly ?? "",
-    // No separate monthly plan is sold (George, 2 Nov 2026) - yearly packages + Lifetime only.
-    plans: COMMERCIAL_PLANS.filter((plan) => plan.interval !== "month").map((plan) => ({
+    plans: COMMERCIAL_PLANS.map((plan) => ({
       id: plan.id,
       label: plan.label,
       interval: plan.interval,
       plan: plan.plan,
-      displayPrice:
-        plan.id === DRIVE_MUSIC_PRICING.yearly.commercialPlanId
-          ? getDriveMusicYearlyDisplay().amount
-          : plan.id === DRIVE_UNLIMITED_PRICING.yearly.commercialPlanId
-            ? getDriveUnlimitedYearlyDisplay().amount
-            : plan.id === DRIVE_PLUS_PRICING.lifetime.commercialPlanId
-            ? getDrivePlusLifetimeDisplay().amount
-            : yearly.amount,
+      displayPrice: displayPriceForPlan(plan.id),
       displayCadence:
         plan.interval === "month" ? "month" : plan.interval === "year" ? "year" : "once",
     })),

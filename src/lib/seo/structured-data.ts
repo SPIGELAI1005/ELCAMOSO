@@ -57,7 +57,7 @@ export function softwareApplicationJsonLd(description: string): Record<string, u
         price: "0",
         priceCurrency: "EUR",
         description:
-          "Free with Racing V10, American Muscle V8 and GT V8. All purchases (Drive+, Drive the Music, Drive Unlimited, Lifetime) open 2026-11-09.",
+          "Free with Racing V10, American Muscle V8, Dracula Carriage and Latino Fiesta. All purchases (Drive+, Drive the Music, Drive Unlimited, Lifetime) open 2026-11-09.",
         availability: "https://schema.org/InStock",
         url: absoluteSeoUrl("/pricing"),
         validThrough: "2026-11-09",

@@ -194,7 +194,7 @@ export function FoundersBanner({ compact = false, className }: { compact?: boole
         onOpenChange={setSignInOpen}
         returnTo="/"
         title="Claim your Founder seat"
-        description="Sign in with your email before 27.11. to keep 3 sounds free forever, get 6 months of Drive+ and Drive the Music free and join the Founders Test Crew. Limited seats."
+        description="Sign in with your email before 27.11. to keep 4 sounds free forever, get 6 months of Drive+ and Drive the Music free and join the Founders Test Crew. Limited seats."
       />
     </div>
   );

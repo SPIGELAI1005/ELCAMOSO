@@ -82,8 +82,9 @@ function PricingFooterNotes({ showCancel = true }: { showCancel?: boolean }) {
           showCancel ? "mt-2 text-sm text-muted-foreground" : "text-sm text-muted-foreground"
         }
       >
-        Racing V10, American Muscle V8 and GT V8 are free. Every other engine sound is Drive+, every
-        music profile is Drive the Music. Drive Unlimited and Lifetime include both.
+        Racing V10, American Muscle V8, Dracula Carriage and Latino Fiesta are free. Every other
+        engine sound is Drive+, every other music profile is Drive the Music. Drive Unlimited and
+        Lifetime include both.
       </p>
     </section>
   );
@@ -199,19 +200,21 @@ function Pricing() {
           ) : billingAvailable ? (
             <>
               <DrivePlusCheckoutButton
-                interval="yearly"
-                label="Drive+ · annual"
+                interval={interval}
+                label={interval === "monthly" ? "Drive+ · monthly" : "Drive+ · annual"}
                 source="pricing"
                 className="inline-flex h-14 w-full items-center justify-center rounded-full bg-primary px-10 text-sm tracking-[0.22em] text-primary-foreground uppercase transition-opacity hover:opacity-90 sm:w-auto"
               />
               {musicAvailable ? (
                 <DrivePlusCheckoutButton
                   plan="drive_music"
-                  interval="yearly"
+                  interval={interval}
                   label={
                     isMusicTrialOfferActive()
                       ? `Drive the Music · ${MUSIC_TRIAL_MONTHS} months free`
-                      : "Drive the Music · annual"
+                      : interval === "monthly"
+                        ? "Drive the Music · monthly"
+                        : "Drive the Music · annual"
                   }
                   source="pricing"
                   className="inline-flex h-14 w-full items-center justify-center rounded-full bg-primary px-10 text-sm tracking-[0.22em] text-primary-foreground uppercase transition-opacity hover:opacity-90 sm:ml-4 sm:w-auto"
@@ -220,8 +223,10 @@ function Pricing() {
               {unlimitedAvailable ? (
                 <DrivePlusCheckoutButton
                   plan="drive_unlimited"
-                  interval="yearly"
-                  label="Drive Unlimited · annual"
+                  interval={interval}
+                  label={
+                    interval === "monthly" ? "Drive Unlimited · monthly" : "Drive Unlimited · annual"
+                  }
                   source="pricing"
                   className="inline-flex h-14 w-full items-center justify-center rounded-full bg-primary px-10 text-sm tracking-[0.22em] text-primary-foreground uppercase transition-opacity hover:opacity-90 sm:ml-4 sm:w-auto"
                 />

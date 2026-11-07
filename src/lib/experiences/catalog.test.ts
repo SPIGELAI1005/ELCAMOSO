@@ -21,10 +21,12 @@ describe("experiences catalog", () => {
     const symphonies = listSymphonyExperiences();
     const worlds = listWorldExperiences();
     const fusion = listFusionExperiences();
-    expect(symphonies.filter((item) => canAccessExperience(item, accessFor("FREE")))).toHaveLength(
-      1,
-    );
-    expect(worlds.filter((item) => canAccessExperience(item, accessFor("FREE")))).toHaveLength(1);
+    expect(
+      symphonies
+        .filter((item) => canAccessExperience(item, accessFor("FREE")))
+        .map((item) => item.id),
+    ).toEqual(["symphony-latino-fiesta"]);
+    expect(worlds.filter((item) => canAccessExperience(item, accessFor("FREE")))).toHaveLength(0);
     expect(fusion.every((item) => !canAccessExperience(item, accessFor("FREE")))).toBe(true);
     expect(fusion.every((item) => canAccessExperience(item, accessFor("DRIVE_MUSIC")))).toBe(true);
   });

@@ -5,7 +5,9 @@ import type { BillingInterval } from "@/lib/billing/status";
 export type CommercialPlanId =
   | "drive_plus_monthly"
   | "drive_plus_yearly"
+  | "drive_music_monthly"
   | "drive_music_yearly"
+  | "drive_unlimited_monthly"
   | "drive_unlimited_yearly"
   | "drive_plus_lifetime";
 
@@ -15,7 +17,9 @@ export type CommercialPlanMode = "subscription" | "payment";
 export const COMMERCIAL_PLAN_IDS: readonly CommercialPlanId[] = [
   "drive_plus_monthly",
   "drive_plus_yearly",
+  "drive_music_monthly",
   "drive_music_yearly",
+  "drive_unlimited_monthly",
   "drive_unlimited_yearly",
   "drive_plus_lifetime",
 ] as const;
@@ -46,6 +50,13 @@ export const COMMERCIAL_PLANS: readonly CommercialPlan[] = [
     label: "Drive+ Yearly",
   },
   {
+    id: "drive_music_monthly",
+    plan: "DRIVE_MUSIC",
+    interval: "month",
+    mode: "subscription",
+    label: "Drive the Music Monthly",
+  },
+  {
     id: "drive_music_yearly",
     plan: "DRIVE_MUSIC",
     interval: "year",
@@ -53,7 +64,14 @@ export const COMMERCIAL_PLANS: readonly CommercialPlan[] = [
     label: "Drive the Music Yearly",
   },
   {
-    // Drive Unlimited (George, 4 Nov 2026): Drive+ AND Drive the Music as one yearly subscription.
+    id: "drive_unlimited_monthly",
+    plan: "DRIVE_COMPLETE",
+    interval: "month",
+    mode: "subscription",
+    label: "Drive Unlimited Monthly",
+  },
+  {
+    // Drive Unlimited: Drive+ AND Drive the Music as one subscription.
     id: "drive_unlimited_yearly",
     plan: "DRIVE_COMPLETE",
     interval: "year",
@@ -93,8 +111,12 @@ export function stripePriceEnvKeyForPlan(id: CommercialPlanId): string {
       return "STRIPE_PRICE_DRIVE_PLUS_MONTHLY";
     case "drive_plus_yearly":
       return "STRIPE_PRICE_DRIVE_PLUS_YEARLY";
+    case "drive_music_monthly":
+      return "STRIPE_PRICE_DRIVE_MUSIC_MONTHLY";
     case "drive_music_yearly":
       return "STRIPE_PRICE_DRIVE_MUSIC_YEARLY";
+    case "drive_unlimited_monthly":
+      return "STRIPE_PRICE_DRIVE_UNLIMITED_MONTHLY";
     case "drive_unlimited_yearly":
       return "STRIPE_PRICE_DRIVE_UNLIMITED_YEARLY";
     case "drive_plus_lifetime":

@@ -58,8 +58,12 @@ export function resolveCommercialPlanId(
 ): CommercialPlanId | null {
   // Lifetime covers both packages regardless of which card started it.
   if (interval === "lifetime") return "drive_plus_lifetime";
-  if (plan === "drive_unlimited") return interval === "yearly" ? "drive_unlimited_yearly" : null;
-  if (plan === "drive_music") return interval === "yearly" ? "drive_music_yearly" : null;
+  if (plan === "drive_unlimited") {
+    return interval === "yearly" ? "drive_unlimited_yearly" : "drive_unlimited_monthly";
+  }
+  if (plan === "drive_music") {
+    return interval === "yearly" ? "drive_music_yearly" : "drive_music_monthly";
+  }
   if (plan !== "drive_plus") return null;
   return interval === "monthly" ? "drive_plus_monthly" : "drive_plus_yearly";
 }

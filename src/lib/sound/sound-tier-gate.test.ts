@@ -33,12 +33,12 @@ describe("Drive+ sound tier gate (22 Oct 2026 Europe/Berlin)", () => {
     expect(isSoundTierGateActive(AFTER)).toBe(true);
   });
 
-  it("free tier is exactly Racing V10, American Muscle V8, GT V8 and Dracula Carriage", () => {
+  it("free tier is exactly Racing V10, American Muscle V8, Dracula Carriage and Latino Fiesta", () => {
     expect([...FREE_SOUND_PROFILE_IDS].sort()).toEqual([
       "american-muscle-v8",
       "dracula-carriage",
-      "gt-v8",
       "racing-v10",
+      "symphony-latino-fiesta",
     ]);
     expect(lockedIds.length).toBeGreaterThan(0);
     expect(lockedIds).toContain("rocket-car");

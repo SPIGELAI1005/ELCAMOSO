@@ -1,18 +1,18 @@
 /**
  * Permanent free Sound Profile set (Prompt 11).
- * Three catalog IDs — American Muscle V8, GT V8, Racing V10 (George, Oct 2026).
- * Every other profile is Drive+ once SOUND_TIER_GATE_STARTS_AT is reached.
+ * American Muscle V8, Racing V10, Dracula Carriage, and Latino Fiesta (George, 7 Nov 2026).
+ * GT V8 is Drive+. Every other profile is paid once SOUND_TIER_GATE_STARTS_AT is reached.
  * Adjust here only; do not scatter free-tier lists across UI components.
  */
 
 export interface FreeSoundProfileSlot {
   id: string;
-  role: "muscle" | "gt" | "racing" | "future";
+  role: "muscle" | "gt" | "racing" | "future" | "music";
   rationale: string;
 }
 
 /**
- * Permanent free trio (actual catalog IDs).
+ * Permanent free Feel it profiles (actual catalog IDs).
  * Grandfathered / purchased profile grants are separate — shrinking this list
  * must not revoke a previously purchased unlock.
  */
@@ -22,12 +22,6 @@ export const FREE_SOUND_PROFILE_SET: readonly FreeSoundProfileSlot[] = [
     role: "muscle",
     rationale:
       "Body-led American V8 character with strong low-end presence; showcases free-tier gear realism and cabin weight without requiring Drive+.",
-  },
-  {
-    id: "gt-v8",
-    role: "gt",
-    rationale:
-      "Refined grand-tourer V8 with smooth mid-range pull — complementary free-tier foil to the muscle body.",
   },
   {
     id: "racing-v10",
@@ -40,6 +34,12 @@ export const FREE_SOUND_PROFILE_SET: readonly FreeSoundProfileSlot[] = [
     role: "future",
     rationale:
       "Gothic ghost coach with a minor-key orchestra; a playful free profile that shows the music layer without Drive+.",
+  },
+  {
+    id: "symphony-latino-fiesta",
+    role: "music",
+    rationale:
+      "Latino Fiesta is the one Symphony experience included with Feel it. Every other music profile stays in Drive the Music.",
   },
 ] as const;
 

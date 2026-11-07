@@ -10,7 +10,7 @@ export interface ProductCapabilityDefinition {
 export const PRODUCT_CAPABILITIES: readonly ProductCapabilityDefinition[] = [
   { id: "basic_sound_profiles", label: "Essential Engine profiles", category: "engine" },
   { id: "all_sound_profiles", label: "All Engine profiles", category: "engine" },
-  { id: "symphony_essential", label: "Essential Symphony", category: "symphony" },
+  { id: "symphony_essential", label: "Latino Fiesta experience", category: "symphony" },
   { id: "symphony_all", label: "All Symphony packs", category: "symphony" },
   { id: "worlds_sampler", label: "Worlds sampler", category: "worlds" },
   { id: "worlds_all", label: "All Worlds", category: "worlds" },

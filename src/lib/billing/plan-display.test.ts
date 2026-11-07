@@ -42,10 +42,11 @@ describe("plan display", () => {
     expect(getFreePlanDisplay().listAmount).toBe("€1.14");
   });
 
-  it("monthly toggle shows the yearly price per month, billed yearly", () => {
+  it("monthly toggle shows the monthly subscription price", () => {
     const m = getDrivePlusDisplay("monthly");
     expect(m.amount).toBe("€2.80");
     expect(m.listAmount).toBe("€3.29");
+    expect(m.cadence).toBe("month");
     expect(getDriveMusicDisplay("monthly")).toEqual(m);
     expect(getDriveMusicDisplay("yearly").listAmount).toBe("€39.48");
   });
@@ -64,6 +65,9 @@ describe("plan display", () => {
     const id = resolveCommercialPlanId("drive_unlimited", "yearly");
     expect(id).toBe("drive_unlimited_yearly");
     expect(getCommercialPlan(id!).plan).toBe("DRIVE_COMPLETE");
-    expect(resolveCommercialPlanId("drive_unlimited", "monthly")).toBeNull();
+    expect(resolveCommercialPlanId("drive_unlimited", "monthly")).toBe("drive_unlimited_monthly");
+    expect(getCommercialPlan("drive_unlimited_monthly").plan).toBe("DRIVE_COMPLETE");
+    expect(resolveCommercialPlanId("drive_music", "monthly")).toBe("drive_music_monthly");
+    expect(getCommercialPlan("drive_music_monthly").plan).toBe("DRIVE_MUSIC");
   });
 });
