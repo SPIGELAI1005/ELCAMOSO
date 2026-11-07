@@ -15,8 +15,10 @@ describe("monetization feature flag", () => {
     else process.env.STRIPE_SECRET_KEY = prevStripe;
   });
 
-  it("defaults to disabled when MONETIZATION_ENABLED is unset", () => {
+  it("is on unless explicitly disabled", () => {
     delete process.env.MONETIZATION_ENABLED;
+    expect(isMonetizationEnabled()).toBe(true);
+    process.env.MONETIZATION_ENABLED = "0";
     expect(isMonetizationEnabled()).toBe(false);
     expect(isBillingAvailable()).toBe(false);
   });
@@ -33,7 +35,7 @@ describe("monetization feature flag", () => {
   });
 
   it("exposes flag state in public billing config", () => {
-    delete process.env.MONETIZATION_ENABLED;
+    process.env.MONETIZATION_ENABLED = "0";
     const off = getBillingPublicConfig();
     expect(off.monetizationEnabled).toBe(false);
     expect(off.available).toBe(false);

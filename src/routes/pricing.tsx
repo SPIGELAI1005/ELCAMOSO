@@ -181,8 +181,7 @@ function Pricing() {
           Make every drive yours.
         </h1>
         <p className="mt-6 max-w-md text-sm leading-relaxed text-muted-foreground">
-          Start with essential motion sound.{" "}
-          <span className="font-medium text-red-500">All purchases (Drive+, Drive the Music, Drive Unlimited, Lifetime and individual sounds) open on 9.11.2026.</span>
+          Start with essential motion sound. VAT is added at checkout.
         </p>
       </section>
 
