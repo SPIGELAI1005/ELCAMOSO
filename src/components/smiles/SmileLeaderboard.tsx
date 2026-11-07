@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { notifySmilesChanged, useSmileStatus } from "@/components/smiles/SmileRewards";
 import { useAccount } from "@/lib/account/AccountProvider";
 import { getSmileLeaderboardFn, setSmileHandleFn } from "@/lib/smiles/rewards-server-fns";
+import { HANDLE_RE } from "@/lib/smiles/rewards";
 import { cn } from "@/lib/utils";
 
 type Board = Awaited<ReturnType<typeof getSmileLeaderboardFn>>;
@@ -15,20 +16,64 @@ export function SmileLeaderboard({ onNote }: { onNote?: ((note: string) => void)
   const [board, setBoard] = useState<Board | null>(null);
   const [tab, setTab] = useState<"country" | "sound">("country");
   const [handle, setHandle] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  const draft = useRef(false);
   const setNote = (n: string) => onNote?.(n);
   useEffect(() => {
-    void getSmileLeaderboardFn().then(setBoard).catch(() => undefined);
-  }, []);
-  useEffect(() => setHandle(status.handle ?? ""), [status.handle]);
+    let live = true;
+    void getSmileLeaderboardFn()
+      .then((next) => live && setBoard(next))
+      .catch(() => undefined);
+    return () => {
+      live = false;
+    };
+  }, [isAuthenticated, status.handle]);
+  useEffect(() => {
+    if (!draft.current) setHandle(status.handle ?? "");
+  }, [status.handle]);
   const groups = tab === "country" ? (board?.byCountry ?? []) : (board?.bySound ?? []);
+  const listed = groups.some((g) => g.rows.some((r) => r.me));
 
   async function saveHandle() {
+    const next = handle.trim();
+    if (next && !HANDLE_RE.test(next)) {
+      const invalid = "Use 3-20 letters, numbers, . _ or -.";
+      setMessage(invalid);
+      setNote(invalid);
+      return;
+    }
+    setSaving(true);
+    setMessage(null);
     try {
-      await setSmileHandleFn({ data: { handle } });
+      const saved = await setSmileHandleFn({ data: { handle: next } });
+      if (!saved.ok) {
+        const failed = "Could not save that name. Sign in and try again.";
+        setMessage(failed);
+        setNote(failed);
+        return;
+      }
+      draft.current = false;
+      setHandle(next);
       notifySmilesChanged();
-      setNote(handle ? `You are "${handle}" on the board.` : "You are anonymous on the board.");
+      const fresh = await getSmileLeaderboardFn();
+      setBoard(fresh);
+      const onBoard = (tab === "country" ? fresh.byCountry : fresh.bySound).some((g) =>
+        g.rows.some((r) => r.me),
+      );
+      const savedNote = next
+        ? onBoard
+          ? `Saved. The board shows you as ${next}.`
+          : `Saved as ${next}. A drive this week adds you to the board.`
+        : "Saved. The board will use an anonymous name.";
+      setMessage(savedNote);
+      setNote(savedNote);
     } catch (e) {
-      setNote(e instanceof Error ? e.message : "Bad name");
+      const failed = e instanceof Error ? e.message : "Could not save that name.";
+      setMessage(failed);
+      setNote(failed);
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -74,18 +119,47 @@ export function SmileLeaderboard({ onNote }: { onNote?: ((note: string) => void)
           </div>
         )}
         {isAuthenticated ? (
-          <div className="mt-5 flex gap-2">
-            <input
-              value={handle}
-              onChange={(e) => setHandle(e.target.value)}
-              placeholder="Board name (empty = anonymous)"
-              maxLength={20}
-              className="h-10 min-w-0 flex-1 rounded-full border border-border bg-transparent px-4 text-sm"
-            />
-            <button type="button" onClick={() => void saveHandle()} className="h-10 rounded-full border border-border px-4 text-[11px] tracking-[0.2em] uppercase">
-              Save
-            </button>
-          </div>
+          <form
+            className="mt-5"
+            onSubmit={(e) => {
+              e.preventDefault();
+              void saveHandle();
+            }}
+          >
+            <div className="flex gap-2">
+              <input
+                value={handle}
+                onChange={(e) => {
+                  draft.current = true;
+                  setHandle(e.target.value);
+                }}
+                placeholder="Board name (empty = anonymous)"
+                maxLength={20}
+                aria-label="Board name"
+                className="h-10 min-w-0 flex-1 rounded-full border border-border bg-transparent px-4 text-sm"
+              />
+              <button
+                type="submit"
+                disabled={saving}
+                className="h-10 rounded-full border border-border px-4 text-[11px] tracking-[0.2em] uppercase disabled:opacity-50"
+              >
+                {saving ? "Saving" : "Save"}
+              </button>
+            </div>
+            {message ? (
+              <p role="status" className="mt-2 text-xs text-muted-foreground">
+                {message}
+              </p>
+            ) : status.handle && !listed ? (
+              <p className="mt-2 text-xs text-muted-foreground">
+                Saved as {status.handle}. A drive this week adds you to the board.
+              </p>
+            ) : (
+              <p className="mt-2 text-xs text-muted-foreground">
+                Names stay on your account. The list is smiles earned since Monday.
+              </p>
+            )}
+          </form>
         ) : null}
       </section>
   );

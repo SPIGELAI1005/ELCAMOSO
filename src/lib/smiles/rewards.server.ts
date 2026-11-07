@@ -417,8 +417,13 @@ export async function redeemItem(userId: string, itemId: string, now = Date.now(
 export async function setSmileHandle(userId: string, handle: string | null): Promise<boolean> {
   if (!hasRewardsDb(userId)) return false;
   try {
-    await getDb().execute(sql`update users set smile_handle = ${handle} where id = ${userId}::uuid`);
-    return true;
+    const db = getDb();
+    await db.execute(sql`insert into users (id) values (${userId}::uuid) on conflict do nothing`);
+    const updated = await rows<{ h: string | null }>(
+      db,
+      sql`update users set smile_handle = ${handle} where id = ${userId}::uuid returning smile_handle as h`,
+    );
+    return updated.length > 0;
   } catch (e) {
     return soft("handle", false)(e);
   }
@@ -446,19 +451,34 @@ export async function getLeaderboard(viewerId: string | null, now = Date.now()):
   if (!hasRewardsDb()) return empty;
   try {
     const db = getDb();
+    let viewerHandle: string | null = null;
+    if (viewerId && UUID_RE.test(viewerId)) {
+      const [viewer] = await rows<{ h: string | null }>(
+        db,
+        sql`select smile_handle as h from users where id = ${viewerId}::uuid`,
+      ).catch(() => []);
+      viewerHandle = viewer?.h ?? null;
+    }
+    const mine = (uid: string) => viewerId != null && uid.toLowerCase() === viewerId.toLowerCase();
     const since = sql`(l.created_at at time zone 'Europe/Berlin')::date >= ${weekOf}::date`;
     const load = async (col: "country" | "sound") => {
       const data = await rows<{ k: string; uid: string; handle: string | null; n: number }>(
         db,
         sql`select coalesce(l.${sql.raw(col)}, '—') as k, l.user_id as uid, u.smile_handle as handle, sum(l.amount)::int as n
-            from smile_ledger l left join users u on u.id::text = l.user_id
+            from smile_ledger l left join users u on lower(u.id::text) = lower(l.user_id)
             where ${EARN} and ${since}
             group by 1, 2, 3 order by n desc limit 200`,
       );
       const groups = new Map<string, BoardRow[]>();
       for (const d of data) {
         const g = groups.get(d.k) ?? [];
-        if (g.length < 5) g.push({ name: d.handle || anonName(d.uid), smiles: Number(d.n), me: d.uid === viewerId });
+        const isMe = mine(d.uid);
+        if (g.length < 5)
+          g.push({
+            name: (isMe ? viewerHandle : null) || d.handle || anonName(d.uid),
+            smiles: Number(d.n),
+            me: isMe,
+          });
         groups.set(d.k, g);
       }
       return [...groups.entries()]
