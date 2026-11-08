@@ -750,6 +750,7 @@ export const ACOUSTIC_ENGINE_BY_PROFILE: Record<string, AcousticEngineConfig> = 
   "motorcycle-superbike": INLINE_4,
   "big-twin": V_TWIN,
   "traby": TWO_STROKE_TWIN,
+  "bollywood-rickshaw": TWO_STROKE_TWIN,
   "ge-squared": BITURBO_V8_4X4,
   "ge-squared-90": CLASSIC_V8_4X4,
 };

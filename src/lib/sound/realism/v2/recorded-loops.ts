@@ -880,6 +880,22 @@ export const RECORDED_LOOP_BANKS_BY_PROFILE: Record<string, RecordedLoopBank> = 
     handover: RAW_HANDOVER,
     eq: { lowShelfDb: 4, midDb: 3, midHz: 900, highShelfDb: 1, highShelfHz: 3000, lowpassHz: 10000 },
   },
+  // Bollywood Rickshaw: reuses Traby's two-stroke audio - same recorded loops and config.
+  "bollywood-rickshaw": {
+    personalityId: "bollywood-rickshaw",
+    sources: [
+      src("rickshaw-idle", "traby_twin.m4a", TRABY_IDLE_REGIONS, "idle", 0.8, 1.6),
+      src("rickshaw-cruise", "traby_twin_rev.m4a", TRABY_REV_GROWL_REGIONS, "cruise", 0.6, 1.5),
+      src("rickshaw-growl", "traby_twin_rev.m4a", TRABY_REV_GROWL_REGIONS, "growl", 0.6, 1.5, 1.2),
+      src("rickshaw-hard", "traby_twin_rev.m4a", [...TRABY_REV_GROWL_REGIONS, ...TRABY_REV_HARD_REGIONS], "hard", 0.6, 1.45, 1.3),
+      src("rickshaw-overrun", "traby_twin_rev.m4a", TRABY_REV_GROWL_REGIONS, "overrun", 0.55, 1.4, 0.8),
+    ],
+    level: 0.34,
+    synthDuck: 0.97,
+    loadSynthDuck: 1.05,
+    handover: RAW_HANDOVER,
+    eq: { lowShelfDb: 4, midDb: 3, midHz: 900, highShelfDb: 1, highShelfHz: 3000, lowpassHz: 10000 },
+  },
   // '90: classic relaxed V8, deep muted burble, gentle pull. Modelled loops, no recordings.
   "ge-squared-90": {
     personalityId: "ge-squared-90",

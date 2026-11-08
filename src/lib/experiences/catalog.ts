@@ -95,6 +95,17 @@ const WORLD_CURATIONS: readonly Omit<
       requiredEntitlement: "worlds_all",
     },
   },
+  {
+    id: "world-bollywood-rickshaw",
+    name: "Bollywood Rickshaw",
+    tagline: "Two-Stroke · Exotic · Chaos",
+    description: "The putt-putt soul of South Asian streets.",
+    capabilities: {
+      profileId: "bollywood-rickshaw",
+      selectableInDrive: true,
+      requiredEntitlement: "worlds_all",
+    },
+  },
 ];
 
 const SYMPHONY_SHELLS: readonly ExperienceDescriptor[] = [

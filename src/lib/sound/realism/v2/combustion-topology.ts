@@ -152,6 +152,7 @@ export const TOPOLOGY_PILOT_PROFILE_IDS = [
   "motorcycle-superbike",
   "big-twin",
   "traby",
+  "bollywood-rickshaw",
   "ge-squared",
   "ge-squared-90",
 ] as const;
@@ -622,6 +623,7 @@ export const TOPOLOGY_BY_PILOT_PROFILE: Record<TopologyPilotProfileId, Combustio
   "motorcycle-superbike": SUPERBIKE_I4_TOPOLOGY,
   "big-twin": V_TWIN_TOPOLOGY,
   "traby": TWO_STROKE_TWIN_TOPOLOGY,
+  "bollywood-rickshaw": TWO_STROKE_TWIN_TOPOLOGY,
   "ge-squared": BITURBO_V8_4X4_TOPOLOGY,
   "ge-squared-90": { ...BITURBO_V8_4X4_TOPOLOGY, cycleLope: 0.4, noiseScale: 0.22 },
 };
