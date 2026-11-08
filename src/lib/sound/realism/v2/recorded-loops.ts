@@ -364,6 +364,8 @@ export interface BackfireConfig {
   /** Shot gain at full strength, and the hard per-shot cap. */
   level: number;
   maxLevel: number;
+  /** Playback-rate scale for bang shots (<1 = lower, heavier; default 1). */
+  bangRate?: number;
   /** Tail: events per second at full rpm, length (s), share of crackles (rest burbles), relative level. */
   tailRate: number;
   tailS: number;
@@ -807,9 +809,9 @@ const GE2_MO_OVERRUN_REGIONS: RecordedRegion[] = [
 ];
 
 const GE2_BF90_SHOTS: BackfireShot[] = [
-  { start: 0, end: 0.45, kind: "burble" },
-  { start: 0.5, end: 0.95, kind: "burble" },
-  { start: 1.0, end: 1.45, kind: "burble" },
+  { start: 0, end: 0.45, kind: "bang" },
+  { start: 0.5, end: 0.95, kind: "bang" },
+  { start: 1.0, end: 1.45, kind: "bang" },
   { start: 1.5, end: 1.95, kind: "burble" },
   { start: 2.0, end: 2.45, kind: "burble" },
   { start: 2.5, end: 2.95, kind: "burble" },
@@ -893,21 +895,22 @@ export const RECORDED_LOOP_BANKS_BY_PROFILE: Record<string, RecordedLoopBank> = 
     loadSynthDuck: 1.05,
     handover: RAW_HANDOVER,
     eq: { lowShelfDb: 5, midDb: -1, midHz: 1200, highShelfDb: -5, highShelfHz: 2200, lowpassHz: 4500 },
-    // Stock fuel cut: only a very soft, occasional burble on a lift.
+    // Classic V8: deep muted explosions on lift, soft burble tail.
     backfire: {
       url: `${PROFILE_BASE}/ge2_90_afterfire.m4a`,
       shots: GE2_BF90_SHOTS,
-      chance: 0.5,
-      bangs: 0,
-      bangChance: 0,
-      level: 0.3,
-      maxLevel: 0.36,
-      tailRate: 1,
-      tailS: 1.2,
+      chance: 0.7,
+      bangs: 2,
+      bangChance: 0.65,
+      level: 0.55,
+      maxLevel: 0.7,
+      bangRate: 0.78,
+      tailRate: 1.5,
+      tailS: 1.4,
       crackleShare: 0,
-      tailLevel: 1,
-      minRpm: 2000,
-      fullRpm: 4500,
+      tailLevel: 0.8,
+      minRpm: 1800,
+      fullRpm: 4200,
     },
   },
   // O))): modern biturbo V8, deep harsh boom, light whoosh, lift-off crackle. Modelled loops.
@@ -925,20 +928,21 @@ export const RECORDED_LOOP_BANKS_BY_PROFILE: Record<string, RecordedLoopBank> = 
     loadSynthDuck: 1.05,
     handover: RAW_HANDOVER,
     eq: { lowShelfDb: 5, midDb: 2, midHz: 500, highShelfDb: -2, highShelfHz: 2500, lowpassHz: 7000 },
-    // Overrun map with flaps open: bangs on a hard high-rpm lift, then crackle and burble.
+    // Overrun map with flaps open: deep explosive bangs on lift, then crackle and burble tail.
     backfire: {
       url: `${PROFILE_BASE}/ge2_o_afterfire.m4a`,
       shots: GE2_BFO_SHOTS,
       chance: 1,
       bangs: 4,
-      bangChance: 0.9,
-      level: 0.9,
-      maxLevel: 1.1,
-      tailRate: 14,
-      tailS: 2.2,
-      crackleShare: 0.6,
-      tailLevel: 0.6,
-      minRpm: 1800,
+      bangChance: 0.92,
+      level: 1.0,
+      maxLevel: 1.25,
+      bangRate: 0.72,
+      tailRate: 12,
+      tailS: 2.4,
+      crackleShare: 0.55,
+      tailLevel: 0.55,
+      minRpm: 1600,
       fullRpm: 4500,
     },
   },
