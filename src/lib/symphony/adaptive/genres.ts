@@ -1306,10 +1306,16 @@ const CINEROCK_RIFF: readonly (readonly number[])[] = [
   [0, 3, 6, 10, 12],
   [0, 2, 6, 8, 11, 14],
 ];
+/** Two-bar lead in D. [step, semitones above the bar root, length in steps]. */
+const CINEROCK_LEAD: readonly (readonly [number, number, number])[][] = [
+  [[0, 0, 3], [4, 7, 2], [8, 12, 3], [12, 10, 2], [14, 7, 2]],
+  [[0, 12, 2], [4, 7, 4], [8, 3, 2], [10, 5, 2], [12, 0, 4]],
+];
 
 /**
  * Cinematic Rock. Signature arrangement for symphony-cinematic-rock.
- * Fixed 105 BPM. Tight muted guitar and bass, dry backbeat, open power chords only on surge.
+ * Fixed 105 BPM. The lead plays from idle, the same way Cinematic Orchestra keeps its piano line.
+ * Muted guitar, bass and the dry backbeat join once the car moves. Open power chords only on surge.
  * Synthesized note sprites stand in for a live-band stem set.
  */
 const cinrock: GenreDef = {
@@ -1319,7 +1325,7 @@ const cinrock: GenreDef = {
   bpmMax: 105,
   fixedBpm: 105,
   key: 38, // D
-  reverb: 0.05,
+  reverb: 0.08,
   surgeFillsOnly: true,
   progression: [
     { deg: 0, tones: [0, 7, 12] },
@@ -1327,16 +1333,29 @@ const cinrock: GenreDef = {
     { deg: 10, tones: [0, 7, 12] },
     { deg: 5, tones: [0, 7, 12] },
   ],
-  mix: { drums_rock: 0.72, ebass: 0.62, dguitar: 0.58, rockgtr: 0.4 },
+  mix: { drums_rock: 0.72, ebass: 0.62, dguitar: 0.58, rockgtr: 0.4, rocklead: 0.52, cleangtr: 0.38 },
   accents: { crash: ["drums_rock", 38], fill: ["drums_rock", [50, 48, 45, 38]], low: ["drums_rock", [36, 36]] },
   pattern(c) {
     const out: NoteSpec[] = [];
-    if (c.mode === "stopped" || c.mode === "brake") return out;
     const I = c.intensity;
-    const settled = c.mode === "cruise" || c.mode === "surge" || I >= 0.4;
+    const quiet = c.mode === "stopped" || c.mode === "brake";
+    const settled = !quiet && (c.mode === "cruise" || c.mode === "surge" || I >= 0.4);
     const punch = c.mode === "surge";
     const rootG = into(c.root, 40, 52);
     const rootB = into(c.root, 36, 48);
+    const leadVel = quiet ? 0.5 : Math.min(0.8, 0.5 + 0.16 * I);
+    for (const [st, iv, len] of CINEROCK_LEAD[c.bar % 2]!) {
+      if (st !== c.step) continue;
+      out.push({ inst: "rocklead", midi: into(c.root + iv, 64, 79), vel: leadVel, dur: c.stepDur * len * 0.92, pan: 0.16 });
+    }
+    if (quiet) {
+      if (c.step === 0) {
+        out.push({ inst: "cleangtr", midi: into(c.root, 52, 64), vel: 0.34, dur: c.barDur * 0.98, pan: -0.22 });
+        out.push({ inst: "cleangtr", midi: into(c.root + 7, 55, 67), vel: 0.24, dur: c.barDur * 0.98, pan: -0.04 });
+      }
+      if (c.mode === "stopped" && on(c, 0)) out.push({ inst: "ebass", midi: rootB, vel: 0.3, dur: c.barDur * 0.85 });
+      return out;
+    }
     if (CINEROCK_RIFF[c.bar % 2]!.includes(c.step)) {
       const gVel = (settled ? 0.46 : 0.32) + 0.18 * I;
       out.push({ inst: "dguitar", midi: rootG, vel: Math.min(0.82, gVel), dur: c.stepDur * 0.45, pan: -0.12 });

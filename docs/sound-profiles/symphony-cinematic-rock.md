@@ -8,7 +8,7 @@
 
 ## Product promise
 
-Original instrumental rock at a steady 105 BPM: a low palm-muted guitar riff, a bass line on the same grid, and a dry backbeat. Smoothed speed sets how full the groove is. Strong acceleration opens wide power chords and one short drum fill, then waits before the next fill. Stopping and braking let the last chord decay. The live Drive arrangement is synthesized note by note. Recorded band stems are not in the sample pack.
+Original instrumental rock at a steady 105 BPM. A lead melody and a clean guitar chord play from idle, the same way Cinematic Orchestra keeps its piano line while stopped. Once the car moves, a palm-muted guitar and bass join on the same grid, then a dry backbeat. Strong acceleration opens wide power chords and one short drum fill, then waits before the next fill. Braking keeps the melody and lets the band fall away. The live Drive arrangement is synthesized note by note. Recorded band stems are not in the sample pack.
 
 ## Required motion behavior
 

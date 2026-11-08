@@ -253,10 +253,15 @@ function cinrockState(mode: ConductorState["mode"], intensity: number, speedKmh:
 }
 
 describe("cinematic rock arrangement", () => {
-  it("stays at 105 BPM, stays quiet when stopped, and keeps the shared rock genre", () => {
+  it("stays at 105 BPM, keeps a lead at idle, and keeps the shared rock genre", () => {
     const tl = createTimeline("cinrock", 0, 1);
     const stopped = tl.scheduleUntil(8, cinrockState("stopped", 0.1, 0));
-    expect(stopped).toHaveLength(0);
+    const lead = stopped.filter((n) => n.inst === "rocklead").map((n) => n.midi);
+    expect(lead.length).toBeGreaterThan(8);
+    expect(new Set(lead).size).toBeGreaterThan(2);
+    expect(stopped.some((n) => n.inst === "cleangtr")).toBe(true);
+    expect(stopped.some((n) => n.inst === "ebass")).toBe(true);
+    expect(stopped.filter((n) => n.inst === "drums_rock")).toHaveLength(0);
     expect(tl.bpm).toBe(105);
     const rock = GENRES.rock.pattern({
       step: 0, bar: 0, chord: [40, 44, 47], root: 40, intensity: 0.2, mode: "cruise", variation: 0, stepDur: 0.12, barDur: 1.9, rand: () => 0.2,
@@ -270,6 +275,7 @@ describe("cinematic rock arrangement", () => {
     const cruising = cruise.scheduleUntil(20, cinrockState("cruise", 0.55, 70));
     expect(cruising.some((n) => n.inst === "dguitar")).toBe(true);
     expect(cruising.some((n) => n.inst === "ebass")).toBe(true);
+    expect(cruising.some((n) => n.inst === "rocklead")).toBe(true);
     expect(cruising.some((n) => n.inst === "drums_rock" && n.midi === 38)).toBe(true);
     expect(cruising.some((n) => n.inst === "rockgtr")).toBe(false);
     expect(cruising.filter((n) => n.inst === "drums_rock" && (n.midi === 45 || n.midi === 48 || n.midi === 50))).toHaveLength(0);
