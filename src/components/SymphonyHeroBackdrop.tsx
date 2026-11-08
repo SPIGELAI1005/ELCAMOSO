@@ -15,37 +15,48 @@ export const SYMPHONY_HERO_IDS = [
   "symphony-cinematic-rock",
 ] as const;
 
-const SLIDES = SYMPHONY_HERO_IDS.map((id) => ({
-  id,
-  src: profileHeroImageSrc(id),
-  alt: profileHeroImageAlt(id),
-})).filter((s): s is { id: (typeof SYMPHONY_HERO_IDS)[number]; src: string; alt: string } =>
-  Boolean(s.src),
-);
-
 const SLIDE_MS = 7000;
+
+function heroSlides(profileIds: readonly string[]) {
+  const seen = new Set<string>();
+  return profileIds
+    .map((id) => ({ id, src: profileHeroImageSrc(id), alt: profileHeroImageAlt(id) }))
+    .filter((slide): slide is { id: string; src: string; alt: string } => {
+      if (!slide.src || seen.has(slide.src)) return false;
+      seen.add(slide.src);
+      return true;
+    });
+}
 
 /**
  * Lightweight backdrop: one interval timer + CSS opacity transition.
  * No per-frame JS animation; static under reduced motion.
+ * Pass `profileIds` to fade a different set of car stills. Defaults to the Symphony cars.
  */
-export function SymphonyHeroBackdrop({ className }: { className?: string }) {
+export function SymphonyHeroBackdrop({
+  className,
+  profileIds = SYMPHONY_HERO_IDS,
+}: {
+  className?: string;
+  profileIds?: readonly string[];
+}) {
+  const slides = heroSlides(profileIds);
   const [index, setIndex] = useState(0);
 
   useEffect(() => {
-    if (SLIDES.length < 2) return;
+    if (slides.length < 2) return;
     if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
-    const id = window.setInterval(() => setIndex((i) => (i + 1) % SLIDES.length), SLIDE_MS);
+    const id = window.setInterval(() => setIndex((i) => (i + 1) % slides.length), SLIDE_MS);
     return () => window.clearInterval(id);
-  }, []);
+  }, [slides.length]);
 
   return (
     <div
       className={cn("pointer-events-none absolute inset-0 -z-10 overflow-hidden", className)}
       aria-hidden="true"
     >
-      {SLIDES.map((slide, i) => {
-        const near = i === index || i === (index + 1) % SLIDES.length || i === 0;
+      {slides.map((slide, i) => {
+        const near = i === index || i === (index + 1) % slides.length || i === 0;
         return near ? (
           <img
             key={slide.id}

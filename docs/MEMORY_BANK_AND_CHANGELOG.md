@@ -3,7 +3,7 @@
 Living document for product context, recent architecture decisions, and a dated changelog.
 Canonical product rules still live in `elcamoso-comprehensive-spec.md`. Update **both** when direction or architecture changes.
 
-**Last updated:** 2026-10-12
+**Last updated:** 2026-11-08
 
 ---
 
@@ -145,6 +145,9 @@ Canonical product rules still live in `elcamoso-comprehensive-spec.md`. Update *
 - **Drive Symphony V1:** `src/lib/symphony/` — Drive Energy, fixed-BPM clock, quantized stems; profiles `symphony-cinematic-rock`, `symphony-motion-orchestra`, `symphony-neon-run`. Docs: `docs/DRIVE_SYMPHONY.md`.
 - **Fusion V1:** `src/lib/fusion/` — Machine + Music mixer, harmonic resonance; presets Road Anthem / Mechanical Symphony / Midnight Boost / Future Pulse. Docs: `docs/FUSION_AUDIO.md`.
 - **Worlds V1:** `src/lib/worlds/` — Space Drive, Cyber City, Storm Run reactive soundscapes. Docs: `docs/WORLDS_ENGINE.md`.
+- **`/worlds` (2026-11-08):** Same page shape as Symphony. Hero headline "Enter another world." Car stills fade in `SymphonyHeroBackdrop` (`listWorldPageHeroIds`, music sounds first, then the place worlds). Reduced motion keeps the first still. Experience cards: Space Drive, Cyber City, Storm Run, Ocean, then Retro Arcade, Synthwave Drive, Deep Bass Pulse, Heartbeat, Bollywood Rickshaw, Dracula Carriage, Road Anthem, Mechanical Symphony, Midnight Boost, Future Pulse. Arcade is omitted there because it is the same profile as Retro Arcade. Symphony packs stay on `/symphony`.
+- **Public catalog (2026-11-08):** 71 profiles. Newer than the 47-profile note below: Cinematic Rock keeps its own still and a `cinrock` arrangement (105 BPM, separate from Motion Orchestra + Rock). Bollywood Rickshaw is a 104 BPM hook over Traby's two-stroke, with Dracula's music/engine level split. Classic Vespa (`classic-vespa`) is a separate single-cylinder two-stroke: one pulse per revolution (`rpm / 60`), idle 1,900 rpm, 5,600 rpm power peak, 7,800 rpm ceiling, four approximate gears. Docs: `docs/sound-profiles/classic-vespa.md`, `docs/sound-profiles/bollywood-rickshaw.md`. Phone and headphone listening for Vespa is not done.
+- **Two-stroke worklet (2026-11-08):** `combustion-processor.js` reconstructs RPM as `firingHz × 60 / cylinders` only when the topology sets `stroke: "two-stroke"`. Missing stroke keeps the historical four-stroke formula, so other engines are unchanged. Worklet query `?v=2026-11-08a`. Shell cache `elcamoso-shell-v84`.
 - **Journey Composer V1:** `src/lib/journey/` — Drive DNA, condensed Drive Song, local journeys + privacy-first share. Docs: `docs/JOURNEY_COMPOSER.md`.
 - Dynamic Drive: `PowertrainSimulator` + `DynamicDriveSynth` when `settings.dynamicDrive` and profile support it. See `docs/DYNAMIC_DRIVE_ARCHITECTURE.md`.
 - Wake lock: requested for **all** live Drive (not only Cockpit); re-acquired on visibility resume / pageshow / wake `release`.
@@ -207,6 +210,16 @@ Canonical product rules still live in `elcamoso-comprehensive-spec.md`. Update *
 ---
 
 ## Changelog
+
+### 2026-11-08 (Worlds hero, music placement, Classic Vespa)
+
+- **`/worlds`:** Rebuilt in the Symphony page format. Fading car hero, motion diagram, then the world cards and the music sounds listed above. SEO title is "Enter Another World".
+- **Symphony list:** Those music profiles are no longer mixed into the Symphony experience cards. The public genre picker still hides profile-only genres `cinrock` and `bwood`.
+- **Cinematic Rock:** Dedicated muscle-car still. Signature arrangement stays locked at 105 BPM so it does not collapse into the shared Rock genre.
+- **Bollywood Rickshaw:** New musical profile. Synthesized flute, plucked answer and dholak are placeholders until recorded stems exist.
+- **Classic Vespa:** New Heritage Drive+ profile and `classic-vespa` drivetrain personality. Gear ratios are approximations (primary 22/67, 3.50-10 wheel), not a verified PX 125 Euro 3 tooth chart. No lift pops. Hero still is the black scooter.
+- Verified here: catalog, topology fire-count, cruise-hold and stop-to-idle tests. Ear tuning on a phone speaker and headphones is still open.
+- Docs: this entry, `docs/sound-profiles/classic-vespa.md`, `docs/sound-profiles/bollywood-rickshaw.md`.
 
 ### 2026-10-12 (Sounds Listen + Drive Sound picker polish)
 

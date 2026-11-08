@@ -81,6 +81,8 @@ export const ALWAYS_LAYERED_PROFILE_IDS: ReadonlySet<string> = new Set(["dracula
 export const BACKGROUND_MUSIC_LEVELS: Readonly<Record<string, number>> = {
   // v38b: Gothic Night ~65% vs carriage ~45% (music +3.2 dB over carriage stem)
   "dracula-carriage": 6.5,
+  // Same rest mix as Dracula Carriage: music leads, the two-stroke stays underneath.
+  "bollywood-rickshaw": 6.5,
 };
 /**
  * Speed boost for the background music: above `onKmh` the music bus ramps to
@@ -91,6 +93,7 @@ export const BACKGROUND_MUSIC_LEVELS: Readonly<Record<string, number>> = {
 export const BACKGROUND_MUSIC_SPEED_BOOST: Readonly<Record<string, { onKmh: number; offKmh: number; level: number; tau: number }>> = {
   // v41: above 18 km/h Gothic Night ~82 % vs carriage ~18 % (music ~+13 dB over carriage stem)
   "dracula-carriage": { onKmh: 19, offKmh: 17, level: 20, tau: 0.5 },
+  "bollywood-rickshaw": { onKmh: 19, offKmh: 17, level: 20, tau: 0.5 },
 };
 import { isWorldProfileId, WorldSynth } from "@/lib/worlds";
 import { fetchSoundAssetManifest } from "@/lib/sound-assets/client-loader";

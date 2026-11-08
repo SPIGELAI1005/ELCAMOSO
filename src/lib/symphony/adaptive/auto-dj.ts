@@ -9,7 +9,7 @@ import { GENRES, GENRE_IDS, type GenreId } from "./genres";
 
 export const AUTO_DJ_INTERVAL_SEC: readonly [number, number] = [120, 180];
 /** Genres Auto DJ never mixes into: 3/4 meter or story-bound signature pieces. */
-const EXCLUDED: ReadonlySet<GenreId> = new Set(GENRE_IDS.filter((id) => (GENRES[id].stepsPerBar ?? 16) !== 16 || id === "gothic"));
+const EXCLUDED: ReadonlySet<GenreId> = new Set(GENRE_IDS.filter((id) => (GENRES[id].stepsPerBar ?? 16) !== 16 || id === "gothic" || id === "cinrock" || id === "bwood"));
 /** How many recently played genres are skipped. */
 const HISTORY = 3;
 

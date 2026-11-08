@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import {
-  GENRE_IDS,
+  PUBLIC_GENRE_IDS,
   GENRES,
   UPCOMING_GENRES,
   getGenreChoice,
@@ -42,7 +42,7 @@ export function MusicGenrePicker({
   }, []);
   const options: { id: GenreChoice; label: string }[] = [
     { id: "auto", label: AUTO_DJ_LABEL },
-    ...GENRE_IDS.map((id) => ({ id, label: GENRES[id].name })),
+    ...PUBLIC_GENRE_IDS.map((id) => ({ id, label: GENRES[id].name })),
   ];
   return (
     <div className={className}>

@@ -16,6 +16,8 @@ const FAMILY_BY_ID: Record<string, ProfileFamily> = {
   "racing-v10": "physical",
   "f1-v10": "physical",
   traby: "physical",
+  "bollywood-rickshaw": "physical",
+  "classic-vespa": "physical",
   "ge-squared": "physical",
   "ge-squared-90": "physical",
   "police-patrol": "physical",

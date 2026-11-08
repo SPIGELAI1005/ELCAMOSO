@@ -665,6 +665,49 @@ const TWO_STROKE_TWIN: AcousticEngineConfig = {
 };
 
 /**
+ * Classic Vespa PX-class: one pulse per revolution, hollow body around 320 Hz,
+ * a gentler edge around 1.1 kHz. Stock muffler: no lift pops or crackle.
+ * 5,600 RPM is the power peak. redlineRpm sits above it so it is not a limiter.
+ */
+const VESPA_SINGLE: AcousticEngineConfig = {
+  cylinders: 1,
+  stroke: "two-stroke",
+  architecture: "single",
+  banks: "single",
+  architectureCode: 5,
+  idleIrregularity: 0.22,
+  exhaustPulse: 0.62,
+  intakePresence: 0.18,
+  mechanicalIntensity: 0.2,
+  combustionSharpness: 0.46,
+  highLoadEnrichment: 0.4,
+  loadContrast: 0.55,
+  upperRpmEnergy: 0.4,
+  intakeLoadResponse: 0.72,
+  overrunCharacter: 0.22,
+  exhaustFormantsHz: [320, 430, 1050, 1400],
+  intakeFormantsHz: [650, 1100, 1700],
+  bodyResonanceHz: [280, 380, 980],
+  supportRatios: [1, 2, 3, 4, 5],
+  supportWeights: [1, 0.62, 0.32, 0.14, 0.06],
+  forcedInduction: false,
+  bodyBrightness: 0.34,
+  redlineRpm: 7800,
+  outputTrimDb: 17.5,
+  throttleGapDb: 2.4,
+  idleLife: {
+    wanderRpm: 55,
+    wanderTauS: 0.45,
+    blipRpm: [80, 160],
+    blipEveryS: [8, 14],
+    blipIntensity: 0.06,
+    breathDb: 0.6,
+  },
+  accelCharacter: { gentleGainDb: -1.2, hardGainDb: 1.6, hardTiltDb: 2.2, gentleTiltDb: -0.6 },
+  growl: { centersHz: [320, 1100], q: 1.1, drive: 0.4, level: 0.03, lowpassHz: 1800 },
+};
+
+/**
  * Ge-Squared: boxy 4x4 with a biturbo cross-plane V8. Deep, lumpy burble (voiced against
  * a CC BY twin-turbo SUV recording: energy 70-110 Hz), turbo whistle on boost, a soft
  * blow-off sigh between gears and crackle when you lift.
@@ -750,8 +793,10 @@ export const ACOUSTIC_ENGINE_BY_PROFILE: Record<string, AcousticEngineConfig> = 
   "motorcycle-superbike": INLINE_4,
   "big-twin": V_TWIN,
   "traby": TWO_STROKE_TWIN,
+  "bollywood-rickshaw": TWO_STROKE_TWIN,
   "ge-squared": BITURBO_V8_4X4,
   "ge-squared-90": CLASSIC_V8_4X4,
+  "classic-vespa": VESPA_SINGLE,
 };
 
 /** Drivetrain personality id → acoustic config. */

@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { createConductor, tempoForSpeed, type ConductorInput } from "./conductor";
+import { createConductor, tempoForSpeed, type ConductorInput, type ConductorState } from "./conductor";
 import { createTimeline } from "./timeline";
 import { GENRES, GENRE_IDS } from "./genres";
+import { autoDjPool } from "./auto-dj";
 import { pickSample, MUSIC_BANK } from "./sample-bank";
 import { resolveGenre } from "./genre-store";
 
@@ -137,7 +138,8 @@ describe("adaptive timeline", () => {
     expect(resolveGenre("symphony-motion-orchestra", "auto")).toBe("waltz");
     expect(resolveGenre("symphony-neon-run", "auto")).toBe("house");
     expect(resolveGenre("symphony-neon-run", "auto")).toBe("house");
-    expect(resolveGenre("symphony-cinematic-rock", "auto")).toBe("rock");
+    expect(resolveGenre("symphony-cinematic-rock", "auto")).toBe("cinrock");
+    expect(resolveGenre("symphony-cinematic-rock", "rock")).toBe("cinrock");
     expect(resolveGenre("symphony-motion-orchestra", "rock")).toBe("rock");
     // signature profiles ignore the global picker
     expect(resolveGenre("deep-bass-pulse", "classic")).toBe("electro");
@@ -231,5 +233,107 @@ describe("road anthem real band", () => {
         }
     for (const inst of ["drums_room", "ebass", "rockgtr", "rocklead", "cleangtr", "rockorgan", "piano", "trumpet"]) expect(used.has(inst), inst).toBe(true);
     for (const inst of ["pad", "choir", "strings", "lead", "synthbass", "timpani", "dguitar", "leadgtr", "drums_elec"]) expect(used.has(inst), inst).toBe(false);
+  });
+});
+
+function cinrockState(mode: ConductorState["mode"], intensity: number, speedKmh: number): ConductorState {
+  return {
+    bpm: 140,
+    targetBpm: 140,
+    intensity,
+    brightness: 0.6,
+    transpose: 0,
+    mode,
+    grade: null,
+    elevationTrend: "unknown",
+    cruiseSeconds: 40,
+    musicalGear: 3,
+    speedKmh,
+  };
+}
+
+describe("cinematic rock arrangement", () => {
+  it("stays at 105 BPM, stays quiet when stopped, and keeps the shared rock genre", () => {
+    const tl = createTimeline("cinrock", 0, 1);
+    const stopped = tl.scheduleUntil(8, cinrockState("stopped", 0.1, 0));
+    expect(stopped).toHaveLength(0);
+    expect(tl.bpm).toBe(105);
+    const rock = GENRES.rock.pattern({
+      step: 0, bar: 0, chord: [40, 44, 47], root: 40, intensity: 0.2, mode: "cruise", variation: 0, stepDur: 0.12, barDur: 1.9, rand: () => 0.2,
+    });
+    expect(rock.some((n) => n.inst === "piano")).toBe(true);
+    expect(autoDjPool()).not.toContain("cinrock");
+  });
+
+  it("holds a muted groove while cruising and opens power chords only on surge", () => {
+    const cruise = createTimeline("cinrock", 0, 2);
+    const cruising = cruise.scheduleUntil(20, cinrockState("cruise", 0.55, 70));
+    expect(cruising.some((n) => n.inst === "dguitar")).toBe(true);
+    expect(cruising.some((n) => n.inst === "ebass")).toBe(true);
+    expect(cruising.some((n) => n.inst === "drums_rock" && n.midi === 38)).toBe(true);
+    expect(cruising.some((n) => n.inst === "rockgtr")).toBe(false);
+    expect(cruising.filter((n) => n.inst === "drums_rock" && (n.midi === 45 || n.midi === 48 || n.midi === 50))).toHaveLength(0);
+
+    const surge = createTimeline("cinrock", 0, 2);
+    surge.pushAccents(["surge"]);
+    const lifting = surge.scheduleUntil(6, cinrockState("surge", 0.85, 40));
+    expect(lifting.some((n) => n.inst === "rockgtr")).toBe(true);
+    expect(lifting.filter((n) => n.inst === "drums_rock" && (n.midi === 45 || n.midi === 48 || n.midi === 50)).length).toBeGreaterThan(0);
+    const after = surge.scheduleUntil(16, cinrockState("cruise", 0.55, 70));
+    const later = after.filter((n) => n.time > 6);
+    expect(later.filter((n) => n.inst === "drums_rock" && (n.midi === 45 || n.midi === 48 || n.midi === 50))).toHaveLength(0);
+    expect(later.some((n) => n.inst === "rockgtr")).toBe(false);
+  });
+
+  it("fires one surge fill for a hard acceleration and none while cruising", () => {
+    const c = createConductor({ bpmMin: 105, bpmMax: 105 });
+    drive(c, 8, { speed: 20, acceleration: 0.1, throttle: 0.3 });
+    c.drainAccents();
+    drive(c, 4, { speed: 20.4, acceleration: 0.2, throttle: 0.35 });
+    expect(c.drainAccents().filter((a) => a === "surge")).toEqual([]);
+    const accents: string[] = [];
+    const dt = 1 / 30;
+    let speed = 22;
+    for (let i = 0; i < 90; i++) {
+      speed += 0.12;
+      c.update({ speed, acceleration: 2.4, throttle: 0.9, regen: 0, gear: 0, dt });
+      accents.push(...c.drainAccents());
+    }
+    expect(accents.filter((a) => a === "surge")).toHaveLength(1);
+  });
+});
+
+describe("bollywood rickshaw arrangement", () => {
+  it("keeps a 104 BPM hook, answers on the next bar, and stays quiet when stopped", () => {
+    expect(resolveGenre("bollywood-rickshaw", "rock")).toBe("bwood");
+    expect(autoDjPool()).not.toContain("bwood");
+    const tl = createTimeline("bwood", 0, 1);
+    expect(tl.scheduleUntil(4, cinrockState("stopped", 0.1, 0))).toHaveLength(0);
+    expect(tl.bpm).toBe(104);
+    const cruise = createTimeline("bwood", 0, 4);
+    const notes = cruise.scheduleUntil(8, cinrockState("cruise", 0.55, 40));
+    const flute = notes.filter((n) => n.inst === "flute").map((n) => n.midi);
+    expect(flute).toEqual(expect.arrayContaining([62, 64, 67, 66]));
+    expect(notes.some((n) => n.inst === "nylon")).toBe(true);
+    expect(notes.some((n) => n.inst === "drums_rock" && n.midi === 45)).toBe(true);
+    expect(notes.filter((n) => n.inst === "drums_rock" && (n.midi === 48 || n.midi === 50))).toHaveLength(0);
+    const surge = createTimeline("bwood", 0, 4);
+    surge.pushAccents(["surge"]);
+    const lifted = surge.scheduleUntil(3, cinrockState("surge", 0.9, 30));
+    expect(lifted.filter((n) => n.inst === "drums_rock" && (n.midi === 48 || n.midi === 50)).length).toBeGreaterThan(0);
+  });
+
+  it("does not restart the hook or refill on small throttle changes", () => {
+    const c = createConductor({ bpmMin: 104, bpmMax: 104 });
+    drive(c, 6, { speed: 12, acceleration: 0.05, throttle: 0.4 });
+    c.drainAccents();
+    const blips: string[] = [];
+    const dt = 1 / 30;
+    for (let i = 0; i < 40; i++) {
+      c.update({ speed: 12.2, acceleration: i % 2 ? 0.35 : -0.2, throttle: i % 2 ? 0.55 : 0.25, regen: 0, gear: 0, dt });
+      blips.push(...c.drainAccents());
+    }
+    expect(blips.filter((a) => a === "surge")).toEqual([]);
+    expect(c.snapshot().mode === "stopped").toBe(false);
   });
 });

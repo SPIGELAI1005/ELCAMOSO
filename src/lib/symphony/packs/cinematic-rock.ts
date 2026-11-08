@@ -4,7 +4,10 @@ import { developmentSymphonyStem } from "../asset-manifest";
 const PACK_ID = "symphony-cinematic-rock";
 const stem = developmentSymphonyStem.bind(null, PACK_ID);
 
-/** Cinematic Rock - ~112 BPM, 4/4, 4-bar loops. */
+/**
+ * Older stem-pack placeholder. Drive plays the adaptive cinrock arrangement instead.
+ * These loops are synthesized (generate_samples.py), about 8.73 s, and are not a 105 BPM live-band grid.
+ */
 export const CINEMATIC_ROCK_PACK: SymphonyPack = {
   id: PACK_ID,
   name: "Cinematic Rock",

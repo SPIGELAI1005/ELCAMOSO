@@ -44,6 +44,7 @@ const REALISM_V2_IDS = new Set([
   "rally-car",
   "motorcycle-superbike",
   "big-twin",
+  "classic-vespa",
 ]);
 
 const ELECTRIC_IDS = new Set([

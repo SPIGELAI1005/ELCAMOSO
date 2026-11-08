@@ -3,7 +3,7 @@
  * (George, 3 Nov 2026). Each genre plays through a music-package profile, so the
  * special's Drive the Music grant unlocks it for every signed-in account.
  */
-import { GENRES, GENRE_IDS, type GenreId } from "@/lib/symphony/adaptive/genres";
+import { GENRES, PUBLIC_GENRE_IDS, type GenreId } from "@/lib/symphony/adaptive/genres";
 
 /** Music sounds kept in their normal category, not in the special group. */
 export const DRIVE_SPECIAL_EXCLUDED_IDS: readonly string[] = [
@@ -36,7 +36,7 @@ export interface DriveSpecialGenreItem {
   signature: boolean;
 }
 
-export const DRIVE_SPECIAL_GENRE_ITEMS: readonly DriveSpecialGenreItem[] = GENRE_IDS.map(
+export const DRIVE_SPECIAL_GENRE_ITEMS: readonly DriveSpecialGenreItem[] = PUBLIC_GENRE_IDS.map(
   (genreId) => {
     const own = MUSIC_SIGNATURE_PROFILE[genreId];
     return {

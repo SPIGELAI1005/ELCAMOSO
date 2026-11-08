@@ -16,6 +16,8 @@ export {
   listFusionShell,
   listSymphonyExperiences,
   listWorldExperiences,
+  listWorldPageExperiences,
+  listWorldPageHeroIds,
 } from "./catalog";
 export { canAccessExperience } from "./access";
 export {

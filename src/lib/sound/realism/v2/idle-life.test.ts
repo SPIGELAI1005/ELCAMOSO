@@ -3,8 +3,8 @@ import { ACOUSTIC_ENGINE_BY_PROFILE } from "@/lib/sound/realism/v2/acoustic-engi
 import { getBassEnhancerConfig } from "@/lib/sound/dsp/bass-enhancer";
 import { combustionTopologyForProfile } from "@/lib/sound/realism/v2/combustion-topology";
 
-const ALIVE_IDLE = ["racing-v10", "f1-v10", "race-car", "flat-six-sport", "turbo-inline-6", "rally-car", "motorcycle-superbike", "traby", "ge-squared", "ge-squared-90"];
-const PETROL = ["race-car", "flat-six-sport", "turbo-inline-6", "rally-car", "traby", "ge-squared", "ge-squared-90"];
+const ALIVE_IDLE = ["racing-v10", "f1-v10", "race-car", "flat-six-sport", "turbo-inline-6", "rally-car", "motorcycle-superbike", "traby", "bollywood-rickshaw", "ge-squared", "ge-squared-90", "classic-vespa"];
+const PETROL = ["race-car", "flat-six-sport", "turbo-inline-6", "rally-car", "traby", "bollywood-rickshaw", "ge-squared", "ge-squared-90"];
 const UNTOUCHED = ["american-muscle-v8", "gt-v8", "big-twin"];
 
 describe("idleLife (alive idle)", () => {

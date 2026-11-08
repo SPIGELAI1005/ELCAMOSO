@@ -143,7 +143,7 @@ export function createTimeline(genreId: GenreId, startTime: number, seed = 1) {
         };
         let notes = genre.pattern(ctx);
         if (genre.layers && ctx.mode !== "brake" && ctx.mode !== "stopped") notes.push(...genre.layers(ctx));
-        if (hwStage > 0 && ctx.mode !== "brake" && ctx.mode !== "stopped")
+        if (hwStage > 0 && !genre.lockArrangement && ctx.mode !== "brake" && ctx.mode !== "stopped")
           notes = arrangeHighway(genre, { ...ctx, stage: hwStage, sub: highway.sub, barsInStage: highway.barsInStage, stepsPerBar: genre.stepsPerBar ?? 16 }, notes, kit);
 
         if (step === 0 && crashNextBar) {
@@ -156,9 +156,10 @@ export function createTimeline(genreId: GenreId, startTime: number, seed = 1) {
             if (k === "brake") continue; // the softer arrangement is the accent
             if (k === "surge") {
               notes.push(...accentNotes(genre, "surge", stepDur));
-              crashNextBar = true;
+              if (!genre.surgeFillsOnly) crashNextBar = true;
               continue;
             }
+            if (genre.surgeFillsOnly) continue;
             notes.push({ inst: genre.accents.crash[0], midi: genre.accents.crash[1], vel: 0.55 + 0.3 * state.intensity, dur: 1.2 });
             notes.push(...accentNotes(genre, k, stepDur));
           }

@@ -8,7 +8,7 @@
 
 ## Product promise
 
-Original adaptive cinematic-rock arrangement whose drums, bass, harmony and intensity follow the drive.
+Original instrumental rock at a steady 105 BPM: a low palm-muted guitar riff, a bass line on the same grid, and a dry backbeat. Smoothed speed sets how full the groove is. Strong acceleration opens wide power chords and one short drum fill, then waits before the next fill. Stopping and braking let the last chord decay. The live Drive arrangement is synthesized note by note. Recorded band stems are not in the sample pack.
 
 ## Required motion behavior
 

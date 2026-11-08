@@ -261,6 +261,7 @@ class CombustionExcitationProcessor extends AudioWorkletProcessor {
       noiseScale,
       rasp,
       pulseTauScale,
+      stroke: raw.stroke === "two-stroke" ? "two-stroke" : "four-stroke",
       organic,
       cycleDegrees: cycle,
       cylinderCount: count,
@@ -353,6 +354,9 @@ class CombustionExcitationProcessor extends AudioWorkletProcessor {
     // - load 0: lightest combustion pressure / brightness shaping, not the 0.3 default.
     // - sharpness 0: softest edge/burst, not the 0.45 default.
     const firingHz = readParam(parameters.firingHz, 40, 0, 2000);
+    // Four-stroke firingHz = rpm × cylinders / 120. A two-stroke topology opts in
+    // so one pulse per revolution stays one pulse. Missing stroke keeps 120.
+    const crankMul = this.topology && this.topology.stroke === "two-stroke" ? 60 : 120;
     const intensity = readParam(parameters.intensity, 0.4, 0, 1);
     const irregularity = readParam(parameters.irregularity, 0, 0, 1);
     const load = readParam(parameters.load, 0.3, 0, 1);
@@ -389,7 +393,7 @@ class CombustionExcitationProcessor extends AudioWorkletProcessor {
         // RPM from firingHz: four-stroke firingHz = rpm * cylinders / 120
         // phaseAdvanceDegrees = rpm * 6 / sampleRate
         const cylinders = topology.cylinderCount;
-        const rpm = firingHz > 0 ? (firingHz * 120) / cylinders : 0;
+        const rpm = firingHz > 0 ? (firingHz * crankMul) / cylinders : 0;
         let advance = (rpm * 6) / sampleRate;
         const og = topology.organic;
         if (og && advance > 0) {
@@ -562,7 +566,7 @@ class CombustionExcitationProcessor extends AudioWorkletProcessor {
       let raspOut = 0;
       const rs = topology ? topology.rasp : null;
       if (rs) {
-        const rpmNow = firingHz > 0 ? (firingHz * 120) / topology.cylinderCount : 0;
+        const rpmNow = firingHz > 0 ? (firingHz * crankMul) / topology.cylinderCount : 0;
         const rpmGate = Math.min(
           1,
           Math.max(0, (rpmNow - rs.startRpm) / (rs.fullRpm - rs.startRpm)),
@@ -580,7 +584,7 @@ class CombustionExcitationProcessor extends AudioWorkletProcessor {
       let organicOut = 0;
       const ogx = topology ? topology.organic : null;
       if (ogx) {
-        const rpmNow = firingHz > 0 ? (firingHz * 120) / topology.cylinderCount : 0;
+        const rpmNow = firingHz > 0 ? (firingHz * crankMul) / topology.cylinderCount : 0;
         if (ogx.vt) {
           const vt = ogx.vt;
           if (this.vtCountdown >= 0 && --this.vtCountdown < 0) this.vtEnv += this.vtAmp;
@@ -610,7 +614,7 @@ class CombustionExcitationProcessor extends AudioWorkletProcessor {
       if (ogx && ogx.bankAm > 0) {
         // 720° cycle → (cylinders / 2) bank periods; cosine locked to the (jittered) crank.
         const ph = (this.crankPhaseDegrees / topology.cycleDegrees) * (topology.cylinderCount / 2) * 2 * Math.PI;
-        const rpmA = firingHz > 0 ? (firingHz * 120) / topology.cylinderCount : 0;
+        const rpmA = firingHz > 0 ? (firingHz * crankMul) / topology.cylinderCount : 0;
         const span = Math.max(1, ogx.bankAmFullRpm - ogx.bankAmStartRpm);
         const amG = clamp01((rpmA - ogx.bankAmStartRpm) / span);
         if (amG > 0) raw *= 1 + ogx.bankAm * amG * Math.cos(ph);

@@ -102,14 +102,14 @@ const SYMPHONY_SHELLS: readonly ExperienceDescriptor[] = [
     id: "symphony-cinematic-rock",
     kind: "symphony",
     name: "Cinematic Rock",
-    tagline: "Drums · Bass · Guitar · Strings",
-    description: "Drive intensity opens layers of a rock arrangement.",
+    tagline: "Muted guitar · Bass · Dry kit",
+    description: "A tight palm-muted groove. Power chords open when you accelerate.",
     artworkStyle: "score",
     entitlement: "drive_plus",
     previewMode: "playable",
     capabilities: {
       profileId: "symphony-cinematic-rock",
-      stems: ["Drums", "Bass", "Guitar", "Strings"],
+      stems: ["Drums", "Bass", "Guitar"],
       selectableInDrive: true,
       requiredEntitlement: "symphony_all",
     },
@@ -268,6 +268,181 @@ export function listWorldExperiences(): ExperienceDescriptor[] {
       },
     };
   });
+}
+
+/**
+ * Sounds shown on /worlds with the world experiences.
+ * Fusion blends stay on /fusion as well. These ids are page cards, not a second product family.
+ */
+const WORLD_PAGE_SOUNDS: readonly ExperienceDescriptor[] = [
+  {
+    id: "music-retro-arcade",
+    kind: "symphony",
+    name: "Retro Arcade",
+    tagline: "8-bit · Square · Noise",
+    description: "Original console-inspired music that follows the drive.",
+    artworkStyle: "score",
+    entitlement: "drive_plus",
+    previewMode: "playable",
+    capabilities: {
+      profileId: "retro-arcade",
+      selectableInDrive: true,
+      requiredEntitlement: "all_sound_profiles",
+    },
+  },
+  {
+    id: "music-synthwave-drive",
+    kind: "symphony",
+    name: "Synthwave Drive",
+    tagline: "Pad · Bass · Arpeggio",
+    description: "A warm retro groove that moves with the drive.",
+    artworkStyle: "score",
+    entitlement: "drive_plus",
+    previewMode: "playable",
+    capabilities: {
+      profileId: "synthwave-drive",
+      selectableInDrive: true,
+      requiredEntitlement: "all_sound_profiles",
+    },
+  },
+  {
+    id: "music-deep-bass-pulse",
+    kind: "symphony",
+    name: "Deep Bass Pulse",
+    tagline: "Sub · Pulse · Cabin",
+    description: "808-style bass that pumps harder as you push.",
+    artworkStyle: "score",
+    entitlement: "drive_plus",
+    previewMode: "playable",
+    capabilities: {
+      profileId: "deep-bass-pulse",
+      selectableInDrive: true,
+      requiredEntitlement: "all_sound_profiles",
+    },
+  },
+  {
+    id: "music-heartbeat",
+    kind: "symphony",
+    name: "Heartbeat",
+    tagline: "Pulse · Organic · Intimate",
+    description: "A two-part heartbeat that rises with how hard you drive.",
+    artworkStyle: "score",
+    entitlement: "drive_plus",
+    previewMode: "playable",
+    capabilities: {
+      profileId: "heartbeat",
+      selectableInDrive: true,
+      requiredEntitlement: "all_sound_profiles",
+    },
+  },
+  {
+    id: "music-bollywood-rickshaw",
+    kind: "symphony",
+    name: "Bollywood Rickshaw",
+    tagline: "Flute · Dholak · Two-stroke",
+    description: "A film-dance hook over a two-stroke buzz and lift-off crackle.",
+    artworkStyle: "score",
+    entitlement: "drive_plus",
+    previewMode: "playable",
+    capabilities: {
+      profileId: "bollywood-rickshaw",
+      selectableInDrive: true,
+      requiredEntitlement: "all_sound_profiles",
+    },
+  },
+  {
+    id: "music-dracula-carriage",
+    kind: "symphony",
+    name: "Dracula Carriage",
+    tagline: "Hooves · Wind · Gothic orchestra",
+    description: "A ghostly coach with a gothic orchestra that rises as you speed up.",
+    artworkStyle: "score",
+    entitlement: "free",
+    previewMode: "playable",
+    capabilities: {
+      profileId: "dracula-carriage",
+      selectableInDrive: true,
+      requiredEntitlement: "basic_sound_profiles",
+    },
+  },
+  {
+    id: "music-fusion-road-anthem",
+    kind: "symphony",
+    name: "Road Anthem",
+    tagline: "V8 · Rock anthem",
+    description: "Thunderous V8 rumble inside a rock anthem. Speed adds the layers.",
+    artworkStyle: "score",
+    entitlement: "drive_plus",
+    previewMode: "playable",
+    capabilities: {
+      profileId: "fusion-road-anthem",
+      selectableInDrive: true,
+      requiredEntitlement: "fusion",
+    },
+  },
+  {
+    id: "music-fusion-mechanical-symphony",
+    kind: "symphony",
+    name: "Mechanical Symphony",
+    tagline: "Flat-six · Orchestra",
+    description: "Precision engine character woven through orchestral motion.",
+    artworkStyle: "score",
+    entitlement: "drive_plus",
+    previewMode: "playable",
+    capabilities: {
+      profileId: "fusion-mechanical-symphony",
+      selectableInDrive: true,
+      requiredEntitlement: "fusion",
+    },
+  },
+  {
+    id: "music-fusion-midnight-boost",
+    kind: "symphony",
+    name: "Midnight Boost",
+    tagline: "Turbo · Dark rave",
+    description: "Night-drive boost inside a dark rave. Speed adds the layers.",
+    artworkStyle: "score",
+    entitlement: "drive_plus",
+    previewMode: "playable",
+    capabilities: {
+      profileId: "fusion-midnight-boost",
+      selectableInDrive: true,
+      requiredEntitlement: "fusion",
+    },
+  },
+  {
+    id: "music-fusion-future-pulse",
+    kind: "symphony",
+    name: "Future Pulse",
+    tagline: "Electric · Neon",
+    description: "Electric hyperdrive and a neon arrangement as one voice.",
+    artworkStyle: "score",
+    entitlement: "drive_plus",
+    previewMode: "playable",
+    capabilities: {
+      profileId: "fusion-future-pulse",
+      selectableInDrive: true,
+      requiredEntitlement: "fusion",
+    },
+  },
+];
+
+/** World experiences, then the sounds that live on the Worlds page. Skips a world that uses the same profile. */
+export function listWorldPageExperiences(): ExperienceDescriptor[] {
+  const moved = new Set(WORLD_PAGE_SOUNDS.map((item) => item.capabilities.profileId));
+  const worlds = listWorldExperiences().filter((item) => !moved.has(item.capabilities.profileId));
+  return [...worlds, ...WORLD_PAGE_SOUNDS];
+}
+
+/** Hero stills for /worlds: every displayed sound that has a car image, music sounds first. */
+export function listWorldPageHeroIds(): string[] {
+  const music = WORLD_PAGE_SOUNDS.map((item) => item.capabilities.profileId).filter(
+    (id): id is string => Boolean(id),
+  );
+  const places = listWorldPageExperiences()
+    .map((item) => item.capabilities.profileId)
+    .filter((id): id is string => Boolean(id) && !music.includes(id));
+  return [...music, ...places];
 }
 
 export function listSymphonyExperiences(): ExperienceDescriptor[] {

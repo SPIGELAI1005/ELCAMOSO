@@ -9,14 +9,15 @@ import { getProfile } from "@/lib/sound/profiles";
 import { resolveVariantPools } from "@/lib/sound/dynamic-drive/transient-scheduler";
 
 describe("drivetrain personalities", () => {
-  it("defines twelve distinct built-in personalities", () => {
-    expect(DRIVETRAIN_PERSONALITY_IDS).toHaveLength(12);
+  it("defines thirteen distinct built-in personalities", () => {
+    expect(DRIVETRAIN_PERSONALITY_IDS).toHaveLength(13);
     expect(DRIVETRAIN_PERSONALITY_IDS).toContain("high-rev-v10");
     expect(DRIVETRAIN_PERSONALITY_IDS).toContain("flat-plane-v8-track");
     expect(DRIVETRAIN_PERSONALITY_IDS).toContain("rally-turbo-3");
     expect(DRIVETRAIN_PERSONALITY_IDS).toContain("motorcycle-inline-4");
     expect(DRIVETRAIN_PERSONALITY_IDS).toContain("v-twin-cruiser");
     expect(DRIVETRAIN_PERSONALITY_IDS).toContain("single-cylinder-ag");
+    expect(DRIVETRAIN_PERSONALITY_IDS).toContain("classic-vespa");
   });
 
   it("lists the dedicated core engine personalities", () => {

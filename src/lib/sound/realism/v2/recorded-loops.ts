@@ -948,6 +948,8 @@ export const RECORDED_LOOP_BANKS_BY_PROFILE: Record<string, RecordedLoopBank> = 
   },
 };
 
+RECORDED_LOOP_BANKS_BY_PROFILE["bollywood-rickshaw"] = RECORDED_LOOP_BANKS_BY_PROFILE.traby!;
+
 /** Recorded bank for a profile: its own bank first, then the shared personality bank. */
 export function getRecordedLoopBankForProfile(profileId: string, personalityId: string): RecordedLoopBank | null {
   return RECORDED_LOOP_BANKS_BY_PROFILE[profileId] ?? getRecordedLoopBank(personalityId);

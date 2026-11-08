@@ -7,7 +7,7 @@
 import { getNoiseBuffer } from "@/lib/sound/dsp/noise";
 
 /** Bump whenever public/audio/combustion-processor.js changes. */
-export const COMBUSTION_WORKLET_VERSION = "2026-11-05a";
+export const COMBUSTION_WORKLET_VERSION = "2026-11-08a";
 
 export interface CombustionExcitationParams {
   firingHz: number;

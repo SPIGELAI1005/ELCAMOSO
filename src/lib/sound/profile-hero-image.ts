@@ -69,6 +69,8 @@ const PROFILE_IDS_WITH_HERO = [
   "symphony-piano-flow",
   "symphony-jazz-cruise",
   "traby",
+  "bollywood-rickshaw",
+  "classic-vespa",
   "ge-squared",
   "ge-squared-90",
   "police-patrol",
@@ -152,9 +154,12 @@ export function genreHeroImageSrc(genre: string | null | undefined): string | nu
   return `/hero/genres/${genre}.png`;
 }
 
+/** Music profiles that always keep their own still, even when a genre is picked. */
+const DEDICATED_HERO_PROFILES = new Set(["symphony-cinematic-rock"]);
+
 /**
  * Genre still shown behind a Drive music profile instead of its own still, or null.
- * Signature-genre profiles and the "auto" choice keep their own still.
+ * Signature-genre profiles, dedicated stills, and the "auto" choice keep their own still.
  */
 export function driveGenreBackdropSrc(
   profileId: string | null | undefined,
@@ -162,5 +167,6 @@ export function driveGenreBackdropSrc(
   hasSignature: (id: string) => boolean,
 ): string | null {
   if (!profileId?.startsWith("symphony-") || hasSignature(profileId) || choice === "auto") return null;
+  if (DEDICATED_HERO_PROFILES.has(profileId)) return null;
   return genreHeroImageSrc(choice);
 }

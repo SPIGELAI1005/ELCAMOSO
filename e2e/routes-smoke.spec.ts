@@ -8,7 +8,7 @@ const ROUTES: { path: string; signal: RegExp }[] = [
   { path: "/explore", signal: /Choose what motion becomes/i },
   { path: "/sounds", signal: /Choose your sound/i },
   { path: "/symphony", signal: /Your driving becomes the arrangement/i },
-  { path: "/worlds", signal: /Drive somewhere impossible/i },
+  { path: "/worlds", signal: /Enter another world/i },
   { path: "/fusion", signal: /Motion has more than one voice/i },
   { path: "/studio", signal: /Make it yours/i },
   { path: "/garage", signal: /My Garage/i },

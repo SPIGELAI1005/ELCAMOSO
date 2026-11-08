@@ -9,6 +9,7 @@ describe("auto dj choice", () => {
   it("picks a near-tempo genre and avoids recent repeats", () => {
     const pool = autoDjPool();
     expect(pool).not.toContain("waltz");
+    expect(pool).not.toContain("cinrock");
     for (let i = 0; i < 40; i++) {
       const r = i / 40;
       const next = pickNextGenre("house", 124, ["pop", "house"], () => r);

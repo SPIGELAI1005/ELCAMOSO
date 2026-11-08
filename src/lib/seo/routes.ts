@@ -65,9 +65,9 @@ export const INDEXABLE_ROUTE_POLICIES: SeoRoutePolicy[] = [
   {
     path: "/worlds",
     indexable: true,
-    title: "World Experiences - Drive Somewhere Impossible | ELCAMOSO",
+    title: "World Experiences - Enter Another World | ELCAMOSO",
     description:
-      "World experiences transform vehicle motion into cinematic, futuristic, and atmospheric soundscapes for your EV.",
+      "Enter another world. Motion wakes Space Drive, Cyber City, Storm Run, Arcade and Ocean.",
     image: "/og/worlds.png",
     imageAlt: "ELCAMOSO World experiences",
     breadcrumbs: [

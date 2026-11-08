@@ -5,7 +5,7 @@
  */
 import type { MusicAccent, MusicMode } from "./conductor";
 
-export type GenreId = "classic" | "house" | "rock" | "pop" | "metal" | "hiphop" | "country" | "waltz" | "electro" | "anthem" | "darkrave" | "latino" | "gothic" | "pianoflow" | "jazz";
+export type GenreId = "classic" | "house" | "rock" | "pop" | "metal" | "hiphop" | "country" | "waltz" | "electro" | "anthem" | "darkrave" | "latino" | "gothic" | "pianoflow" | "jazz" | "cinrock" | "bwood";
 
 export interface NoteSpec {
   inst: string;
@@ -60,6 +60,10 @@ export interface GenreDef {
   fixedBpm?: number;
   /** Extra energy layers stacked on top of the base pattern as intensity rises. */
   layers?(c: StepContext): NoteSpec[];
+  /** Drum fills only on a surge onset. Gear-band upshifts stay a single hit. */
+  surgeFillsOnly?: boolean;
+  /** Keep the written arrangement at every speed. Highway stages do not rewrite it. */
+  lockArrangement?: boolean;
   /** concert-hall reverb send, 0..1 (default 0.12) */
   reverb?: number;
   pattern(c: StepContext): NoteSpec[];
@@ -1297,7 +1301,135 @@ const jazz: GenreDef = {
   },
 };
 
-export const GENRES: Record<GenreId, GenreDef> = { classic, house, rock, pop, metal, hiphop, country, waltz, electro, anthem, darkrave, latino, gothic, pianoflow, jazz };
+/** Two-bar palm-mute grid. Original, not a straight eighth-note chug. */
+const CINEROCK_RIFF: readonly (readonly number[])[] = [
+  [0, 3, 6, 10, 12],
+  [0, 2, 6, 8, 11, 14],
+];
+
+/**
+ * Cinematic Rock. Signature arrangement for symphony-cinematic-rock.
+ * Fixed 105 BPM. Tight muted guitar and bass, dry backbeat, open power chords only on surge.
+ * Synthesized note sprites stand in for a live-band stem set.
+ */
+const cinrock: GenreDef = {
+  id: "cinrock",
+  name: "Cinematic Rock",
+  bpmMin: 105,
+  bpmMax: 105,
+  fixedBpm: 105,
+  key: 38, // D
+  reverb: 0.05,
+  surgeFillsOnly: true,
+  progression: [
+    { deg: 0, tones: [0, 7, 12] },
+    { deg: 8, tones: [0, 7, 12] },
+    { deg: 10, tones: [0, 7, 12] },
+    { deg: 5, tones: [0, 7, 12] },
+  ],
+  mix: { drums_rock: 0.72, ebass: 0.62, dguitar: 0.58, rockgtr: 0.4 },
+  accents: { crash: ["drums_rock", 38], fill: ["drums_rock", [50, 48, 45, 38]], low: ["drums_rock", [36, 36]] },
+  pattern(c) {
+    const out: NoteSpec[] = [];
+    if (c.mode === "stopped" || c.mode === "brake") return out;
+    const I = c.intensity;
+    const settled = c.mode === "cruise" || c.mode === "surge" || I >= 0.4;
+    const punch = c.mode === "surge";
+    const rootG = into(c.root, 40, 52);
+    const rootB = into(c.root, 36, 48);
+    if (CINEROCK_RIFF[c.bar % 2]!.includes(c.step)) {
+      const gVel = (settled ? 0.46 : 0.32) + 0.18 * I;
+      out.push({ inst: "dguitar", midi: rootG, vel: Math.min(0.82, gVel), dur: c.stepDur * 0.45, pan: -0.12 });
+      out.push({ inst: "ebass", midi: rootB, vel: Math.min(0.8, gVel * 0.92), dur: c.stepDur * 1.5 });
+    }
+    if (!settled) {
+      if (on(c, 0, 8)) out.push({ inst: "drums_rock", midi: 36, vel: 0.3 + 0.12 * I, dur: 0.22 });
+      return out;
+    }
+    const kick = punch ? 0.74 : 0.52;
+    const snare = punch ? 0.7 : 0.46;
+    if (on(c, 0, 8) || (punch && on(c, 10))) out.push({ inst: "drums_rock", midi: 36, vel: Math.min(0.9, kick + 0.12 * I), dur: 0.24 });
+    if (on(c, 4, 12)) out.push({ inst: "drums_rock", midi: 38, vel: Math.min(0.88, snare + 0.1 * I), dur: 0.14 });
+    if (on(c, 2, 6, 10, 14)) out.push({ inst: "drums_rock", midi: 42, vel: 0.1 + 0.06 * I, dur: 0.08, pan: 0.22 });
+    if (punch && on(c, 0, 8)) {
+      out.push({ inst: "rockgtr", midi: rootG, vel: Math.min(0.78, 0.48 + 0.22 * I), dur: c.stepDur * 7, pan: 0.38 });
+      out.push({ inst: "dguitar", midi: into(c.root + 7, 40, 52), vel: Math.min(0.55, 0.28 + 0.12 * I), dur: c.stepDur * 6, pan: -0.42 });
+    }
+    return out;
+  },
+  layers(c) {
+    if (c.mode !== "surge" || c.step !== 0) return [];
+    const root = into(c.root, 40, 52);
+    return [
+      { inst: "rockgtr", midi: root, vel: 0.4, dur: c.barDur * 0.92, pan: 0.62 },
+      { inst: "dguitar", midi: into(c.root + 12, 40, 52), vel: 0.26, dur: c.barDur * 0.85, pan: -0.62 },
+    ];
+  },
+};
+
+/** Scale degrees 1, 2, 4, 3 as semitones in a major scale. */
+const BWOOD_HOOK = [0, 2, 5, 4] as const;
+
+/**
+ * Bollywood Rickshaw. Signature arrangement for bollywood-rickshaw.
+ * Fixed 104 BPM, eight-beat cycle. Synthesized flute, nylon and drum sprites stand in for bansuri, plucked strings and dholak.
+ */
+const bwood: GenreDef = {
+  id: "bwood",
+  name: "Bollywood Rickshaw",
+  bpmMin: 104,
+  bpmMax: 104,
+  fixedBpm: 104,
+  key: 50, // D
+  reverb: 0.07,
+  surgeFillsOnly: true,
+  lockArrangement: true,
+  progression: [
+    { deg: 0, tones: [0, 4, 7] },
+    { deg: 0, tones: [0, 4, 7] },
+    { deg: 0, tones: [0, 4, 7] },
+    { deg: 0, tones: [0, 4, 7] },
+  ],
+  mix: { flute: 0.64, nylon: 0.4, drums_rock: 0.52, ebass: 0.4 },
+  accents: { crash: ["drums_rock", 50], fill: ["drums_rock", [50, 48, 45, 38]], low: ["drums_rock", [45, 36]] },
+  pattern(c) {
+    const out: NoteSpec[] = [];
+    if (c.mode === "stopped") return out;
+    const braking = c.mode === "brake";
+    const I = c.intensity;
+    const punch = c.mode === "surge";
+    const pulling = !punch && !braking && c.mode === "flow" && I < 0.38;
+    const hookBar = c.bar % 2 === 0;
+    const playHook = punch || pulling || hookBar;
+    const playAnswer = !pulling && !hookBar && (c.mode === "cruise" || punch || braking);
+    const fluteAt = (deg: number) => into(c.root + deg, 62, 78);
+    const phraseUnderway = !braking || c.step > 0;
+    if (phraseUnderway && playHook) {
+      if (c.step === 0 && !braking) out.push({ inst: "flute", midi: fluteAt(BWOOD_HOOK[0]!), vel: Math.min(0.72, 0.42 + 0.16 * I), dur: c.stepDur * 2, pan: -0.06 });
+      if (c.step === 3) out.push({ inst: "flute", midi: fluteAt(BWOOD_HOOK[1]!), vel: Math.min(0.7, 0.4 + 0.14 * I), dur: c.stepDur * 1.5, pan: -0.04 });
+      if (c.step === 7) out.push({ inst: "flute", midi: fluteAt(BWOOD_HOOK[2]!), vel: Math.min(0.68, 0.38 + 0.14 * I), dur: c.stepDur * 1.3, pan: 0.04 });
+      if (c.step === 10) {
+        out.push({ inst: "flute", midi: fluteAt(BWOOD_HOOK[2]!), vel: 0.22, dur: c.stepDur * 0.55, offset: -0.45, pan: 0.06 });
+        out.push({ inst: "flute", midi: fluteAt(BWOOD_HOOK[3]!), vel: Math.min(0.74, 0.46 + 0.14 * I), dur: c.stepDur * 5, pan: 0.08 });
+      }
+    }
+    if (phraseUnderway && playAnswer) {
+      if (c.step === 2) out.push({ inst: "nylon", midi: into(c.root + 2, 52, 67), vel: Math.min(0.55, 0.32 + 0.1 * I), dur: c.stepDur * 3, pan: 0.28 });
+      if (c.step === 8) out.push({ inst: "nylon", midi: into(c.root, 50, 64), vel: Math.min(0.52, 0.3 + 0.1 * I), dur: c.stepDur * 6, pan: 0.2 });
+      if (punch && c.step === 2) out.push({ inst: "flute", midi: fluteAt(2), vel: 0.36, dur: c.stepDur * 3, pan: -0.12 });
+      if (punch && c.step === 8) out.push({ inst: "flute", midi: fluteAt(0), vel: 0.4, dur: c.stepDur * 5, pan: -0.06 });
+    }
+    if (braking) return out;
+    if (c.step === 0) {
+      out.push({ inst: "drums_rock", midi: 45, vel: pulling ? 0.28 : punch ? 0.62 : 0.4, dur: 0.26 });
+      out.push({ inst: "ebass", midi: into(c.root, 38, 50), vel: pulling ? 0.22 : 0.36, dur: c.stepDur * 2.2 });
+    }
+    if (!pulling && c.step === 8) out.push({ inst: "drums_rock", midi: 38, vel: punch ? 0.52 : 0.32, dur: 0.08, pan: 0.08 });
+    return out;
+  },
+};
+
+export const GENRES: Record<GenreId, GenreDef> = { classic, house, rock, pop, metal, hiphop, country, waltz, electro, anthem, darkrave, latino, gothic, pianoflow, jazz, cinrock, bwood };
 for (const [id, l] of Object.entries(LAYERED)) {
   const g = GENRES[id as GenreId];
   g.fixedBpm = l!.bpm;
@@ -1305,6 +1437,9 @@ for (const [id, l] of Object.entries(LAYERED)) {
   g.mix = { ...l!.mix, ...g.mix };
 }
 export const GENRE_IDS = Object.keys(GENRES) as GenreId[];
+/** Arrangements owned by one sound profile. Hidden from the genre picker and Auto DJ. */
+export const PROFILE_ONLY_GENRE_IDS: readonly GenreId[] = ["cinrock", "bwood"];
+export const PUBLIC_GENRE_IDS = GENRE_IDS.filter((id) => !PROFILE_ONLY_GENRE_IDS.includes(id));
 /** Genres planned next - UI lists them as coming soon. */
 export const UPCOMING_GENRES: readonly string[] = [];
 

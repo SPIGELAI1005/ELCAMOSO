@@ -6,6 +6,8 @@ import {
   getExperienceFlags,
   listFusionExperiences,
   listSymphonyExperiences,
+  listWorldPageExperiences,
+  listWorldPageHeroIds,
   listWorldExperiences,
 } from "@/lib/experiences";
 import { entitlementsForPlan } from "@/lib/entitlements/plans";
@@ -58,6 +60,34 @@ describe("experiences catalog", () => {
     expect(fusion.length).toBeGreaterThanOrEqual(4);
     if (flags.fusion) {
       expect(fusion.every((f) => f.capabilities.selectableInDrive)).toBe(true);
+    }
+  });
+
+  it("lists the moved sounds on the Worlds page and keeps them off the Symphony packs", () => {
+    const moved = [
+      "retro-arcade",
+      "synthwave-drive",
+      "deep-bass-pulse",
+      "heartbeat",
+      "bollywood-rickshaw",
+      "dracula-carriage",
+      "fusion-road-anthem",
+      "fusion-mechanical-symphony",
+      "fusion-midnight-boost",
+      "fusion-future-pulse",
+    ];
+    const page = listWorldPageExperiences().map((item) => item.capabilities.profileId);
+    const packs = listSymphonyExperiences().map((item) => item.capabilities.profileId);
+    for (const id of moved) {
+      expect(page.filter((value) => value === id)).toHaveLength(1);
+      expect(packs).not.toContain(id);
+    }
+    expect(page.filter((id) => id === "world-space-drive")).toHaveLength(1);
+    expect(new Set(listWorldPageExperiences().map((item) => item.id)).size).toBe(page.length);
+    const heroes = listWorldPageHeroIds();
+    expect(heroes.slice(0, moved.length)).toEqual(moved);
+    for (const id of ["world-space-drive", "world-cyber-city", "world-storm-run", "ocean-drive"]) {
+      expect(heroes).toContain(id);
     }
   });
 

@@ -14,6 +14,8 @@ const SIGNATURE_GENRES: Readonly<Record<string, GenreId>> = {
   "dracula-carriage": "gothic",
   "symphony-piano-flow": "pianoflow",
   "symphony-jazz-cruise": "jazz",
+  "symphony-cinematic-rock": "cinrock",
+  "bollywood-rickshaw": "bwood",
 };
 
 /** True when the profile always plays its own genre (picker ignored). */

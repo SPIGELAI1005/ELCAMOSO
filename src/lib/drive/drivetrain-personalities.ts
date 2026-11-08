@@ -300,6 +300,7 @@ export const DRIVETRAIN_PERSONALITY_IDS = [
   "motorcycle-inline-4",
   "v-twin-cruiser",
   "single-cylinder-ag",
+  "classic-vespa",
 ] as const;
 
 /** Primary launch personalities - referenced by featured Sound Profiles. */
@@ -1106,6 +1107,102 @@ const BASE_DRIVETRAIN_PERSONALITIES: DrivetrainPersonalityConfig[] = [
       speedSlowTau: 0.75,
     },
     legacy: { shiftSmoothing: 0.55 },
+  },
+  {
+    id: "classic-vespa",
+    name: "Classic Vespa",
+    engine: { idleRpm: 1900, redlineRpm: 7800 },
+    // Approximations, not a verified PX 125 Euro 3 tooth chart.
+    // Primary 22/67 (3.045) and a 3.50-10 wheel (~1.36 m). Gearbox ratios
+    // are a short four-speed spread: about 31/45/58/75 km/h at 5,600 rpm.
+    // 5,600 rpm is the power peak. 7,800 rpm is only the soft ceiling.
+    transmission: {
+      gearRatios: [4.83, 3.36, 2.57, 2.0],
+      finalDrive: 3.045,
+      upshiftRpm: { lowLoad: 4300, mediumLoad: 5200, highLoad: 6400 },
+      upshiftLoadMedium: 0.4,
+      upshiftLoadHigh: 0.75,
+      upshiftHysteresisRpm: 480,
+      downshiftBaseRpm: 3100,
+      downshiftHysteresisRpm: 520,
+      postUpshiftBlockMs: 800,
+      kickdown: {
+        enabled: true,
+        throttleThreshold: 0.82,
+        rpmFractionOfUpshift: 0.55,
+        maxSteps: 1,
+      },
+      shift: {
+        upshiftDurationMs: 180,
+        downshiftDurationMs: 200,
+        minGearHoldMs: 1200,
+        torqueDipUp: 0.4,
+        torqueDipDown: 0.18,
+        revMatchEnabled: false,
+        revMatchOvershoot: 0,
+        revMatchFlareFraction: 0,
+        shiftLockoutMs: 700,
+      },
+      idle: {
+        engageSpeedKmh: 6,
+        engageThrottle: 0.22,
+        disengageSpeedKmh: 2,
+        disengageThrottle: 0.1,
+        stoppedInGearRpm: 1900,
+        revLimitFraction: 0.55,
+      },
+      redline: { softFraction: 0.92, maxDownshiftFraction: 0.85 },
+      rpm: {
+        trackTau: 0.11,
+        maxRateRpmPerSec: 3200,
+        upshiftEasePower: 1.6,
+        downshiftEasePower: 1.4,
+      },
+    },
+    wheelCircumferenceM: 1.36,
+    throttle: { attackTau: 0.08, releaseTau: 0.16, directWeight: 0.72 },
+    overrun: {
+      probability: 0.08,
+      minIntervalMs: 2800,
+      minPriorThrottle: 0.45,
+      liftOffAccelThreshold: 0.35,
+    },
+    behavior: { engineResponse: 0.78, shiftAggression: 0.46, overrunIntensity: 0.16 },
+    transient: {
+      aspiration: "na",
+      variantPools: {
+        upshift: [{ id: "vespa-shift-click", intensity: 0.22, filterHz: 900, decayMs: 70 }],
+        overrun: [{ id: "vespa-overrun-ease", intensity: 0.16, filterHz: 420, decayMs: 180 }],
+      },
+      upshiftStrength: 0.22,
+      downshiftStrength: 0.16,
+      revMatchStrength: 0,
+      overrunStrength: 0.14,
+      highLoadThreshold: 0.55,
+      upshiftPitchDrop: 0.08,
+      downshiftPitchFlare: 0.04,
+      overrunPitchBias: 0.01,
+      bandWidth: { idle: 0.12, low: 0.16, mid: 0.16, high: 0.14, redline: 0.1 },
+      maxLayerGain: 0.28,
+      scheduler: {
+        revMatch: {
+          probability: 0,
+          cooldownMs: 99999,
+          minSpeedKmh: 99,
+          minThrottle: 1,
+          minProgress: 1,
+        },
+        upshift: { probability: 0.28, cooldownMs: 900, minLoad: 0.42 },
+        overrun: { probability: 0.1, cooldownMs: 2400, minPriorThrottle: 0.4 },
+      },
+    },
+    motion: {
+      pitchTauBase: 0.05,
+      pitchTauShiftScale: 0.08,
+      pitchTauRevMatchExtra: 0,
+      speedSlowTau: 0.42,
+    },
+    legacy: { shiftSmoothing: 0.14 },
   },
 ];
 

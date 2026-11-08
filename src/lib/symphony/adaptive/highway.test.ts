@@ -119,7 +119,8 @@ describe("highway arrangements cover every genre", () => {
         expect(Number.isFinite(e.time)).toBe(true);
       }
     }
-    expect(sigs.size).toBe(12);
+    if (GENRES[id].lockArrangement) expect(sigs.size).toBe(1);
+    else expect(sigs.size).toBe(12);
   });
 
   it("leaves the base arrangement untouched below 90 km/h", () => {

@@ -34,6 +34,12 @@ export interface CombustionTopologyV1 {
   cylinders: CombustionCylinderTopology[];
   collectors: CombustionCollectorTopology[];
   soundSpeedMetresPerSecond: number;
+  /**
+   * Two-stroke topologies fire once per revolution per cylinder, so the worklet
+   * reconstructs RPM as firingHz × 60 / cylinders. Absent means the historical
+   * four-stroke reconstruction (firingHz × 120 / cylinders).
+   */
+  stroke?: "two-stroke" | "four-stroke";
   /** Optional per-720° random gain depth (0..1) scaled by irregularity in the worklet. */
   cycleLope?: number;
   /** Optional broadband noise floor scale (0..1) in the worklet; load-gated toward 1. */
@@ -152,8 +158,10 @@ export const TOPOLOGY_PILOT_PROFILE_IDS = [
   "motorcycle-superbike",
   "big-twin",
   "traby",
+  "bollywood-rickshaw",
   "ge-squared",
   "ge-squared-90",
+  "classic-vespa",
 ] as const;
 export type TopologyPilotProfileId = (typeof TOPOLOGY_PILOT_PROFILE_IDS)[number];
 
@@ -280,6 +288,7 @@ export function validateCombustionTopology(input: unknown): {
       cylinders,
       collectors: (t.collectors as CombustionCollectorTopology[]).map((c) => ({ id: c.id })),
       soundSpeedMetresPerSecond: soundSpeed,
+      ...(t.stroke === "two-stroke" ? { stroke: "two-stroke" as const } : {}),
       ...(Number.isFinite(t.cycleLope) && (t.cycleLope as number) > 0
         ? { cycleLope: Math.min(1, t.cycleLope as number) }
         : {}),
@@ -591,6 +600,25 @@ export const TWO_STROKE_TWIN_TOPOLOGY: CombustionTopologyV1 = {
   organic: { crankJitter: 0.009, crankWander: 0.007, wanderHz: 1.6 },
 };
 
+/**
+ * Classic Vespa: one single-cylinder two-stroke pulse per crank revolution.
+ * Short primary, small idle lope, quiet intake noise. Not Traby's twin.
+ */
+export const VESPA_SINGLE_TOPOLOGY: CombustionTopologyV1 = {
+  version: 1,
+  cycleDegrees: 360,
+  cylinderCount: 1,
+  stroke: "two-stroke",
+  noiseScale: 0.32,
+  collectors: [{ id: 0 }],
+  soundSpeedMetresPerSecond: TOPOLOGY_SOUND_SPEED_DEFAULT,
+  cylinders: [
+    { id: 1, firingAngleDegrees: 0, collectorId: 0, pulseWeight: 1, primaryLengthMetres: 0.35 },
+  ],
+  cycleLope: 0.32,
+  organic: { crankJitter: 0.003, crankWander: 0.003, wanderHz: 1.1 },
+};
+
 /** Ge-Squared: cross-plane biturbo V8, two banks into two turbos, lumpy burble. */
 export const BITURBO_V8_4X4_TOPOLOGY: CombustionTopologyV1 = {
   version: 1,
@@ -622,8 +650,10 @@ export const TOPOLOGY_BY_PILOT_PROFILE: Record<TopologyPilotProfileId, Combustio
   "motorcycle-superbike": SUPERBIKE_I4_TOPOLOGY,
   "big-twin": V_TWIN_TOPOLOGY,
   "traby": TWO_STROKE_TWIN_TOPOLOGY,
+  "bollywood-rickshaw": TWO_STROKE_TWIN_TOPOLOGY,
   "ge-squared": BITURBO_V8_4X4_TOPOLOGY,
   "ge-squared-90": { ...BITURBO_V8_4X4_TOPOLOGY, cycleLope: 0.4, noiseScale: 0.22 },
+  "classic-vespa": VESPA_SINGLE_TOPOLOGY,
 };
 
 export function combustionTopologyForProfile(profileId: string): CombustionTopologyV1 | null {

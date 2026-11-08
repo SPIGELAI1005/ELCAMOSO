@@ -74,6 +74,7 @@ This package was derived from the current GitHub portfolio and preserves all 57 
 | `fusion-mechanical-symphony` | Mechanical Symphony | Musical | fusion | `continuous` |
 | `fusion-midnight-boost` | Midnight Boost | Musical | fusion | `continuous` |
 | `fusion-future-pulse` | Future Pulse | Musical | fusion | `continuous` |
+| `classic-vespa` | Classic Vespa | Heritage | physical | `virtual-transmission` |
 
 ## File contract
 
