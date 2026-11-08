@@ -56,6 +56,7 @@ import {
 import { isSymphonyProfileId } from "@/lib/symphony";
 import { AdaptiveMusicSynth } from "@/lib/symphony/adaptive";
 import { FusionSynth, isFusionProfileId } from "@/lib/fusion";
+import { RetroArcadeSynth, isRetroArcadeProfileId } from "@/lib/sound/retro-arcade";
 /** Non-symphony profiles whose sound is the adaptive music engine (genre via genre-store). */
 const ADAPTIVE_MUSIC_PROFILE_IDS: ReadonlySet<string> = new Set(["deep-bass-pulse"]);
 /** Profiles that keep their own sound and add an adaptive music bed underneath (level = bus gain). */
@@ -273,6 +274,7 @@ export class SoundEngine {
   private siren: SirenOverlay | null = null;
   private fusion: FusionSynth | null = null;
   private world: WorldSynth | null = null;
+  private retroArcade: RetroArcadeSynth | null = null;
   /** Dev A/B: current engine vs Realism V2. Default v2 for combustion when eligible. */
   private realismEngine: RealismEngineMode = "v2";
   private hybrid: HybridCombustionSynth | null = null;
@@ -357,6 +359,7 @@ export class SoundEngine {
     if (this.fusion) return "fusion";
     if (this.symphony) return "symphony";
     if (this.world) return "world";
+    if (this.retroArcade) return "retro-arcade";
     if (this.hybrid) {
       const diag = this.hybrid.getDiagnostics();
       const prefix = diag.realismEngine === "v3" ? "realism-v3" : "realism-v2";
@@ -1285,6 +1288,15 @@ export class SoundEngine {
       this.symphony = null;
     }
 
+    // Retro Arcade - speed-responsive procedural music (approved design).
+    if (isRetroArcadeProfileId(profile.id) && strategyBuses) {
+      this.retroArcade = new RetroArcadeSynth();
+      const ok = this.retroArcade.build(ctx, profile, strategyBuses, this.experienceSeed);
+      if (ok) return;
+      this.retroArcade.dispose();
+      this.retroArcade = null;
+    }
+
     // Worlds - reactive sonic fiction from Drive Energy.
     if (isWorldProfileId(profile.id) && strategyBuses) {
       this.world = new WorldSynth();
@@ -1743,11 +1755,13 @@ export class SoundEngine {
       this.hybrid ||
       this.symphony ||
       this.fusion ||
-      this.world
+      this.world ||
+      this.retroArcade
     ) {
       if (this.fusion) this.fusion.update(state, t);
       if (this.symphony) this.symphony.update(state, t);
       if (this.world) this.world.update(state, t);
+      if (this.retroArcade) this.retroArcade.update(state, t);
       if (this.hybrid) this.hybrid.update(state, t);
       if (this.improved) this.improved.update(state, t);
       if (this.dynamicDrive) this.dynamicDrive.update(state, t);
@@ -2540,6 +2554,8 @@ export class SoundEngine {
     this.fusion = null;
     this.world?.dispose();
     this.world = null;
+    this.retroArcade?.dispose();
+    this.retroArcade = null;
     this.hybrid?.dispose();
     this.hybrid = null;
     this.voices.forEach(({ osc }) => {
