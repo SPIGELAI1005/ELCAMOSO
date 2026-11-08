@@ -2730,7 +2730,9 @@ export class HybridCombustionSynth {
     }
     const src = ctx.createBufferSource();
     src.buffer = ready.buf;
-    src.playbackRate.value = 0.92 + this.popRand() * 0.16;
+    const baseRate = 0.92 + this.popRand() * 0.16;
+    const rateScale = kind === "bang" ? (ready.bf.bangRate ?? 1) : 1;
+    src.playbackRate.value = baseRate * rateScale;
     const g = ctx.createGain();
     g.gain.value = Math.min(ready.bf.maxLevel, Math.max(0, level));
     src.connect(g);
