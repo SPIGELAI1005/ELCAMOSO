@@ -234,8 +234,8 @@ async function loadOneStem(
       errors.push(`${stem.id}:${err instanceof Error ? err.message : "decode-failed"}`);
     }
   }
-  // Procedural fallback - always available
-  return generateProceduralStemBuffer(ctx, clockConfig, stem, hashSeed(pack.id + stem.id));
+  // Procedural fallback - always available (pack-specific for enhanced profiles)
+  return generateProceduralStemBuffer(ctx, clockConfig, stem, hashSeed(pack.id + stem.id), pack.id);
 }
 
 function hashSeed(s: string): number {
