@@ -188,6 +188,17 @@ const baseStrategies: ProfileStrategy[] = [
     body: [160, 320, 700],
     pulse: 60,
   }),
+  combustionFamily("bollywood-rickshaw", {
+    ratios: [1, 2, 3, 4.5, 6],
+    weights: [0.9, 0.75, 0.5, 0.32, 0.2],
+    cylinders: 2,
+    drive: 0.45,
+    filterBase: 520,
+    intake: 0.14,
+    mechanical: 0.12,
+    body: [160, 320, 700],
+    pulse: 60,
+  }),
   combustionFamily("ge-squared", {
     ratios: [1, 2, 3, 4.02, 6],
     weights: [1, 0.75, 0.48, 0.3, 0.18],

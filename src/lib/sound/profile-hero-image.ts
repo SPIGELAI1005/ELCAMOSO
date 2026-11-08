@@ -72,6 +72,7 @@ const PROFILE_IDS_WITH_HERO = [
   "ge-squared",
   "ge-squared-90",
   "police-patrol",
+  "bollywood-rickshaw",
 ] as const;
 
 const PROFILE_HERO_SET = new Set<string>(PROFILE_IDS_WITH_HERO);
