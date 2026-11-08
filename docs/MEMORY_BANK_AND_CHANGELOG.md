@@ -208,6 +208,18 @@ Canonical product rules still live in `elcamoso-comprehensive-spec.md`. Update *
 
 ## Changelog
 
+### 2026-11-08 (Bollywood Rickshaw world profile)
+
+- Added **Bollywood Rickshaw** to the "Enter another world" catalog as a new World profile.
+- **Audio:** Reuses the exact LIVE Traby two-stroke audio engine (TWO_STROKE_TWIN acoustic config, TWO_STROKE_TWIN_TOPOLOGY, recorded loops from `traby_twin.m4a`).
+- **Image:** Emerald rickshaw image as hero/backdrop (`public/hero/sound-profiles/bollywood-rickshaw.png`).
+- **Entitlement:** Drive+ (`worlds_all`), matching Traby's access tier.
+- Profile appears in Worlds section; behaves like all other world profiles (selectable in Drive, motion-responsive).
+- Category: Heritage; Traits: Two-Stroke, Exotic, Rickshaw.
+- Files touched: `profiles-expansion.ts`, `profile-experience-config.ts`, `profile-hero-image.ts`, `catalog.ts`, `families.ts`, `loudness.ts`, `strategies.ts`, `acoustic-engine.ts`, `combustion-topology.ts`, `recorded-loops.ts`, `by-profile.ts`.
+- Test count assertions updated: 68→70 profiles.
+- PR #13: awaiting approval (DO NOT MERGE until explicit approval).
+
 ### 2026-10-12 (Sounds Listen + Drive Sound picker polish)
 
 - **`/sounds`:** Selecting a profile (row, Preview, Use Sound) updates sticky Listen and switches live audio via `listenProfile` when already playing — no longer stuck on the previous profile.
