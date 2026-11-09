@@ -3,7 +3,7 @@
 Living document for product context, recent architecture decisions, and a dated changelog.
 Canonical product rules still live in `elcamoso-comprehensive-spec.md`. Update **both** when direction or architecture changes.
 
-**Last updated:** 2026-11-09 (Founders Pack = yearly Drive+ / Drive the Music; 4 forever-sound picks)
+**Last updated:** 2026-11-09 (Sign up CTA, yearly switch, 0016 welcome, German withdrawal/cancel)
 
 ---
 
@@ -210,6 +210,14 @@ Canonical product rules still live in `elcamoso-comprehensive-spec.md`. Update *
 ---
 
 ## Changelog
+
+### 2026-11-09 (PR #17 owner feedback: Sign up, yearly switch, German withdrawal)
+
+- Banner signed-out CTA is **Sign up** (DE Registrieren, RO Înregistrare) and opens the account dialog. When the signed-out 15 min/day Midnight Dark Rave allowance expires, Sign up is primary and Sign in is secondary (EN/DE/RO).
+- Black Friday congratulations modal is once per **account** (`users.bf_welcome_seen_at`, migration `0016_bf_welcome_seen`); localStorage `elcamoso.bfWelcome.v1:<accountId>` is a cache only.
+- Monthly Drive+ / Drive the Music can switch to yearly of the same package via Stripe `subscriptions.update` + `proration_behavior: create_prorations`. A switch between 9 Nov 2026 00:00 and 27 Nov 2026 23:59 Berlin is a Founders Pack purchase (458-seat cap). **Switch to yearly** on settings and pricing. Display price remains €33.60/year.
+- Checkout: required unticked immediate-start consent; Stripe session metadata `immediateStartConsent=1`. Legal: `/legal/withdrawal`, `/legal/cancel`, footer “Cancel contract · Verträge hier kündigen” (§ 312k), Terms §7 / §11 (German law, CISG excluded). `revokeFoundersPackPurchase` exists for a 14-day withdrawal; automated Stripe refund → revoke is not wired (support/email).
+- Catalog: police-patrol, wild-west-carriage, romanian-85-carriage stay paid and pickable.
 
 ### 2026-11-09 (Black Friday: Start Drive opens Midnight Dark Rave)
 

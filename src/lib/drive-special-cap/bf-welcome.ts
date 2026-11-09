@@ -1,6 +1,7 @@
 /**
  * Once-per-account Black Friday congratulations after sign-in.
- * localStorage keyed by account id; nothing is stored after the window.
+ * localStorage is a fast cache only; the server column `users.bf_welcome_seen_at`
+ * is the source of truth across devices.
  */
 import { isDriveSpecialActive } from "@/lib/billing/drive-special";
 

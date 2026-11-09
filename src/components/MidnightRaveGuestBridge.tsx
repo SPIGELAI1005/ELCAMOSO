@@ -28,7 +28,7 @@ export function MidnightRaveGuestBridge() {
     () => 0,
   );
   const [timeUp, setTimeUp] = useState(false);
-  const [signInOpen, setSignInOpen] = useState(false);
+  const [authOpen, setAuthOpen] = useState<"sign_up" | "sign_in" | null>(null);
   const wasUsing = useRef(false);
 
   const now = Date.now();
@@ -85,7 +85,7 @@ export function MidnightRaveGuestBridge() {
           </span>
         </div>
       ) : null}
-      {showNotice && !signInOpen ? (
+      {showNotice && !authOpen ? (
         <div
           data-testid="midnight-rave-guest-timeup"
           role="dialog"
@@ -98,8 +98,17 @@ export function MidnightRaveGuestBridge() {
             <div className="mt-5 flex flex-col gap-2">
               <button
                 type="button"
+                data-testid="midnight-rave-guest-signup"
                 className="rounded-full bg-white px-4 py-2.5 text-sm font-semibold text-black"
-                onClick={() => setSignInOpen(true)}
+                onClick={() => setAuthOpen("sign_up")}
+              >
+                {copy.signUp}
+              </button>
+              <button
+                type="button"
+                data-testid="midnight-rave-guest-signin"
+                className="rounded-full border border-white/30 px-4 py-2.5 text-sm font-semibold text-white"
+                onClick={() => setAuthOpen("sign_in")}
               >
                 {copy.signIn}
               </button>
@@ -118,12 +127,16 @@ export function MidnightRaveGuestBridge() {
         </div>
       ) : null}
       <AccountSignInDialog
-        open={signInOpen}
+        open={authOpen != null}
         onOpenChange={(open) => {
-          setSignInOpen(open);
-          if (!open) setTimeUp(false);
+          if (!open) {
+            setAuthOpen(null);
+            setTimeUp(false);
+          }
         }}
         returnTo="/drive"
+        title={authOpen === "sign_in" ? copy.signInTitle : copy.signUpTitle}
+        description={authOpen === "sign_in" ? copy.signInDescription : copy.signUpDescription}
       />
     </>
   );

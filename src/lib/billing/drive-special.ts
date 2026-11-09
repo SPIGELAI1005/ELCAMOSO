@@ -139,19 +139,19 @@ export const DRIVE_SPECIAL_BANNER_TEXT = {
   en: {
     teaser: "Limited availability until 27th of November.",
     cta: "See the sounds",
-    login: "Log In",
+    signup: "Sign up",
     terms: "See terms and conditions",
   },
   de: {
     teaser: "Nur begrenzt verfügbar bis 27. November.",
     cta: "Zu den Sounds",
-    login: "Anmelden",
+    signup: "Registrieren",
     terms: "Zu den Bedingungen",
   },
   ro: {
     teaser: "Disponibilitate limitată până pe 27 noiembrie.",
     cta: "Vezi sunetele",
-    login: "Autentificare",
+    signup: "Înregistrare",
     terms: "Vezi termenii și condițiile",
   },
 } as const;
@@ -232,31 +232,56 @@ export type MidnightDarkRaveGuestCopy = {
   remaining: (min: number, sec: number) => string;
   title: string;
   body: string;
+  signUp: string;
   signIn: string;
   close: string;
+  signUpTitle: string;
+  signUpDescription: string;
+  signInTitle: string;
+  signInDescription: string;
 };
 
 const MIDNIGHT_RAVE_GUEST_COPY: Record<"en" | "de" | "ro", MidnightDarkRaveGuestCopy> = {
   en: {
     remaining: (m, s) => `Midnight Dark Rave: ${m}:${String(s).padStart(2, "0")} left today`,
-    title: "Sign in to keep driving",
-    body: "Today's 15 minutes of Midnight Dark Rave are up. Sign in or sign up to keep driving with no daily limit until 27 November 2026.",
-    signIn: "Sign in / Sign up",
+    title: "Today's 15 minutes are up",
+    body: "Sign up or sign in to keep enjoying Midnight Dark Rave with no daily limit until 27 November 2026.",
+    signUp: "Sign up",
+    signIn: "Sign in",
     close: "Not now",
+    signUpTitle: "Sign up",
+    signUpDescription:
+      "Create an account to keep Midnight Dark Rave unlimited until 27 November 2026.",
+    signInTitle: "Sign in",
+    signInDescription: "Sign in to keep Midnight Dark Rave unlimited until 27 November 2026.",
   },
   de: {
     remaining: (m, s) => `Midnight Dark Rave: noch ${m}:${String(s).padStart(2, "0")} heute`,
-    title: "Anmelden, um weiterzufahren",
-    body: "Die 15 Minuten Midnight Dark Rave für heute sind vorbei. Melde dich an oder registriere dich, um bis zum 27. November 2026 ohne Tageslimit weiterzufahren.",
-    signIn: "Anmelden / Registrieren",
+    title: "Die 15 Minuten für heute sind vorbei",
+    body: "Registriere dich oder melde dich an, um Midnight Dark Rave bis zum 27. November 2026 ohne Tageslimit weiter zu nutzen.",
+    signUp: "Registrieren",
+    signIn: "Anmelden",
     close: "Später",
+    signUpTitle: "Registrieren",
+    signUpDescription:
+      "Lege ein Konto an, um Midnight Dark Rave bis zum 27. November 2026 unbegrenzt zu nutzen.",
+    signInTitle: "Anmelden",
+    signInDescription:
+      "Melde dich an, um Midnight Dark Rave bis zum 27. November 2026 unbegrenzt zu nutzen.",
   },
   ro: {
     remaining: (m, s) => `Midnight Dark Rave: ${m}:${String(s).padStart(2, "0")} rămase azi`,
-    title: "Autentifică-te ca să conduci mai departe",
-    body: "Cele 15 minute de Midnight Dark Rave de azi s-au terminat. Conectează-te sau creează un cont ca să conduci fără limită zilnică până pe 27 noiembrie 2026.",
-    signIn: "Conectare / Cont nou",
+    title: "Cele 15 minute de azi s-au terminat",
+    body: "Înregistrează-te sau autentifică-te ca să te bucuri de Midnight Dark Rave fără limită zilnică până pe 27 noiembrie 2026.",
+    signUp: "Înregistrare",
+    signIn: "Autentificare",
     close: "Nu acum",
+    signUpTitle: "Înregistrare",
+    signUpDescription:
+      "Creează un cont ca să păstrezi Midnight Dark Rave nelimitat până pe 27 noiembrie 2026.",
+    signInTitle: "Autentificare",
+    signInDescription:
+      "Autentifică-te ca să păstrezi Midnight Dark Rave nelimitat până pe 27 noiembrie 2026.",
   },
 };
 

@@ -51,9 +51,14 @@ function RewardsTerms() {
         <p>
           A Founders Pack purchase grants the package bought, Drive Unlimited for 4 months from the
           purchase date, then fallback to that paid package, and four forever sounds (see below).
-          Cancelling the subscription does not take away those four sounds. Founders (existing seats
-          and Pack buyers) receive the Black Friday Special benefits while that offer runs; Drive
-          Unlimited already includes Drive the Music without the special's 30-minute cap.
+          Cancelling the subscription does not take away those four sounds. A statutory withdrawal
+          within 14 days of the purchase refunds it and revokes those Founder perks (see the{" "}
+          <Link to="/legal/withdrawal" className={linkCls}>
+            withdrawal information
+          </Link>
+          ). Founders (existing seats and Pack buyers) receive the Black Friday Special benefits
+          while that offer runs; Drive Unlimited already includes Drive the Music without the
+          special's 30-minute cap.
         </p>
         <p>
           Forever-sound picks: a Founders Pack buyer chooses 4 sounds from any library (Drive+

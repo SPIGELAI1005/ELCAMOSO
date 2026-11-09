@@ -6,6 +6,7 @@ export async function openDrivePlusCheckout(
   returnPath = "/pricing",
   source = "pricing",
   plan: CheckoutPlanSlug = "drive_plus",
+  immediateStartConsent = false,
 ): Promise<void> {
   const result = await createCheckoutSessionFn({
     data: {
@@ -15,6 +16,7 @@ export async function openDrivePlusCheckout(
       origin: window.location.origin,
       returnPath,
       source,
+      immediateStartConsent,
     },
   });
   window.location.assign(result.url);

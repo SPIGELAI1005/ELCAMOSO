@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
 
 import { DrivePlusCheckoutButton } from "@/components/DrivePlusCheckoutButton";
+import { SwitchToYearlyButton } from "@/components/SwitchToYearlyButton";
 import { useBillingPublicConfig } from "@/lib/billing/use-billing-public-config";
 import { MUSIC_TRIAL_MONTHS, isMusicTrialOfferActive } from "@/lib/billing/black-friday";
 import type { BillingDisplayInterval } from "@/lib/billing/plan-display";
@@ -41,7 +42,9 @@ function ManagePlanLink() {
 
 function PackageNotReady() {
   return (
-    <p className="mt-8 text-sm text-muted-foreground">Checkout for this package is not connected yet.</p>
+    <p className="mt-8 text-sm text-muted-foreground">
+      Checkout for this package is not connected yet.
+    </p>
   );
 }
 
@@ -76,7 +79,10 @@ export function usePlanPurchaseActions(
   return {
     free: <OpenDriveInPlan />,
     drivePlus: hasPaidPlan ? (
-      <ManagePlanLink />
+      <div className="mt-8 space-y-3">
+        <ManagePlanLink />
+        <SwitchToYearlyButton />
+      </div>
     ) : billingAvailable ? (
       <DrivePlusCheckoutButton
         interval={interval}
@@ -86,7 +92,11 @@ export function usePlanPurchaseActions(
         className={purchaseButtonClass}
       />
     ) : null,
-    music: hasPaidPlan ? null : billingAvailable ? (
+    music: hasPaidPlan ? (
+      <div className="mt-8">
+        <SwitchToYearlyButton />
+      </div>
+    ) : billingAvailable ? (
       musicReady ? (
         <DrivePlusCheckoutButton
           plan="drive_music"
@@ -112,9 +122,7 @@ export function usePlanPurchaseActions(
           plan="drive_unlimited"
           interval={interval}
           returnTo={returnTo}
-          label={
-            interval === "monthly" ? "Drive Unlimited · monthly" : "Drive Unlimited · annual"
-          }
+          label={interval === "monthly" ? "Drive Unlimited · monthly" : "Drive Unlimited · annual"}
           source={source}
           className={purchaseButtonClass}
         />

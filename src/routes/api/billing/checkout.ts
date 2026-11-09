@@ -28,12 +28,18 @@ export const Route = createFileRoute("/api/billing/checkout")({
 
         try {
           const session = requireAccountSessionFromRequest(request);
+          const consent =
+            body &&
+            typeof body === "object" &&
+            "immediateStartConsent" in body &&
+            (body as { immediateStartConsent?: unknown }).immediateStartConsent === true;
           const result = await beginDrivePlusCheckout({
             userId: session.userId,
             email: session.email,
             origin: resolveCheckoutOrigin(request),
             trustedHost: resolveTrustedHostFromRequest(request),
             request: checkoutRequest,
+            immediateStartConsent: consent,
           });
 
           return jsonResponse(result);

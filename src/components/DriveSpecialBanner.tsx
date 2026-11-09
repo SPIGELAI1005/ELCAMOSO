@@ -16,7 +16,7 @@ export function DriveSpecialBanner({ className }: { className?: string }) {
   const { settings } = useSettings();
   const { isAuthenticated } = useAccount();
   const [show, setShow] = useState(false);
-  const [signInOpen, setSignInOpen] = useState(false);
+  const [signUpOpen, setSignUpOpen] = useState(false);
   useEffect(() => {
     const check = () => setShow(isDriveSpecialActive());
     check();
@@ -58,12 +58,12 @@ export function DriveSpecialBanner({ className }: { className?: string }) {
           ) : (
             <button
               type="button"
-              data-testid="drive-special-banner-login"
+              data-testid="drive-special-banner-signup"
               className="rounded-sm px-2.5 py-1 text-[10px] font-semibold tracking-[0.16em] text-white uppercase"
               style={{ background: DRIVE_SPECIAL_PURPLE }}
-              onClick={() => setSignInOpen(true)}
+              onClick={() => setSignUpOpen(true)}
             >
-              {copy.login}
+              {copy.signup}
             </button>
           )}
           <Link
@@ -76,7 +76,19 @@ export function DriveSpecialBanner({ className }: { className?: string }) {
           </Link>
         </span>
       </div>
-      <AccountSignInDialog open={signInOpen} onOpenChange={setSignInOpen} returnTo="/drive" />
+      <AccountSignInDialog
+        open={signUpOpen}
+        onOpenChange={setSignUpOpen}
+        returnTo="/drive"
+        title={copy.signup}
+        description={
+          settings.language.slice(0, 2).toLowerCase() === "de"
+            ? "Lege ein Konto an, um Midnight Dark Rave unbegrenzt und Drive the Music 30 Minuten am Tag bis zum 27. November zu nutzen."
+            : settings.language.slice(0, 2).toLowerCase() === "ro"
+              ? "Creează un cont ca să ai Midnight Dark Rave nelimitat și Drive the Music 30 de minute pe zi până pe 27 noiembrie."
+              : "Create an account to keep Midnight Dark Rave unlimited and Drive the Music 30 minutes a day until 27 November."
+        }
+      />
     </>
   );
 }

@@ -102,15 +102,17 @@ function Privacy() {
         </p>
         <p>
           <strong className="font-normal text-foreground">Account and Founder picks.</strong> If you
-          create an account, we store your email, session, Founder status, and — if you buy the
-          Founders Pack — the four forever-sound identifiers you confirm (sound id and time of
+          create an account, we store your email, session, Founder status, whether we have shown you
+          the Black Friday congratulations (so it appears only once per account), and — if you buy
+          the Founders Pack — the four forever-sound identifiers you confirm (sound id and time of
           pick). We use this to unlock those sounds on your account.
         </p>
         <p>
           <strong className="font-normal text-foreground">Drive+ billing (optional).</strong> If you
           purchase Drive+ or Drive the Music, payment is processed by our payment provider
-          (currently Stripe). We receive subscription status, customer reference ids, and billing
-          email - not full card numbers. See{" "}
+          (currently Stripe). We receive subscription status, customer reference ids, billing email,
+          and the checkout confirmation that you requested immediate start of the digital service
+          (stored as payment metadata) - not full card numbers. See{" "}
           <Link to="/legal/terms" className="text-foreground underline-offset-2 hover:underline">
             Terms of Use
           </Link>{" "}

@@ -41,6 +41,7 @@ live("stripe checkout integration (test mode)", () => {
       userId,
       email,
       origin: "http://localhost:5173",
+      immediateStartConsent: true,
       request: { plan: "drive_plus", interval: "monthly", source: "integration_test" },
     });
     expect(monthly.action).toBe("checkout");
@@ -53,6 +54,7 @@ live("stripe checkout integration (test mode)", () => {
       userId: `${userId}-yearly`,
       email: `yearly+${Date.now()}@example.com`,
       origin: "http://localhost:5173",
+      immediateStartConsent: true,
       request: { plan: "drive_plus", interval: "yearly", source: "integration_test" },
     });
     expect(yearly.action).toBe("checkout");

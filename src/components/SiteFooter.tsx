@@ -61,6 +61,13 @@ export function SiteFooter() {
             FAQ
           </Link>
         </nav>
+        <Link
+          to="/legal/cancel"
+          data-testid="footer-cancel-contract"
+          className="mt-6 inline-flex items-center border border-foreground/30 px-4 py-2 text-[10px] tracking-[0.18em] text-foreground uppercase underline-offset-4 hover:bg-foreground hover:text-background"
+        >
+          Cancel contract · Verträge hier kündigen
+        </Link>
 
         <p className="mt-8 max-w-xl text-[11px] leading-relaxed text-muted-foreground">
           © {year} {LEGAL_OPERATOR.serviceName}. Motion stays on this device unless you opt into

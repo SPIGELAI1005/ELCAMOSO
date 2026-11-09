@@ -54,6 +54,7 @@ const lifetimeCheckout = () =>
     userId: buyer,
     email: "driver@example.com",
     origin: "http://localhost:5173",
+    immediateStartConsent: true,
     request: { plan: "drive_plus", interval: "lifetime" },
   });
 

@@ -34,6 +34,12 @@ export interface BeginCheckoutInput {
   trustedHost?: string | null;
   /** Optional Sound Spin discount reservation (Prompt 13). Never trust client coupon ids. */
   rewardReservationId?: string | null;
+  /**
+   * Consumer expressly requests immediate start of the digital service and
+   * acknowledges the 14-day withdrawal information (§§ 356(5), 357a BGB).
+   * Required before a Checkout Session is created.
+   */
+  immediateStartConsent?: boolean;
 }
 
 export type BeginCheckoutResult =
@@ -118,6 +124,12 @@ export async function beginDrivePlusCheckout(
     };
   }
 
+  if (!input.immediateStartConsent) {
+    throw new Error(
+      "Please confirm that you request immediate start of the digital service and acknowledge the 14-day withdrawal information.",
+    );
+  }
+
   const stripeCustomerId = await ensureStripeCustomer({
     userId: input.userId,
     email: input.email,
@@ -139,6 +151,7 @@ export async function beginDrivePlusCheckout(
     billingInterval: described.billingInterval ?? (isFoundersPack ? "once" : "lifetime"),
   };
   if (source) metadata["source"] = source;
+  metadata["immediateStartConsent"] = "1";
   if (isLifetime && hasActiveSubscription) metadata["hadActiveSubscription"] = "true";
   if (input.request.upgradeToken) metadata["upgradeToken"] = input.request.upgradeToken;
 

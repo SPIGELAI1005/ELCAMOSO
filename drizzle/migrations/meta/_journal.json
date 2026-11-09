@@ -113,6 +113,13 @@
       "when": 1801000000000,
       "tag": "0015_founder_sound_picks",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1802000000000,
+      "tag": "0016_bf_welcome_seen",
+      "breakpoints": true
     }
   ]
 }

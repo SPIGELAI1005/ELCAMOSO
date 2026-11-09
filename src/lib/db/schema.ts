@@ -51,6 +51,8 @@ export const users = pgTable(
     founderSeat: integer("founder_seat"),
     /** Founders Test Crew opt-in (early access / beta feedback). */
     testCrewOptIn: boolean("test_crew_opt_in").notNull().default(false),
+    /** Black Friday congratulations shown once per account (server source of truth). */
+    bfWelcomeSeenAt: timestamp("bf_welcome_seen_at", { withTimezone: true, mode: "date" }),
     createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" })
       .notNull()

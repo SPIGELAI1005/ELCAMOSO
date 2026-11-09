@@ -85,9 +85,10 @@ function Terms() {
 
       <LegalSection title="7. Drive+ subscriptions (when offered)">
         <p>
-          Optional Drive+ is a paid subscription for extended motion sound features. Prices shown in
-          the app are in EUR unless stated otherwise. Subscriptions renew automatically until
-          canceled through your account plan settings or the payment provider customer portal.
+          Optional Drive+, Drive the Music and Drive Unlimited are paid subscriptions for extended
+          motion sound features. Prices shown in the app are in EUR unless stated otherwise
+          (currently €33.60 per year for yearly Drive+ and yearly Drive the Music, early-adopter
+          display). Payment is processed by our payment provider; we do not store full card numbers.
         </p>
         <p>
           Dynamic Drive preview, when offered, is free for eligible accounts: typically 30 minutes
@@ -95,22 +96,42 @@ function Terms() {
           before activation.
         </p>
         <p>
-          EU/EEA consumers may have a 14-day withdrawal right for distance contracts where
-          applicable law grants it. If you expressly request immediate access to digital content
-          during that period, you may lose the withdrawal right once delivery begins - as explained
-          at checkout where required.
+          Consumers have a statutory 14-day right of withdrawal (Widerrufsrecht, §§ 312g, 355 BGB)
+          for distance contracts. The{" "}
+          <Link
+            to="/legal/withdrawal"
+            className="text-foreground underline-offset-2 hover:underline"
+          >
+            withdrawal information and model form
+          </Link>{" "}
+          apply. If you expressly request immediate start of the digital service at checkout and
+          acknowledge the legal consequences, the withdrawal right for digital content expires when
+          performance starts (§ 356(5) BGB); for services you owe a pro-rata amount if you then
+          withdraw (§ 357a BGB). A valid withdrawal within 14 days refunds the payment and revokes
+          Founder perks granted by that purchase (no forever sounds / Founder seat from that
+          purchase).
         </p>
         <p>
-          Cancel anytime before renewal to avoid the next billing period. We do not prorate partial
-          periods unless required by law. Refund requests: contact{" "}
+          Ordinary termination: monthly plans may be cancelled at any time and then end at the close
+          of the current billing period. Yearly plans run for 12 months. After the initial term they
+          are cancellable at any time with one month’s notice, as permitted after 1 March 2022 (§
+          309 Nr. 9 BGB). There is no refund of the remaining yearly term except where the law
+          requires it. Forever sounds from a Founders Pack stay yours after a regular cancellation.
+          Use{" "}
+          <Link to="/legal/cancel" className="text-foreground underline-offset-2 hover:underline">
+            Cancel contract (Verträge hier kündigen)
+          </Link>{" "}
+          to terminate.
+        </p>
+        <p>
+          Refund and cancellation questions:{" "}
           <a
             className="text-foreground underline-offset-2 hover:underline"
             href={`mailto:${o.email}`}
           >
             {o.email}
           </a>
-          . Payment processing is handled by our payment provider; we do not store full card
-          numbers.
+          .
         </p>
       </LegalSection>
 
@@ -224,9 +245,11 @@ function Terms() {
 
       <LegalSection title="11. Governing law">
         <p>
-          These Terms are governed by the laws of {o.country}, excluding conflict-of-law rules,
-          unless mandatory consumer protection law of your habitual residence applies and cannot be
-          derogated from by agreement (especially for EU consumers).
+          These Terms are governed by the laws of the Federal Republic of Germany, excluding
+          conflict-of-law rules and excluding the UN Convention on Contracts for the International
+          Sale of Goods (CISG). Mandatory consumer protection provisions of the law of the country
+          in which you have your habitual residence remain unaffected and cannot be derogated from
+          by agreement.
         </p>
       </LegalSection>
 

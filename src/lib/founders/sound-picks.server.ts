@@ -40,6 +40,10 @@ export function resetFounderSoundPicksForTests(): void {
   memory.clear();
 }
 
+export async function clearFounderSoundPicks(userId: string): Promise<void> {
+  await writePicks(userId, []);
+}
+
 export async function loadFounderSoundPicks(userId: string): Promise<FounderSoundPickRecord[]> {
   if (!dbEnabled(userId)) return [...(memory.get(userId) ?? [])];
   try {

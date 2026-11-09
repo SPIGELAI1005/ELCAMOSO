@@ -1,7 +1,10 @@
 import Stripe from "stripe";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { beginDrivePlusCheckout, buildLifetimeCheckoutParams } from "@/lib/billing/checkout-service";
+import {
+  beginDrivePlusCheckout,
+  buildLifetimeCheckoutParams,
+} from "@/lib/billing/checkout-service";
 import { hasActiveLifetimeGrant, resetLifetimeStoreForTests } from "@/lib/billing/lifetime-store";
 import { resolveLocalSubscriptionAccess } from "@/lib/billing/resilience/local-access";
 import { resetSubscriptionRepositoryStoreForTests } from "@/lib/billing/subscription-repository-memory";
@@ -10,7 +13,10 @@ import {
   resetSubscriptionStoreForTests,
   setSubscriptionForUser,
 } from "@/lib/billing/subscription-store";
-import { dispatchStripeWebhookEvent, resetWebhookEventStoreStateForTests } from "@/lib/billing/stripe/webhook";
+import {
+  dispatchStripeWebhookEvent,
+  resetWebhookEventStoreStateForTests,
+} from "@/lib/billing/stripe/webhook";
 import { syncStripeSubscriptionRecord } from "@/lib/billing/stripe/subscription-sync";
 import { getDrivePlusLifetimeDisplay } from "@/lib/billing/plan-display";
 import { parseCheckoutPlanRequest } from "@/lib/billing/checkout-request";
@@ -42,7 +48,9 @@ const ENV = {
 };
 const previous: Record<string, string | undefined> = {};
 
-function lifetimeSession(overrides: Partial<Stripe.Checkout.Session> = {}): Stripe.Checkout.Session {
+function lifetimeSession(
+  overrides: Partial<Stripe.Checkout.Session> = {},
+): Stripe.Checkout.Session {
   return {
     id: "cs_lifetime_1",
     object: "checkout.session",
@@ -52,7 +60,11 @@ function lifetimeSession(overrides: Partial<Stripe.Checkout.Session> = {}): Stri
     payment_intent: "pi_lifetime_1",
     client_reference_id: USER_ID,
     created: 1_790_000_000,
-    metadata: { userId: USER_ID, commercialPlanId: "drive_plus_lifetime", elcamosoPlan: "DRIVE_PLUS" },
+    metadata: {
+      userId: USER_ID,
+      commercialPlanId: "drive_plus_lifetime",
+      elcamosoPlan: "DRIVE_PLUS",
+    },
     ...overrides,
   } as Stripe.Checkout.Session;
 }
@@ -106,6 +118,7 @@ describe("lifetime checkout payload", () => {
       userId: USER_ID,
       email: "driver@example.com",
       origin: "http://localhost:3000",
+      immediateStartConsent: true,
       trustedHost: "localhost:3000",
       request: { plan: "drive_plus", interval: "lifetime", returnPath: "/pricing" },
     });
@@ -119,11 +132,17 @@ describe("lifetime checkout payload", () => {
   });
 
   it("allows lifetime while subscribed and returns a cancel note", async () => {
-    setSubscriptionForUser({ userId: USER_ID, plan: "DRIVE_PLUS", status: "active", interval: "month" });
+    setSubscriptionForUser({
+      userId: USER_ID,
+      plan: "DRIVE_PLUS",
+      status: "active",
+      interval: "month",
+    });
     const result = await beginDrivePlusCheckout({
       userId: USER_ID,
       email: "driver@example.com",
       origin: "http://localhost:3000",
+      immediateStartConsent: true,
       trustedHost: "localhost:3000",
       request: { plan: "drive_plus", interval: "lifetime" },
     });
@@ -149,9 +168,13 @@ describe("lifetime checkout payload", () => {
 
 describe("lifetime webhooks", () => {
   it("grants Drive+ forever, idempotently, and revokes on refund", async () => {
-    await dispatchStripeWebhookEvent(event("evt_1", "checkout.session.completed", lifetimeSession()));
+    await dispatchStripeWebhookEvent(
+      event("evt_1", "checkout.session.completed", lifetimeSession()),
+    );
     // Replay with a new event id - grant stays single.
-    await dispatchStripeWebhookEvent(event("evt_2", "checkout.session.completed", lifetimeSession()));
+    await dispatchStripeWebhookEvent(
+      event("evt_2", "checkout.session.completed", lifetimeSession()),
+    );
     expect(hasActiveLifetimeGrant(USER_ID)).toBe(true);
     const record = getSubscriptionForUser(USER_ID);
     expect(record?.plan).toBe("DRIVE_COMPLETE");
@@ -161,7 +184,12 @@ describe("lifetime webhooks", () => {
     expect(resolveLocalSubscriptionAccess(USER_ID, farFuture).hasDrivePlusAccess).toBe(true);
 
     await dispatchStripeWebhookEvent(
-      event("evt_3", "charge.refunded", { id: "ch_1", payment_intent: "pi_lifetime_1", customer: "cus_lifetime", metadata: {} }),
+      event("evt_3", "charge.refunded", {
+        id: "ch_1",
+        payment_intent: "pi_lifetime_1",
+        customer: "cus_lifetime",
+        metadata: {},
+      }),
     );
     expect(hasActiveLifetimeGrant(USER_ID)).toBe(false);
     expect(resolveLocalSubscriptionAccess(USER_ID).hasDrivePlusAccess).toBe(false);
@@ -179,7 +207,9 @@ describe("lifetime webhooks", () => {
   });
 
   it("keeps lifetime access when a recurring subscription is later canceled", async () => {
-    await dispatchStripeWebhookEvent(event("evt_l", "checkout.session.completed", lifetimeSession()));
+    await dispatchStripeWebhookEvent(
+      event("evt_l", "checkout.session.completed", lifetimeSession()),
+    );
     await syncStripeSubscriptionRecord({
       id: "sub_old",
       object: "subscription",
@@ -206,7 +236,11 @@ describe("lifetime webhooks", () => {
 
   it("ignores payment sessions that are not lifetime", async () => {
     await dispatchStripeWebhookEvent(
-      event("evt_x", "checkout.session.completed", lifetimeSession({ metadata: { userId: USER_ID } })),
+      event(
+        "evt_x",
+        "checkout.session.completed",
+        lifetimeSession({ metadata: { userId: USER_ID } }),
+      ),
     );
     expect(hasActiveLifetimeGrant(USER_ID)).toBe(false);
   });

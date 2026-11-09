@@ -120,6 +120,7 @@ describe("billing failure resilience", () => {
         userId: USER_ID,
         email: "driver@example.com",
         origin: "http://localhost:5173",
+        immediateStartConsent: true,
         request: { plan: "drive_plus", interval: "monthly" },
       }),
     ).rejects.toBeInstanceOf(BillingServiceUnavailableError);

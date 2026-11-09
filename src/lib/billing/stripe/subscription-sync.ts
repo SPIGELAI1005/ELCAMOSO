@@ -115,7 +115,13 @@ export async function syncStripeSubscriptionRecord(subscription: Stripe.Subscrip
   try {
     const { applyFoundersPackFromYearlySubscription } =
       await import("@/lib/founders/founders.server");
-    await applyFoundersPackFromYearlySubscription(saved);
+    const raw = subscription.metadata?.["foundersPackSwitchAt"];
+    const switchAt = raw && Number.isFinite(Number(raw)) ? Number(raw) : null;
+    await applyFoundersPackFromYearlySubscription(
+      saved,
+      Date.now(),
+      switchAt != null ? { purchasedAt: switchAt } : undefined,
+    );
   } catch (error) {
     console.error(
       "[founders-pack] yearly apply failed",

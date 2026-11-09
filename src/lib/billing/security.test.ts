@@ -73,9 +73,9 @@ describe("checkout origin allowlist", () => {
   it("accepts the request host when the allowlist does not include it", () => {
     process.env.ELCAMOSO_ALLOWED_ORIGINS = "https://wrong.example";
     process.env.ELCAMOSO_ENV = "production";
-    expect(
-      assertAllowedCheckoutOrigin("https://www.elcamoso.com", "www.elcamoso.com"),
-    ).toBe("https://www.elcamoso.com");
+    expect(assertAllowedCheckoutOrigin("https://www.elcamoso.com", "www.elcamoso.com")).toBe(
+      "https://www.elcamoso.com",
+    );
     expect(() =>
       assertAllowedCheckoutOrigin("https://phishing.example", "www.elcamoso.com"),
     ).toThrow(/not allowed/i);
@@ -195,6 +195,7 @@ describe("checkout uses server-resolved price ids", () => {
         userId: USER_A,
         email: "driver@example.com",
         origin: "https://phishing.example.com",
+        immediateStartConsent: true,
         request: { plan: "drive_plus", interval: "yearly" },
       }),
     ).rejects.toThrow(/not allowed/i);
@@ -205,6 +206,7 @@ describe("checkout uses server-resolved price ids", () => {
       userId: USER_A,
       email: "driver@example.com",
       origin: "http://localhost:5173",
+      immediateStartConsent: true,
       trustedHost: "localhost:5173",
       request: { plan: "drive_plus", interval: "yearly" },
     });

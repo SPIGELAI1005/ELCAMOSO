@@ -137,7 +137,9 @@ describe("Black Friday Special banner copy", () => {
     expect(driveSpecialBannerText("en").teaser).toMatch(/27th of November/);
     expect(driveSpecialBannerText("de").teaser).toMatch(/27\. November/);
     expect(driveSpecialBannerText("ro").teaser).toMatch(/27 noiembrie/);
-    expect(driveSpecialBannerText("en").login).toBe("Log In");
+    expect(driveSpecialBannerText("en").signup).toBe("Sign up");
+    expect(driveSpecialBannerText("de").signup).toBe("Registrieren");
+    expect(driveSpecialBannerText("ro").signup).toBe("Înregistrare");
     expect(driveSpecialBannerText("en").cta).toBe("See the sounds");
     expect(driveSpecialBannerText("ro").terms).toMatch(/termen/i);
     expect(DRIVE_SPECIAL_PURPLE).toMatch(/^#[0-9a-f]{6}$/i);
@@ -156,6 +158,14 @@ describe("Black Friday Special banner copy", () => {
     expect(blackFridayWelcomeCopy("en").body).toMatch(/limited availability/);
     expect(blackFridayWelcomeCopy("de").title).toMatch(/Glückwunsch/);
     expect(blackFridayWelcomeCopy("ro").terms).toMatch(/termen/i);
+  });
+  it("guest time-up copy asks to sign up (primary) then sign in", async () => {
+    const { midnightDarkRaveGuestCopy } = await import("./drive-special");
+    expect(midnightDarkRaveGuestCopy("en").signUp).toBe("Sign up");
+    expect(midnightDarkRaveGuestCopy("en").signIn).toBe("Sign in");
+    expect(midnightDarkRaveGuestCopy("de").signUp).toBe("Registrieren");
+    expect(midnightDarkRaveGuestCopy("ro").signUp).toBe("Înregistrare");
+    expect(midnightDarkRaveGuestCopy("en").body).toMatch(/Sign up or sign in/);
   });
   it("sounds hint names Midnight Dark Rave and the 30-minute Drive the Music allowance", async () => {
     const { driveSpecialSoundsHint } = await import("./drive-special");

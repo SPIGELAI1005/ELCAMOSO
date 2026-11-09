@@ -12,12 +12,18 @@ import { useAccount } from "@/lib/account/AccountProvider";
 import { writeSettings } from "@/lib/drive/settings";
 import { useSettings } from "@/lib/drive/useSettings";
 import {
+  hasSeenBlackFridayWelcome,
   markBlackFridayWelcomeSeen,
   shouldShowBlackFridayWelcome,
 } from "@/lib/drive-special-cap/bf-welcome";
+import {
+  getBlackFridayWelcomeFn,
+  markBlackFridayWelcomeSeenFn,
+} from "@/lib/drive-special-cap/server-fns";
 
 /**
- * After sign-in during the Black Friday window: congratulations, once per account.
+ * After sign-in during the Black Friday window: congratulations, once per account
+ * (server-side). localStorage is a cache so the same browser does not flash the modal.
  */
 export function BlackFridayWelcomeModal() {
   const { session, isAuthenticated, isLoading } = useAccount();
@@ -32,12 +38,33 @@ export function BlackFridayWelcomeModal() {
       setOpen(false);
       return;
     }
-    setOpen(shouldShowBlackFridayWelcome(accountId));
+    if (hasSeenBlackFridayWelcome(accountId)) {
+      setOpen(false);
+      return;
+    }
+    let cancelled = false;
+    void getBlackFridayWelcomeFn()
+      .then((result) => {
+        if (cancelled) return;
+        if (result.seen) {
+          markBlackFridayWelcomeSeen(accountId);
+          setOpen(false);
+          return;
+        }
+        setOpen(shouldShowBlackFridayWelcome(accountId));
+      })
+      .catch(() => {
+        if (!cancelled) setOpen(shouldShowBlackFridayWelcome(accountId));
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [accountId, isAuthenticated, isLoading]);
 
   function dismiss() {
     markBlackFridayWelcomeSeen(accountId);
     setOpen(false);
+    void markBlackFridayWelcomeSeenFn({ data: {} }).catch(() => undefined);
   }
 
   function startDrive() {

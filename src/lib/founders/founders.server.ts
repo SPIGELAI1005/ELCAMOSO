@@ -8,11 +8,16 @@ import { eq, isNotNull, sql } from "drizzle-orm";
 import { getDb } from "@/lib/db/client";
 import { users } from "@/lib/db/schema";
 import { entitlementsForPlan } from "@/lib/entitlements/plans";
-import { listAllGrantsForAccount, upsertEntitlementGrant } from "@/lib/entitlements/grants";
+import {
+  listAllGrantsForAccount,
+  revokeEntitlementGrant,
+  upsertEntitlementGrant,
+} from "@/lib/entitlements/grants";
 import { persistEntitlementGrantsForAccount } from "@/lib/billing/durable-state.server";
 import { hasDrivePlusSubscriptionAccess } from "@/lib/billing/subscription-access-policy";
 import type { Subscription } from "@/lib/billing/types";
 import {
+  FOUNDERS_FOREVER_PICK_SOURCE,
   FOUNDERS_PACK_GRANT_SOURCE,
   canMintFounder,
   canMintFounderFromPurchase,
@@ -20,8 +25,12 @@ import {
   foundersPackUnlimitedUntilMs,
   isFoundersPackQualifyingPlan,
   isFoundersPackQualifyingPurchaseTime,
+  isLegacyFounderClaim,
 } from "@/lib/founders/founders";
-import { ensureLegacyFounderForeverSounds } from "@/lib/founders/sound-picks.server";
+import {
+  clearFounderSoundPicks,
+  ensureLegacyFounderForeverSounds,
+} from "@/lib/founders/sound-picks.server";
 
 export interface FounderRecord {
   founderAt: number | null;
@@ -231,6 +240,7 @@ export function grantFoundersPackUnlimited(userId: string, purchasedAt: number):
 export async function applyFoundersPackFromYearlySubscription(
   subscription: Pick<Subscription, "userId" | "plan" | "interval" | "status" | "createdAt">,
   now = Date.now(),
+  opts?: { purchasedAt?: number },
 ): Promise<{ applied: boolean; until: number | null }> {
   if (!isFoundersPackQualifyingPlan(subscription.plan, subscription.interval)) {
     return { applied: false, until: null };
@@ -238,7 +248,7 @@ export async function applyFoundersPackFromYearlySubscription(
   if (!hasDrivePlusSubscriptionAccess(subscription, now)) {
     return { applied: false, until: null };
   }
-  const purchasedAt = subscription.createdAt.getTime();
+  const purchasedAt = opts?.purchasedAt ?? subscription.createdAt.getTime();
   if (!isFoundersPackQualifyingPurchaseTime(purchasedAt)) {
     return { applied: false, until: null };
   }
@@ -252,6 +262,35 @@ export async function applyFoundersPackFromYearlySubscription(
     );
   });
   return { applied: true, until };
+}
+
+/**
+ * Withdrawal within 14 days: refund is processed in Stripe/support.
+ * This drops Founders Pack grants and forever picks. Legacy Founder seats stay.
+ */
+export async function revokeFoundersPackPurchase(userId: string, now = Date.now()): Promise<void> {
+  for (const grant of listAllGrantsForAccount(userId)) {
+    if (
+      grant.source === FOUNDERS_PACK_GRANT_SOURCE ||
+      grant.source === FOUNDERS_FOREVER_PICK_SOURCE
+    ) {
+      revokeEntitlementGrant(grant.id);
+    }
+  }
+  await clearFounderSoundPicks(userId);
+  const current = await loadFounderRecord(userId, now);
+  if (current.founderAt != null && !isLegacyFounderClaim(current.founderAt)) {
+    if (dbEnabled(userId)) {
+      await getDb()
+        .update(users)
+        .set({ founderAt: null, founderSeat: null })
+        .where(eq(users.id, userId));
+    }
+    memory.set(userId, { ...current, founderAt: null, seat: null });
+    loadedAt.set(userId, now);
+    countCache = null;
+  }
+  await persistEntitlementGrantsForAccount(userId).catch(() => undefined);
 }
 
 export async function setTestCrewOptIn(

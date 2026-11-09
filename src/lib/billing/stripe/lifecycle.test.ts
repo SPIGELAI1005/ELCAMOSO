@@ -114,6 +114,7 @@ describe("stripe subscription lifecycle (test mode)", () => {
         userId: STRIPE_TEST_USER_ID,
         email: "driver@example.com",
         origin: "http://localhost:5173",
+        immediateStartConsent: true,
         request: { plan: "drive_plus", interval: "monthly" },
       });
 

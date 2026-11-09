@@ -8,6 +8,9 @@ export interface CreatePortalSessionInput {
   origin: string;
   returnPath?: string;
   trustedHost?: string | null;
+  /** Deep-link into Stripe portal cancellation when configured. */
+  flow?: "cancel";
+  subscriptionId?: string;
 }
 
 export interface CreatePortalSessionResult {
@@ -38,14 +41,40 @@ export async function createStripePortalSession(
   const origin = sanitizeOrigin(input.origin, input.trustedHost);
   const returnPath = sanitizeReturnPath(input.returnPath ?? "/settings");
 
-  const session = await stripe.billingPortal.sessions
-    .create({
-      customer: input.stripeCustomerId,
-      return_url: `${origin}${returnPath}`,
-    })
-    .catch((error) => {
-      throw wrapStripeBillingError(error);
-    });
+  const returnUrl = `${origin}${returnPath}`;
+  const params: {
+    customer: string;
+    return_url: string;
+    flow_data?: {
+      type: "subscription_cancel";
+      subscription_cancel: { subscription: string };
+    };
+  } = {
+    customer: input.stripeCustomerId,
+    return_url: returnUrl,
+  };
+  if (input.flow === "cancel" && input.subscriptionId) {
+    params.flow_data = {
+      type: "subscription_cancel",
+      subscription_cancel: { subscription: input.subscriptionId },
+    };
+  }
 
-  return { url: session.url };
+  try {
+    const session = await stripe.billingPortal.sessions.create(params);
+    return { url: session.url };
+  } catch (error) {
+    if (params.flow_data) {
+      try {
+        const fallback = await stripe.billingPortal.sessions.create({
+          customer: input.stripeCustomerId,
+          return_url: returnUrl,
+        });
+        return { url: fallback.url };
+      } catch (fallbackError) {
+        throw wrapStripeBillingError(fallbackError);
+      }
+    }
+    throw wrapStripeBillingError(error);
+  }
 }
