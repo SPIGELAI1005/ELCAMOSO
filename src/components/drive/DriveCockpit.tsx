@@ -430,7 +430,11 @@ export function DriveCockpit({
       },
     });
     if (outcome === "locked") {
-      setSwitchStatus(DRIVE_PLUS_LOCKED_MESSAGE);
+      setSwitchStatus(
+        isMusicPackageProfileId(profileId)
+          ? "Part of Drive the Music."
+          : DRIVE_PLUS_LOCKED_MESSAGE,
+      );
       return;
     }
     if (outcome === "failed") {

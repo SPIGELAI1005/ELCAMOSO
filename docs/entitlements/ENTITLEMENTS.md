@@ -7,10 +7,11 @@ Configured in `src/lib/sound/profile-access-config.ts` (`FREE_SOUND_PROFILE_SET`
 | Role | ID | Rationale |
 | --- | --- | --- |
 | Muscle / body-led | `american-muscle-v8` | Low-end body presence; free-tier gear realism |
-| Sport / mechanical | `flat-six-sport` | Contrasting high-rev NA mechanical character |
-| Futuristic | `cyber-pulse` | Continuous EV / future motion sound |
+| Racing | `racing-v10` | High-rev motorsport profile alongside muscle |
+| Playful / gothic | `dracula-carriage` | Ghost coach with a minor-key orchestra |
+| Music | `symphony-latino-fiesta` | Latino Fiesta is the one Symphony experience on Feel it |
 
-Default `DEFAULT_PROFILE_ID` and `FALLBACK_SOUND_PROFILE_ID` point at the muscle free id.
+Default `DEFAULT_PROFILE_ID` and `FALLBACK_SOUND_PROFILE_ID` point at `racing-v10`.
 
 **Grandfathering:** Shrinking the free list does **not** revoke purchased / grandfathered profile grants stored in `entitlement_grants` / in-memory grant store.
 
@@ -34,7 +35,7 @@ No new prices or payment plans are introduced by Prompt 11.
 
 Drive/Sounds UI gating uses `canDriveProfileWithAccess` (`drive-profile-access.ts`) via `useFeatureAccess`:
 
-- Free trio from `FREE_SOUND_PROFILE_IDS` (profile.access cannot invent extra free IDs)
+- Free set from `FREE_SOUND_PROFILE_IDS` (profile.access cannot invent extra free IDs)
 - Active grants ∪ live-drive hold profile ids
 - `all_sound_profiles` entitlement / trial / subscription
 - Symphony / World / Fusion IDs via experience entitlements (`symphony_essential`, etc.)
@@ -87,7 +88,7 @@ Configured by `DRIVE_PLUS_PAST_DUE_GRACE_DAYS` (default 7) via `subscription-acc
 
 | Point | Location |
 | --- | --- |
-| Free trio | `profile-access-config.ts` |
+| Free set | `profile-access-config.ts` |
 | Plan entitlements | `plans.ts` |
 | Past-due grace days | `DRIVE_PLUS_PAST_DUE_GRACE_DAYS` |
 | Offline lease max | `OFFLINE_LEASE_MAX_MS` |

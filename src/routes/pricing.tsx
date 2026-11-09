@@ -150,7 +150,10 @@ function Pricing() {
           </h1>
           <p className="mt-6 max-w-md text-sm leading-relaxed text-muted-foreground">
             Start with essential motion sound — free during early access.{" "}
-            <span className="font-medium text-red-500">All purchases (Drive+, Drive the Music, Drive Unlimited, Lifetime and individual sounds) open on 9.11.2026.</span>
+            <span className="font-medium text-red-500">
+              Purchases (Drive+, Drive the Music, Drive Unlimited, Lifetime and individual sounds)
+              are not open yet.
+            </span>
           </p>
         </section>
         <section className="mx-auto w-full max-w-2xl px-6 sm:px-10">

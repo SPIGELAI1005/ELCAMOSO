@@ -56,17 +56,17 @@ export const LOCKED_PROFILE_PREVIEW_SECONDS = 20;
 
 /**
  * Single source of truth for when the free/Drive+ sound split starts.
- * George, 22 Oct 2026: lock Drive+ sounds now (was 9 Nov). The Drive+
- * subscription itself still opens on 9 Nov (DRIVE_PLUS_OPENS_LABEL).
+ * George, 22 Oct 2026: lock Drive+ sounds now (was 9 Nov). Purchases opened
+ * on 9 Nov 2026; locked copy is a normal Drive+ upsell, not a future date.
  */
 export const SOUND_TIER_GATE_STARTS_AT_ISO = "2026-10-22T00:00:00+02:00";
 export const SOUND_TIER_GATE_STARTS_AT_UTC_MS: number = Date.parse(SOUND_TIER_GATE_STARTS_AT_ISO);
 /** Short label for UI copy ("Free until 9 Nov"). */
 export const SOUND_TIER_GATE_LABEL = "9 Nov";
-/** When the Drive+ subscription opens (sounds are already locked). */
+/** Historical purchase-open label (9 Nov 2026). Kept for date-gated pre-launch UI. */
 export const DRIVE_PLUS_OPENS_LABEL = "09.11.";
 /** Shown when someone taps a locked Drive+ sound. */
-export const DRIVE_PLUS_LOCKED_MESSAGE = `Drive+ sound. Available from ${DRIVE_PLUS_OPENS_LABEL}`;
+export const DRIVE_PLUS_LOCKED_MESSAGE = "Drive+ sound.";
 
 export function simulatedSoundGateNow(): number | null {
   // Local/preview simulation only — ignored in production builds.

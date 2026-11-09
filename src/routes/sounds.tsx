@@ -1,4 +1,3 @@
-import { DRIVE_PLUS_LOCKED_MESSAGE } from "@/lib/sound/profile-access-config";
 import { useMemo, useRef, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { createSeoHeadFromPath } from "@/lib/seo";
@@ -541,14 +540,25 @@ function Sounds() {
               >
                 {settings.favourites.includes(detail.id) ? "♥ Favorite" : "♡ Favorite"}
               </button>
-              <button
-                type="button"
-                onClick={() => select(detail.id, { forDrive: true, closeDetail: true })}
-                disabled={!access.canDriveWithProfile(detail.id)}
-                className="h-11 rounded-full bg-primary px-6 text-[11px] tracking-[0.2em] text-primary-foreground uppercase disabled:opacity-40"
-              >
-                {access.canDriveWithProfile(detail.id) ? "Use Sound" : DRIVE_PLUS_LOCKED_MESSAGE}
-              </button>
+              {access.canDriveWithProfile(detail.id) ? (
+                <button
+                  type="button"
+                  onClick={() => select(detail.id, { forDrive: true, closeDetail: true })}
+                  className="h-11 rounded-full bg-primary px-6 text-[11px] tracking-[0.2em] text-primary-foreground uppercase"
+                >
+                  Use Sound
+                </button>
+              ) : (
+                <Link
+                  to="/pricing"
+                  hash={isMusicPackageProfileId(detail.id) ? "drive-music" : "drive-plus"}
+                  className="inline-flex h-11 items-center rounded-full bg-primary px-6 text-[11px] tracking-[0.2em] text-primary-foreground uppercase"
+                >
+                  {isMusicPackageProfileId(detail.id)
+                    ? t(settings.language, "sounds.getMusic")
+                    : t(settings.language, "sounds.getDrivePlus")}
+                </Link>
+              )}
             </div>
             <button
               type="button"
