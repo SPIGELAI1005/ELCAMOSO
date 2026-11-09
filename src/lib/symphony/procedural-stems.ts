@@ -1,6 +1,15 @@
 import type { MusicClockConfig } from "./types";
 import { samplesPerLoop } from "./music-clock";
 import type { SymphonyPackStemDef } from "./types";
+import {
+  generateViralMixBellBuffer,
+  generateViralMixPadBuffer,
+  generateViralMixBassBuffer,
+  generateViralMixPluckBuffer,
+  generateViralMixKickBuffer,
+  generateViralMixHihatBuffer,
+  generateViralMixRiserBuffer,
+} from "./packs/viral-mix-procedural";
 
 /** Generate bar-aligned procedural placeholder loops (not commercial music). */
 export function generateProceduralStemBuffer(
@@ -8,7 +17,11 @@ export function generateProceduralStemBuffer(
   clock: MusicClockConfig,
   stem: SymphonyPackStemDef,
   seed: number,
+  packId?: string,
 ): AudioBuffer {
+  if (packId === "symphony-viral-mix") {
+    return generateViralMixStemBuffer(ctx, clock, stem, seed);
+  }
   const length = samplesPerLoop(clock, ctx.sampleRate);
   const buffer = ctx.createBuffer(2, length, ctx.sampleRate);
   const L = buffer.getChannelData(0);
@@ -80,4 +93,30 @@ export function generateProceduralStemBuffer(
   }
 
   return buffer;
+}
+
+function generateViralMixStemBuffer(
+  ctx: BaseAudioContext,
+  clock: MusicClockConfig,
+  stem: SymphonyPackStemDef,
+  seed: number,
+): AudioBuffer {
+  switch (stem.id) {
+    case "lead":
+      return generateViralMixBellBuffer(ctx, clock, seed);
+    case "atmosphere":
+      return generateViralMixPadBuffer(ctx, clock, seed);
+    case "bass":
+      return generateViralMixBassBuffer(ctx, clock, seed);
+    case "rhythm":
+      return generateViralMixPluckBuffer(ctx, clock, seed);
+    case "drumsLow":
+      return generateViralMixKickBuffer(ctx, clock, seed);
+    case "drumsHigh":
+      return generateViralMixHihatBuffer(ctx, clock, seed);
+    case "fx":
+      return generateViralMixRiserBuffer(ctx, clock, seed);
+    default:
+      return generateProceduralStemBuffer(ctx, clock, stem, seed);
+  }
 }
