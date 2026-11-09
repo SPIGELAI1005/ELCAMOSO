@@ -218,6 +218,7 @@ Canonical product rules still live in `elcamoso-comprehensive-spec.md`. Update *
 - **Founders Pack:** existing seats claimed before `FOUNDER_PAID_UNLIMITED_CUTOVER` (2026-11-09T13:00:00+01:00) keep Drive Unlimited until 27.05.2027. New free seat claims do not get that perk. Buying the Founders Pack grants Drive Unlimited (`DRIVE_COMPLETE`) for 4 months from the purchase date. There is no Stripe product/price yet — `STRIPE_PRICE_FOUNDERS_PACK` is a placeholder; checkout stays disconnected until the owner creates the Price. No euro amount is invented in code.
 - Copy (EN/DE/RO): purple banner, Sounds hint, Founders banner/claim/pricing/FAQ. Dated historical news posts left as published. New news item for the Black Friday Special.
 - DB: `drive_special_usage` (migration `0014_drive_special_usage.sql`). Applied on production build when `DATABASE_URL` is set.
+- **Purchases-closed flash:** `/pricing` and the home `home-purchases-note` treated a missing billing-public-config query as monetization off, so SSR showed “Purchases … are not open yet.” while production purchases are open. The note now waits until config has loaded and `monetizationEnabled === false`. Same for the sound-share “not available for purchase yet” line. `sounds.tsx` has no such notice.
 
 ### 2026-11-09 (Post-launch locked-sound and pricing copy)
 
