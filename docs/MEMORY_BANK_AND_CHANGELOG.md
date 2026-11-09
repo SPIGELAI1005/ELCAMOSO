@@ -3,7 +3,7 @@
 Living document for product context, recent architecture decisions, and a dated changelog.
 Canonical product rules still live in `elcamoso-comprehensive-spec.md`. Update **both** when direction or architecture changes.
 
-**Last updated:** 2026-11-08
+**Last updated:** 2026-11-09
 
 ---
 
@@ -124,7 +124,7 @@ Canonical product rules still live in `elcamoso-comprehensive-spec.md`. Update *
 ### Pricing (`/pricing`)
 
 - Monthly / yearly toggle; **14% early adopter** discount (list prices struck through in red; charged amounts in `plan-display.ts`).
-- Billing-disabled copy in red; primary secondary CTA **Open Drive** → `/drive` with footer spacing preserved.
+- When `MONETIZATION_ENABLED` is off, billing-disabled copy in red says purchases are not open yet (no future date). Checkout itself is `isBillingAvailable()` = flag + Stripe config, not a calendar date. Primary secondary CTA **Open Drive** → `/drive` with footer spacing preserved.
 
 ### Mini player / headroom
 
@@ -210,6 +210,13 @@ Canonical product rules still live in `elcamoso-comprehensive-spec.md`. Update *
 ---
 
 ## Changelog
+
+### 2026-11-09 (Post-launch locked-sound and pricing copy)
+
+- Locked Drive+ copy is a normal upsell (`Drive+ sound.` / Get Drive+ or Get Drive the Music), not “Available from 09.11.”
+- Pricing / home plans / sound-share callout no longer promise purchases “open on 9.11.2026”. When monetization is off they say purchases are not open yet; checkout still follows `isBillingAvailable()`.
+- `/pricing` SEO description matches the live free set. `docs/entitlements/ENTITLEMENTS.md` free set aligned with `profile-access-config.ts` (Muscle V8, Racing V10, Dracula Carriage, Latino Fiesta).
+- News archive and date-gated 7 Days Drive Special strings left as published history.
 
 ### 2026-11-08 (Worlds hero, music placement, Classic Vespa)
 

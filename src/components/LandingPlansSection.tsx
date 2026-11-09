@@ -373,7 +373,8 @@ export function LandingPlansSection() {
       </div>
       {!monetizationEnabled ? (
         <p className="mt-4 text-sm font-medium text-red-500" data-testid="home-purchases-note">
-          All purchases (Drive+, Drive the Music, Drive Unlimited, Lifetime and individual sounds) open on 9.11.2026.
+          Purchases (Drive+, Drive the Music, Drive Unlimited, Lifetime and individual sounds) are
+          not open yet.
         </p>
       ) : null}
       <div className="mt-10">

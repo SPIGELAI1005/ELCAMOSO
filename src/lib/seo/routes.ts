@@ -95,7 +95,7 @@ export const INDEXABLE_ROUTE_POLICIES: SeoRoutePolicy[] = [
     indexable: true,
     title: "Pricing | ELCAMOSO",
     description:
-      "Racing V10, American Muscle V8, Dracula Carriage and Latino Fiesta are free. Drive+, Drive the Music and Lifetime open on 9.11.2026.",
+      "Racing V10, American Muscle V8, Dracula Carriage and Latino Fiesta are free. Drive+, Drive the Music and Lifetime unlock the rest of the library.",
     image: IMG,
     imageAlt: ALT,
     breadcrumbs: [

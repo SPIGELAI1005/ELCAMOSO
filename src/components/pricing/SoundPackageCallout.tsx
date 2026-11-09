@@ -93,7 +93,7 @@ export function SoundPackageCallout({
                 </button>
               ) : null}
               <p className="w-full text-sm text-muted-foreground">
-                {label} opens for purchase on 9.11.2026.
+                {label} is not available for purchase yet.
               </p>
             </>
           )}

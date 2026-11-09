@@ -141,7 +141,7 @@ describe("Drive+ sound tier gate (22 Oct 2026 Europe/Berlin)", () => {
 describe("locked sound copy + fallback", () => {
   it("uses the George copy and racing-v10 fallback", async () => {
     const m = await import("@/lib/sound/profile-access-config");
-    expect(m.DRIVE_PLUS_LOCKED_MESSAGE).toBe("Drive+ sound. Available from 09.11.");
+    expect(m.DRIVE_PLUS_LOCKED_MESSAGE).toBe("Drive+ sound.");
     expect(m.FALLBACK_SOUND_PROFILE_ID).toBe("racing-v10");
     expect(m.isSoundTierGateActive(Date.parse("2026-10-22T16:00:00Z"))).toBe(true);
   });

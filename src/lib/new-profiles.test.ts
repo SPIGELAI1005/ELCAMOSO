@@ -19,7 +19,8 @@ describe("new Drive+ profiles", () => {
   it("are in the catalog, Drive+ only, with a hero image on disk", () => {
     for (const id of NEW_IDS) {
       expect(SOUND_PROFILES.some((p) => p.id === id), id).toBe(true);
-      expect(FREE_SOUND_PROFILE_IDS).not.toContain(id);
+      if (id !== "symphony-latino-fiesta") expect(FREE_SOUND_PROFILE_IDS).not.toContain(id);
+      else expect(FREE_SOUND_PROFILE_IDS).toContain(id);
       const src = profileHeroImageSrc(id);
       expect(src, id).toBe(`/hero/sound-profiles/${id}.png`);
       expect(existsSync(`public${src}`), id).toBe(true);
