@@ -72,13 +72,13 @@ describe("Black Friday Special", () => {
   });
 });
 
-describe("Black Friday Special 15-minute cap math", () => {
-  it("is 15 minutes and remaining never goes below zero", () => {
-    expect(DRIVE_SPECIAL_DAILY_SECONDS).toBe(900);
-    expect(remainingDriveSpecialSeconds(0)).toBe(900);
-    expect(remainingDriveSpecialSeconds(899)).toBe(1);
-    expect(remainingDriveSpecialSeconds(900)).toBe(0);
-    expect(remainingDriveSpecialSeconds(1200)).toBe(0);
+describe("Black Friday Special 30-minute cap math", () => {
+  it("is 30 minutes and remaining never goes below zero", () => {
+    expect(DRIVE_SPECIAL_DAILY_SECONDS).toBe(1800);
+    expect(remainingDriveSpecialSeconds(0)).toBe(1800);
+    expect(remainingDriveSpecialSeconds(1799)).toBe(1);
+    expect(remainingDriveSpecialSeconds(1800)).toBe(0);
+    expect(remainingDriveSpecialSeconds(2400)).toBe(0);
   });
   it("does not cap purchasers, Founders with an active perk, or music-trial grants", () => {
     expect(
@@ -124,18 +124,30 @@ describe("Demo page flag", () => {
 });
 
 describe("Black Friday Special banner copy", () => {
-  it("has EN/DE/RO copy and falls back to EN", async () => {
+  it("has a short non-specific EN/DE/RO teaser and falls back to EN", async () => {
     const { driveSpecialBannerText, DRIVE_SPECIAL_PURPLE, driveSpecialCapCopy } = await import(
       "./drive-special"
     );
     expect(DRIVE_SPECIAL_NAME).toBe("Black Friday Special");
-    expect(driveSpecialBannerText("en").text).toMatch(/15 minutes a day/);
-    expect(driveSpecialBannerText("de").text).toMatch(/15 Minuten/);
-    expect(driveSpecialBannerText("ro").text).toMatch(/15 minute/);
-    expect(driveSpecialBannerText("fr").text).toMatch(/15 minutes a day/);
+    const offerDetail = /minute|Drive the Music|15|30/i;
+    for (const lang of ["en", "de", "ro", "fr"] as const) {
+      const copy = driveSpecialBannerText(lang);
+      expect(copy.teaser).not.toMatch(offerDetail);
+      expect(copy.cta.length).toBeGreaterThan(0);
+      expect(copy.terms.length).toBeGreaterThan(0);
+    }
+    expect(driveSpecialBannerText("de").teaser).toMatch(/Black Friday/);
+    expect(driveSpecialBannerText("ro").terms).toMatch(/termen/i);
     expect(DRIVE_SPECIAL_PURPLE).toMatch(/^#[0-9a-f]{6}$/i);
     expect(driveSpecialCapCopy("en").cta).toMatch(/Drive the Music/);
     expect(driveSpecialCapCopy("de").body).toMatch(/Morgen/);
-    expect(driveSpecialCapCopy("ro").title).toMatch(/15 minute/);
+    expect(driveSpecialCapCopy("en").title).toMatch(/30/);
+    expect(driveSpecialCapCopy("ro").title).toMatch(/30/);
+  });
+  it("sounds hint still names the 30-minute Drive the Music allowance", async () => {
+    const { driveSpecialSoundsHint } = await import("./drive-special");
+    expect(driveSpecialSoundsHint("en", true)).toMatch(/30 minutes/);
+    expect(driveSpecialSoundsHint("de", true)).toMatch(/30 Minuten/);
+    expect(driveSpecialSoundsHint("ro", false)).toMatch(/30 minute/);
   });
 });

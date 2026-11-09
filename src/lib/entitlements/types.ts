@@ -89,7 +89,7 @@ export interface EntitlementSnapshot {
   founder?: FounderInfo | null;
   /**
    * True when Drive the Music is granted only by the Black Friday Special, so
-   * the 15-minute per Berlin-day cap applies. False for purchasers, Founders
+   * the 30-minute per Berlin-day cap applies. False for purchasers, Founders
    * with an active Drive Unlimited perk, and logged-out visitors.
    */
   driveSpecialCapApplies: boolean;

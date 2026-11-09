@@ -1,4 +1,5 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useRouterState } from "@tanstack/react-router";
+import { useEffect } from "react";
 import { createSeoHeadFromPath } from "@/lib/seo";
 import { LegalNote, LegalPage, LegalSection } from "@/components/LegalPage";
 import { LEGAL_OPERATOR } from "@/lib/legal/operator";
@@ -10,6 +11,12 @@ export const Route = createFileRoute("/legal/terms")({
 
 function Terms() {
   const o = LEGAL_OPERATOR;
+  const hash = useRouterState({ select: (s) => s.location.hash });
+  useEffect(() => {
+    const id = hash.replace(/^#/, "");
+    if (!id) return;
+    document.getElementById(id)?.scrollIntoView({ block: "start" });
+  }, [hash]);
 
   return (
     <LegalPage
@@ -111,6 +118,39 @@ function Terms() {
         <p>
           The Founders Pack, Founders Test Crew, Smiles, Smile Shop, invite rewards, leaderboards,
           challenges and promotions are governed additionally by our{" "}
+          <Link to="/legal/rewards" className="text-foreground underline-offset-2 hover:underline">
+            Founders, Crew &amp; Rewards Terms
+          </Link>
+          .
+        </p>
+      </LegalSection>
+
+      <LegalSection id="black-friday-special" title="7b. Black Friday Special">
+        <p>
+          The Black Friday Special is a limited promotional offer for signed-in drivers. Logged-out
+          visitors do not receive it. Drive+ is not included.
+        </p>
+        <p>
+          During the offer, signed-in drivers may use Drive the Music for 30 minutes per calendar
+          day per account. The daily allowance resets at midnight Europe/Berlin. Minutes do not
+          carry over. Paying users and Founders who already own Drive the Music are not limited by
+          this daily allowance.
+        </p>
+        <p>
+          The Black Friday Special runs from 9 November 2026 00:00 until the end of Black Friday, 27
+          November 2026 23:59 Europe/Berlin.
+        </p>
+        <p>
+          Separately, Drive the Music may be offered with 4 months included at checkout as a Black
+          Friday deal, as shown at purchase. That deal is independent of the daily Black Friday
+          Special minutes and runs until the end of Black Friday, 27 November 2026 23:59
+          Europe/Berlin.
+        </p>
+        <p>
+          Buying the Founders Pack grants Drive Unlimited for 4 months from the purchase date. New
+          Founders who only claim a free seat do not receive that perk. Founders who claimed a seat
+          before 9 November 2026 13:00 Europe/Berlin keep their existing Drive Unlimited access
+          until 27 May 2027 23:59 Europe/Berlin. Further Founders Pack conditions are in the{" "}
           <Link to="/legal/rewards" className="text-foreground underline-offset-2 hover:underline">
             Founders, Crew &amp; Rewards Terms
           </Link>

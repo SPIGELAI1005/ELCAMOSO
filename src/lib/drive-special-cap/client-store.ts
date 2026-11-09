@@ -1,5 +1,5 @@
 /**
- * Client side of the Black Friday Special 15-minute cap: remaining free seconds
+ * Client side of the Black Friday Special 30-minute cap: remaining free seconds
  * today for a signed-in account whose Drive the Music access is only the special.
  * Source of truth is the server (/api/drive-special, keyed by account id); a
  * localStorage counter is kept as a backup and the stricter of the two wins.
@@ -152,7 +152,7 @@ export type DriveSpecialCapUser = {
   grantedProfileIds?: readonly string[] | null;
 };
 
-/** True when the special's 15-minute cap decides whether this music profile may play. */
+/** True when the special's 30-minute cap decides whether this music profile may play. */
 export function driveSpecialCapGoverns(
   profileId: string,
   user: DriveSpecialCapUser,

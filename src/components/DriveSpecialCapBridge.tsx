@@ -46,7 +46,7 @@ async function sendHeartbeat(seconds: number) {
 }
 
 /**
- * Black Friday Special runtime: counts 15 free minutes/day while a signed-in
+ * Black Friday Special runtime: counts 30 free minutes/day while a signed-in
  * driver plays Drive the Music through the special, sends heartbeats, shows
  * remaining time, and the time-up notice pointing at /pricing#drive-music.
  */

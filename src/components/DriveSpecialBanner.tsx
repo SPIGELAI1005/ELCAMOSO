@@ -25,7 +25,7 @@ export function DriveSpecialBanner({ className }: { className?: string }) {
     <div
       data-testid="drive-special-banner"
       className={cn(
-        "flex flex-wrap items-center justify-center gap-x-4 gap-y-1 border-b px-4 py-2 text-xs",
+        "flex w-full flex-wrap items-center justify-center gap-x-3 gap-y-1.5 border-b px-3 py-2 text-xs",
         className,
       )}
       style={{
@@ -39,14 +39,24 @@ export function DriveSpecialBanner({ className }: { className?: string }) {
       >
         {DRIVE_SPECIAL_NAME}
       </span>
-      <span className="text-foreground/90">{copy.text}</span>
-      <Link
-        to="/sounds"
-        className="rounded-sm px-2.5 py-1 text-[10px] font-semibold tracking-[0.16em] text-white uppercase"
-        style={{ background: DRIVE_SPECIAL_PURPLE }}
-      >
-        {copy.cta}
-      </Link>
+      <span className="text-foreground/90">{copy.teaser}</span>
+      <span className="flex flex-wrap items-center justify-center gap-2">
+        <Link
+          to="/sounds"
+          className="rounded-sm px-2.5 py-1 text-[10px] font-semibold tracking-[0.16em] text-white uppercase"
+          style={{ background: DRIVE_SPECIAL_PURPLE }}
+        >
+          {copy.cta}
+        </Link>
+        <Link
+          to="/legal/terms"
+          hash="black-friday-special"
+          className="rounded-sm px-2.5 py-1 text-[10px] font-semibold tracking-[0.16em] uppercase"
+          style={{ color: DRIVE_SPECIAL_PURPLE, border: `1px solid ${DRIVE_SPECIAL_PURPLE}99` }}
+        >
+          {copy.terms}
+        </Link>
+      </span>
     </div>
   );
 }

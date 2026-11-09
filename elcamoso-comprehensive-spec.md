@@ -691,9 +691,9 @@ When editing this codebase, remember:
 
 ### Promotions (current)
 
-- **Black Friday Special** (`src/lib/billing/drive-special.ts`): 9 Nov 2026 00:00 to exclusive end 28 Nov 2026 00:00 Europe/Berlin. Signed-in drivers get Drive the Music (`DRIVE_MUSIC_PACKAGE_ENTITLEMENTS`) for 15 minutes per Berlin day. Drive+ is not included. Purchasers and Founders who already own the music are not capped. Logged-out visitors keep the separate 7-minute guest trial (`src/lib/guest-trial`). Independent of the Black Friday Drive the Music 4-month checkout trial (`src/lib/billing/black-friday.ts`).
+- **Black Friday Special** (`src/lib/billing/drive-special.ts`): 9 Nov 2026 00:00 to exclusive end 28 Nov 2026 00:00 Europe/Berlin. Signed-in drivers get Drive the Music (`DRIVE_MUSIC_PACKAGE_ENTITLEMENTS`) for 30 minutes per Berlin day. Drive+ is not included. Purchasers and Founders who already own the music are not capped. The purple banner is a short teaser only; full terms are on `/legal/terms#black-friday-special`. Logged-out visitors keep the separate 7-minute guest trial (`src/lib/guest-trial`). Independent of the Black Friday Drive the Music 4-month checkout trial (`src/lib/billing/black-friday.ts`).
 - **Founders Pack:** 458 seats until Black Friday 27.11.2026 23:59:59 Berlin. Founders claimed before `FOUNDER_PAID_UNLIMITED_CUTOVER` (2026-11-09T13:00:00+01:00) keep Drive Unlimited (`DRIVE_COMPLETE`) until 27.05.2027. New Founders get Drive Unlimited for 4 months only after a paid Founders Pack purchase (`STRIPE_PRICE_FOUNDERS_PACK` placeholder until the Stripe Price exists).
 
 ---
 
-_Last updated: 2026-11-09 (Black Friday Special 15-min cap, Founders Pack purchase-gated Drive Unlimited)_
+_Last updated: 2026-11-09 (Black Friday Special 30-min cap, teaser banner, terms section)_

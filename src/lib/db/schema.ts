@@ -542,7 +542,7 @@ export const guestTrialUsage = pgTable(
 );
 
 /**
- * Black Friday Special minutes (15 free minutes/day of Drive the Music for
+ * Black Friday Special minutes (30 free minutes/day of Drive the Music for
  * signed-in drivers who do not already own the music). Keyed by account id
  * per Berlin day; old days are deleted.
  */

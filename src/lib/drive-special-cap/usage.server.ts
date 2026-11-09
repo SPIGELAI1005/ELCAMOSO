@@ -1,5 +1,5 @@
 /**
- * Server side of the Black Friday Special 15-minute cap: counts free seconds
+ * Server side of the Black Friday Special 30-minute cap: counts free seconds
  * per Berlin day per signed-in account id. Storage: the app's Postgres
  * (DATABASE_URL) when set, otherwise an in-memory map (local dev / tests).
  * Rows from earlier days are deleted on the next request.

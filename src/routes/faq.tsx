@@ -174,7 +174,7 @@ const FAQ_ENTRIES: FaqEntry[] = [
           page for current plans, free experiences, and availability.
         </p>
         <p className="mt-3">
-          Until Black Friday, signed-in drivers can use Drive the Music for 15 minutes a day
+          Until Black Friday, signed-in drivers can use Drive the Music for 30 minutes a day
           (Black Friday Special). Logged-out visitors keep the separate 7-minute guest trial.
         </p>
       </>

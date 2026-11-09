@@ -1,7 +1,7 @@
 /**
  * Black Friday Special: the Drive the Music genres listed inside the purple group.
  * Each genre plays through a music-package profile, so the special's Drive the Music
- * grant unlocks it for every signed-in account (15 min/day cap).
+ * grant unlocks it for every signed-in account (30 min/day cap).
  */
 import { GENRES, PUBLIC_GENRE_IDS, type GenreId } from "@/lib/symphony/adaptive/genres";
 

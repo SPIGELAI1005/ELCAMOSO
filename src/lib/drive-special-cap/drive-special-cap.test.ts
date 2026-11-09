@@ -25,8 +25,8 @@ const founder = {
   founderDrivePlusActive: true,
 };
 
-describe("server: 15-minute cap per account id", () => {
-  it("caps at 15:00 and keys by account, not IP", async () => {
+describe("server: 30-minute cap per account id", () => {
+  it("caps at 30:00 and keys by account, not IP", async () => {
     const store = createMemoryDriveSpecialStore();
     let t = IN;
     let r = await recordDriveSpecialHeartbeat({
@@ -36,17 +36,25 @@ describe("server: 15-minute cap per account id", () => {
       store,
     });
     expect(r).toMatchObject({ mode: "capped", remainingSeconds: DRIVE_SPECIAL_DAILY_SECONDS });
-    for (let i = 0; i < 30; i++) {
-      t += 30_000;
+    const beat = 30;
+    const beats = DRIVE_SPECIAL_DAILY_SECONDS / beat;
+    for (let i = 0; i < beats; i++) {
+      t += beat * 1000;
       r = await recordDriveSpecialHeartbeat({
         account: freeUser,
-        claimedSeconds: 30,
+        claimedSeconds: beat,
         now: t,
         store,
       });
     }
-    expect(r).toMatchObject({ mode: "capped", usedSeconds: 900, remainingSeconds: 0 });
-    expect(await store.get("acc-special", berlinDayKey(t))).toMatchObject({ usedSeconds: 900 });
+    expect(r).toMatchObject({
+      mode: "capped",
+      usedSeconds: DRIVE_SPECIAL_DAILY_SECONDS,
+      remainingSeconds: 0,
+    });
+    expect(await store.get("acc-special", berlinDayKey(t))).toMatchObject({
+      usedSeconds: DRIVE_SPECIAL_DAILY_SECONDS,
+    });
   });
 
   it("does not credit more than wall-clock time", () => {
@@ -71,7 +79,7 @@ describe("server: 15-minute cap per account id", () => {
     expect(after).toMatchObject({
       mode: "capped",
       usedSeconds: 0,
-      remainingSeconds: 900,
+      remainingSeconds: DRIVE_SPECIAL_DAILY_SECONDS,
       day: "2026-11-16",
     });
     expect(await store.get("acc-special", "2026-11-15")).toBeNull();
@@ -117,10 +125,10 @@ describe("server: 15-minute cap per account id", () => {
 describe("client: special cap access", () => {
   beforeEach(() => resetDriveSpecialCapForTests());
 
-  it("allows music profiles until 15 minutes are used", () => {
+  it("allows music profiles until 30 minutes are used", () => {
     const user = { accountId: "acc-special", plan: "FREE" as const };
     expect(driveSpecialCapAllows("fusion-road-anthem", user, IN)).toBe(true);
-    tickDriveSpecialCap("acc-special", 899, IN);
+    tickDriveSpecialCap("acc-special", DRIVE_SPECIAL_DAILY_SECONDS - 1, IN);
     expect(driveSpecialRemainingSeconds("acc-special", IN)).toBe(1);
     tickDriveSpecialCap("acc-special", 1, IN);
     expect(driveSpecialCapAllows("fusion-road-anthem", user, IN)).toBe(false);
@@ -141,7 +149,7 @@ describe("client: special cap access", () => {
   it("server count wins when stricter than the local counter", () => {
     tickDriveSpecialCap("acc-special", 10, IN);
     applyDriveSpecialServerUsage(
-      { mode: "capped", usedSeconds: 880, day: berlinDayKey(IN) },
+      { mode: "capped", usedSeconds: DRIVE_SPECIAL_DAILY_SECONDS - 20, day: berlinDayKey(IN) },
       10,
     );
     expect(driveSpecialRemainingSeconds("acc-special", IN)).toBe(20);
