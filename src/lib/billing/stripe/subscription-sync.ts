@@ -123,6 +123,12 @@ export async function syncStripeSubscriptionById(subscriptionId: string) {
 
 export async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) {
   if (session.mode === "payment") {
+    if (session.metadata?.["commercialPlanId"] === "founders_pack") {
+      const { handleFoundersPackCheckoutCompleted } = await import(
+        "@/lib/billing/stripe/founders-pack-sync"
+      );
+      return handleFoundersPackCheckoutCompleted(session);
+    }
     const { handleLifetimeCheckoutCompleted } = await import("@/lib/billing/stripe/lifetime-sync");
     return handleLifetimeCheckoutCompleted(session);
   }

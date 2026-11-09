@@ -1,11 +1,13 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { createSeoHeadFromPath } from "@/lib/seo";
 import { useEffect, useRef, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-
 import { PlansBillingIntervalToggle, PlansOverview } from "@/components/LandingPlansSection";
 import { usePlanPurchaseActions } from "@/components/pricing/plan-purchase-actions";
-import { getBillingPublicConfigFn } from "@/lib/billing/public-config-server-fn";
+import {
+  PURCHASES_CLOSED_COPY,
+  isPurchasesClosedNoticeVisible,
+  useBillingPublicConfig,
+} from "@/lib/billing/use-billing-public-config";
 import type { BillingDisplayInterval } from "@/lib/billing/plan-display";
 import { useEntitlements } from "@/lib/entitlements/useEntitlements";
 import { trackMonetizationEvent } from "@/lib/telemetry/monetization-analytics";
@@ -106,12 +108,8 @@ function Pricing() {
   const { plan: highlightPlan, sound: highlightSound } = Route.useSearch();
   const [interval, setInterval] = useState<BillingDisplayInterval>("monthly");
   const purchaseActions = usePlanPurchaseActions(interval, "pricing");
-  const billingQuery = useQuery({
-    queryKey: ["billing-public-config"],
-    queryFn: () => getBillingPublicConfigFn(),
-    staleTime: 60_000,
-  });
-  const monetizationEnabled = billingQuery.data?.monetizationEnabled ?? false;
+  const billingQuery = useBillingPublicConfig();
+  const purchasesClosed = isPurchasesClosedNoticeVisible(billingQuery);
   const billingAvailable = billingQuery.data?.available ?? false;
   const lifetimeAvailable = billingQuery.data?.lifetimeAvailable ?? false;
   const hasDrivePlus = plan !== "FREE";
@@ -126,7 +124,7 @@ function Pricing() {
     });
   }, [hasDrivePlus]);
 
-  if (!monetizationEnabled) {
+  if (purchasesClosed) {
     return (
       <main className="min-h-screen">
         <EarlyAccessBanner />
@@ -150,9 +148,8 @@ function Pricing() {
           </h1>
           <p className="mt-6 max-w-md text-sm leading-relaxed text-muted-foreground">
             Start with essential motion sound — free during early access.{" "}
-            <span className="font-medium text-red-500">
-              Purchases (Drive+, Drive the Music, Drive Unlimited, Lifetime and individual sounds)
-              are not open yet.
+            <span className="font-medium text-red-500" data-testid="pricing-purchases-note">
+              {PURCHASES_CLOSED_COPY}
             </span>
           </p>
         </section>

@@ -3,6 +3,7 @@ import { COMMERCIAL_PLANS } from "@/lib/billing/stripe/plans";
 import type { Plan } from "@/lib/entitlements/types";
 import { isBillingAvailable } from "@/lib/billing/billing-available";
 import {
+  isFoundersPackPriceConfigured,
   isLifetimePriceConfigured,
   isMusicPriceConfigured,
   isUnlimitedPriceConfigured,
@@ -51,6 +52,11 @@ export interface BillingPublicConfig {
   unlimitedMonthlyAvailable: boolean;
   /** True when the yearly Drive Unlimited price is set, even if monthly is not. */
   unlimitedYearlyAvailable: boolean;
+  /**
+   * Founders Pack checkout is available only when STRIPE_PRICE_FOUNDERS_PACK is set.
+   * The app does not store a euro amount; the Stripe Price is the source of truth.
+   */
+  foundersPackAvailable: boolean;
   /** Which Stripe settings the server can see. Values are booleans, never secrets. */
   checkoutRequirements: {
     secretKey: boolean;
@@ -79,6 +85,9 @@ function displayPriceForPlan(id: CommercialPlanId): string {
       return getDriveUnlimitedYearlyDisplay().amount;
     case "drive_plus_lifetime":
       return getDrivePlusLifetimeDisplay().amount;
+    case "founders_pack":
+      // No invented amount — Stripe Price (when configured) is the source of truth.
+      return "";
   }
 }
 
@@ -97,10 +106,11 @@ export function getBillingPublicConfig(): BillingPublicConfig {
     unlimitedAvailable: billing && isUnlimitedPriceConfigured(),
     unlimitedMonthlyAvailable: billing && Boolean(prices.drive_unlimited_monthly),
     unlimitedYearlyAvailable: billing && Boolean(prices.drive_unlimited_yearly),
+    foundersPackAvailable: billing && isFoundersPackPriceConfigured(),
     checkoutRequirements: stripeCheckoutRequirements(),
     freePrice: formatEuroAmount(0),
     yearlyEquivalentMonthly: yearly.equivalentMonthly ?? "",
-    plans: COMMERCIAL_PLANS.map((plan) => ({
+    plans: COMMERCIAL_PLANS.filter((plan) => plan.id !== "founders_pack").map((plan) => ({
       id: plan.id,
       label: plan.label,
       interval: plan.interval,

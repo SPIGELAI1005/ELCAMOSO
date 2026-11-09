@@ -27,7 +27,7 @@ export const LEGAL_OPERATOR: LegalOperator = {
   country: "Germany",
   email: "support@elcamoso.com",
   website: "https://elcamoso.com",
-  lastUpdated: "2026-08-21",
+  lastUpdated: "2026-11-09",
 };
 
 export function operatorAddressLines(): string[] {

@@ -173,6 +173,10 @@ const FAQ_ENTRIES: FaqEntry[] = [
           </Link>{" "}
           page for current plans, free experiences, and availability.
         </p>
+        <p className="mt-3">
+          Until Black Friday, signed-in drivers can use Drive the Music for 30 minutes a day
+          (Black Friday Special). Logged-out visitors keep the separate 7-minute guest trial.
+        </p>
       </>
     ),
   },
@@ -203,6 +207,24 @@ const FAQ_ENTRIES: FaqEntry[] = [
             Pricing
           </Link>{" "}
           page.
+        </p>
+      </>
+    ),
+  },
+  {
+    id: "founders-pack",
+    question: "What is the Founders Pack?",
+    answer: (
+      <>
+        <p>
+          The Founders Pack is a limited offer (458 seats) until Black Friday, 27.11.2026 23:59
+          Berlin. Founders keep selected sounds free forever and can join the Founders Test Crew.
+        </p>
+        <p className="mt-3">
+          Buying the Founders Pack gives{" "}
+          <strong className="font-medium text-foreground">Drive Unlimited for 4 months</strong>{" "}
+          from the purchase date. Founders who claimed a seat before this change keep their
+          existing access until 27.05.2027.
         </p>
       </>
     ),

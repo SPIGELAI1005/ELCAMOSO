@@ -9,7 +9,9 @@ export type CommercialPlanId =
   | "drive_music_yearly"
   | "drive_unlimited_monthly"
   | "drive_unlimited_yearly"
-  | "drive_plus_lifetime";
+  | "drive_plus_lifetime"
+  /** One-time Founders Pack. Price id from STRIPE_PRICE_FOUNDERS_PACK only — no invented amount. */
+  | "founders_pack";
 
 /** Stripe Checkout mode for a commercial plan. */
 export type CommercialPlanMode = "subscription" | "payment";
@@ -22,6 +24,7 @@ export const COMMERCIAL_PLAN_IDS: readonly CommercialPlanId[] = [
   "drive_unlimited_monthly",
   "drive_unlimited_yearly",
   "drive_plus_lifetime",
+  "founders_pack",
 ] as const;
 
 export interface CommercialPlan {
@@ -86,6 +89,13 @@ export const COMMERCIAL_PLANS: readonly CommercialPlan[] = [
     mode: "payment",
     label: "Lifetime (Drive+ & Drive the Music)",
   },
+  {
+    id: "founders_pack",
+    plan: "DRIVE_COMPLETE",
+    interval: null,
+    mode: "payment",
+    label: "Founders Pack",
+  },
 ] as const;
 
 const COMMERCIAL_PLAN_MAP = new Map<CommercialPlanId, CommercialPlan>(
@@ -121,5 +131,7 @@ export function stripePriceEnvKeyForPlan(id: CommercialPlanId): string {
       return "STRIPE_PRICE_DRIVE_UNLIMITED_YEARLY";
     case "drive_plus_lifetime":
       return "STRIPE_PRICE_DRIVE_PLUS_LIFETIME";
+    case "founders_pack":
+      return "STRIPE_PRICE_FOUNDERS_PACK";
   }
 }

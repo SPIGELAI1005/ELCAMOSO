@@ -7,8 +7,10 @@ import {
   type PlanPurchaseActions,
 } from "@/components/pricing/plan-purchase-actions";
 import {
+  PURCHASES_CLOSED_COPY,
   useBillingPublicConfig,
   useMonetizationEnabled,
+  usePurchasesClosedNotice,
 } from "@/lib/billing/use-billing-public-config";
 import type { LifetimeSeatStatus } from "@/lib/billing/lifetime-seats";
 import type { Locale } from "@/lib/i18n";
@@ -362,6 +364,7 @@ export function PlansOverview({
 
 export function LandingPlansSection() {
   const monetizationEnabled = useMonetizationEnabled();
+  const purchasesClosed = usePurchasesClosedNotice();
   const [interval, setInterval] = useState<BillingDisplayInterval>("monthly");
   const purchaseActions = usePlanPurchaseActions(interval, "home", "/");
 
@@ -371,10 +374,9 @@ export function LandingPlansSection() {
         <h2 className="text-3xl font-light">Plans</h2>
         <PlansBillingIntervalToggle value={interval} onChange={setInterval} />
       </div>
-      {!monetizationEnabled ? (
+      {purchasesClosed ? (
         <p className="mt-4 text-sm font-medium text-red-500" data-testid="home-purchases-note">
-          Purchases (Drive+, Drive the Music, Drive Unlimited, Lifetime and individual sounds) are
-          not open yet.
+          {PURCHASES_CLOSED_COPY}
         </p>
       ) : null}
       <div className="mt-10">

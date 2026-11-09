@@ -274,9 +274,14 @@ export async function grantSmileDrivePlus(
   let base = now;
   for (const g of existing) if (g.expiresAt) base = Math.max(base, g.expiresAt.getTime());
   try {
-    const { loadFounderRecord } = await import("@/lib/founders/founders.server");
-    const { FOUNDER_DRIVE_PLUS_UNTIL_MS } = await import("@/lib/founders/founders");
-    if ((await loadFounderRecord(userId)).founderAt != null) base = Math.max(base, FOUNDER_DRIVE_PLUS_UNTIL_MS);
+    const { loadFounderRecord, foundersPackPurchasedAt } = await import("@/lib/founders/founders.server");
+    const { founderDriveUnlimitedUntilMs } = await import("@/lib/founders/founders");
+    const rec = await loadFounderRecord(userId);
+    const until = founderDriveUnlimitedUntilMs({
+      founderAt: rec.founderAt,
+      purchasedAt: foundersPackPurchasedAt(userId),
+    });
+    if (until != null) base = Math.max(base, until);
   } catch {
     /* founders store unavailable: stack onto grants only */
   }

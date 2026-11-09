@@ -7,6 +7,7 @@ import { isBillingAvailable } from "@/lib/billing/billing-available";
 import { ensureStripeCustomer } from "@/lib/billing/stripe/customer";
 import { getStripeClient } from "@/lib/billing/stripe/client";
 import {
+  isFoundersPackPriceConfigured,
   isStripeConfigured,
   readStripeConfig,
   resolveStripePriceId,
@@ -73,10 +74,18 @@ export async function beginDrivePlusCheckout(
   const repository = getUserBillingRepository();
   const existingCustomerId = await repository.getStripeCustomerId(input.userId);
 
-  const isLifetime = described.mode === "payment";
+  const isLifetime = described.commercialPlanId === "drive_plus_lifetime";
+  const isFoundersPack = described.commercialPlanId === "founders_pack";
+  const isOneTimePayment = isLifetime || isFoundersPack;
   const ownsLifetime = hasActiveLifetimeGrant(input.userId);
 
   // Lifetime is limited to LIFETIME_SEAT_LIMIT seats: block new Lifetime checkouts when sold out.
+  if (isFoundersPack && !isFoundersPackPriceConfigured()) {
+    throw new Error(
+      "Founders Pack checkout is not connected yet. Set STRIPE_PRICE_FOUNDERS_PACK after creating the Stripe Price (no amount is stored in the app).",
+    );
+  }
+
   if (isLifetime && !ownsLifetime) {
     const { getLifetimeSeatStatus } = await import("@/lib/billing/lifetime-seats.server");
     if ((await getLifetimeSeatStatus()).soldOut) {
@@ -87,7 +96,7 @@ export async function beginDrivePlusCheckout(
     !ownsLifetime &&
     (await userHasActiveDrivePlusSubscription(input.userId, existingCustomerId));
 
-  if (ownsLifetime || (!isLifetime && hasActiveSubscription)) {
+  if (!isFoundersPack && (ownsLifetime || (!isLifetime && hasActiveSubscription))) {
     const stripeCustomerId =
       existingCustomerId ??
       (await ensureStripeCustomer({ userId: input.userId, email: input.email }));
@@ -128,13 +137,13 @@ export async function beginDrivePlusCheckout(
     interval: input.request.interval,
     commercialPlanId: described.commercialPlanId,
     elcamosoPlan: described.entitlementPlan,
-    billingInterval: described.billingInterval ?? "lifetime",
+    billingInterval: described.billingInterval ?? (isFoundersPack ? "once" : "lifetime"),
   };
   if (source) metadata["source"] = source;
   if (isLifetime && hasActiveSubscription) metadata["hadActiveSubscription"] = "true";
   if (input.request.upgradeToken) metadata["upgradeToken"] = input.request.upgradeToken;
 
-  if (isLifetime) {
+  if (isOneTimePayment) {
     const params = buildLifetimeCheckoutParams({
       priceId,
       stripeCustomerId,
@@ -153,7 +162,7 @@ export async function beginDrivePlusCheckout(
       action: "checkout",
       url: session.url,
       sessionId: session.id,
-      ...(hasActiveSubscription
+      ...(isLifetime && hasActiveSubscription
         ? {
             note: "You still have an active subscription. After buying Lifetime, cancel it in Manage plan so you are not charged again.",
           }

@@ -16,6 +16,12 @@ import { lockedProfilePreviewSeconds } from "@/lib/sound/profile-access";
 import { useSessionSelector } from "@/lib/store/session-store";
 import { useSyncExternalStore } from "react";
 import {
+  driveSpecialCapAllows,
+  driveSpecialCapGoverns,
+  getDriveSpecialCapState,
+  subscribeDriveSpecialCap,
+} from "@/lib/drive-special-cap/client-store";
+import {
   getGuestTrialState,
   guestTrialAllows,
   guestTrialGoverns,
@@ -66,11 +72,30 @@ export function useFeatureAccess() {
     () => 0,
   );
   void guestTrialVersion;
-  const canDriveWithProfile = (profileId: string) =>
-    guestTrialGoverns(profileId, signedIn)
-      ? guestTrialAllows(profileId, signedIn)
-      : canDriveWithoutGuestTrial(profileId);
+  const capUser = {
+    accountId: user?.accountId ?? null,
+    plan: snapshot.plan,
+    founderDrivePlusActive: Boolean(snapshot.founder?.drivePlusActive),
+    grantedEntitlements: user?.grantedEntitlements,
+    trialActive: snapshot.trialActive,
+    trialEntitlements: user?.trialEntitlements,
+    grantedProfileIds: grantedProfileIds,
+  };
+  const specialCapVersion = useSyncExternalStore(
+    subscribeDriveSpecialCap,
+    () => getDriveSpecialCapState(user?.accountId ?? "").version,
+    () => 0,
+  );
+  void specialCapVersion;
+  const canDriveWithProfile = (profileId: string) => {
+    if (guestTrialGoverns(profileId, signedIn)) return guestTrialAllows(profileId, signedIn);
+    if (snapshot.driveSpecialCapApplies && driveSpecialCapGoverns(profileId, capUser))
+      return driveSpecialCapAllows(profileId, capUser);
+    return canDriveWithoutGuestTrial(profileId);
+  };
   const isGuestTrialGoverned = (profileId: string) => guestTrialGoverns(profileId, signedIn);
+  const isDriveSpecialCapGoverned = (profileId: string) =>
+    Boolean(snapshot.driveSpecialCapApplies) && driveSpecialCapGoverns(profileId, capUser);
 
   const canPreviewProfile = (profileId: string) => isSoundProfilePreviewAllowed(profileId);
 
@@ -110,6 +135,7 @@ export function useFeatureAccess() {
     canDriveWithoutGuestTrial,
     isSignedIn: signedIn,
     isGuestTrialGoverned,
+    isDriveSpecialCapGoverned,
     canPreviewProfile,
     previewDurationForProfile,
     /** @deprecated Prefer canDriveWithProfile - preview vs drive semantics differ. */

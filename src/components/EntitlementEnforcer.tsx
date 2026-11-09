@@ -36,12 +36,14 @@ export function EntitlementEnforcer() {
 
   useEffect(() => {
     const leaseAction = resolveOfflineLeaseExpiryAction(Date.now(), settings.accountUserId);
-    // Guest trial sounds that ran out are handled by GuestTrialBridge (fade out +
-    // time-up notice); never crossfade them to V10, which is itself a trial sound.
+    // Guest trial / Black Friday Special sounds that ran out are handled by their
+    // bridges (fade out + time-up notice); never crossfade them to V10.
     const guestTrialOwned = access.isGuestTrialGoverned(settings.profileId);
+    const specialCapOwned = access.isDriveSpecialCapGoverned(settings.profileId);
     const mustFadeToFree =
       isLiveDrive &&
       !guestTrialOwned &&
+      !specialCapOwned &&
       (!access.canDriveWithProfile(settings.profileId) ||
         (leaseAction.expired && OFFLINE_LEASE_EXPIRY_POLICY === "fade_to_free"));
 
@@ -74,6 +76,7 @@ export function EntitlementEnforcer() {
     if (
       !isLiveDrive &&
       !guestTrialOwned &&
+      !specialCapOwned &&
       !access.canDriveWithProfile(settings.profileId) &&
       settings.profileId !== FALLBACK_SOUND_PROFILE_ID
     ) {
@@ -97,6 +100,7 @@ export function EntitlementEnforcer() {
     access.revMatch,
     access.canDriveWithProfile,
     access.isGuestTrialGoverned,
+    access.isDriveSpecialCapGoverned,
     isLiveDrive,
     settings.dynamicDrive,
     settings.latencyCompMs,

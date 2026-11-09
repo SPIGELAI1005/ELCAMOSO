@@ -69,10 +69,18 @@ async function handleStripeEvent(event: Stripe.Event): Promise<boolean> {
       await syncStripeSubscriptionRecord(event.data.object as Stripe.Subscription);
       return true;
     case "checkout.session.async_payment_succeeded": {
+      const session = event.data.object as Stripe.Checkout.Session;
+      if (session.metadata?.["commercialPlanId"] === "founders_pack") {
+        const { handleFoundersPackCheckoutCompleted } = await import(
+          "@/lib/billing/stripe/founders-pack-sync"
+        );
+        await handleFoundersPackCheckoutCompleted(session);
+        return true;
+      }
       const { handleLifetimeCheckoutCompleted } = await import(
         "@/lib/billing/stripe/lifetime-sync"
       );
-      await handleLifetimeCheckoutCompleted(event.data.object as Stripe.Checkout.Session);
+      await handleLifetimeCheckoutCompleted(session);
       return true;
     }
     case "charge.refunded": {

@@ -22,8 +22,10 @@ import { useFeatureAccess } from "@/lib/entitlements/selectors";
 import { useAccount } from "@/lib/account/AccountProvider";
 import { isMusicPackageProfileId } from "@/lib/entitlements/plans";
 import {
+  DRIVE_SPECIAL_BADGE,
   DRIVE_SPECIAL_NAME,
   DRIVE_SPECIAL_PURPLE,
+  driveSpecialSoundsHint,
   isDriveSpecialActive,
 } from "@/lib/billing/drive-special";
 import { GENRE_ITEM_PREFIX, driveSpecialGenreItem } from "@/lib/billing/drive-special-genres";
@@ -75,7 +77,7 @@ function Sounds() {
   // Free users: everything they can drive first ("Free"), Drive+ sounds below with a lock.
   const canDrive = access.canDriveWithProfile;
   const sections = useMemo(() => {
-    // 7 Days Drive Special: music sounds on top, next to the named engine sounds.
+    // Black Friday Special: music sounds on top, next to the named engine sounds.
     // Genres without their own profile show as purple pills (see specialGenres).
     const special: SoundProfile[] = specialActive
       ? driveSpecialPinned(profiles).pinned.filter((p) => !p.id.startsWith(GENRE_ITEM_PREFIX))
@@ -289,11 +291,10 @@ function Sounds() {
                   style={{ color: DRIVE_SPECIAL_PURPLE }}
                 >
                   {isAuthenticated ? (
-                    "Drive the Music is free for you until 09.11."
+                    driveSpecialSoundsHint(settings.language, true)
                   ) : (
                     <a href="/auth/account/google/start" className="underline">
-                      {t(settings.language, "sounds.loginToUnlock")}: Drive the Music free until
-                      09.11.
+                      {driveSpecialSoundsHint(settings.language, false)}
                     </a>
                   )}
                 </p>
@@ -334,7 +335,7 @@ function Sounds() {
                             className="rounded-full px-1.5 py-0.5 text-[8px] font-semibold tracking-[0.12em] text-white"
                             style={{ background: DRIVE_SPECIAL_PURPLE }}
                           >
-                            7 Days
+                            {DRIVE_SPECIAL_BADGE}
                           </span>
                         )}
                       </button>

@@ -4,6 +4,7 @@ import { AccountSignInDialog } from "@/components/AccountSignInDialog";
 import { DrivePlusCheckoutButton } from "@/components/DrivePlusCheckoutButton";
 import { useAccount } from "@/lib/account/AccountProvider";
 import { SOUND_PACKAGE_LABEL, type SoundPackage } from "@/lib/drive/sound-share";
+import { useBillingPublicConfig } from "@/lib/billing/use-billing-public-config";
 import { getProfile } from "@/lib/sound/profiles";
 
 const BTN =
@@ -22,6 +23,7 @@ export function SoundPackageCallout({
   lifetimeAvailable: boolean;
 }) {
   const { isAuthenticated, isLoading } = useAccount();
+  const billingQuery = useBillingPublicConfig();
   const [signIn, setSignIn] = useState(false);
   const label = SOUND_PACKAGE_LABEL[plan];
   const soundName = sound ? getProfile(sound).name : null;
@@ -92,9 +94,11 @@ export function SoundPackageCallout({
                   Sign in or create account
                 </button>
               ) : null}
-              <p className="w-full text-sm text-muted-foreground">
-                {label} is not available for purchase yet.
-              </p>
+              {billingQuery.isSuccess ? (
+                <p className="w-full text-sm text-muted-foreground">
+                  {label} is not available for purchase yet.
+                </p>
+              ) : null}
             </>
           )}
         </div>

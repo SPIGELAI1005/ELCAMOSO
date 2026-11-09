@@ -26,6 +26,7 @@ import { useSessionSelector } from "@/lib/store/session-store";
 import { cn } from "@/lib/utils";
 import { HALLOWEEN_ORANGE, HALLOWEEN_TAG, halloweenPinned } from "@/lib/halloween/halloween";
 import {
+  DRIVE_SPECIAL_BADGE,
   DRIVE_SPECIAL_NAME,
   DRIVE_SPECIAL_PURPLE,
   isDriveSpecialActive,
@@ -49,7 +50,7 @@ type MenuGroup = {
 };
 
 /**
- * 7 Days Drive Special (until 9.11.): music + the named engine sounds pinned first.
+ * Black Friday Special: music + the named engine sounds pinned first.
  * Halloween profiles pinned next (only inside the window), then the normal categories.
  */
 export function profilesByCategory(now?: number): MenuGroup[] {
@@ -314,7 +315,7 @@ export function HeaderSoundsMenu({
                     className="shrink-0 rounded-full px-1.5 py-0.5 text-[8px] font-semibold tracking-[0.12em] text-white uppercase"
                     style={{ background: DRIVE_SPECIAL_PURPLE }}
                   >
-                    7 Days
+                    {DRIVE_SPECIAL_BADGE}
                   </span>
                 ) : null}
                 {locked ? (

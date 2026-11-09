@@ -44,9 +44,17 @@ export function LegalPage({ title, subtitle, children }: LegalPageProps) {
   );
 }
 
-export function LegalSection({ title, children }: { title: string; children: ReactNode }) {
+export function LegalSection({
+  title,
+  children,
+  id,
+}: {
+  title: string;
+  children: ReactNode;
+  id?: string;
+}) {
   return (
-    <section>
+    <section id={id} className={id ? "scroll-mt-24" : undefined}>
       <h2 className="text-base font-light text-foreground">{title}</h2>
       <div className="mt-3 space-y-3">{children}</div>
     </section>

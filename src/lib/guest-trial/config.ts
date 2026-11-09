@@ -1,15 +1,14 @@
 /**
  * Guest trial (George, 4 Nov 2026): visitors who are NOT signed in may drive a
- * small set of sounds for 7 minutes per day, from the end of the 7 Days Drive
- * Special for 30 days. Logged-in users are never affected.
+ * small set of sounds for 7 minutes per day, from 9 Nov 2026 for 30 days.
+ * Logged-in users are never affected. Independent of the Black Friday Special.
  *
  * Client-safe: pure config + date math, shared by the API route and the client.
  * To extend the window, change GUEST_TRIAL_DAYS (or set GUEST_TRIAL_END_ISO).
  */
-import { DRIVE_SPECIAL_END_ISO } from "@/lib/billing/drive-special";
 
-/** Starts exactly when the 7 Days Drive Special ends (9 Nov 2026 00:00 Berlin). */
-export const GUEST_TRIAL_START_ISO = DRIVE_SPECIAL_END_ISO;
+/** Starts when the ended 7 Days Drive Special closed (9 Nov 2026 00:00 Berlin). */
+export const GUEST_TRIAL_START_ISO = "2026-11-09T00:00:00+01:00";
 export const GUEST_TRIAL_DAYS = 30;
 /** Exclusive end: 9 Dec 2026 00:00 Berlin (CET, UTC+1). */
 export const GUEST_TRIAL_END_ISO = "2026-12-09T00:00:00+01:00";

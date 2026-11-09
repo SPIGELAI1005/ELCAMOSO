@@ -1,3 +1,4 @@
+import { driveSpecialCapApplies } from "@/lib/billing/drive-special";
 import {
   resolveEffectiveEntitlements,
   type AccessResolverInput,
@@ -53,6 +54,17 @@ export function buildEntitlementSnapshot(
     grantedProfileIds: [...(user.grantedProfileIds ?? [])].sort(),
     offlineLeaseExpiresAt,
     founder: user.founder ?? null,
+    driveSpecialCapApplies: driveSpecialCapApplies(
+      {
+        accountId: user.accountId,
+        plan: user.plan,
+        founderDrivePlusActive: Boolean(user.founder?.drivePlusActive),
+        grantedEntitlements: user.grantedEntitlements,
+        trialActive,
+        trialEntitlements: user.trialEntitlements,
+      },
+      now,
+    ),
   };
 }
 

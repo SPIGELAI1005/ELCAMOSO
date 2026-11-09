@@ -364,7 +364,7 @@ export function resolveEffectiveEntitlements(input: AccessResolverInput): Readon
     for (const e of input.leaseEntitlements ?? []) granted.add(e);
   }
 
-  // 7 Days Drive Special: Drive the Music for signed-in accounts until 9.11.
+  // Black Friday Special: Drive the Music for signed-in accounts (30 min/day cap is overlayed client/server).
   if (driveSpecialAppliesTo(input.user.accountId, now)) {
     for (const e of DRIVE_SPECIAL_ENTITLEMENTS) granted.add(e);
   }

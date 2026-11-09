@@ -35,6 +35,11 @@ export interface StripePriceConfig {
   drive_unlimited_yearly: string;
   /** Optional one-time price; lifetime checkout is unavailable when empty. */
   drive_plus_lifetime: string;
+  /**
+   * Founders Pack one-time Price id. PLACEHOLDER: unset until the owner creates the
+   * Stripe product. Do not invent a euro amount in code.
+   */
+  founders_pack: string;
 }
 
 export interface StripeConfig {
@@ -72,6 +77,7 @@ export function readStripeConfig(deploy = resolveDeployEnv()): StripeConfig {
     drive_unlimited_monthly: readPriceEnv("drive_unlimited_monthly", deploy),
     drive_unlimited_yearly: readPriceEnv("drive_unlimited_yearly", deploy),
     drive_plus_lifetime: readPriceEnv("drive_plus_lifetime", deploy),
+    founders_pack: readPriceEnv("founders_pack", deploy),
   };
 
   const configured = Boolean(
@@ -112,6 +118,11 @@ export function isMusicPriceConfigured(config: StripeConfig = readStripeConfig()
 /** Whether Drive Unlimited monthly and yearly prices are configured. */
 export function isUnlimitedPriceConfigured(config: StripeConfig = readStripeConfig()): boolean {
   return Boolean(config.prices.drive_unlimited_monthly && config.prices.drive_unlimited_yearly);
+}
+
+/** Whether the Founders Pack one-time Price id is set (no amount is stored in code). */
+export function isFoundersPackPriceConfigured(config: StripeConfig = readStripeConfig()): boolean {
+  return Boolean(config.prices.founders_pack);
 }
 
 /** Whether checkout and webhooks can run in the current environment. */

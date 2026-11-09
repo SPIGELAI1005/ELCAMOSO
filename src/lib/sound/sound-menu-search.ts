@@ -1,5 +1,5 @@
 /**
- * Sounds dropdown: live search + "7 Days Drive Special" pinning (George, 3 Nov 2026).
+ * Sounds dropdown: live search + Black Friday Special pinning.
  * Pure helpers, no React, so they are unit-tested.
  */
 import { isMusicPackageProfileId } from "@/lib/entitlements/plans";
