@@ -3,7 +3,6 @@ import { COMMERCIAL_PLANS } from "@/lib/billing/stripe/plans";
 import type { Plan } from "@/lib/entitlements/types";
 import { isBillingAvailable } from "@/lib/billing/billing-available";
 import {
-  isFoundersPackPriceConfigured,
   isLifetimePriceConfigured,
   isMusicPriceConfigured,
   isUnlimitedPriceConfigured,
@@ -11,6 +10,7 @@ import {
   stripeCheckoutRequirements,
 } from "@/lib/billing/stripe/config";
 import { isMonetizationEnabled } from "@/lib/billing/monetization-flag";
+import { isFoundersPackPurchaseOpen } from "@/lib/founders/founders";
 import {
   getDriveMusicDisplay,
   getDriveMusicYearlyDisplay,
@@ -53,8 +53,8 @@ export interface BillingPublicConfig {
   /** True when the yearly Drive Unlimited price is set, even if monthly is not. */
   unlimitedYearlyAvailable: boolean;
   /**
-   * Founders Pack checkout is available only when STRIPE_PRICE_FOUNDERS_PACK is set.
-   * The app does not store a euro amount; the Stripe Price is the source of truth.
+   * Founders Pack is yearly Drive+ or yearly Drive the Music until 27 Nov 2026.
+   * True when billing is on, the purchase window is open, and a yearly price id is set.
    */
   foundersPackAvailable: boolean;
   /** Which Stripe settings the server can see. Values are booleans, never secrets. */
@@ -106,7 +106,10 @@ export function getBillingPublicConfig(): BillingPublicConfig {
     unlimitedAvailable: billing && isUnlimitedPriceConfigured(),
     unlimitedMonthlyAvailable: billing && Boolean(prices.drive_unlimited_monthly),
     unlimitedYearlyAvailable: billing && Boolean(prices.drive_unlimited_yearly),
-    foundersPackAvailable: billing && isFoundersPackPriceConfigured(),
+    foundersPackAvailable:
+      billing &&
+      isFoundersPackPurchaseOpen() &&
+      (Boolean(prices.drive_plus_yearly) || Boolean(prices.drive_music_yearly)),
     checkoutRequirements: stripeCheckoutRequirements(),
     freePrice: formatEuroAmount(0),
     yearlyEquivalentMonthly: yearly.equivalentMonthly ?? "",

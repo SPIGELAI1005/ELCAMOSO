@@ -27,7 +27,12 @@ export const billingStatusEnum = pgEnum("billing_status", [
 
 export const subscriptionProviderEnum = pgEnum("subscription_provider", ["stripe"]);
 
-export const billingPlanEnum = pgEnum("billing_plan", ["FREE", "DRIVE_PLUS", "DRIVE_MUSIC", "DRIVE_COMPLETE"]);
+export const billingPlanEnum = pgEnum("billing_plan", [
+  "FREE",
+  "DRIVE_PLUS",
+  "DRIVE_MUSIC",
+  "DRIVE_COMPLETE",
+]);
 
 export const billingIntervalEnum = pgEnum("billing_interval", ["month", "year"]);
 
@@ -40,7 +45,7 @@ export const users = pgTable(
     email: text("email"),
     stripeCustomerId: text("stripe_customer_id"),
     role: userRoleEnum("role").notNull().default("user"),
-    /** Founders Pack: verified sign-in on/before 27.11.2026 23:59:59 Berlin (Black Friday). Null = not a Founder. */
+    /** Founder seat: free claims on/before 09.11.2026 23:59 Berlin; yearly Drive+/Music purchase until 27.11.2026 23:59:59 Berlin. Null = not a Founder. */
     founderAt: timestamp("founder_at", { withTimezone: true, mode: "date" }),
     /** 1-based Founder seat number (unique; capped by FOUNDER_SEAT_LIMIT). */
     founderSeat: integer("founder_seat"),
@@ -536,7 +541,9 @@ export const guestTrialUsage = pgTable(
     ipHash: text("ip_hash").notNull(),
     day: text("day").notNull(),
     usedSeconds: integer("used_seconds").notNull().default(0),
-    lastSeenAt: timestamp("last_seen_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+    lastSeenAt: timestamp("last_seen_at", { withTimezone: true, mode: "date" })
+      .notNull()
+      .defaultNow(),
   },
   (table) => [uniqueIndex("guest_trial_usage_hash_day_unique").on(table.ipHash, table.day)],
 );
@@ -552,7 +559,24 @@ export const driveSpecialUsage = pgTable(
     accountId: text("account_id").notNull(),
     day: text("day").notNull(),
     usedSeconds: integer("used_seconds").notNull().default(0),
-    lastSeenAt: timestamp("last_seen_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+    lastSeenAt: timestamp("last_seen_at", { withTimezone: true, mode: "date" })
+      .notNull()
+      .defaultNow(),
   },
   (table) => [uniqueIndex("drive_special_usage_account_day_unique").on(table.accountId, table.day)],
+);
+
+/**
+ * Founders Pack forever-sound picks (4 catalog sounds). Confirmed picks stay
+ * unless the sound is removed or becomes free for everyone.
+ */
+export const founderSoundPicks = pgTable(
+  "founder_sound_picks",
+  {
+    accountId: text("account_id").notNull(),
+    soundId: text("sound_id").notNull(),
+    pickedAt: timestamp("picked_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+    confirmedAt: timestamp("confirmed_at", { withTimezone: true, mode: "date" }),
+  },
+  (table) => [primaryKey({ columns: [table.accountId, table.soundId] })],
 );

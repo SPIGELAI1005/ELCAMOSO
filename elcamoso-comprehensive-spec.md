@@ -504,6 +504,7 @@ Primary navigation is minimal. Main routes:
 | `/debug/calibration` (dev-only)     | Road-test calibration lab: capture/replay traces, Current vs V2, Dynamic vs Legacy                        |
 
 **Header menu hierarchy (desktop dropdowns + mobile hamburger accordion):**
+
 - **Explore** → Explore, Demo
 - **Sounds** → Sounds, Studio, Garage
 - **About** → Story, Science
@@ -691,9 +692,9 @@ When editing this codebase, remember:
 
 ### Promotions (current)
 
-- **Black Friday Special** (`src/lib/billing/drive-special.ts`): 9 Nov 2026 00:00 to exclusive end 28 Nov 2026 00:00 Europe/Berlin. Signed-in drivers get Drive the Music (`DRIVE_MUSIC_PACKAGE_ENTITLEMENTS`) for 30 minutes per Berlin day. Drive+ is not included. Purchasers and Founders who already own the music are not capped. The purple banner is a short teaser only; full terms are on `/legal/terms#black-friday-special`. Logged-out visitors keep the separate 7-minute guest trial (`src/lib/guest-trial`). Independent of the Black Friday Drive the Music 4-month checkout trial (`src/lib/billing/black-friday.ts`).
-- **Founders Pack:** 458 seats until Black Friday 27.11.2026 23:59:59 Berlin. Founders claimed before `FOUNDER_PAID_UNLIMITED_CUTOVER` (2026-11-09T13:00:00+01:00) keep Drive Unlimited (`DRIVE_COMPLETE`) until 27.05.2027. New Founders get Drive Unlimited for 4 months only after a paid Founders Pack purchase (`STRIPE_PRICE_FOUNDERS_PACK` placeholder until the Stripe Price exists).
+- **Black Friday Special** (`src/lib/billing/drive-special.ts`): 9 Nov 2026 00:00 to exclusive end 28 Nov 2026 00:00 Europe/Berlin (27 Nov 2026 23:59). Landing Start Drive opens Midnight Dark Rave (`fusion-midnight-boost` / menu `genre:darkrave`): 15 min/day Berlin without an account (localStorage), unlimited when signed in until the window ends, then Start Drive falls back to Racing V10. Midnight Dark Rave does not count against the 30-minute Drive the Music cap. Other Drive the Music sounds: signed-in drivers get `DRIVE_MUSIC_PACKAGE_ENTITLEMENTS` for 30 minutes per Berlin day (login required). Drive+ is not included. Purchasers and Founders who already own the music are not capped. Purple banner teaser + Log In (signed-out) or See the sounds (signed-in); full terms on `/legal/terms#black-friday-special`. Logged-out visitors also keep the separate 7-minute guest trial (`src/lib/guest-trial`), except Midnight Dark Rave uses the 15-minute rule during the window. Independent of the Black Friday Drive the Music 4-month checkout trial (`src/lib/billing/black-friday.ts`).
+- **Founders Pack:** 458 seats. Free Founder seats close at `FOUNDER_PAID_UNLIMITED_CUTOVER` (2026-11-09T23:59:59+01:00); those Founders keep Racing V10, American Muscle V8 and GT V8 forever and Drive Unlimited until 27.05.2027. **Purchase** through 27.11.2026 23:59:59 Berlin is a yearly Drive+ or yearly Drive the Music subscription (existing Stripe yearly prices, display €33.60/year — no `STRIPE_PRICE_FOUNDERS_PACK` product). That purchase mints a Founder seat, grants Drive Unlimited for 4 months from purchase then falls back to the paid package, and lets the buyer pick 4 catalog sounds (`founder_sound_picks`, migration 0015) that stay forever even after cancel. Globally free catalog sounds cannot be picked. Founders also receive the Black Friday Special; Unlimited uncaps the 30-minute Drive the Music limit. After sign-in during the BF window, a congratulations modal shows once per account (`elcamoso.bfWelcome.v1:<accountId>`) with a Founders Pack / pricing CTA.
 
 ---
 
-_Last updated: 2026-11-09 (Black Friday Special 30-min cap, teaser banner, terms section)_
+_Last updated: 2026-11-09 (Founders Pack = yearly Drive+ or Drive the Music; 4 forever-sound picks; BF welcome + purchase CTA)_

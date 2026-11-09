@@ -3,10 +3,7 @@ import { getDynamicDriveTrialService } from "@/lib/dynamic-drive-trial/service";
 import { getAccountSession } from "@/lib/account/auth-service";
 import { hasDrivePlusSubscriptionAccess } from "@/lib/billing/subscription-access-policy";
 import { getSubscriptionForUser } from "@/lib/billing/subscription-store";
-import {
-  activeGrantedEntitlements,
-  activeGrantedProfileIds,
-} from "@/lib/entitlements/grants";
+import { activeGrantedEntitlements, activeGrantedProfileIds } from "@/lib/entitlements/grants";
 import { getOfflineAccessLease } from "@/lib/entitlements/offline-lease";
 import { ALL_ENTITLEMENTS, TRIAL_DRIVE_PLUS_ENTITLEMENTS } from "@/lib/entitlements/plans";
 import { isAllowlistedAdminEmail } from "@/lib/admin/admin-access";
@@ -112,17 +109,29 @@ export async function resolveEntitlementUser(input: {
       // Legacy Founders (claimed before FOUNDER_PAID_UNLIMITED_CUTOVER) keep Drive Unlimited
       // until 27.05.2027. Newer seats do not get that perk until a paid Founders Pack purchase.
       try {
-        const { claimFounderSeat, foundersEnabled, foundersPackPurchasedAt } = await import(
-          "@/lib/founders/founders.server"
-        );
+        const { claimFounderSeat, foundersEnabled, foundersPackPurchasedAt } =
+          await import("@/lib/founders/founders.server");
         const rec = foundersEnabled()
           ? await claimFounderSeat(session.userId, session.email ?? null, now)
           : null;
         const purchasedAt = foundersPackPurchasedAt(session.userId);
+        if (rec?.founderAt != null) {
+          const { ensureLegacyFounderForeverSounds } =
+            await import("@/lib/founders/sound-picks.server");
+          ensureLegacyFounderForeverSounds(session.userId, rec.founderAt);
+          grantedProfileIds = [
+            ...new Set([...grantedProfileIds, ...activeGrantedProfileIds(session.userId, now)]),
+          ];
+        }
         const status = rec ? founderStatusFrom(rec.founderAt, purchasedAt) : null;
         if (status && rec) {
           const active = isFounderDrivePlusActive(rec.founderAt, now, purchasedAt);
-          founder = { ...status, seat: rec.seat, drivePlusActive: active, testCrewOptIn: rec.testCrewOptIn };
+          founder = {
+            ...status,
+            seat: rec.seat,
+            drivePlusActive: active,
+            testCrewOptIn: rec.testCrewOptIn,
+          };
           if (active) {
             grantedEntitlements = [
               ...new Set([...grantedEntitlements, ...entitlementsForPlan("DRIVE_COMPLETE")]),

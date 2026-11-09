@@ -112,6 +112,16 @@ export async function syncStripeSubscriptionRecord(subscription: Stripe.Subscrip
     });
   }
   await maybeCompleteDynamicDriveTrial(userId, saved.status);
+  try {
+    const { applyFoundersPackFromYearlySubscription } =
+      await import("@/lib/founders/founders.server");
+    await applyFoundersPackFromYearlySubscription(saved);
+  } catch (error) {
+    console.error(
+      "[founders-pack] yearly apply failed",
+      error instanceof Error ? error.message : error,
+    );
+  }
   return saved;
 }
 
@@ -124,9 +134,8 @@ export async function syncStripeSubscriptionById(subscriptionId: string) {
 export async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) {
   if (session.mode === "payment") {
     if (session.metadata?.["commercialPlanId"] === "founders_pack") {
-      const { handleFoundersPackCheckoutCompleted } = await import(
-        "@/lib/billing/stripe/founders-pack-sync"
-      );
+      const { handleFoundersPackCheckoutCompleted } =
+        await import("@/lib/billing/stripe/founders-pack-sync");
       return handleFoundersPackCheckoutCompleted(session);
     }
     const { handleLifetimeCheckoutCompleted } = await import("@/lib/billing/stripe/lifetime-sync");
@@ -179,9 +188,8 @@ export async function handleSubscriptionDeleted(subscription: Stripe.Subscriptio
   );
   const { subscription: saved } = await persistAndProvisionSubscription(normalized, existing);
   try {
-    const { reconcileRewardDiscountOnSubscriptionDeleted } = await import(
-      "@/lib/rewards/discount/reconcile"
-    );
+    const { reconcileRewardDiscountOnSubscriptionDeleted } =
+      await import("@/lib/rewards/discount/reconcile");
     reconcileRewardDiscountOnSubscriptionDeleted(userId, normalized.providerSubscriptionId);
   } catch {
     /* ignore */
@@ -202,9 +210,8 @@ export async function handleSubscriptionDeleted(subscription: Stripe.Subscriptio
 export async function handleInvoicePaid(invoice: Stripe.Invoice) {
   const subscriptionId = stripeSubscriptionId(invoice.parent?.subscription_details?.subscription);
   try {
-    const { reconcileRewardDiscountFromPaidInvoice } = await import(
-      "@/lib/rewards/discount/reconcile"
-    );
+    const { reconcileRewardDiscountFromPaidInvoice } =
+      await import("@/lib/rewards/discount/reconcile");
     await reconcileRewardDiscountFromPaidInvoice(invoice);
   } catch {
     /* discount reconcile must not block entitlement sync */
@@ -216,9 +223,8 @@ export async function handleInvoicePaid(invoice: Stripe.Invoice) {
 export async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
   const subscriptionId = stripeSubscriptionId(invoice.parent?.subscription_details?.subscription);
   try {
-    const { reconcileRewardDiscountFromFailedInvoice } = await import(
-      "@/lib/rewards/discount/reconcile"
-    );
+    const { reconcileRewardDiscountFromFailedInvoice } =
+      await import("@/lib/rewards/discount/reconcile");
     await reconcileRewardDiscountFromFailedInvoice(invoice);
   } catch {
     /* ignore */

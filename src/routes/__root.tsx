@@ -27,6 +27,8 @@ import { DynamicDriveTrialBridge } from "@/components/DynamicDriveTrialBridge";
 import { EntitlementEnforcer } from "@/components/EntitlementEnforcer";
 import { DriveSpecialCapBridge } from "@/components/DriveSpecialCapBridge";
 import { GuestTrialBridge } from "@/components/GuestTrialBridge";
+import { MidnightRaveGuestBridge } from "@/components/MidnightRaveGuestBridge";
+import { BlackFridayWelcomeModal } from "@/components/BlackFridayWelcomeModal";
 import { AccountProvider } from "@/lib/account/AccountProvider";
 import { EntitlementsProvider } from "@/lib/entitlements/EntitlementsProvider";
 import { useSessionSelector } from "@/lib/store/session-store";
@@ -194,7 +196,9 @@ function RootComponent() {
             <DeviceLinkBridge />
             <EntitlementEnforcer />
             <GuestTrialBridge />
+            <MidnightRaveGuestBridge />
             <DriveSpecialCapBridge />
+            <BlackFridayWelcomeModal />
             <DynamicDriveSessionBridge />
             <DynamicDriveTrialBridge />
             <VehicleTelemetryBridge />

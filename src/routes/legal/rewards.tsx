@@ -25,17 +25,17 @@ function RewardsTerms() {
             Terms of Use
           </Link>{" "}
           and apply to the Founders Pack, the Founders Test Crew, Smiles, the Smile Shop, invite
-          rewards, leaderboards, challenges and promotional banners within {o.serviceName}. If
-          these terms conflict with the Terms of Use on a rewards topic, these terms prevail.
+          rewards, leaderboards, challenges and promotional banners within {o.serviceName}. If these
+          terms conflict with the Terms of Use on a rewards topic, these terms prevail.
           Participation is voluntary and free unless stated otherwise.
         </p>
       </LegalSection>
 
       <LegalSection title="2. “Free forever” sounds and Founder benefits">
         <p>
-          “Free forever” sounds and Founder benefits are provided for as long as we operate
-          ELCAMOSO and it remains technically and economically feasible for us to provide them.
-          “Forever” does not mean beyond the life of the Service.
+          “Free forever” sounds and Founder benefits are provided for as long as we operate ELCAMOSO
+          and it remains technically and economically feasible for us to provide them. “Forever”
+          does not mean beyond the life of the Service.
         </p>
         <p>
           Sounds may be technically updated, re-mastered or replaced with equivalent sounds, for
@@ -43,9 +43,32 @@ function RewardsTerms() {
           legal or licensing reasons.
         </p>
         <p>
-          Buying the Founders Pack grants Drive Unlimited for 4 months from the purchase date.
-          Founders who claimed a seat before 9 November 2026 13:00 Europe/Berlin keep their
-          existing Drive Unlimited access until 27 May 2027 23:59 Europe/Berlin.
+          The Founders Pack is a yearly Drive+ or yearly Drive the Music subscription at the price
+          shown at checkout (currently €33.60 per year). It may be purchased until 27 November 2026
+          23:59 Europe/Berlin. Checkout uses the existing yearly Drive+ and Drive the Music prices.
+          The Black Friday Special does not grant a free Founder seat.
+        </p>
+        <p>
+          A Founders Pack purchase grants the package bought, Drive Unlimited for 4 months from the
+          purchase date, then fallback to that paid package, and four forever sounds (see below).
+          Cancelling the subscription does not take away those four sounds. Founders (existing seats
+          and Pack buyers) receive the Black Friday Special benefits while that offer runs; Drive
+          Unlimited already includes Drive the Music without the special's 30-minute cap.
+        </p>
+        <p>
+          Forever-sound picks: a Founders Pack buyer chooses 4 sounds from any library (Drive+
+          and/or Drive the Music, combinable). Sounds that are free for everyone at the time of
+          picking cannot be selected and do not count toward the 4. A counter in the app shows how
+          many are selected and how many are left. Picks are stored on the account and become final
+          when confirmed, unless a picked sound is later removed or replaced, or later becomes free
+          for everyone — in that case the Founder may pick an equivalent replacement for that slot.
+          “Forever” means for as long as we operate the ELCAMOSO service and it remains technically
+          and economically feasible for us to provide the sound or an equivalent.
+        </p>
+        <p>
+          Existing Founders who signed up and confirmed before 9 November 2026 23:59 Europe/Berlin
+          keep Racing V10, American Muscle V8 and GT V8 forever and their existing Drive Unlimited
+          access until 27 May 2027 23:59 Europe/Berlin. Those rules are unchanged.
         </p>
       </LegalSection>
 
@@ -58,9 +81,9 @@ function RewardsTerms() {
         <p>
           Minor changes that do not materially affect you (for example wording, design, ordering of
           items, or new rewards) may be made at any time without notice. Material changes that
-          affect benefits you already hold will be announced in the app or by email with
-          reasonable notice where required by law. Where the law gives you the right to end the
-          contract because of such a change, that right remains unaffected.
+          affect benefits you already hold will be announced in the app or by email with reasonable
+          notice where required by law. Where the law gives you the right to end the contract
+          because of such a change, that right remains unaffected.
         </p>
       </LegalSection>
 
@@ -78,8 +101,8 @@ function RewardsTerms() {
           <li>Smiles have no cash value and cannot be exchanged for money.</li>
           <li>Smiles are personal, non-transferable and non-refundable.</li>
           <li>
-            Smiles may expire if stated in the app, and we may correct a balance that is wrong
-            (for example after a technical error or misuse).
+            Smiles may expire if stated in the app, and we may correct a balance that is wrong (for
+            example after a technical error or misuse).
           </li>
         </ul>
       </LegalSection>
@@ -96,8 +119,8 @@ function RewardsTerms() {
         <p>
           When an invite qualifies, the invited friend receives 1 month of Drive+ and the inviter
           receives 1 month of Drive+ per qualifying friend, up to 6 months in total. A friend
-          qualifies only with a new account, a confirmed email address and a genuine first drive,
-          as described in the app.
+          qualifies only with a new account, a confirmed email address and a genuine first drive, as
+          described in the app.
         </p>
         <p>
           Drive+ months earned through invites or the Smile Shop are time-limited, are not
@@ -108,17 +131,19 @@ function RewardsTerms() {
 
       <LegalSection title="8. Founder seats">
         <p>
-          Founder seats are limited and allocated on a first come, first served basis. Eligibility
-          ends on 27.11.2026 at 23:59 (Berlin time) and requires a confirmed email address. The
-          number of seats shown in the app or on the website is for information only and may be
-          approximate or delayed.
+          Founder seats are limited and allocated on a first come, first served basis. Free Founder
+          seats required a confirmed email address on or before 9 November 2026 23:59 Europe/Berlin.
+          After that, a Founder seat is granted when a yearly Drive+ or yearly Drive the Music
+          subscription is purchased on or before 27.11.2026 at 23:59 (Berlin time). The number of
+          seats shown in the app or on the website is for information only and may be approximate or
+          delayed.
         </p>
       </LegalSection>
 
       <LegalSection title="9. Leaderboards and challenges">
         <p>
-          Leaderboards and challenges are for fun. There is no entitlement to prizes unless a
-          prize is expressly promised in the rules of a specific challenge. Rules are published per
+          Leaderboards and challenges are for fun. There is no entitlement to prizes unless a prize
+          is expressly promised in the rules of a specific challenge. Rules are published per
           challenge. We may disqualify participants who break the rules or these terms.
         </p>
       </LegalSection>
@@ -141,9 +166,8 @@ function RewardsTerms() {
       <LegalSection title="11. Drive safely">
         <p>
           Use all features only in compliance with traffic laws and never in a way that distracts
-          you from driving. No Smiles, rewards or rankings are given for unsafe or unlawful
-          driving, and we may remove any that result from it. Do not interact with the app while
-          driving.
+          you from driving. No Smiles, rewards or rankings are given for unsafe or unlawful driving,
+          and we may remove any that result from it. Do not interact with the app while driving.
         </p>
       </LegalSection>
 

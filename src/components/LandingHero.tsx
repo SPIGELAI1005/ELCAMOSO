@@ -7,6 +7,8 @@ import {
 } from "@/components/ElcamosoLogo";
 import { HeroSoundBackdrop } from "@/components/HeroSoundBackdrop";
 import { StartDriveMarkControl } from "@/components/StartDriveMarkControl";
+import { isDriveSpecialActive, landingStartDriveProfileId } from "@/lib/billing/drive-special";
+import { writeSettings } from "@/lib/drive/settings";
 import { cn } from "@/lib/utils";
 import { DEMO_PAGE_ENABLED } from "@/lib/feature-flags";
 
@@ -50,6 +52,9 @@ export function LandingStartDriveMark({
         revealFace={showStartFace}
         className="mt-8 sm:mt-10 lg:mt-12"
         onStart={() => {
+          if (isDriveSpecialActive()) {
+            writeSettings({ profileId: landingStartDriveProfileId() });
+          }
           void navigate({ to: "/drive", search: { start: true } });
         }}
       />

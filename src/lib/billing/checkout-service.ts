@@ -7,7 +7,6 @@ import { isBillingAvailable } from "@/lib/billing/billing-available";
 import { ensureStripeCustomer } from "@/lib/billing/stripe/customer";
 import { getStripeClient } from "@/lib/billing/stripe/client";
 import {
-  isFoundersPackPriceConfigured,
   isStripeConfigured,
   readStripeConfig,
   resolveStripePriceId,
@@ -18,7 +17,10 @@ import { userHasActiveDrivePlusSubscription } from "@/lib/billing/stripe/subscri
 import { wrapStripeBillingError } from "@/lib/billing/resilience/stripe-errors";
 import { getUserBillingRepository } from "@/lib/billing/user-billing-store";
 import { LIFETIME_SOLD_OUT_MESSAGE } from "@/lib/billing/lifetime-seats";
-import { getUnderlyingSubscriptionRecord, hasActiveLifetimeGrant } from "@/lib/billing/lifetime-store";
+import {
+  getUnderlyingSubscriptionRecord,
+  hasActiveLifetimeGrant,
+} from "@/lib/billing/lifetime-store";
 import { getSubscriptionForUser } from "@/lib/billing/subscription-store";
 import { isMusicTrialOfferActive, musicTrialEndUnix } from "@/lib/billing/black-friday";
 import { hydrateUserBillingState } from "@/lib/billing/durable-state.server";
@@ -79,10 +81,9 @@ export async function beginDrivePlusCheckout(
   const isOneTimePayment = isLifetime || isFoundersPack;
   const ownsLifetime = hasActiveLifetimeGrant(input.userId);
 
-  // Lifetime is limited to LIFETIME_SEAT_LIMIT seats: block new Lifetime checkouts when sold out.
-  if (isFoundersPack && !isFoundersPackPriceConfigured()) {
+  if (isFoundersPack) {
     throw new Error(
-      "Founders Pack checkout is not connected yet. Set STRIPE_PRICE_FOUNDERS_PACK after creating the Stripe Price (no amount is stored in the app).",
+      "The Founders Pack is a yearly Drive+ or Drive the Music subscription. Choose that package on Pricing until 27 November 2026 23:59 Europe/Berlin.",
     );
   }
 
@@ -93,8 +94,7 @@ export async function beginDrivePlusCheckout(
     }
   }
   const hasActiveSubscription =
-    !ownsLifetime &&
-    (await userHasActiveDrivePlusSubscription(input.userId, existingCustomerId));
+    !ownsLifetime && (await userHasActiveDrivePlusSubscription(input.userId, existingCustomerId));
 
   if (!isFoundersPack && (ownsLifetime || (!isLifetime && hasActiveSubscription))) {
     const stripeCustomerId =
@@ -106,8 +106,7 @@ export async function beginDrivePlusCheckout(
       returnPath: sanitizeReturnPath(input.request.returnPath ?? "/settings"),
     });
     const activePlan = getSubscriptionForUser(input.userId)?.plan;
-    const otherPackage =
-      !ownsLifetime && activePlan && activePlan !== described.entitlementPlan;
+    const otherPackage = !ownsLifetime && activePlan && activePlan !== described.entitlementPlan;
     return {
       action: "manage",
       url: portal.url,
@@ -198,9 +197,8 @@ export async function beginDrivePlusCheckout(
 
   if (input.rewardReservationId && input.request.interval !== "lifetime") {
     const { isRewardDiscountsEnabled } = await import("@/lib/rewards/discount/flag");
-    const { prepareCheckoutRewardDiscount, bindCheckoutSessionToReservation } = await import(
-      "@/lib/rewards/discount/service"
-    );
+    const { prepareCheckoutRewardDiscount, bindCheckoutSessionToReservation } =
+      await import("@/lib/rewards/discount/service");
     if (!isRewardDiscountsEnabled()) {
       throw new Error("Reward discounts are not enabled");
     }

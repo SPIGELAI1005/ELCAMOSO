@@ -9,6 +9,7 @@ import {
   FOUNDER_PAID_UNLIMITED_CUTOVER_MS,
   FOUNDERS_SIGNUP_DEADLINE_MS,
   canMintFounder,
+  canMintFounderFromPurchase,
   founderDriveUnlimitedUntilMs,
   founderSeatLimit,
   founderStatusFrom,
@@ -16,16 +17,22 @@ import {
   isFounderDrivePlusActive,
   isFounderEligible,
   isFounderSignupOpen,
+  isFoundersPackPurchaseOpen,
+  isFoundersPackQualifyingPlan,
+  isFoundersPackQualifyingPurchaseTime,
   isLegacyFounderClaim,
   seatsLeft,
   splitCountdown,
 } from "@/lib/founders/founders";
 import {
+  applyFoundersPackFromYearlySubscription,
   claimFounderSeat,
+  claimFounderSeatFromPurchase,
   grantFoundersPackUnlimited,
   resetFoundersStoreForTests,
   setTestCrewOptIn,
 } from "@/lib/founders/founders.server";
+import { resetFounderSoundPicksForTests } from "@/lib/founders/sound-picks.server";
 
 const DEADLINE = Date.parse("2026-11-27T22:59:59Z");
 const UNTIL = Date.parse("2027-05-27T21:59:59Z");
@@ -36,6 +43,7 @@ describe("founders eligibility", () => {
     delete process.env["FOUNDER_SEAT_LIMIT"];
     resetFoundersStoreForTests();
     resetEntitlementGrantsForTests();
+    resetFounderSoundPicksForTests();
   });
 
   it("deadline is 27.11.2026 (Black Friday) 23:59:59 Berlin and legacy perk ends 27.05.2027 23:59:59 Berlin", () => {
@@ -43,16 +51,29 @@ describe("founders eligibility", () => {
     expect(FOUNDER_DRIVE_PLUS_UNTIL_MS).toBe(UNTIL);
   });
 
-  it("signup window closes after the deadline", () => {
-    expect(isFounderSignupOpen(DEADLINE)).toBe(true);
-    expect(isFounderSignupOpen(DEADLINE + 1)).toBe(false);
+  it("free signup closes after 09.11 23:59 Berlin; purchase stays open through Black Friday", () => {
+    expect(isFounderSignupOpen(FOUNDER_PAID_UNLIMITED_CUTOVER_MS)).toBe(true);
+    expect(isFounderSignupOpen(FOUNDER_PAID_UNLIMITED_CUTOVER_MS + 1)).toBe(false);
+    expect(isFoundersPackPurchaseOpen(DEADLINE)).toBe(true);
+    expect(isFoundersPackPurchaseOpen(DEADLINE + 1)).toBe(false);
   });
 
-  it("requires created AND confirmed before the deadline", () => {
-    expect(isFounderEligible({ createdAt: DEADLINE - 10, confirmedAt: DEADLINE })).toBe(true);
-    expect(isFounderEligible({ createdAt: DEADLINE - 10, confirmedAt: DEADLINE + 1 })).toBe(false);
-    expect(isFounderEligible({ createdAt: DEADLINE + 1, confirmedAt: DEADLINE + 2 })).toBe(false);
-    expect(isFounderEligible({ createdAt: DEADLINE - 10, confirmedAt: null })).toBe(false);
+  it("requires created AND confirmed before the 09.11 cutover for a free seat", () => {
+    const before = FOUNDER_PAID_UNLIMITED_CUTOVER_MS - 10;
+    expect(isFounderEligible({ createdAt: before, confirmedAt: before })).toBe(true);
+    expect(
+      isFounderEligible({
+        createdAt: before,
+        confirmedAt: FOUNDER_PAID_UNLIMITED_CUTOVER_MS,
+      }),
+    ).toBe(true);
+    expect(
+      isFounderEligible({
+        createdAt: FOUNDER_PAID_UNLIMITED_CUTOVER_MS + 1,
+        confirmedAt: FOUNDER_PAID_UNLIMITED_CUTOVER_MS + 2,
+      }),
+    ).toBe(false);
+    expect(isFounderEligible({ createdAt: before, confirmedAt: null })).toBe(false);
   });
 
   it("legacy Founders (claimed before the cutover) keep Drive Unlimited until 27.05.2027", () => {
@@ -88,9 +109,12 @@ describe("founders eligibility", () => {
     expect(founderSeatLimit()).toBe(458);
     process.env["FOUNDER_SEAT_LIMIT"] = "3";
     expect(founderSeatLimit()).toBe(3);
-    expect(canMintFounder(2, DEADLINE - 1, 3)).toBe(true);
-    expect(canMintFounder(3, DEADLINE - 1, 3)).toBe(false);
-    expect(canMintFounder(0, DEADLINE + 1, 3)).toBe(false);
+    expect(canMintFounder(2, FOUNDER_PAID_UNLIMITED_CUTOVER_MS, 3)).toBe(true);
+    expect(canMintFounder(3, FOUNDER_PAID_UNLIMITED_CUTOVER_MS, 3)).toBe(false);
+    expect(canMintFounder(0, FOUNDER_PAID_UNLIMITED_CUTOVER_MS + 1, 3)).toBe(false);
+    expect(canMintFounderFromPurchase(2, DEADLINE, 3)).toBe(true);
+    expect(canMintFounderFromPurchase(3, DEADLINE, 3)).toBe(false);
+    expect(canMintFounderFromPurchase(0, DEADLINE + 1, 3)).toBe(false);
     expect(seatsLeft(460, 458)).toBe(0);
   });
 
@@ -100,7 +124,7 @@ describe("founders eligibility", () => {
 
   it("memory store assigns seats up to the cap, idempotently", async () => {
     process.env["FOUNDER_SEAT_LIMIT"] = "2";
-    const t = DEADLINE - 60_000;
+    const t = FOUNDER_PAID_UNLIMITED_CUTOVER_MS - 60_000;
     const a = await claimFounderSeat("a", null, t);
     const a2 = await claimFounderSeat("a", null, t);
     const b = await claimFounderSeat("b", null, t);
@@ -109,9 +133,23 @@ describe("founders eligibility", () => {
     expect(a2.seat).toBe(1);
     expect(b.seat).toBe(2);
     expect(c.founderAt).toBeNull();
-    expect((await claimFounderSeat("d", null, DEADLINE + 1)).founderAt).toBeNull();
+    expect(
+      (await claimFounderSeat("d", null, FOUNDER_PAID_UNLIMITED_CUTOVER_MS + 1)).founderAt,
+    ).toBeNull();
     expect((await setTestCrewOptIn("a", true)).testCrewOptIn).toBe(true);
     await expect(setTestCrewOptIn("c", true)).rejects.toThrow();
+  });
+
+  it("paid purchase can still mint a seat after free signup closed, until Black Friday", async () => {
+    const duringBf = Date.parse("2026-11-20T12:00:00+01:00");
+    expect(isFounderSignupOpen(duringBf)).toBe(false);
+    expect((await claimFounderSeat("bf-free", null, duringBf)).founderAt).toBeNull();
+    const paid = await claimFounderSeatFromPurchase("bf-paid", null, duringBf);
+    expect(paid.founderAt).toBe(duringBf);
+    expect(paid.seat).toBe(1);
+    expect(
+      (await claimFounderSeatFromPurchase("bf-late", null, DEADLINE + 1)).founderAt,
+    ).toBeNull();
   });
 });
 
@@ -119,6 +157,7 @@ describe("founder Drive Unlimited via entitlement service", () => {
   afterEach(() => {
     resetFoundersStoreForTests();
     resetEntitlementGrantsForTests();
+    resetFounderSoundPicksForTests();
   });
 
   it("legacy claim before the cutover still gets Drive Unlimited until 27.05.2027", async () => {
@@ -130,27 +169,30 @@ describe("founder Drive Unlimited via entitlement service", () => {
     expect(snap.founder?.drivePlusActive).toBe(true);
     expect(snap.founder?.drivePlusUntil).toBe(UNTIL);
     expect(snap.entitlements).toContain("all_sound_profiles");
-    const later = await resolveEntitlementSnapshot({ sessionToken: s.sessionToken, now: UNTIL + 1 });
+    const later = await resolveEntitlementSnapshot({
+      sessionToken: s.sessionToken,
+      now: UNTIL + 1,
+    });
     expect(later.founder?.drivePlusActive ?? false).toBe(false);
   });
 
-  it("new free claim after the cutover is a Founder but does not get Drive Unlimited", async () => {
+  it("sign-in after the 09.11 cutover does not grant a free Founder seat", async () => {
     const { createSessionFromVerifiedEmail } = await import("@/lib/account/auth-service");
     const { resolveEntitlementSnapshot } = await import("@/lib/entitlements/service");
     const now = FOUNDER_PAID_UNLIMITED_CUTOVER_MS + 60_000;
     const s = createSessionFromVerifiedEmail("founder-new@example.com", now);
     const snap = await resolveEntitlementSnapshot({ sessionToken: s.sessionToken, now });
-    expect(snap.founder).not.toBeNull();
-    expect(snap.founder?.drivePlusActive).toBe(false);
+    expect(snap.founder ?? null).toBeNull();
     expect(snap.entitlements).not.toContain("all_sound_profiles");
   });
 
-  it("Founders Pack purchase grants Drive Unlimited for 4 months from purchase", async () => {
+  it("Founders Pack purchase during Black Friday mints a seat and grants Drive Unlimited", async () => {
     const { createSessionFromVerifiedEmail } = await import("@/lib/account/auth-service");
     const { resolveEntitlementSnapshot } = await import("@/lib/entitlements/service");
     const now = FOUNDER_PAID_UNLIMITED_CUTOVER_MS + 60_000;
     const s = createSessionFromVerifiedEmail("founder-paid@example.com", now);
     await resolveEntitlementSnapshot({ sessionToken: s.sessionToken, now });
+    await claimFounderSeatFromPurchase(s.userId, s.email, now);
     const until = grantFoundersPackUnlimited(s.userId, now);
     expect(until).toBe(addMonthsUtc(now, 4));
     const snap = await resolveEntitlementSnapshot({ sessionToken: s.sessionToken, now });
@@ -158,34 +200,78 @@ describe("founder Drive Unlimited via entitlement service", () => {
     expect(snap.founder?.drivePlusUntil).toBe(until);
     expect(snap.entitlements).toContain("all_sound_profiles");
     expect(snap.entitlements).toContain("symphony_all");
-    const after = await resolveEntitlementSnapshot({ sessionToken: s.sessionToken, now: until + 1 });
+    const after = await resolveEntitlementSnapshot({
+      sessionToken: s.sessionToken,
+      now: until + 1,
+    });
     expect(after.founder?.drivePlusActive ?? false).toBe(false);
   });
 
-  it("webhook grants 4 months from the paid Founders Pack checkout", async () => {
-    process.env.STRIPE_PRICE_FOUNDERS_PACK = "price_founders_test";
-    const purchasedAt = FOUNDER_PAID_UNLIMITED_CUTOVER_MS + 120_000;
-    const { handleFoundersPackCheckoutCompleted } = await import(
-      "@/lib/billing/stripe/founders-pack-sync"
-    );
-    const result = await handleFoundersPackCheckoutCompleted({
-      id: "cs_founders_1",
-      object: "checkout.session",
-      mode: "payment",
-      payment_status: "paid",
-      payment_intent: "pi_founders_1",
-      customer: "cus_founders",
-      client_reference_id: "founder-paid-webhook",
-      created: Math.floor(purchasedAt / 1000),
-      metadata: {
-        commercialPlanId: "founders_pack",
-        userId: "founder-paid-webhook",
-      },
-    } as never);
-    expect(result.skipped).toBe(false);
-    if (result.skipped) return;
+  it("yearly Drive+ purchase during Black Friday mints a Founder and 4-month Unlimited", async () => {
+    const purchasedAt = Date.parse("2026-11-20T12:00:00+01:00");
+    const result = await applyFoundersPackFromYearlySubscription({
+      userId: "yearly-founder",
+      plan: "DRIVE_PLUS",
+      interval: "year",
+      status: "active",
+      createdAt: new Date(purchasedAt),
+    });
+    expect(result.applied).toBe(true);
     expect(result.until).toBe(addMonthsUtc(purchasedAt, 4));
-    delete process.env.STRIPE_PRICE_FOUNDERS_PACK;
+    const monthly = await applyFoundersPackFromYearlySubscription({
+      userId: "monthly-not-founder",
+      plan: "DRIVE_PLUS",
+      interval: "month",
+      status: "active",
+      createdAt: new Date(purchasedAt),
+    });
+    expect(monthly.applied).toBe(false);
+    expect(isFoundersPackQualifyingPlan("DRIVE_PLUS", "year")).toBe(true);
+    expect(isFoundersPackQualifyingPlan("DRIVE_MUSIC", "year")).toBe(true);
+    expect(isFoundersPackQualifyingPlan("DRIVE_COMPLETE", "year")).toBe(false);
+    expect(isFoundersPackQualifyingPurchaseTime(purchasedAt)).toBe(true);
+  });
+
+  it("does not treat a yearly Drive+ created before 9 Nov as a Founders Pack", async () => {
+    const result = await applyFoundersPackFromYearlySubscription({
+      userId: "old-yearly",
+      plan: "DRIVE_PLUS",
+      interval: "year",
+      status: "active",
+      createdAt: new Date(Date.parse("2026-10-01T12:00:00+02:00")),
+    });
+    expect(result.applied).toBe(false);
+  });
+
+  it("after 4 months falls back off Unlimited while forever sound grants remain", async () => {
+    const { createSessionFromVerifiedEmail } = await import("@/lib/account/auth-service");
+    const { resolveEntitlementSnapshot } = await import("@/lib/entitlements/service");
+    const { activeGrantedProfileIds } = await import("@/lib/entitlements/grants");
+    const { confirmFounderSoundPicks, saveFounderSoundPicks } =
+      await import("@/lib/founders/sound-picks.server");
+    const now = Date.parse("2026-11-20T12:00:00+01:00");
+    const s = createSessionFromVerifiedEmail("founder-fallback@example.com", now);
+    await applyFoundersPackFromYearlySubscription({
+      userId: s.userId,
+      plan: "DRIVE_MUSIC",
+      interval: "year",
+      status: "active",
+      createdAt: new Date(now),
+    });
+    const picks = ["gt-v8", "police-patrol", "fusion-road-anthem", "wild-west-carriage"];
+    await saveFounderSoundPicks(s.userId, picks, now);
+    await confirmFounderSoundPicks(s.userId, now);
+    const until = addMonthsUtc(now, 4);
+    const during = await resolveEntitlementSnapshot({ sessionToken: s.sessionToken, now });
+    expect(during.founder?.drivePlusActive).toBe(true);
+    expect(during.entitlements).toContain("all_sound_profiles");
+    const after = await resolveEntitlementSnapshot({
+      sessionToken: s.sessionToken,
+      now: until + 1,
+    });
+    expect(after.founder?.drivePlusActive ?? false).toBe(false);
+    expect(after.entitlements).not.toContain("all_sound_profiles");
+    expect(activeGrantedProfileIds(s.userId, until + 1).sort()).toEqual([...picks].sort());
   });
 
   it("first sign-in after the deadline is not a Founder", async () => {

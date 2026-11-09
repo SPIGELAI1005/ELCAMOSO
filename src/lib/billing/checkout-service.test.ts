@@ -273,8 +273,7 @@ describe("beginDrivePlusCheckout", () => {
     );
   });
 
-  it("does not invent a Founders Pack price; checkout stays disconnected until STRIPE_PRICE_FOUNDERS_PACK is set", async () => {
-    delete process.env.STRIPE_PRICE_FOUNDERS_PACK;
+  it("does not open a separate Founders Pack Stripe product; yearly Drive+ / Drive the Music is the pack", async () => {
     await expect(
       beginDrivePlusCheckout({
         userId,
@@ -282,28 +281,7 @@ describe("beginDrivePlusCheckout", () => {
         origin: "http://localhost:5173",
         request: { plan: "founders", interval: "lifetime" },
       }),
-    ).rejects.toThrow(/STRIPE_PRICE_FOUNDERS_PACK/);
+    ).rejects.toThrow(/yearly Drive\+|Drive the Music/);
     expect(checkoutCreate).not.toHaveBeenCalled();
-  });
-
-  it("opens a one-time Founders Pack checkout when the Price id is configured", async () => {
-    process.env.STRIPE_PRICE_FOUNDERS_PACK = "price_founders_test";
-    const result = await beginDrivePlusCheckout({
-      userId,
-      email: "driver@example.com",
-      origin: "http://localhost:5173",
-      request: { plan: "founders", interval: "lifetime", source: "founders_banner" },
-    });
-    expect(result.action).toBe("checkout");
-    expect(checkoutCreate).toHaveBeenCalledWith(
-      expect.objectContaining({
-        mode: "payment",
-        line_items: [{ price: "price_founders_test", quantity: 1 }],
-        metadata: expect.objectContaining({
-          commercialPlanId: "founders_pack",
-          plan: "founders",
-        }),
-      }),
-    );
   });
 });
