@@ -4,6 +4,7 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { ChevronDown } from "lucide-react";
 import { useMemo, useState } from "react";
 
+import { AccountSignInDialog } from "@/components/AccountSignInDialog";
 import { PremiumBadge } from "@/components/premium/PremiumBadge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { getSession } from "@/lib/drive/session";
@@ -29,6 +30,7 @@ import {
   DRIVE_SPECIAL_BADGE,
   DRIVE_SPECIAL_NAME,
   DRIVE_SPECIAL_PURPLE,
+  driveSpecialBannerText,
   isDriveSpecialActive,
 } from "@/lib/billing/drive-special";
 import { isMusicPackageProfileId } from "@/lib/entitlements/plans";
@@ -105,16 +107,28 @@ export function HeaderSoundsMenu({
   const [query, setQuery] = useState("");
   const groups = useMemo(() => filterMenuGroups(allGroups, query), [allGroups, query]);
   const specialActive = isDriveSpecialActive();
+  const [signUpOpen, setSignUpOpen] = useState(false);
+  const [signUpReturnTo, setSignUpReturnTo] = useState("/drive");
+  const signUpLabel = driveSpecialBannerText(language).signup;
 
-  /** Locked sound tap: straight to its package on the pricing page (or sign-in for the special). */
-  function goToPackage(id: string) {
+  /** Locked Drive the Music (signed-out, Black Friday): same Sign up dialog as the banner. */
+  function openMusicSignUp(id: string) {
     closeOtherNavGroups();
     setSheetOpen(false);
     onNavigate?.();
+    setSignUpReturnTo(`/drive?sound=${encodeURIComponent(id)}`);
+    setSignUpOpen(true);
+  }
+
+  /** Locked sound tap: Sign up for music during the special, else its package on pricing. */
+  function goToPackage(id: string) {
     if (!isAuthenticated && specialActive && isMusicPackageProfileId(id)) {
-      window.location.href = "/auth/account/google/start";
+      openMusicSignUp(id);
       return;
     }
+    closeOtherNavGroups();
+    setSheetOpen(false);
+    onNavigate?.();
     window.location.href = pricingHrefForProfile(id);
   }
   function canSelect(id: string) {
@@ -138,6 +152,23 @@ export function HeaderSoundsMenu({
     onNavigate?.();
     void navigate({ to: "/drive" });
   }
+
+
+  const signUpDialog = (
+    <AccountSignInDialog
+      open={signUpOpen}
+      onOpenChange={setSignUpOpen}
+      returnTo={signUpReturnTo}
+      title={signUpLabel}
+      description={
+        language.slice(0, 2).toLowerCase() === "de"
+          ? "Lege ein Konto an, um Midnight Dark Rave unbegrenzt und Drive the Music 30 Minuten am Tag bis zum 27. November zu nutzen."
+          : language.slice(0, 2).toLowerCase() === "ro"
+            ? "Creează un cont ca să ai Midnight Dark Rave nelimitat și Drive the Music 30 de minute pe zi până pe 27 noiembrie."
+            : "Create an account to keep Midnight Dark Rave unlimited and Drive the Music 30 minutes a day until 27 November."
+      }
+    />
+  );
 
   const triggerLabel = t(language, "nav.sounds");
   const activeId = settings.profileId;
@@ -181,6 +212,14 @@ export function HeaderSoundsMenu({
               ? t(language, "sounds.getMusic")
               : t(language, "sounds.getDrivePlus")}
           </Link>
+        ) : specialActive && packageForProfile(upsellProfile.id) === "drive_music" ? (
+          <button
+            type="button"
+            onClick={() => openMusicSignUp(upsellProfile.id)}
+            className="rounded-sm bg-foreground px-2.5 py-1 text-[10px] tracking-[0.14em] text-background uppercase"
+          >
+            {signUpLabel}
+          </button>
         ) : (
           <a
             href="/auth/account/google/start"
@@ -322,7 +361,11 @@ export function HeaderSoundsMenu({
                   <PremiumBadge
                     className="shrink-0"
                     label={
-                      packageForProfile(realId) === "drive_music" ? "Drive the Music" : "Drive+"
+                      packageForProfile(realId) === "drive_music"
+                        ? !isAuthenticated && specialActive
+                          ? signUpLabel
+                          : "Drive the Music"
+                        : "Drive+"
                     }
                   />
                 ) : null}
@@ -377,6 +420,7 @@ export function HeaderSoundsMenu({
 
   if (variant === "sheet") {
     return (
+      <>
       <Collapsible open={sheetOpen} onOpenChange={setSheetOpen} className={className}>
         <CollapsibleTrigger
           className={cn(
@@ -399,11 +443,14 @@ export function HeaderSoundsMenu({
           {footerLinks}
         </CollapsibleContent>
       </Collapsible>
+      {signUpDialog}
+      </>
     );
   }
 
   if (variant === "compact") {
     return (
+      <>
       <details
         data-nav-group="sounds-picker"
         className={cn("group/nav relative", className)}
@@ -435,10 +482,13 @@ export function HeaderSoundsMenu({
           {footerLinks}
         </div>
       </details>
+      {signUpDialog}
+      </>
     );
   }
 
   return (
+    <>
     <details
       data-nav-group="sounds-picker"
       className={cn("group/nav relative", className)}
@@ -470,5 +520,7 @@ export function HeaderSoundsMenu({
         {footerLinks}
       </div>
     </details>
+    {signUpDialog}
+    </>
   );
 }

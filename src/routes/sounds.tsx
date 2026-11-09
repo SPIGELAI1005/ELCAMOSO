@@ -25,9 +25,11 @@ import {
   DRIVE_SPECIAL_BADGE,
   DRIVE_SPECIAL_NAME,
   DRIVE_SPECIAL_PURPLE,
+  driveSpecialBannerText,
   driveSpecialSoundsHint,
   isDriveSpecialActive,
 } from "@/lib/billing/drive-special";
+import { AccountSignInDialog } from "@/components/AccountSignInDialog";
 import { GENRE_ITEM_PREFIX, driveSpecialGenreItem } from "@/lib/billing/drive-special-genres";
 import { driveSpecialPinned } from "@/lib/sound/sound-menu-search";
 import { setGenreChoice } from "@/lib/symphony/adaptive/genre-store";
@@ -53,6 +55,9 @@ function Sounds() {
   const access = useFeatureAccess();
   const { isAuthenticated } = useAccount();
   const specialActive = isDriveSpecialActive();
+  const signUpLabel = driveSpecialBannerText(settings.language).signup;
+  const [signUpOpen, setSignUpOpen] = useState(false);
+  const [signUpReturnTo, setSignUpReturnTo] = useState("/drive");
   const reducedMotion = useReducedMotion();
   const snap = useSessionStore();
   const [query, setQuery] = useState("");
@@ -118,6 +123,16 @@ function Sounds() {
   const listeningLive =
     (snap.kind === "audition" || snap.kind === "demo" || snap.kind === "ab") &&
     (snap.status === "running" || snap.status === "starting" || snap.status === "suspended");
+
+  function openMusicSignUp(profileId: string) {
+    setSignUpReturnTo(`/drive?sound=${encodeURIComponent(profileId)}`);
+    setSignUpOpen(true);
+  }
+
+  function musicLockLabel(profileId: string): string {
+    if (!isAuthenticated && specialActive && isMusicPackageProfileId(profileId)) return signUpLabel;
+    return isMusicPackageProfileId(profileId) ? "Drive the Music" : "Drive+";
+  }
 
   /**
    * Put a Sound Profile into the sticky Listen section.
@@ -293,9 +308,13 @@ function Sounds() {
                   {isAuthenticated ? (
                     driveSpecialSoundsHint(settings.language, true)
                   ) : (
-                    <a href="/auth/account/google/start" className="underline">
+                    <button
+                      type="button"
+                      className="underline"
+                      onClick={() => openMusicSignUp("fusion-midnight-boost")}
+                    >
                       {driveSpecialSoundsHint(settings.language, false)}
-                    </a>
+                    </button>
                   )}
                 </p>
               ) : null}
@@ -316,9 +335,12 @@ function Sounds() {
                         data-locked={locked ? "true" : undefined}
                         onClick={() => {
                           if (locked) {
-                            window.location.href = isAuthenticated
-                              ? "/pricing#drive-music"
-                              : "/auth/account/google/start";
+                            if (!isAuthenticated && specialActive) {
+                              if (!g.signature) setGenreChoice(g.genreId);
+                              openMusicSignUp(g.profileId);
+                              return;
+                            }
+                            window.location.href = "/pricing#drive-music";
                             return;
                           }
                           if (!g.signature) setGenreChoice(g.genreId);
@@ -329,7 +351,11 @@ function Sounds() {
                       >
                         {g.name}
                         {locked ? (
-                          <SoundProfileAccessIndicator label="Drive the Music" />
+                          <SoundProfileAccessIndicator
+                            label={
+                              !isAuthenticated && specialActive ? signUpLabel : "Drive the Music"
+                            }
+                          />
                         ) : (
                           <span
                             className="rounded-full px-1.5 py-0.5 text-[8px] font-semibold tracking-[0.12em] text-white"
@@ -360,6 +386,20 @@ function Sounds() {
                       <button
                         type="button"
                         onClick={() => {
+                          if (
+                            lockedForDrive &&
+                            !isAuthenticated &&
+                            specialActive &&
+                            isMusicPackageProfileId(profile.id)
+                          ) {
+                            trackMonetizationEvent("premium_feature_clicked", {
+                              source: "sounds",
+                              plan: "free",
+                              context: "locked_sound",
+                            });
+                            openMusicSignUp(profile.id);
+                            return;
+                          }
                           if (lockedForDrive) {
                             trackMonetizationEvent("premium_feature_clicked", {
                               source: "sounds",
@@ -377,11 +417,7 @@ function Sounds() {
                         <span className="flex items-baseline gap-2">
                           <span className="text-xl font-light">{profile.name}</span>
                           {lockedForDrive ? (
-                            <SoundProfileAccessIndicator
-                              label={
-                                isMusicPackageProfileId(profile.id) ? "Drive the Music" : "Drive+"
-                              }
-                            />
+                            <SoundProfileAccessIndicator label={musicLockLabel(profile.id)} />
                           ) : null}
                         </span>
                         <span className="mt-2 block text-xs tracking-[0.18em] text-muted-foreground uppercase">
@@ -603,6 +639,19 @@ function Sounds() {
           </div>
         </div>
       ) : null}
+      <AccountSignInDialog
+        open={signUpOpen}
+        onOpenChange={setSignUpOpen}
+        returnTo={signUpReturnTo}
+        title={signUpLabel}
+        description={
+          settings.language.slice(0, 2).toLowerCase() === "de"
+            ? "Lege ein Konto an, um Midnight Dark Rave unbegrenzt und Drive the Music 30 Minuten am Tag bis zum 27. November zu nutzen."
+            : settings.language.slice(0, 2).toLowerCase() === "ro"
+              ? "Creează un cont ca să ai Midnight Dark Rave nelimitat și Drive the Music 30 de minute pe zi până pe 27 noiembrie."
+              : "Create an account to keep Midnight Dark Rave unlimited and Drive the Music 30 minutes a day until 27 November."
+        }
+      />
     </main>
   );
 }

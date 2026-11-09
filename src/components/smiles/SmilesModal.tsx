@@ -21,7 +21,7 @@ export function SmilesModal({
     <Dialog open={Boolean(journey)} onOpenChange={(o) => !o && onClose()}>
       <DialogContent
         data-testid="smiles-modal"
-        className="max-h-[92dvh] w-[calc(100vw-1.5rem)] z-[200] max-w-xl overflow-y-auto rounded-[32px] border-white/10 bg-black/60 p-4 backdrop-blur-2xl sm:p-6 [&>button]:top-5 [&>button]:right-5 [&>button]:rounded-full [&>button]:border [&>button]:border-white/25 [&>button]:p-1.5"
+        className="max-h-[92dvh] w-[calc(100vw-1.5rem)] z-[200] max-w-xl overflow-y-auto rounded-[32px] border-white/10 bg-black/60 px-4 pb-4 pt-14 backdrop-blur-2xl sm:px-6 sm:pb-6 sm:pt-16 [&>button]:top-3 [&>button]:right-3 [&>button]:flex [&>button]:h-11 [&>button]:w-11 [&>button]:items-center [&>button]:justify-center [&>button]:rounded-full [&>button]:border [&>button]:border-white/25 [&>button]:p-0"
       >
         <DialogTitle className="sr-only">Smiles per Mile</DialogTitle>
         <DialogDescription className="sr-only">
