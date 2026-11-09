@@ -3,10 +3,15 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 
 import { AccountSignInDialog } from "@/components/AccountSignInDialog";
+import { DrivePlusCheckoutButton } from "@/components/DrivePlusCheckoutButton";
 import { useAccount } from "@/lib/account/AccountProvider";
+import { useBillingPublicConfig } from "@/lib/billing/use-billing-public-config";
 import { useEntitlements } from "@/lib/entitlements/useEntitlements";
+import { useSettings } from "@/lib/drive/useSettings";
 import {
   FOUNDERS_SIGNUP_DEADLINE_MS,
+  founderPerkLine,
+  foundersOfferCopy,
   msUntilFounderDeadline,
   splitCountdown,
 } from "@/lib/founders/founders";
@@ -18,7 +23,7 @@ const pad = (n: number) => String(n).padStart(2, "0");
 
 /**
  * Founders Pack ticker strip: thin red-accent "special promotion" bar with live countdown
- * to 27.11.2026 23:59:59 Berlin (Black Friday), live seats left and a Claim button. Disappears after the
+ * to 27.11.2026 23:59:59 Berlin (Black Friday), live seats left, and Claim / Buy. Disappears after the
  * deadline, can be dismissed (localStorage). Founders see a "You're a Founder" state.
  */
 export function FoundersBanner({ compact = false, className }: { compact?: boolean; className?: string }) {
@@ -26,8 +31,12 @@ export function FoundersBanner({ compact = false, className }: { compact?: boole
   const [dismissed, setDismissed] = useState(true);
   const [signInOpen, setSignInOpen] = useState(false);
   const { isAuthenticated } = useAccount();
+  const { settings } = useSettings();
+  const offer = foundersOfferCopy(settings.language);
   const { snapshot } = useEntitlements();
   const founder = snapshot.founder ?? null;
+  const billing = useBillingPublicConfig();
+  const foundersPackAvailable = billing.data?.foundersPackAvailable ?? false;
   const seats = useQuery({
     queryKey: ["founders-seats"],
     queryFn: () => getFoundersSeatsFn(),
@@ -81,7 +90,7 @@ export function FoundersBanner({ compact = false, className }: { compact?: boole
           ) : null}
         </span>
         <span className="text-muted-foreground">
-          3 sounds free forever · 6 months Drive+ free · Founders Test Crew: new features first · Exclusive Crew perks to follow
+          {founderPerkLine(founder.since, settings.language)}
         </span>
       </span>
     );
@@ -95,24 +104,31 @@ export function FoundersBanner({ compact = false, className }: { compact?: boole
   } else {
     message = compact ? (
       <>
-        <span className="text-foreground">Sign up before 27.11.</span>
-        <span className="text-muted-foreground"> · 3 sounds free forever + 6 mo Drive+</span>
+        <span className="text-foreground">{offer.compact}</span>
+        <span className="text-muted-foreground">{offer.compactPerk}</span>
       </>
     ) : (
       <>
-        <span className="text-foreground">Sign up before 27.11.</span>
-        <span className="text-muted-foreground">
-          {" "}and keep 3 sounds free forever + 6 months Drive+ free + Founders Test Crew
-        </span>
+        <span className="text-foreground">{offer.compact}</span>
+        <span className="text-muted-foreground">{offer.fullPerk}</span>
       </>
     );
-    cta = isAuthenticated ? null : (
+    cta = foundersPackAvailable ? (
+      <DrivePlusCheckoutButton
+        plan="founders"
+        interval="lifetime"
+        source="founders_banner"
+        returnTo="/pricing"
+        label={offer.buy}
+        className="order-4 shrink-0 border border-[#e53935] sm:order-none px-2.5 py-1 text-[10px] font-medium tracking-[0.2em] text-[#e53935] uppercase transition-colors hover:bg-[#e53935] hover:text-white"
+      />
+    ) : isAuthenticated ? null : (
       <button
         type="button"
         onClick={() => setSignInOpen(true)}
         className="order-4 shrink-0 border border-[#e53935] sm:order-none px-2.5 py-1 text-[10px] font-medium tracking-[0.2em] text-[#e53935] uppercase transition-colors hover:bg-[#e53935] hover:text-white"
       >
-        Claim it
+        {offer.claim}
       </button>
     );
   }
@@ -193,8 +209,8 @@ export function FoundersBanner({ compact = false, className }: { compact?: boole
         open={signInOpen}
         onOpenChange={setSignInOpen}
         returnTo="/"
-        title="Claim your Founder seat"
-        description="Sign in with your email before 27.11. to keep 4 sounds free forever, get 6 months of Drive+ and Drive the Music free and join the Founders Test Crew. Limited seats."
+        title={offer.claimTitle}
+        description={offer.claimBody}
       />
     </div>
   );

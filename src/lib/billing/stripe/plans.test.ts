@@ -54,6 +54,7 @@ describe("commercial plan mapping", () => {
       "drive_unlimited_monthly",
       "drive_unlimited_yearly",
       "drive_plus_lifetime",
+      "founders_pack",
     ]);
     for (const id of COMMERCIAL_PLAN_IDS) {
       expect(id.startsWith("price_")).toBe(false);
@@ -74,6 +75,7 @@ describe("commercial plan mapping", () => {
     expect(stripePriceEnvKeyForPlan("drive_unlimited_monthly")).toBe(
       "STRIPE_PRICE_DRIVE_UNLIMITED_MONTHLY",
     );
+    expect(stripePriceEnvKeyForPlan("founders_pack")).toBe("STRIPE_PRICE_FOUNDERS_PACK");
   });
 
   it("resolves entitlement plan and interval from internal id", () => {
@@ -168,7 +170,10 @@ describe("stripe config", () => {
     expect(serialized).not.toContain("sk_test");
     expect(serialized).not.toContain("whsec");
     expect(serialized).not.toContain("price_month_test");
-    expect(publicConfig.plans.map((plan) => plan.id)).toEqual(COMMERCIAL_PLAN_IDS);
+    expect(publicConfig.plans.map((plan) => plan.id)).toEqual(
+      COMMERCIAL_PLAN_IDS.filter((id) => id !== "founders_pack"),
+    );
+    expect(publicConfig.foundersPackAvailable).toBe(false);
   });
 });
 

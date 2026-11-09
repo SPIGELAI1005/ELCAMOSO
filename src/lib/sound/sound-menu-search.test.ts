@@ -83,17 +83,20 @@ describe("special pinning", () => {
     expect(profileIdForMenuItem("genre:rock")).toBe("symphony-motion-orchestra");
     expect(profileIdForMenuItem("genre:darkrave")).toBe("fusion-midnight-boost");
     expect(packageForProfile("genre:gothic")).toBe("drive_music");
-    const musical = profilesByCategory(Date.parse("2026-11-05T12:00:00+01:00")).find(
+    const musical = profilesByCategory(Date.parse("2026-11-15T12:00:00+01:00")).find(
       (g) => g.category === "Musical",
     );
     expect(musical?.profiles.map((p) => p.id)).toEqual(
       expect.arrayContaining(["fusion-mechanical-symphony", "fusion-future-pulse"]),
     );
-    expect(profilesByCategory(Date.parse("2026-11-05T12:00:00+01:00"))[0].category).toBe(
-      "7 Days Drive Special",
+    expect(profilesByCategory(Date.parse("2026-11-15T12:00:00+01:00"))[0].category).toBe(
+      "Black Friday Special",
     );
-    expect(profilesByCategory(Date.parse("2026-11-09T00:00:00+01:00"))[0].category).not.toBe(
-      "7 Days Drive Special",
+    expect(profilesByCategory(Date.parse("2026-11-08T23:59:59+01:00"))[0].category).not.toBe(
+      "Black Friday Special",
+    );
+    expect(profilesByCategory(Date.parse("2026-11-28T00:00:00+01:00"))[0].category).not.toBe(
+      "Black Friday Special",
     );
   });
 });

@@ -31,7 +31,7 @@ export function MusicGenrePicker({
   const access = useFeatureAccess();
   const locked = !access.canDriveWithProfile("symphony-motion-orchestra");
   const { isAuthenticated } = useAccount();
-  /** Locked genre: sign in during the 7 Days Drive Special, else the Drive the Music package. */
+  /** Locked genre: sign in during the Black Friday Special, else the Drive the Music package. */
   const unlockHref =
     !isAuthenticated && isDriveSpecialActive()
       ? "/auth/account/google/start"

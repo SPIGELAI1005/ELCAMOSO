@@ -40,8 +40,10 @@ export function FounderAccountCard() {
         <FounderBadge seat={founder.seat} />
       </div>
       <p className="mt-3 text-sm">
-        You're a Founder. Drive+ is free until {fmt(founder.drivePlusUntil)}
-        {founder.drivePlusActive ? "." : " (ended)."}
+        {founder.drivePlusUntil
+          ? `You're a Founder. Drive Unlimited is included until ${fmt(founder.drivePlusUntil)}`
+          : "You're a Founder. Buy the Founders Pack to get Drive Unlimited for 4 months."}
+        {founder.drivePlusUntil ? (founder.drivePlusActive ? "." : " (ended).") : ""}
       </p>
       <ul className="mt-2 space-y-1 text-xs text-muted-foreground">
         {FOUNDER_PERKS.map((p) => (

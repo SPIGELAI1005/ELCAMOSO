@@ -109,15 +109,19 @@ export async function resolveEntitlementUser(input: {
       }
 
       // Founders Pack: a verified session before the deadline claims a seat (atomic, capped).
-      // Active Founders get both packages (Drive+ and Drive the Music) until FOUNDER_DRIVE_PLUS_UNTIL.
+      // Legacy Founders (claimed before FOUNDER_PAID_UNLIMITED_CUTOVER) keep Drive Unlimited
+      // until 27.05.2027. Newer seats do not get that perk until a paid Founders Pack purchase.
       try {
-        const { claimFounderSeat, foundersEnabled } = await import("@/lib/founders/founders.server");
+        const { claimFounderSeat, foundersEnabled, foundersPackPurchasedAt } = await import(
+          "@/lib/founders/founders.server"
+        );
         const rec = foundersEnabled()
           ? await claimFounderSeat(session.userId, session.email ?? null, now)
           : null;
-        const status = rec ? founderStatusFrom(rec.founderAt) : null;
+        const purchasedAt = foundersPackPurchasedAt(session.userId);
+        const status = rec ? founderStatusFrom(rec.founderAt, purchasedAt) : null;
         if (status && rec) {
-          const active = isFounderDrivePlusActive(rec.founderAt, now);
+          const active = isFounderDrivePlusActive(rec.founderAt, now, purchasedAt);
           founder = { ...status, seat: rec.seat, drivePlusActive: active, testCrewOptIn: rec.testCrewOptIn };
           if (active) {
             grantedEntitlements = [

@@ -540,3 +540,19 @@ export const guestTrialUsage = pgTable(
   },
   (table) => [uniqueIndex("guest_trial_usage_hash_day_unique").on(table.ipHash, table.day)],
 );
+
+/**
+ * Black Friday Special minutes (15 free minutes/day of Drive the Music for
+ * signed-in drivers who do not already own the music). Keyed by account id
+ * per Berlin day; old days are deleted.
+ */
+export const driveSpecialUsage = pgTable(
+  "drive_special_usage",
+  {
+    accountId: text("account_id").notNull(),
+    day: text("day").notNull(),
+    usedSeconds: integer("used_seconds").notNull().default(0),
+    lastSeenAt: timestamp("last_seen_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+  },
+  (table) => [uniqueIndex("drive_special_usage_account_day_unique").on(table.accountId, table.day)],
+);

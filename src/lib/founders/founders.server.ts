@@ -7,7 +7,17 @@ import { eq, isNotNull, sql } from "drizzle-orm";
 
 import { getDb } from "@/lib/db/client";
 import { users } from "@/lib/db/schema";
-import { canMintFounder, founderSeatLimit } from "@/lib/founders/founders";
+import { entitlementsForPlan } from "@/lib/entitlements/plans";
+import {
+  listAllGrantsForAccount,
+  upsertEntitlementGrant,
+} from "@/lib/entitlements/grants";
+import {
+  FOUNDERS_PACK_GRANT_SOURCE,
+  canMintFounder,
+  founderSeatLimit,
+  foundersPackUnlimitedUntilMs,
+} from "@/lib/founders/founders";
 
 export interface FounderRecord {
   founderAt: number | null;
@@ -142,6 +152,33 @@ export async function claimFounderSeat(
     console.error("[founders] claim failed", error instanceof Error ? error.message : error);
     return current;
   }
+}
+
+/** Earliest Founders Pack purchase timestamp from entitlement grants, if any. */
+export function foundersPackPurchasedAt(userId: string): number | null {
+  const grants = listAllGrantsForAccount(userId).filter((g) => g.source === FOUNDERS_PACK_GRANT_SOURCE);
+  if (!grants.length) return null;
+  return Math.min(...grants.map((g) => g.createdAt));
+}
+
+/**
+ * Grant Drive Unlimited (DRIVE_COMPLETE) for 4 months from `purchasedAt`.
+ * Idempotent per entitlement. Does not invent a price — caller is the paid webhook.
+ */
+export function grantFoundersPackUnlimited(userId: string, purchasedAt: number): number {
+  const until = foundersPackUnlimitedUntilMs(purchasedAt);
+  for (const entitlement of entitlementsForPlan("DRIVE_COMPLETE")) {
+    upsertEntitlementGrant({
+      accountId: userId,
+      kind: "promo_entitlement",
+      profileId: null,
+      entitlement,
+      expiresAt: until,
+      createdAt: purchasedAt,
+      source: FOUNDERS_PACK_GRANT_SOURCE,
+    });
+  }
+  return until;
 }
 
 export async function setTestCrewOptIn(userId: string, optIn: boolean, now = Date.now()): Promise<FounderRecord> {

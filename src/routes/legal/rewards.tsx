@@ -42,6 +42,11 @@ function RewardsTerms() {
           example to improve quality, keep them compatible with new devices or browsers, or for
           legal or licensing reasons.
         </p>
+        <p>
+          Buying the Founders Pack grants Drive Unlimited for 4 months from the purchase date.
+          Founders who claimed a seat before 9 November 2026 13:00 Europe/Berlin keep their
+          existing Drive Unlimited access until 27 May 2027 23:59 Europe/Berlin.
+        </p>
       </LegalSection>
 
       <LegalSection title="3. Changes to offers, perks and rules">

@@ -9,7 +9,7 @@ import {
 import { useSettings } from "@/lib/drive/useSettings";
 import { cn } from "@/lib/utils";
 
-/** Purple promo strip for the 7 Days Drive Special. Only shown inside the special window. */
+/** Purple promo strip for the Black Friday Special. Only shown inside the special window. */
 export function DriveSpecialBanner({ className }: { className?: string }) {
   const { settings } = useSettings();
   const [show, setShow] = useState(false);

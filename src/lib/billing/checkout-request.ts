@@ -7,7 +7,7 @@ import {
 } from "@/lib/billing/stripe/plans";
 
 /** Client-facing plan slug - never a Stripe Price id. */
-export type CheckoutPlanSlug = "drive_plus" | "drive_music" | "drive_unlimited";
+export type CheckoutPlanSlug = "drive_plus" | "drive_music" | "drive_unlimited" | "founders";
 
 /** Client-facing billing interval slug. */
 export type CheckoutIntervalSlug = "monthly" | "yearly" | "lifetime";
@@ -16,6 +16,7 @@ export const CHECKOUT_PLAN_SLUGS: readonly CheckoutPlanSlug[] = [
   "drive_plus",
   "drive_music",
   "drive_unlimited",
+  "founders",
 ] as const;
 export const CHECKOUT_INTERVAL_SLUGS: readonly CheckoutIntervalSlug[] = [
   "monthly",
@@ -56,6 +57,7 @@ export function resolveCommercialPlanId(
   plan: CheckoutPlanSlug,
   interval: CheckoutIntervalSlug,
 ): CommercialPlanId | null {
+  if (plan === "founders") return "founders_pack";
   // Lifetime covers both packages regardless of which card started it.
   if (interval === "lifetime") return "drive_plus_lifetime";
   if (plan === "drive_unlimited") {

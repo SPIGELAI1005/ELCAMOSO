@@ -18,6 +18,7 @@ describe("checkout plan request", () => {
     expect(resolveCommercialPlanId("drive_music", "yearly")).toBe("drive_music_yearly");
     expect(resolveCommercialPlanId("drive_unlimited", "monthly")).toBe("drive_unlimited_monthly");
     expect(resolveCommercialPlanId("drive_unlimited", "yearly")).toBe("drive_unlimited_yearly");
+    expect(resolveCommercialPlanId("founders", "lifetime")).toBe("founders_pack");
   });
 
   it("rejects Stripe price ids and unknown plans in request bodies", () => {

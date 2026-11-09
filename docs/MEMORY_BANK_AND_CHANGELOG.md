@@ -211,6 +211,14 @@ Canonical product rules still live in `elcamoso-comprehensive-spec.md`. Update *
 
 ## Changelog
 
+### 2026-11-09 (Black Friday Special + Founders Pack purchase perk)
+
+- Replaced the ended 7 Days Drive Special with **Black Friday Special** (9 Nov 2026 00:00 → exclusive end 28 Nov 2026 00:00 Berlin, purple `#a855f7`). Signed-in drivers get Drive the Music for **15 minutes per Berlin day**; logged-out users do not. Drive+ is not included. Paying users and Founders who already own the music are not capped. Server-side cap keyed by account id (heartbeat + Berlin day), same pattern as the guest trial. Out-of-minutes modal points to `/pricing#drive-music`. Guest trial (7 min/day, logged-out) is unchanged and no longer shares the special's end date.
+- The existing Black Friday **4-month Drive the Music checkout trial** (`src/lib/billing/black-friday.ts`) is unchanged and does not double-count with the daily special.
+- **Founders Pack:** existing seats claimed before `FOUNDER_PAID_UNLIMITED_CUTOVER` (2026-11-09T13:00:00+01:00) keep Drive Unlimited until 27.05.2027. New free seat claims do not get that perk. Buying the Founders Pack grants Drive Unlimited (`DRIVE_COMPLETE`) for 4 months from the purchase date. There is no Stripe product/price yet — `STRIPE_PRICE_FOUNDERS_PACK` is a placeholder; checkout stays disconnected until the owner creates the Price. No euro amount is invented in code.
+- Copy (EN/DE/RO): purple banner, Sounds hint, Founders banner/claim/pricing/FAQ. Dated historical news posts left as published. New news item for the Black Friday Special.
+- DB: `drive_special_usage` (migration `0014_drive_special_usage.sql`). Applied on production build when `DATABASE_URL` is set.
+
 ### 2026-11-09 (Post-launch locked-sound and pricing copy)
 
 - Locked Drive+ copy is a normal upsell (`Drive+ sound.` / Get Drive+ or Get Drive the Music), not “Available from 09.11.”

@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
 
-import { DRIVE_SPECIAL_END_MS } from "@/lib/billing/drive-special";
 import {
   GUEST_TRIAL_DAILY_SECONDS,
   GUEST_TRIAL_DAYS,
@@ -29,8 +28,8 @@ const SECRET = "test-secret-0123456789";
 const IN = Date.parse("2026-11-15T12:00:00+01:00");
 
 describe("guest trial window", () => {
-  it("starts when the 7 Days Drive Special ends and lasts 30 days", () => {
-    expect(GUEST_TRIAL_START_MS).toBe(DRIVE_SPECIAL_END_MS);
+  it("starts 9 Nov 2026 00:00 Berlin and lasts 30 days", () => {
+    expect(GUEST_TRIAL_START_MS).toBe(Date.parse("2026-11-09T00:00:00+01:00"));
     expect(GUEST_TRIAL_END_MS - GUEST_TRIAL_START_MS).toBe(GUEST_TRIAL_DAYS * 86_400_000);
     expect(isGuestTrialWindow(Date.parse("2026-11-08T23:59:59+01:00"))).toBe(false);
     expect(isGuestTrialWindow(Date.parse("2026-11-09T00:00:00+01:00"))).toBe(true);

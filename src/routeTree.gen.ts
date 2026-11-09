@@ -47,6 +47,7 @@ import { Route as WorldsRouteImport } from './routes/worlds'
 import { Route as ApiAnalyticsRouteImport } from './routes/api/analytics'
 import { Route as ApiBroadcastRouteImport } from './routes/api/broadcast'
 import { Route as ApiDriveLogsRouteImport } from './routes/api/drive-logs'
+import { Route as ApiDriveSpecialRouteImport } from './routes/api/drive-special'
 import { Route as ApiFeedbackRouteImport } from './routes/api/feedback'
 import { Route as ApiGuestTrialRouteImport } from './routes/api/guest-trial'
 import { Route as ApiOgRouteImport } from './routes/api/og'
@@ -280,6 +281,11 @@ const ApiBroadcastRoute = ApiBroadcastRouteImport.update({
 const ApiDriveLogsRoute = ApiDriveLogsRouteImport.update({
   id: '/api/drive-logs',
   path: '/api/drive-logs',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiDriveSpecialRoute = ApiDriveSpecialRouteImport.update({
+  id: '/api/drive-special',
+  path: '/api/drive-special',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiFeedbackRoute = ApiFeedbackRouteImport.update({
@@ -543,6 +549,7 @@ export interface FileRoutesByFullPath {
   '/api/analytics': typeof ApiAnalyticsRoute
   '/api/broadcast': typeof ApiBroadcastRoute
   '/api/drive-logs': typeof ApiDriveLogsRoute
+  '/api/drive-special': typeof ApiDriveSpecialRoute
   '/api/feedback': typeof ApiFeedbackRoute
   '/api/guest-trial': typeof ApiGuestTrialRoute
   '/api/og': typeof ApiOgRouteWithChildren
@@ -626,6 +633,7 @@ export interface FileRoutesByTo {
   '/api/analytics': typeof ApiAnalyticsRoute
   '/api/broadcast': typeof ApiBroadcastRoute
   '/api/drive-logs': typeof ApiDriveLogsRoute
+  '/api/drive-special': typeof ApiDriveSpecialRoute
   '/api/feedback': typeof ApiFeedbackRoute
   '/api/guest-trial': typeof ApiGuestTrialRoute
   '/api/og': typeof ApiOgRouteWithChildren
@@ -711,6 +719,7 @@ export interface FileRoutesById {
   '/api/analytics': typeof ApiAnalyticsRoute
   '/api/broadcast': typeof ApiBroadcastRoute
   '/api/drive-logs': typeof ApiDriveLogsRoute
+  '/api/drive-special': typeof ApiDriveSpecialRoute
   '/api/feedback': typeof ApiFeedbackRoute
   '/api/guest-trial': typeof ApiGuestTrialRoute
   '/api/og': typeof ApiOgRouteWithChildren
@@ -797,6 +806,7 @@ export interface FileRouteTypes {
     | '/api/analytics'
     | '/api/broadcast'
     | '/api/drive-logs'
+    | '/api/drive-special'
     | '/api/feedback'
     | '/api/guest-trial'
     | '/api/og'
@@ -880,6 +890,7 @@ export interface FileRouteTypes {
     | '/api/analytics'
     | '/api/broadcast'
     | '/api/drive-logs'
+    | '/api/drive-special'
     | '/api/feedback'
     | '/api/guest-trial'
     | '/api/og'
@@ -964,6 +975,7 @@ export interface FileRouteTypes {
     | '/api/analytics'
     | '/api/broadcast'
     | '/api/drive-logs'
+    | '/api/drive-special'
     | '/api/feedback'
     | '/api/guest-trial'
     | '/api/og'
@@ -1049,6 +1061,7 @@ export interface RootRouteChildren {
   ApiAnalyticsRoute: typeof ApiAnalyticsRoute
   ApiBroadcastRoute: typeof ApiBroadcastRoute
   ApiDriveLogsRoute: typeof ApiDriveLogsRoute
+  ApiDriveSpecialRoute: typeof ApiDriveSpecialRoute
   ApiFeedbackRoute: typeof ApiFeedbackRoute
   ApiGuestTrialRoute: typeof ApiGuestTrialRoute
   ApiOgRoute: typeof ApiOgRouteWithChildren
@@ -1344,6 +1357,13 @@ declare module '@tanstack/react-router' {
       path: '/api/drive-logs'
       fullPath: '/api/drive-logs'
       preLoaderRoute: typeof ApiDriveLogsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/drive-special': {
+      id: '/api/drive-special'
+      path: '/api/drive-special'
+      fullPath: '/api/drive-special'
+      preLoaderRoute: typeof ApiDriveSpecialRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/feedback': {
@@ -1764,6 +1784,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAnalyticsRoute: ApiAnalyticsRoute,
   ApiBroadcastRoute: ApiBroadcastRoute,
   ApiDriveLogsRoute: ApiDriveLogsRoute,
+  ApiDriveSpecialRoute: ApiDriveSpecialRoute,
   ApiFeedbackRoute: ApiFeedbackRoute,
   ApiGuestTrialRoute: ApiGuestTrialRoute,
   ApiOgRoute: ApiOgRouteWithChildren,
