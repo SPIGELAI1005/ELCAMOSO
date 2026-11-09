@@ -14,7 +14,11 @@ import { trackMonetizationEvent } from "@/lib/telemetry/monetization-analytics";
 import { useSettings } from "@/lib/drive/useSettings";
 import { t } from "@/lib/i18n";
 import { SoundPackageCallout } from "@/components/pricing/SoundPackageCallout";
-import { parsePricingPlanParam, parseSharedSoundParam, type SoundPackage } from "@/lib/drive/sound-share";
+import {
+  parsePricingPlanParam,
+  parseSharedSoundParam,
+  type SoundPackage,
+} from "@/lib/drive/sound-share";
 import type { BillingPublicConfig } from "@/lib/billing/public-config";
 
 function missingCheckoutSettings(
@@ -31,13 +35,14 @@ function missingCheckoutSettings(
 
 export const Route = createFileRoute("/pricing")({
   component: Pricing,
-  validateSearch: (search: Record<string, unknown>): { plan?: SoundPackage | undefined; sound?: string | undefined } => ({
+  validateSearch: (
+    search: Record<string, unknown>,
+  ): { plan?: SoundPackage | undefined; sound?: string | undefined } => ({
     plan: parsePricingPlanParam(search["plan"]),
     sound: parseSharedSoundParam(search["sound"]) ?? undefined,
   }),
   head: () => createSeoHeadFromPath("/pricing"),
 });
-
 
 function EarlyAccessBanner() {
   const { settings } = useSettings();
@@ -58,10 +63,14 @@ function EarlyAccessBanner() {
         <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
           {t(language, "pricing.earlyAccessBody")}
         </p>
-        <div className="mt-6 border-l-2 border-[#e53935] pl-4">
+        <div className="mt-6 border-l-2 border-[#e53935] pl-4" id="founders">
           <p className="text-[10px] tracking-[0.3em] text-[#e53935] uppercase">Founders Pack</p>
-          <h3 className="mt-2 text-lg font-light tracking-tight">{t(language, "pricing.founders.title")}</h3>
-          <p className="mt-2 text-sm text-muted-foreground">{t(language, "pricing.founders.body")}</p>
+          <h3 className="mt-2 text-lg font-light tracking-tight">
+            {t(language, "pricing.founders.title")}
+          </h3>
+          <p className="mt-2 text-sm text-muted-foreground">
+            {t(language, "pricing.founders.body")}
+          </p>
           <ul className="mt-3 space-y-1 text-sm text-muted-foreground">
             {(["perk1", "perk2", "perk3", "perk4"] as const).map((k) => (
               <li key={k}>

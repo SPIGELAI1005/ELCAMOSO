@@ -71,7 +71,9 @@ describe("commercial plan mapping", () => {
   it("maps internal plans to server env keys", () => {
     expect(stripePriceEnvKeyForPlan("drive_plus_monthly")).toBe("STRIPE_PRICE_DRIVE_PLUS_MONTHLY");
     expect(stripePriceEnvKeyForPlan("drive_plus_yearly")).toBe("STRIPE_PRICE_DRIVE_PLUS_YEARLY");
-    expect(stripePriceEnvKeyForPlan("drive_music_monthly")).toBe("STRIPE_PRICE_DRIVE_MUSIC_MONTHLY");
+    expect(stripePriceEnvKeyForPlan("drive_music_monthly")).toBe(
+      "STRIPE_PRICE_DRIVE_MUSIC_MONTHLY",
+    );
     expect(stripePriceEnvKeyForPlan("drive_unlimited_monthly")).toBe(
       "STRIPE_PRICE_DRIVE_UNLIMITED_MONTHLY",
     );
@@ -173,7 +175,7 @@ describe("stripe config", () => {
     expect(publicConfig.plans.map((plan) => plan.id)).toEqual(
       COMMERCIAL_PLAN_IDS.filter((id) => id !== "founders_pack"),
     );
-    expect(publicConfig.foundersPackAvailable).toBe(false);
+    expect(publicConfig.foundersPackAvailable).toBe(true);
   });
 });
 
@@ -193,6 +195,7 @@ describe("beginDrivePlusCheckout guard", () => {
         userId: "user-1",
         email: "driver@example.com",
         origin: "http://localhost:5173",
+        immediateStartConsent: true,
         request: { plan: "drive_plus", interval: "monthly" },
       }),
     ).rejects.toThrow("Billing is not available");

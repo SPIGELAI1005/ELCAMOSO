@@ -3,7 +3,6 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 
 import { AccountSignInDialog } from "@/components/AccountSignInDialog";
-import { DrivePlusCheckoutButton } from "@/components/DrivePlusCheckoutButton";
 import { useAccount } from "@/lib/account/AccountProvider";
 import { useBillingPublicConfig } from "@/lib/billing/use-billing-public-config";
 import { useEntitlements } from "@/lib/entitlements/useEntitlements";
@@ -12,6 +11,7 @@ import {
   FOUNDERS_SIGNUP_DEADLINE_MS,
   founderPerkLine,
   foundersOfferCopy,
+  isFounderSignupOpen,
   msUntilFounderDeadline,
   splitCountdown,
 } from "@/lib/founders/founders";
@@ -26,7 +26,13 @@ const pad = (n: number) => String(n).padStart(2, "0");
  * to 27.11.2026 23:59:59 Berlin (Black Friday), live seats left, and Claim / Buy. Disappears after the
  * deadline, can be dismissed (localStorage). Founders see a "You're a Founder" state.
  */
-export function FoundersBanner({ compact = false, className }: { compact?: boolean; className?: string }) {
+export function FoundersBanner({
+  compact = false,
+  className,
+}: {
+  compact?: boolean;
+  className?: string;
+}) {
   const [now, setNow] = useState<number | null>(null);
   const [dismissed, setDismissed] = useState(true);
   const [signInOpen, setSignInOpen] = useState(false);
@@ -76,13 +82,17 @@ export function FoundersBanner({ compact = false, className }: { compact?: boole
     const seatLabel = founder.seat ? `Founder seat #${founder.seat}` : null;
     message = compact ? (
       <>
-        <span className="font-semibold text-foreground">Congratulations! You're a Founder! THANK YOU!</span>
+        <span className="font-semibold text-foreground">
+          Congratulations! You're a Founder! THANK YOU!
+        </span>
         {seatLabel ? <span className="text-[#e53935]"> · {seatLabel}</span> : null}
       </>
     ) : (
       <span className="flex flex-col gap-1">
         <span>
-          <span className="font-semibold text-foreground">Congratulations! You're a Founder! THANK YOU!</span>
+          <span className="font-semibold text-foreground">
+            Congratulations! You're a Founder! THANK YOU!
+          </span>
           {seatLabel ? (
             <span className="ml-2 inline-block whitespace-nowrap border border-[#e53935]/60 px-1.5 py-0.5 text-[10px] font-semibold tracking-[0.2em] text-[#e53935] uppercase">
               {seatLabel}
@@ -98,7 +108,12 @@ export function FoundersBanner({ compact = false, className }: { compact?: boole
     message = (
       <>
         <span className="text-foreground">Founder seats are full</span>
-        {!compact ? <span className="text-muted-foreground"> · Thanks for the rush. Drive+ is open on Pricing.</span> : null}
+        {!compact ? (
+          <span className="text-muted-foreground">
+            {" "}
+            · Thanks for the rush. Drive+ is open on Pricing.
+          </span>
+        ) : null}
       </>
     );
   } else {
@@ -114,15 +129,14 @@ export function FoundersBanner({ compact = false, className }: { compact?: boole
       </>
     );
     cta = foundersPackAvailable ? (
-      <DrivePlusCheckoutButton
-        plan="founders"
-        interval="lifetime"
-        source="founders_banner"
-        returnTo="/pricing"
-        label={offer.buy}
+      <Link
+        to="/pricing"
+        hash="founders"
         className="order-4 shrink-0 border border-[#e53935] sm:order-none px-2.5 py-1 text-[10px] font-medium tracking-[0.2em] text-[#e53935] uppercase transition-colors hover:bg-[#e53935] hover:text-white"
-      />
-    ) : isAuthenticated ? null : (
+      >
+        {offer.buy}
+      </Link>
+    ) : !isAuthenticated && isFounderSignupOpen(now) ? (
       <button
         type="button"
         onClick={() => setSignInOpen(true)}
@@ -130,7 +144,7 @@ export function FoundersBanner({ compact = false, className }: { compact?: boole
       >
         {offer.claim}
       </button>
-    );
+    ) : null;
   }
 
   return (
@@ -157,27 +171,41 @@ export function FoundersBanner({ compact = false, className }: { compact?: boole
           Founders Pack
         </span>
         {!compact ? <span className="flex-1 sm:hidden" /> : null}
-        <p className={cn("min-w-0 flex-1 text-xs leading-snug", !compact && "order-3 basis-full sm:order-none sm:basis-auto", compact && "hidden truncate sm:block")}>{message}</p>
+        <p
+          className={cn(
+            "min-w-0 flex-1 text-xs leading-snug",
+            !compact && "order-3 basis-full sm:order-none sm:basis-auto",
+            compact && "hidden truncate sm:block",
+          )}
+        >
+          {message}
+        </p>
         {compact ? <span className="flex-1 sm:hidden" /> : null}
         {!founder && !full ? (
           <span
-            className={cn("shrink-0 font-mono text-[11px] tabular-nums text-foreground", !compact && "order-4 sm:order-none")}
+            className={cn(
+              "shrink-0 font-mono text-[11px] tabular-nums text-foreground",
+              !compact && "order-4 sm:order-none",
+            )}
             aria-label="Time left to become a Founder"
           >
             {d}d {pad(h)}:{pad(m)}:{pad(s)}
           </span>
         ) : null}
         {!founder && !full && left != null ? (
-          <span className={cn("shrink-0 text-[10px] tracking-[0.16em] text-muted-foreground uppercase", !compact && "order-4 sm:order-none")}>
+          <span
+            className={cn(
+              "shrink-0 text-[10px] tracking-[0.16em] text-muted-foreground uppercase",
+              !compact && "order-4 sm:order-none",
+            )}
+          >
             {compact ? (
               <>
                 {left}
                 <span className="hidden sm:inline"> seats</span> left
               </>
             ) : (
-              <>
-                {left} seats left
-              </>
+              <>{left} seats left</>
             )}
           </span>
         ) : null}
@@ -192,7 +220,11 @@ export function FoundersBanner({ compact = false, className }: { compact?: boole
         ) : null}
         <Link
           to="/legal/rewards"
-          className={cn("shrink-0 text-[9px] tracking-[0.16em] text-muted-foreground/80 uppercase underline-offset-2 hover:text-foreground hover:underline", !compact && "order-4 sm:order-none", compact && "hidden sm:inline")}
+          className={cn(
+            "shrink-0 text-[9px] tracking-[0.16em] text-muted-foreground/80 uppercase underline-offset-2 hover:text-foreground hover:underline",
+            !compact && "order-4 sm:order-none",
+            compact && "hidden sm:inline",
+          )}
         >
           Terms apply
         </Link>

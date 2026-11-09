@@ -3,9 +3,11 @@ import {
   DRIVE_SPECIAL_DAILY_SECONDS,
   DRIVE_SPECIAL_END_MS,
   DRIVE_SPECIAL_NAME,
+  MIDNIGHT_DARK_RAVE_PROFILE_ID,
   driveSpecialAppliesTo,
   driveSpecialCapApplies,
   isDriveSpecialActive,
+  landingStartDriveProfileId,
   remainingDriveSpecialSeconds,
   userOwnsDriveTheMusicIndependently,
 } from "@/lib/billing/drive-special";
@@ -81,15 +83,9 @@ describe("Black Friday Special 30-minute cap math", () => {
     expect(remainingDriveSpecialSeconds(2400)).toBe(0);
   });
   it("does not cap purchasers, Founders with an active perk, or music-trial grants", () => {
-    expect(
-      userOwnsDriveTheMusicIndependently({ plan: "DRIVE_MUSIC" }),
-    ).toBe(true);
-    expect(
-      userOwnsDriveTheMusicIndependently({ plan: "DRIVE_COMPLETE" }),
-    ).toBe(true);
-    expect(
-      userOwnsDriveTheMusicIndependently({ founderDrivePlusActive: true }),
-    ).toBe(true);
+    expect(userOwnsDriveTheMusicIndependently({ plan: "DRIVE_MUSIC" })).toBe(true);
+    expect(userOwnsDriveTheMusicIndependently({ plan: "DRIVE_COMPLETE" })).toBe(true);
+    expect(userOwnsDriveTheMusicIndependently({ founderDrivePlusActive: true })).toBe(true);
     expect(
       userOwnsDriveTheMusicIndependently({
         grantedEntitlements: ["symphony_all"],
@@ -109,7 +105,10 @@ describe("Black Friday Special 30-minute cap math", () => {
     expect(driveSpecialCapApplies({ accountId: "acc-1", plan: "DRIVE_PLUS" }, NOW)).toBe(true);
     expect(driveSpecialCapApplies({ accountId: "acc-1", plan: "DRIVE_MUSIC" }, NOW)).toBe(false);
     expect(
-      driveSpecialCapApplies({ accountId: "acc-1", plan: "FREE", founderDrivePlusActive: true }, NOW),
+      driveSpecialCapApplies(
+        { accountId: "acc-1", plan: "FREE", founderDrivePlusActive: true },
+        NOW,
+      ),
     ).toBe(false);
     expect(driveSpecialCapApplies({ accountId: null, plan: "FREE" }, NOW)).toBe(false);
     expect(driveSpecialCapApplies({ accountId: "acc-1", plan: "FREE" }, AFTER)).toBe(false);
@@ -125,9 +124,8 @@ describe("Demo page flag", () => {
 
 describe("Black Friday Special banner copy", () => {
   it("has a short non-specific EN/DE/RO teaser and falls back to EN", async () => {
-    const { driveSpecialBannerText, DRIVE_SPECIAL_PURPLE, driveSpecialCapCopy } = await import(
-      "./drive-special"
-    );
+    const { driveSpecialBannerText, DRIVE_SPECIAL_PURPLE, driveSpecialCapCopy } =
+      await import("./drive-special");
     expect(DRIVE_SPECIAL_NAME).toBe("Black Friday Special");
     const offerDetail = /minute|Drive the Music|15|30/i;
     for (const lang of ["en", "de", "ro", "fr"] as const) {
@@ -136,7 +134,13 @@ describe("Black Friday Special banner copy", () => {
       expect(copy.cta.length).toBeGreaterThan(0);
       expect(copy.terms.length).toBeGreaterThan(0);
     }
-    expect(driveSpecialBannerText("de").teaser).toMatch(/Black Friday/);
+    expect(driveSpecialBannerText("en").teaser).toMatch(/27th of November/);
+    expect(driveSpecialBannerText("de").teaser).toMatch(/27\. November/);
+    expect(driveSpecialBannerText("ro").teaser).toMatch(/27 noiembrie/);
+    expect(driveSpecialBannerText("en").signup).toBe("Sign up");
+    expect(driveSpecialBannerText("de").signup).toBe("Registrieren");
+    expect(driveSpecialBannerText("ro").signup).toBe("Înregistrare");
+    expect(driveSpecialBannerText("en").cta).toBe("See the sounds");
     expect(driveSpecialBannerText("ro").terms).toMatch(/termen/i);
     expect(DRIVE_SPECIAL_PURPLE).toMatch(/^#[0-9a-f]{6}$/i);
     expect(driveSpecialCapCopy("en").cta).toMatch(/Drive the Music/);
@@ -144,10 +148,38 @@ describe("Black Friday Special banner copy", () => {
     expect(driveSpecialCapCopy("en").title).toMatch(/30/);
     expect(driveSpecialCapCopy("ro").title).toMatch(/30/);
   });
-  it("sounds hint still names the 30-minute Drive the Music allowance", async () => {
+  it("welcome copy is EN/DE/RO and names the benefits", async () => {
+    const { blackFridayWelcomeCopy } = await import("./drive-special");
+    expect(blackFridayWelcomeCopy("en").title).toBe("Congratulations!");
+    expect(blackFridayWelcomeCopy("en").body).toMatch(/Midnight Dark Rave/);
+    expect(blackFridayWelcomeCopy("en").body).toMatch(/30 minutes/);
+    expect(blackFridayWelcomeCopy("en").startDrive).toBe("Start Drive");
+    expect(blackFridayWelcomeCopy("en").foundersPack).toBe("Founders Pack");
+    expect(blackFridayWelcomeCopy("en").body).toMatch(/limited availability/);
+    expect(blackFridayWelcomeCopy("de").title).toMatch(/Glückwunsch/);
+    expect(blackFridayWelcomeCopy("ro").terms).toMatch(/termen/i);
+  });
+  it("guest time-up copy asks to sign up (primary) then sign in", async () => {
+    const { midnightDarkRaveGuestCopy } = await import("./drive-special");
+    expect(midnightDarkRaveGuestCopy("en").signUp).toBe("Sign up");
+    expect(midnightDarkRaveGuestCopy("en").signIn).toBe("Sign in");
+    expect(midnightDarkRaveGuestCopy("de").signUp).toBe("Registrieren");
+    expect(midnightDarkRaveGuestCopy("ro").signUp).toBe("Înregistrare");
+    expect(midnightDarkRaveGuestCopy("en").body).toMatch(/Sign up or sign in/);
+  });
+  it("sounds hint names Midnight Dark Rave and the 30-minute Drive the Music allowance", async () => {
     const { driveSpecialSoundsHint } = await import("./drive-special");
+    expect(driveSpecialSoundsHint("en", true)).toMatch(/Midnight Dark Rave/);
     expect(driveSpecialSoundsHint("en", true)).toMatch(/30 minutes/);
+    expect(driveSpecialSoundsHint("en", false)).toMatch(/15 minutes/);
     expect(driveSpecialSoundsHint("de", true)).toMatch(/30 Minuten/);
     expect(driveSpecialSoundsHint("ro", false)).toMatch(/30 minute/);
+  });
+});
+
+describe("landing Start Drive profile", () => {
+  it("is Midnight Dark Rave during the window and Racing V10 after", () => {
+    expect(landingStartDriveProfileId(NOW)).toBe(MIDNIGHT_DARK_RAVE_PROFILE_ID);
+    expect(landingStartDriveProfileId(AFTER)).toBe("racing-v10");
   });
 });

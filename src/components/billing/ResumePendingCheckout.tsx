@@ -12,7 +12,10 @@ function checkoutFailureMessage(error: unknown): string {
   const raw =
     error instanceof Error
       ? error.message
-      : error && typeof error === "object" && "message" in error && typeof error.message === "string"
+      : error &&
+          typeof error === "object" &&
+          "message" in error &&
+          typeof error.message === "string"
         ? error.message
         : "";
   const message = raw.replace(/sk_(live|test)_[A-Za-z0-9]+/g, "sk_…").trim();
@@ -35,12 +38,17 @@ export function ResumePendingCheckout() {
     const next = intent.returnPath === "/" ? "/" : intent.returnPath;
     window.history.replaceState(window.history.state, "", next);
     setNotice("Opening checkout…");
-    void openDrivePlusCheckout(intent.interval, intent.returnPath, intent.source, intent.plan).catch(
-      (error: unknown) => {
-        resumeStartedFor = null;
-        setNotice(checkoutFailureMessage(error));
-      },
-    );
+    // Resume only runs after the visitor already ticked immediate-start consent on checkout.
+    void openDrivePlusCheckout(
+      intent.interval,
+      intent.returnPath,
+      intent.source,
+      intent.plan,
+      true,
+    ).catch((error: unknown) => {
+      resumeStartedFor = null;
+      setNotice(checkoutFailureMessage(error));
+    });
   }, [isAuthenticated, isLoading]);
 
   if (!notice) return null;

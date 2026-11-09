@@ -28,7 +28,10 @@ function idOf(value: string | { id: string } | null | undefined): string | null 
 }
 
 export function isFoundersPackCheckoutSession(session: Stripe.Checkout.Session): boolean {
-  return session.mode === "payment" && session.metadata?.["commercialPlanId"] === FOUNDERS_PACK_COMMERCIAL_PLAN_ID;
+  return (
+    session.mode === "payment" &&
+    session.metadata?.["commercialPlanId"] === FOUNDERS_PACK_COMMERCIAL_PLAN_ID
+  );
 }
 
 function sessionPriceMatchesFoundersPack(session: Stripe.Checkout.Session): boolean {
@@ -64,22 +67,25 @@ export async function handleFoundersPackCheckoutCompleted(session: Stripe.Checko
     ? await getUserBillingRepository().getUserIdByStripeCustomerId(customerId)
     : null;
   if (fromCustomer && metaUser && fromCustomer !== metaUser) {
-    throw new StripeFoundersPackProcessingError("Stripe customer owner does not match metadata userId");
+    throw new StripeFoundersPackProcessingError(
+      "Stripe customer owner does not match metadata userId",
+    );
   }
   const userId = fromCustomer ?? metaUser ?? session.client_reference_id?.trim() ?? null;
   if (!userId) {
-    throw new StripeFoundersPackProcessingError("Unable to resolve user for Founders Pack checkout");
+    throw new StripeFoundersPackProcessingError(
+      "Unable to resolve user for Founders Pack checkout",
+    );
   }
   if (customerId) {
     await getUserBillingRepository().setStripeCustomerId(userId, customerId);
   }
 
-  const purchasedAt = (session.created ? session.created * 1000 : Date.now());
-  const { claimFounderSeat, grantFoundersPackUnlimited, foundersPackPurchasedAt } = await import(
-    "@/lib/founders/founders.server"
-  );
+  const purchasedAt = session.created ? session.created * 1000 : Date.now();
+  const { claimFounderSeatFromPurchase, grantFoundersPackUnlimited, foundersPackPurchasedAt } =
+    await import("@/lib/founders/founders.server");
   const already = foundersPackPurchasedAt(userId);
-  await claimFounderSeat(userId, null, purchasedAt);
+  await claimFounderSeatFromPurchase(userId, null, purchasedAt);
   const until = grantFoundersPackUnlimited(userId, already ?? purchasedAt);
   await persistEntitlementGrantsForAccount(userId).catch((error: unknown) => {
     console.error(

@@ -40,6 +40,8 @@ export const LEGAL_LINKS = [
   { to: "/legal/privacy" as const, label: "Privacy" },
   { to: "/legal/cookies" as const, label: "Cookies" },
   { to: "/legal/terms" as const, label: "Terms" },
+  { to: "/legal/withdrawal" as const, label: "Withdrawal" },
+  { to: "/legal/cancel" as const, label: "Cancel contract" },
   { to: "/legal/rewards" as const, label: "Founders, Crew & Rewards Terms" },
   { to: "/legal/accessibility" as const, label: "Accessibility" },
 ];

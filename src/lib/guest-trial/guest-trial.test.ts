@@ -38,7 +38,19 @@ describe("guest trial window", () => {
   });
 
   it("covers exactly the eleven trial sounds", () => {
-    for (const id of ["american-muscle-v8", "racing-v10", "symphony-latino-fiesta", "fusion-midnight-boost", "genre:waltz", "genre:house", "wild-west-carriage", "romanian-85-carriage", "dracula-carriage", "police-patrol", "gt-v8"])
+    for (const id of [
+      "american-muscle-v8",
+      "racing-v10",
+      "symphony-latino-fiesta",
+      "fusion-midnight-boost",
+      "genre:waltz",
+      "genre:house",
+      "wild-west-carriage",
+      "romanian-85-carriage",
+      "dracula-carriage",
+      "police-patrol",
+      "gt-v8",
+    ])
       expect(isGuestTrialProfile(id)).toBe(true);
     expect(isGuestTrialProfile("symphony-motion-orchestra", "waltz")).toBe(true);
     expect(isGuestTrialProfile("symphony-motion-orchestra", "house")).toBe(true);
@@ -53,11 +65,25 @@ describe("server: 7-minute cap per hashed IP", () => {
   it("never stores the raw IP and caps at 7:00", async () => {
     const store = createMemoryStore();
     let t = IN;
-    let r = await recordGuestHeartbeat({ ip: "203.0.113.7", signedIn: false, claimedSeconds: 0, now: t, secret: SECRET, store });
+    let r = await recordGuestHeartbeat({
+      ip: "203.0.113.7",
+      signedIn: false,
+      claimedSeconds: 0,
+      now: t,
+      secret: SECRET,
+      store,
+    });
     expect(r).toMatchObject({ mode: "guest", remainingSeconds: GUEST_TRIAL_DAILY_SECONDS });
     for (let i = 0; i < 20; i++) {
       t += 30_000;
-      r = await recordGuestHeartbeat({ ip: "203.0.113.7", signedIn: false, claimedSeconds: 30, now: t, secret: SECRET, store });
+      r = await recordGuestHeartbeat({
+        ip: "203.0.113.7",
+        signedIn: false,
+        claimedSeconds: 30,
+        now: t,
+        secret: SECRET,
+        store,
+      });
     }
     expect(r).toMatchObject({ mode: "guest", usedSeconds: 420, remainingSeconds: 0 });
     const h = hashGuestIp("203.0.113.7", berlinDayKey(t), SECRET);
@@ -74,19 +100,65 @@ describe("server: 7-minute cap per hashed IP", () => {
 
   it("resets at Berlin midnight and purges old days", async () => {
     const store = createMemoryStore();
-    const before = await recordGuestHeartbeat({ ip: "198.51.100.1", signedIn: false, claimedSeconds: 30, now: Date.parse("2026-11-15T23:59:30+01:00"), secret: SECRET, store });
+    const before = await recordGuestHeartbeat({
+      ip: "198.51.100.1",
+      signedIn: false,
+      claimedSeconds: 30,
+      now: Date.parse("2026-11-15T23:59:30+01:00"),
+      secret: SECRET,
+      store,
+    });
     expect(before).toMatchObject({ mode: "guest", usedSeconds: 30 });
-    const after = await recordGuestHeartbeat({ ip: "198.51.100.1", signedIn: false, claimedSeconds: 0, now: Date.parse("2026-11-16T00:00:01+01:00"), secret: SECRET, store });
-    expect(after).toMatchObject({ mode: "guest", usedSeconds: 0, remainingSeconds: 420, day: "2026-11-16" });
+    const after = await recordGuestHeartbeat({
+      ip: "198.51.100.1",
+      signedIn: false,
+      claimedSeconds: 0,
+      now: Date.parse("2026-11-16T00:00:01+01:00"),
+      secret: SECRET,
+      store,
+    });
+    expect(after).toMatchObject({
+      mode: "guest",
+      usedSeconds: 0,
+      remainingSeconds: 420,
+      day: "2026-11-16",
+    });
     const oldHash = hashGuestIp("198.51.100.1", "2026-11-15", SECRET);
     expect(await store.get(oldHash, "2026-11-15")).toBeNull();
   });
 
   it("bypasses signed-in users and does nothing outside the window", async () => {
     const store = createMemoryStore();
-    expect(await recordGuestHeartbeat({ ip: "1.2.3.4", signedIn: true, claimedSeconds: 30, now: IN, secret: SECRET, store })).toEqual({ mode: "signed_in" });
-    expect(await recordGuestHeartbeat({ ip: "1.2.3.4", signedIn: false, claimedSeconds: 30, now: Date.parse("2026-11-05T12:00:00+01:00"), secret: SECRET, store })).toEqual({ mode: "inactive" });
-    expect(await recordGuestHeartbeat({ ip: "1.2.3.4", signedIn: false, claimedSeconds: 30, now: IN, secret: null, store })).toEqual({ mode: "local_only" });
+    expect(
+      await recordGuestHeartbeat({
+        ip: "1.2.3.4",
+        signedIn: true,
+        claimedSeconds: 30,
+        now: IN,
+        secret: SECRET,
+        store,
+      }),
+    ).toEqual({ mode: "signed_in" });
+    expect(
+      await recordGuestHeartbeat({
+        ip: "1.2.3.4",
+        signedIn: false,
+        claimedSeconds: 30,
+        now: Date.parse("2026-11-05T12:00:00+01:00"),
+        secret: SECRET,
+        store,
+      }),
+    ).toEqual({ mode: "inactive" });
+    expect(
+      await recordGuestHeartbeat({
+        ip: "1.2.3.4",
+        signedIn: false,
+        claimedSeconds: 30,
+        now: IN,
+        secret: null,
+        store,
+      }),
+    ).toEqual({ mode: "local_only" });
   });
 });
 
@@ -116,7 +188,14 @@ describe("client: guest access", () => {
 
   it("logged-in users never go through the trial; outside the window guests are unchanged", () => {
     expect(guestTrialAllows("symphony-latino-fiesta", true, IN, null)).toBe(false);
-    expect(guestTrialAllows("symphony-latino-fiesta", false, Date.parse("2026-12-10T12:00:00+01:00"), null)).toBe(false);
+    expect(
+      guestTrialAllows(
+        "symphony-latino-fiesta",
+        false,
+        Date.parse("2026-12-10T12:00:00+01:00"),
+        null,
+      ),
+    ).toBe(false);
     expect(guestTrialAllows("traby", false, IN, null)).toBe(false);
   });
 
@@ -125,9 +204,11 @@ describe("client: guest access", () => {
     expect(guestTrialGoverns("racing-v10", false, IN, null)).toBe(true);
     tickGuestTrial(300, IN); // e.g. 5 min on V8
     tickGuestTrial(120, IN); // then 2 min on Latino
-    for (const id of ["american-muscle-v8", "racing-v10", "symphony-latino-fiesta", "fusion-midnight-boost"]) {
+    for (const id of ["american-muscle-v8", "racing-v10", "symphony-latino-fiesta"]) {
       expect(guestTrialAllows(id, false, IN, null)).toBe(false);
     }
+    // During Black Friday, Midnight Dark Rave uses its own 15-minute guest rule.
+    expect(guestTrialGoverns("fusion-midnight-boost", false, IN, null)).toBe(false);
     expect(guestTrialAllows("symphony-motion-orchestra", false, IN, "waltz")).toBe(false);
     expect(guestTrialAllows("symphony-motion-orchestra", false, IN, "house")).toBe(false);
   });

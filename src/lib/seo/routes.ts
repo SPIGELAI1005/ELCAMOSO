@@ -159,7 +159,8 @@ export const INDEXABLE_ROUTE_POLICIES: SeoRoutePolicy[] = [
     path: "/crew",
     indexable: true,
     title: "Crew - Smiles, Levels & Leaderboard | ELCAMOSO",
-    description: "How ELCAMOSO Smiles work: earn on every drive, climb the levels, top the weekly board.",
+    description:
+      "How ELCAMOSO Smiles work: earn on every drive, climb the levels, top the weekly board.",
     image: IMG,
     imageAlt: ALT,
     breadcrumbs: [
@@ -246,6 +247,24 @@ export const INDEXABLE_ROUTE_POLICIES: SeoRoutePolicy[] = [
     title: "Terms of Use | ELCAMOSO",
     description:
       "Terms of use for the ELCAMOSO web app and motion-responsive sound experiences for EVs.",
+    image: IMG,
+    imageAlt: ALT,
+  },
+  {
+    path: "/legal/withdrawal",
+    indexable: true,
+    title: "Right of withdrawal | ELCAMOSO",
+    description:
+      "14-day statutory withdrawal information (Widerrufsbelehrung) and model withdrawal form for ELCAMOSO subscriptions.",
+    image: IMG,
+    imageAlt: ALT,
+  },
+  {
+    path: "/legal/cancel",
+    indexable: true,
+    title: "Cancel contract | ELCAMOSO",
+    description:
+      "Cancel your ELCAMOSO subscription (Verträge hier kündigen) under German consumer contract law.",
     image: IMG,
     imageAlt: ALT,
   },

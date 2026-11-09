@@ -8,6 +8,7 @@ import {
   DRIVE_SPECIAL_DAILY_SECONDS,
   driveSpecialCapApplies,
   isDriveSpecialActive,
+  isMidnightDarkRaveProfile,
 } from "@/lib/billing/drive-special";
 import { isMusicPackageProfileId } from "@/lib/entitlements/plans";
 import type { Entitlement, Plan } from "@/lib/entitlements/types";
@@ -74,10 +75,7 @@ function emit() {
   for (const l of listeners) l();
 }
 
-export function getDriveSpecialCapState(
-  accountId: string,
-  now = Date.now(),
-): DriveSpecialCapState {
+export function getDriveSpecialCapState(accountId: string, now = Date.now()): DriveSpecialCapState {
   load(accountId, now);
   return state;
 }
@@ -87,9 +85,7 @@ export function subscribeDriveSpecialCap(fn: () => void): () => void {
   return () => listeners.delete(fn);
 }
 
-export function driveSpecialUsedSeconds(
-  s: DriveSpecialCapState = state,
-): number {
+export function driveSpecialUsedSeconds(s: DriveSpecialCapState = state): number {
   const server = s.serverUsed == null ? 0 : s.serverUsed + s.pending;
   return Math.max(s.localUsed, server);
 }
@@ -159,6 +155,8 @@ export function driveSpecialCapGoverns(
   now = Date.now(),
 ): boolean {
   if (!driveSpecialCapApplies(user, now)) return false;
+  // Midnight Dark Rave is unlimited for signed-in drivers during the window.
+  if (isMidnightDarkRaveProfile(profileId)) return false;
   if (!isMusicPackageProfileId(profileId)) return false;
   if ((FREE_SOUND_PROFILE_IDS as readonly string[]).includes(profileId)) return false;
   if (user.grantedProfileIds?.includes(profileId)) return false;

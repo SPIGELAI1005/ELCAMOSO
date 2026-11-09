@@ -3,6 +3,7 @@
  * Source of truth is the server (/api/guest-trial, hashed IP); a localStorage
  * counter is kept as a backup and the stricter of the two always wins.
  */
+import { isDriveSpecialActive, isMidnightDarkRaveProfile } from "@/lib/billing/drive-special";
 import {
   GUEST_TRIAL_DAILY_SECONDS,
   berlinDayKey,
@@ -99,7 +100,10 @@ export function takePendingSeconds(): number {
 }
 
 /** Apply a server reply. */
-export function applyServerUsage(reply: { mode: string; usedSeconds?: number; day?: string }, sent: number) {
+export function applyServerUsage(
+  reply: { mode: string; usedSeconds?: number; day?: string },
+  sent: number,
+) {
   if (reply.mode !== "guest" || typeof reply.usedSeconds !== "number") {
     // local_only / inactive / signed_in: keep counting locally.
     state.pending = Math.max(0, state.pending - sent);
@@ -143,6 +147,8 @@ export function guestTrialGoverns(
   now = guestTrialNow(),
   genre: string | null = currentTrialGenre(),
 ): boolean {
+  // During Black Friday, Midnight Dark Rave uses its own 15-minute guest rule.
+  if (isMidnightDarkRaveProfile(profileId) && isDriveSpecialActive(now)) return false;
   return !signedIn && isGuestTrialWindow(now) && isGuestTrialProfile(profileId, genre);
 }
 
@@ -154,6 +160,7 @@ export function guestTrialAllows(
 ): boolean {
   if (signedIn) return false;
   if (!isGuestTrialWindow(now)) return false;
+  if (isMidnightDarkRaveProfile(profileId) && isDriveSpecialActive(now)) return false;
   if (!isGuestTrialProfile(profileId, genre)) return false;
   return guestRemainingSeconds(now) > 0;
 }

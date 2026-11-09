@@ -34,10 +34,7 @@ import {
   previewRewardDiscount,
   retryApplyRenewalRewardDiscount,
 } from "./service";
-import {
-  setRewardDiscountStripeOpsForTests,
-  type RewardDiscountStripeOps,
-} from "./stripe-ops";
+import { setRewardDiscountStripeOpsForTests, type RewardDiscountStripeOps } from "./stripe-ops";
 
 const ACCOUNT = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const OTHER = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
@@ -214,6 +211,7 @@ describe("Prompt 13 reward discount fulfilment (test-mode scenarios)", () => {
       userId: ACCOUNT,
       email: "driver@example.com",
       origin: "http://localhost:5173",
+      immediateStartConsent: true,
       request: { plan: "drive_plus", interval: "monthly" },
       rewardReservationId: RES_ID,
     });

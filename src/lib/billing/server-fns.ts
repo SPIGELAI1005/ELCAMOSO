@@ -100,6 +100,7 @@ export const createCheckoutSessionFn = createServerFn({ method: "POST" })
       source?: string;
       /** Sound Spin reservation id — server validates ownership; no client coupon ids. */
       rewardReservationId?: string | null;
+      immediateStartConsent?: boolean;
     }) => data,
   )
   .handler(async ({ data }) => {
@@ -114,21 +115,25 @@ export const createCheckoutSessionFn = createServerFn({ method: "POST" })
       email: session.email,
       origin: data.origin,
       trustedHost: await requestHost(),
+      immediateStartConsent: Boolean(data.immediateStartConsent),
       request: {
         plan: data.plan,
         interval: data.interval,
         ...(data.returnPath ? { returnPath: data.returnPath } : {}),
         ...(data.source ? { source: data.source } : {}),
       },
-      ...(data.rewardReservationId
-        ? { rewardReservationId: data.rewardReservationId }
-        : {}),
+      ...(data.rewardReservationId ? { rewardReservationId: data.rewardReservationId } : {}),
     });
   });
 
 export const createBillingPortalSessionFn = createServerFn({ method: "POST" })
   .inputValidator(
-    (data: { sessionToken?: string | null; origin: string; returnPath?: string }) => data,
+    (data: {
+      sessionToken?: string | null;
+      origin: string;
+      returnPath?: string;
+      flow?: "cancel" | null;
+    }) => data,
   )
   .handler(async ({ data }) => {
     const { resolveAuthenticatedUserId } = await import("@/lib/account/resolve-authenticated-user");
@@ -138,11 +143,34 @@ export const createBillingPortalSessionFn = createServerFn({ method: "POST" })
     if (!stripeCustomerId) {
       throw new Error("No billing account linked");
     }
+    const { getSubscriptionRepository } =
+      await import("@/lib/billing/subscription-repository-memory");
+    const sub =
+      data.flow === "cancel"
+        ? await getSubscriptionRepository().findLatestByUserId?.(userId)
+        : null;
 
     return createStripePortalSession({
       stripeCustomerId,
       origin: data.origin,
       trustedHost: await requestHost(),
       ...(data.returnPath ? { returnPath: data.returnPath } : {}),
+      ...(data.flow === "cancel" && sub?.providerSubscriptionId
+        ? { flow: "cancel" as const, subscriptionId: sub.providerSubscriptionId }
+        : {}),
     });
+  });
+
+export const switchToYearlyFn = createServerFn({ method: "POST" })
+  .inputValidator((data: { sessionToken?: string | null }) => data)
+  .handler(async ({ data }) => {
+    const { getAccountSession } = await import("@/lib/account/auth-service");
+    const { tryResolveRequestSessionToken } = await import("@/lib/account/session-cookies.server");
+    const token = tryResolveRequestSessionToken(data.sessionToken);
+    const session = token ? getAccountSession(token) : null;
+    if (!session) throw new Error("Sign in required");
+    const { hydrateUserBillingState } = await import("@/lib/billing/durable-state.server");
+    await hydrateUserBillingState(session.userId, { force: true });
+    const { switchMonthlySubscriptionToYearly } = await import("@/lib/billing/switch-to-yearly");
+    return switchMonthlySubscriptionToYearly(session.userId);
   });

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 
 import { AccountSignInDialog } from "@/components/AccountSignInDialog";
 import { useAccount } from "@/lib/account/AccountProvider";
@@ -30,6 +30,7 @@ function UpgradeTokenScreen() {
   const [showSignIn, setShowSignIn] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [consent, setConsent] = useState(false);
 
   useEffect(() => {
     void resolveTeslaUpgradeTokenFn({ data: { token } }).then(setResolved);
@@ -46,6 +47,7 @@ function UpgradeTokenScreen() {
           sessionToken: null,
           origin: window.location.origin,
           returnPath: `/upgrade/${encodeURIComponent(token)}`,
+          immediateStartConsent: true,
         },
       });
       window.location.assign(result.url);
@@ -57,6 +59,10 @@ function UpgradeTokenScreen() {
 
   function handleContinueClick() {
     if (isLoading || busy) return;
+    if (!consent) {
+      setError("Please confirm immediate start of the service.");
+      return;
+    }
     if (isAuthenticated && session) {
       void startCheckout();
       return;
@@ -125,14 +131,36 @@ function UpgradeTokenScreen() {
       {!resolved.billingAvailable ? (
         <p className="mt-6 text-sm text-muted-foreground">Drive+ is not available yet.</p>
       ) : (
-        <button
-          type="button"
-          disabled={busy || isLoading}
-          onClick={handleContinueClick}
-          className="mt-10 inline-flex h-14 items-center justify-center rounded-full bg-primary px-10 text-sm tracking-[0.22em] text-primary-foreground uppercase disabled:opacity-50"
-        >
-          {busy ? "Opening secure payment…" : "Continue with Drive+"}
-        </button>
+        <>
+          <label className="mt-8 flex max-w-md cursor-pointer items-start gap-2 text-left text-xs leading-relaxed text-muted-foreground">
+            <input
+              type="checkbox"
+              className="mt-0.5 h-4 w-4 shrink-0 accent-foreground"
+              checked={consent}
+              onChange={(e) => {
+                setConsent(e.target.checked);
+                setError(null);
+              }}
+              data-testid="checkout-immediate-start-consent"
+            />
+            <span>
+              I request immediate start of the digital service and acknowledge that my 14-day
+              withdrawal right then expires, as explained in the{" "}
+              <Link to="/legal/withdrawal" className="underline underline-offset-2">
+                withdrawal information
+              </Link>
+              .
+            </span>
+          </label>
+          <button
+            type="button"
+            disabled={busy || isLoading || !consent}
+            onClick={handleContinueClick}
+            className="mt-6 inline-flex h-14 items-center justify-center rounded-full bg-primary px-10 text-sm tracking-[0.22em] text-primary-foreground uppercase disabled:opacity-50"
+          >
+            {busy ? "Opening secure payment…" : "Continue with Drive+"}
+          </button>
+        </>
       )}
       {error ? <p className="mt-4 text-sm text-muted-foreground">{error}</p> : null}
       <p className="mt-8 max-w-sm text-xs text-muted-foreground">

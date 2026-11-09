@@ -40,10 +40,12 @@ export function EntitlementEnforcer() {
     // bridges (fade out + time-up notice); never crossfade them to V10.
     const guestTrialOwned = access.isGuestTrialGoverned(settings.profileId);
     const specialCapOwned = access.isDriveSpecialCapGoverned(settings.profileId);
+    const midnightRaveOwned = access.isMidnightRaveGuestGoverned(settings.profileId);
     const mustFadeToFree =
       isLiveDrive &&
       !guestTrialOwned &&
       !specialCapOwned &&
+      !midnightRaveOwned &&
       (!access.canDriveWithProfile(settings.profileId) ||
         (leaseAction.expired && OFFLINE_LEASE_EXPIRY_POLICY === "fade_to_free"));
 
@@ -77,6 +79,7 @@ export function EntitlementEnforcer() {
       !isLiveDrive &&
       !guestTrialOwned &&
       !specialCapOwned &&
+      !midnightRaveOwned &&
       !access.canDriveWithProfile(settings.profileId) &&
       settings.profileId !== FALLBACK_SOUND_PROFILE_ID
     ) {
@@ -101,6 +104,7 @@ export function EntitlementEnforcer() {
     access.canDriveWithProfile,
     access.isGuestTrialGoverned,
     access.isDriveSpecialCapGoverned,
+    access.isMidnightRaveGuestGoverned,
     isLiveDrive,
     settings.dynamicDrive,
     settings.latencyCompMs,

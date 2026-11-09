@@ -48,8 +48,8 @@ const FAQ_ENTRIES: FaqEntry[] = [
           compatible in-car or phone browsers, subject to permissions and browser support.
         </p>
         <p className="mt-3">
-          Electric vehicles, petrol-engine cars, hybrids, and older vehicles can all use ELCAMOSO
-          if you have a compatible browser—either built into the car or on a mounted phone.
+          Electric vehicles, petrol-engine cars, hybrids, and older vehicles can all use ELCAMOSO if
+          you have a compatible browser—either built into the car or on a mounted phone.
         </p>
       </>
     ),
@@ -73,8 +73,7 @@ const FAQ_ENTRIES: FaqEntry[] = [
           </li>
           <li>
             <strong className="font-medium text-foreground">Permissions.</strong> The browser may
-            request location or motion permissions to detect your driving. Grant them when
-            prompted.
+            request location or motion permissions to detect your driving. Grant them when prompted.
           </li>
           <li>
             <strong className="font-medium text-foreground">Keep the browser visible.</strong>{" "}
@@ -174,8 +173,12 @@ const FAQ_ENTRIES: FaqEntry[] = [
           page for current plans, free experiences, and availability.
         </p>
         <p className="mt-3">
-          Until Black Friday, signed-in drivers can use Drive the Music for 30 minutes a day
-          (Black Friday Special). Logged-out visitors keep the separate 7-minute guest trial.
+          Until 27 November 2026 23:59 Europe/Berlin (Black Friday Special), Start Drive on the home
+          page opens Midnight Dark Rave. Visitors without an account can play it for 15 minutes a
+          day (Berlin). Sign in to keep driving Midnight Dark Rave with no daily limit until the end
+          of Black Friday, and to use other Drive the Music sounds for 30 minutes a day. After the
+          offer, Start Drive falls back to Racing V10. Logged-out visitors also keep the separate
+          7-minute guest trial on a small set of sounds.
         </p>
       </>
     ),
@@ -186,8 +189,8 @@ const FAQ_ENTRIES: FaqEntry[] = [
     answer: (
       <>
         <p>
-          <strong className="font-medium text-foreground">Drive+</strong> unlocks every Engine
-          sound profile and all World experiences.
+          <strong className="font-medium text-foreground">Drive+</strong> unlocks every Engine sound
+          profile and all World experiences.
         </p>
         <p className="mt-3">
           <strong className="font-medium text-foreground">Drive the Music</strong> unlocks every
@@ -217,14 +220,18 @@ const FAQ_ENTRIES: FaqEntry[] = [
     answer: (
       <>
         <p>
-          The Founders Pack is a limited offer (458 seats) until Black Friday, 27.11.2026 23:59
-          Berlin. Founders keep selected sounds free forever and can join the Founders Test Crew.
+          The Founders Pack is a yearly Drive+ or yearly Drive the Music subscription until Black
+          Friday, 27.11.2026 23:59 Berlin. You get the package you buy, Drive Unlimited for 4 months
+          from purchase (then that package), and 4 sounds you choose that stay yours forever.
+          Founders can join the Founders Test Crew.
         </p>
         <p className="mt-3">
-          Buying the Founders Pack gives{" "}
-          <strong className="font-medium text-foreground">Drive Unlimited for 4 months</strong>{" "}
-          from the purchase date. Founders who claimed a seat before this change keep their
-          existing access until 27.05.2027.
+          Buying yearly Drive+ or Drive the Music in that window makes you a Founder. The Black
+          Friday Special does not grant a free Founder seat. Existing Founders who signed in before
+          9 November 2026 23:59 Europe/Berlin keep Racing V10, American Muscle V8 and GT V8 forever
+          and Drive Unlimited until 27.05.2027 23:59 Europe/Berlin. Founders also receive the Black
+          Friday Special while that offer runs; Drive Unlimited already includes Drive the Music
+          without the 30-minute cap.
         </p>
       </>
     ),
@@ -245,9 +252,9 @@ const FAQ_ENTRIES: FaqEntry[] = [
         </p>
         <p className="mt-3 font-medium text-foreground">Driver responsibility</p>
         <p className="mt-2">
-          Set up ELCAMOSO while parked. Choose your sound and adjust volume before you start
-          moving. Do not interact with the screen while driving—let a passenger change settings if
-          needed, or wait until you stop.
+          Set up ELCAMOSO while parked. Choose your sound and adjust volume before you start moving.
+          Do not interact with the screen while driving—let a passenger change settings if needed,
+          or wait until you stop.
         </p>
         <p className="mt-3">
           ELCAMOSO is not a vehicle control or navigation system. It creates sound from motion data

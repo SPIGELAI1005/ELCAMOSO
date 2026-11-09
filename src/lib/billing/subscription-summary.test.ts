@@ -38,6 +38,7 @@ describe("buildSubscriptionSummary", () => {
       canManageSubscription: false,
       canUpgrade: true,
       trial: null,
+      canSwitchToYearly: false,
     });
   });
 
@@ -62,6 +63,7 @@ describe("buildSubscriptionSummary", () => {
     expect(summary.actionHint).toBeNull();
     expect(summary.canManageSubscription).toBe(true);
     expect(summary.canUpgrade).toBe(false);
+    expect(summary.canSwitchToYearly).toBe(true);
   });
 
   it("describes annual Drive+ scheduled to cancel at period end", () => {
@@ -82,6 +84,7 @@ describe("buildSubscriptionSummary", () => {
     expect(summary.intervalLabel).toBe("Annual");
     expect(summary.statusHeadline).toBe("Ending soon");
     expect(summary.statusDetail).toBe("Available until Jan 1, 2027");
+    expect(summary.canSwitchToYearly).toBe(false);
   });
 
   it("shows payment issue copy during past_due grace", () => {

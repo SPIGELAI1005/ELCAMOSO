@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 
 import { useAccount } from "@/lib/account/AccountProvider";
 import { AccountSignInDialog } from "@/components/AccountSignInDialog";
+import { SwitchToYearlyButton } from "@/components/SwitchToYearlyButton";
 import { openBillingPortal } from "@/lib/billing/portal-client";
 import { getDrivePlusYearlyDisplay } from "@/lib/billing/plan-display";
 import { getSubscriptionSummaryFn } from "@/lib/billing/server-fns";
@@ -20,6 +21,7 @@ const FREE_SUMMARY: SubscriptionSummary = {
   canManageSubscription: false,
   canUpgrade: true,
   trial: null,
+  canSwitchToYearly: false,
 };
 
 interface BillingSettingsPanelProps {
@@ -184,6 +186,7 @@ export function BillingSettingsPanel({ billingFlash = null }: BillingSettingsPan
             Drive+ · {yearlyPrice.amount}/year
           </Link>
         ) : null}
+        {summary.canSwitchToYearly ? <SwitchToYearlyButton /> : null}
         {summary.canManageSubscription ? (
           <button
             type="button"

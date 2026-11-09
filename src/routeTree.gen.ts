@@ -65,11 +65,13 @@ import { Route as DebugTachoRouteImport } from './routes/debug_.tacho'
 import { Route as JourneysJourneyIdRouteImport } from './routes/journeys_.$journeyId'
 import { Route as LegalIndexRouteImport } from './routes/legal/index'
 import { Route as LegalAccessibilityRouteImport } from './routes/legal/accessibility'
+import { Route as LegalCancelRouteImport } from './routes/legal/cancel'
 import { Route as LegalCookiesRouteImport } from './routes/legal/cookies'
 import { Route as LegalImpressumRouteImport } from './routes/legal/impressum'
 import { Route as LegalPrivacyRouteImport } from './routes/legal/privacy'
 import { Route as LegalRewardsRouteImport } from './routes/legal/rewards'
 import { Route as LegalTermsRouteImport } from './routes/legal/terms'
+import { Route as LegalWithdrawalRouteImport } from './routes/legal/withdrawal'
 import { Route as NewsHalloweenRouteImport } from './routes/news_.halloween'
 import { Route as PairTokenRouteImport } from './routes/pair_.$token'
 import { Route as SyncIndexRouteImport } from './routes/sync.index'
@@ -373,6 +375,11 @@ const LegalAccessibilityRoute = LegalAccessibilityRouteImport.update({
   path: '/accessibility',
   getParentRoute: () => LegalRouteRoute,
 } as any)
+const LegalCancelRoute = LegalCancelRouteImport.update({
+  id: '/cancel',
+  path: '/cancel',
+  getParentRoute: () => LegalRouteRoute,
+} as any)
 const LegalCookiesRoute = LegalCookiesRouteImport.update({
   id: '/cookies',
   path: '/cookies',
@@ -396,6 +403,11 @@ const LegalRewardsRoute = LegalRewardsRouteImport.update({
 const LegalTermsRoute = LegalTermsRouteImport.update({
   id: '/terms',
   path: '/terms',
+  getParentRoute: () => LegalRouteRoute,
+} as any)
+const LegalWithdrawalRoute = LegalWithdrawalRouteImport.update({
+  id: '/withdrawal',
+  path: '/withdrawal',
   getParentRoute: () => LegalRouteRoute,
 } as any)
 const NewsHalloweenRoute = NewsHalloweenRouteImport.update({
@@ -566,11 +578,13 @@ export interface FileRoutesByFullPath {
   '/debug/tacho': typeof DebugTachoRoute
   '/journeys/$journeyId': typeof JourneysJourneyIdRoute
   '/legal/accessibility': typeof LegalAccessibilityRoute
+  '/legal/cancel': typeof LegalCancelRoute
   '/legal/cookies': typeof LegalCookiesRoute
   '/legal/impressum': typeof LegalImpressumRoute
   '/legal/privacy': typeof LegalPrivacyRoute
   '/legal/rewards': typeof LegalRewardsRoute
   '/legal/terms': typeof LegalTermsRoute
+  '/legal/withdrawal': typeof LegalWithdrawalRoute
   '/news/halloween': typeof NewsHalloweenRoute
   '/pair/$token': typeof PairTokenRoute
   '/sync/$code': typeof SyncCodeRoute
@@ -650,11 +664,13 @@ export interface FileRoutesByTo {
   '/debug/tacho': typeof DebugTachoRoute
   '/journeys/$journeyId': typeof JourneysJourneyIdRoute
   '/legal/accessibility': typeof LegalAccessibilityRoute
+  '/legal/cancel': typeof LegalCancelRoute
   '/legal/cookies': typeof LegalCookiesRoute
   '/legal/impressum': typeof LegalImpressumRoute
   '/legal/privacy': typeof LegalPrivacyRoute
   '/legal/rewards': typeof LegalRewardsRoute
   '/legal/terms': typeof LegalTermsRoute
+  '/legal/withdrawal': typeof LegalWithdrawalRoute
   '/news/halloween': typeof NewsHalloweenRoute
   '/pair/$token': typeof PairTokenRoute
   '/sync/$code': typeof SyncCodeRoute
@@ -736,11 +752,13 @@ export interface FileRoutesById {
   '/debug_/tacho': typeof DebugTachoRoute
   '/journeys_/$journeyId': typeof JourneysJourneyIdRoute
   '/legal/accessibility': typeof LegalAccessibilityRoute
+  '/legal/cancel': typeof LegalCancelRoute
   '/legal/cookies': typeof LegalCookiesRoute
   '/legal/impressum': typeof LegalImpressumRoute
   '/legal/privacy': typeof LegalPrivacyRoute
   '/legal/rewards': typeof LegalRewardsRoute
   '/legal/terms': typeof LegalTermsRoute
+  '/legal/withdrawal': typeof LegalWithdrawalRoute
   '/news_/halloween': typeof NewsHalloweenRoute
   '/pair_/$token': typeof PairTokenRoute
   '/sync/$code': typeof SyncCodeRoute
@@ -823,11 +841,13 @@ export interface FileRouteTypes {
     | '/debug/tacho'
     | '/journeys/$journeyId'
     | '/legal/accessibility'
+    | '/legal/cancel'
     | '/legal/cookies'
     | '/legal/impressum'
     | '/legal/privacy'
     | '/legal/rewards'
     | '/legal/terms'
+    | '/legal/withdrawal'
     | '/news/halloween'
     | '/pair/$token'
     | '/sync/$code'
@@ -907,11 +927,13 @@ export interface FileRouteTypes {
     | '/debug/tacho'
     | '/journeys/$journeyId'
     | '/legal/accessibility'
+    | '/legal/cancel'
     | '/legal/cookies'
     | '/legal/impressum'
     | '/legal/privacy'
     | '/legal/rewards'
     | '/legal/terms'
+    | '/legal/withdrawal'
     | '/news/halloween'
     | '/pair/$token'
     | '/sync/$code'
@@ -992,11 +1014,13 @@ export interface FileRouteTypes {
     | '/debug_/tacho'
     | '/journeys_/$journeyId'
     | '/legal/accessibility'
+    | '/legal/cancel'
     | '/legal/cookies'
     | '/legal/impressum'
     | '/legal/privacy'
     | '/legal/rewards'
     | '/legal/terms'
+    | '/legal/withdrawal'
     | '/news_/halloween'
     | '/pair_/$token'
     | '/sync/$code'
@@ -1485,6 +1509,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LegalAccessibilityRouteImport
       parentRoute: typeof LegalRouteRoute
     }
+    '/legal/cancel': {
+      id: '/legal/cancel'
+      path: '/cancel'
+      fullPath: '/legal/cancel'
+      preLoaderRoute: typeof LegalCancelRouteImport
+      parentRoute: typeof LegalRouteRoute
+    }
     '/legal/cookies': {
       id: '/legal/cookies'
       path: '/cookies'
@@ -1518,6 +1549,13 @@ declare module '@tanstack/react-router' {
       path: '/terms'
       fullPath: '/legal/terms'
       preLoaderRoute: typeof LegalTermsRouteImport
+      parentRoute: typeof LegalRouteRoute
+    }
+    '/legal/withdrawal': {
+      id: '/legal/withdrawal'
+      path: '/withdrawal'
+      fullPath: '/legal/withdrawal'
+      preLoaderRoute: typeof LegalWithdrawalRouteImport
       parentRoute: typeof LegalRouteRoute
     }
     '/news_/halloween': {
@@ -1679,21 +1717,25 @@ declare module '@tanstack/react-router' {
 
 interface LegalRouteRouteChildren {
   LegalAccessibilityRoute: typeof LegalAccessibilityRoute
+  LegalCancelRoute: typeof LegalCancelRoute
   LegalCookiesRoute: typeof LegalCookiesRoute
   LegalImpressumRoute: typeof LegalImpressumRoute
   LegalPrivacyRoute: typeof LegalPrivacyRoute
   LegalRewardsRoute: typeof LegalRewardsRoute
   LegalTermsRoute: typeof LegalTermsRoute
+  LegalWithdrawalRoute: typeof LegalWithdrawalRoute
   LegalIndexRoute: typeof LegalIndexRoute
 }
 
 const LegalRouteRouteChildren: LegalRouteRouteChildren = {
   LegalAccessibilityRoute: LegalAccessibilityRoute,
+  LegalCancelRoute: LegalCancelRoute,
   LegalCookiesRoute: LegalCookiesRoute,
   LegalImpressumRoute: LegalImpressumRoute,
   LegalPrivacyRoute: LegalPrivacyRoute,
   LegalRewardsRoute: LegalRewardsRoute,
   LegalTermsRoute: LegalTermsRoute,
+  LegalWithdrawalRoute: LegalWithdrawalRoute,
   LegalIndexRoute: LegalIndexRoute,
 }
 

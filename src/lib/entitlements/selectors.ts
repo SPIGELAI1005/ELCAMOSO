@@ -22,6 +22,12 @@ import {
   subscribeDriveSpecialCap,
 } from "@/lib/drive-special-cap/client-store";
 import {
+  getMidnightRaveGuestState,
+  midnightRaveGuestAllows,
+  midnightRaveGuestGoverns,
+  subscribeMidnightRaveGuest,
+} from "@/lib/drive-special-cap/midnight-rave-guest";
+import {
   getGuestTrialState,
   guestTrialAllows,
   guestTrialGoverns,
@@ -76,9 +82,9 @@ export function useFeatureAccess() {
     accountId: user?.accountId ?? null,
     plan: snapshot.plan,
     founderDrivePlusActive: Boolean(snapshot.founder?.drivePlusActive),
-    grantedEntitlements: user?.grantedEntitlements,
+    grantedEntitlements: user?.grantedEntitlements ?? null,
     trialActive: snapshot.trialActive,
-    trialEntitlements: user?.trialEntitlements,
+    trialEntitlements: user?.trialEntitlements ?? null,
     grantedProfileIds: grantedProfileIds,
   };
   const specialCapVersion = useSyncExternalStore(
@@ -87,7 +93,15 @@ export function useFeatureAccess() {
     () => 0,
   );
   void specialCapVersion;
+  const midnightRaveVersion = useSyncExternalStore(
+    subscribeMidnightRaveGuest,
+    () => getMidnightRaveGuestState().version,
+    () => 0,
+  );
+  void midnightRaveVersion;
   const canDriveWithProfile = (profileId: string) => {
+    if (midnightRaveGuestGoverns(profileId, signedIn))
+      return midnightRaveGuestAllows(profileId, signedIn);
     if (guestTrialGoverns(profileId, signedIn)) return guestTrialAllows(profileId, signedIn);
     if (snapshot.driveSpecialCapApplies && driveSpecialCapGoverns(profileId, capUser))
       return driveSpecialCapAllows(profileId, capUser);
@@ -96,6 +110,8 @@ export function useFeatureAccess() {
   const isGuestTrialGoverned = (profileId: string) => guestTrialGoverns(profileId, signedIn);
   const isDriveSpecialCapGoverned = (profileId: string) =>
     Boolean(snapshot.driveSpecialCapApplies) && driveSpecialCapGoverns(profileId, capUser);
+  const isMidnightRaveGuestGoverned = (profileId: string) =>
+    midnightRaveGuestGoverns(profileId, signedIn);
 
   const canPreviewProfile = (profileId: string) => isSoundProfilePreviewAllowed(profileId);
 
@@ -136,6 +152,7 @@ export function useFeatureAccess() {
     isSignedIn: signedIn,
     isGuestTrialGoverned,
     isDriveSpecialCapGoverned,
+    isMidnightRaveGuestGoverned,
     canPreviewProfile,
     previewDurationForProfile,
     /** @deprecated Prefer canDriveWithProfile - preview vs drive semantics differ. */

@@ -10,14 +10,12 @@ import {
   GUEST_TRIAL_HEARTBEAT_SECONDS,
   guestTrialCopy,
   guestTrialNow,
-  isGuestTrialProfile,
-  isGuestTrialWindow,
 } from "@/lib/guest-trial/config";
 import {
   applyServerUsage,
-  currentTrialGenre,
   getGuestTrialState,
   guestRemainingSeconds,
+  guestTrialGoverns,
   subscribeGuestTrial,
   takePendingSeconds,
   tickGuestTrial,
@@ -36,7 +34,10 @@ async function sendHeartbeat(seconds: number) {
         : { method: "GET", credentials: "same-origin" };
     const res = await fetch("/api/guest-trial", init);
     if (!res.ok) throw new Error(String(res.status));
-    applyServerUsage((await res.json()) as { mode: string; usedSeconds?: number; day?: string }, seconds);
+    applyServerUsage(
+      (await res.json()) as { mode: string; usedSeconds?: number; day?: string },
+      seconds,
+    );
   } catch {
     // Offline / error: the localStorage counter keeps the limit.
   }
@@ -50,17 +51,18 @@ async function sendHeartbeat(seconds: number) {
 export function GuestTrialBridge() {
   const { settings } = useSettings();
   const access = useFeatureAccess();
-  useSyncExternalStore(subscribeGuestTrial, () => getGuestTrialState().version, () => 0);
+  useSyncExternalStore(
+    subscribeGuestTrial,
+    () => getGuestTrialState().version,
+    () => 0,
+  );
   const [timeUp, setTimeUp] = useState(false);
   const [signInOpen, setSignInOpen] = useState(false);
   const wasUsing = useRef(false);
 
   const now = guestTrialNow();
   const usingTrial =
-    access.isLiveDrive &&
-    !access.isSignedIn &&
-    isGuestTrialWindow(now) &&
-    isGuestTrialProfile(settings.profileId, currentTrialGenre());
+    access.isLiveDrive && guestTrialGoverns(settings.profileId, access.isSignedIn, now);
   const remaining = guestRemainingSeconds(now);
 
   // Time up (or a switch to another trial sound with nothing left): fade the

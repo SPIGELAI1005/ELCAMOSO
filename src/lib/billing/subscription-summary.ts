@@ -22,6 +22,8 @@ export interface SubscriptionSummary {
   canManageSubscription: boolean;
   canUpgrade: boolean;
   trial: TrialBillingState | null;
+  /** Monthly Drive+ or Drive the Music can switch to yearly of the same package. */
+  canSwitchToYearly: boolean;
 }
 
 function formatSummaryDate(date: Date, locale = "en-US"): string {
@@ -92,12 +94,16 @@ export function buildSubscriptionSummary(
       canManageSubscription: false,
       canUpgrade: true,
       trial: buildTrialBillingState(trialSnapshot, false),
+      canSwitchToYearly: false,
     };
   }
 
   const access = evaluateSubscriptionAccess(subscription!, now);
   const periodEnd = subscription!.currentPeriodEnd;
   const formattedPeriodEnd = periodEnd ? formatSummaryDate(periodEnd, locale) : null;
+  const canSwitchToYearly =
+    subscription!.interval === "month" &&
+    (subscription!.plan === "DRIVE_PLUS" || subscription!.plan === "DRIVE_MUSIC");
 
   if (access.reason === "past_due_grace") {
     return {
@@ -111,6 +117,7 @@ export function buildSubscriptionSummary(
       canManageSubscription,
       canUpgrade: false,
       trial: buildTrialBillingState(trialSnapshot, true),
+      canSwitchToYearly,
     };
   }
 
@@ -126,6 +133,7 @@ export function buildSubscriptionSummary(
       canManageSubscription,
       canUpgrade: false,
       trial: buildTrialBillingState(trialSnapshot, true),
+      canSwitchToYearly,
     };
   }
 
@@ -139,6 +147,7 @@ export function buildSubscriptionSummary(
       canManageSubscription,
       canUpgrade: false,
       trial: buildTrialBillingState(trialSnapshot, true),
+      canSwitchToYearly,
     };
   }
 
@@ -151,5 +160,6 @@ export function buildSubscriptionSummary(
     canManageSubscription,
     canUpgrade: false,
     trial: buildTrialBillingState(trialSnapshot, true),
+    canSwitchToYearly,
   };
 }

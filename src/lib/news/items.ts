@@ -203,11 +203,11 @@ export const NEWS_ITEMS: NewsItem[] = [
   {
     id: "black-friday-special-2026",
     publishAt: "2026-11-09T13:00:00+01:00",
-    text: "Black Friday Special: signed-in drivers get Drive the Music free for 30 minutes a day until Black Friday. Drive+ is not included. Minutes come back tomorrow.",
+    text: "Black Friday Special until 27 November 2026 23:59 Berlin: Start Drive opens Midnight Dark Rave (15 minutes a day without an account; unlimited when signed in). Sign in for Drive the Music 30 minutes a day. Drive+ is not included.",
     textDe:
-      "Black Friday Special: angemeldete Fahrer bekommen Drive the Music 30 Minuten am Tag gratis bis Black Friday. Drive+ ist nicht dabei. Morgen gibt es wieder Minuten.",
+      "Black Friday Special bis 27. November 2026 23:59 Berlin: Start Drive öffnet Midnight Dark Rave (15 Minuten am Tag ohne Konto; unbegrenzt mit Anmeldung). Anmelden für Drive the Music 30 Minuten am Tag. Drive+ ist nicht dabei.",
     textRo:
-      "Black Friday Special: soferii conectati primesc Drive the Music gratuit 30 minute pe zi pana de Black Friday. Drive+ nu este inclus. Minutele revin maine.",
+      "Black Friday Special până pe 27 noiembrie 2026 23:59 Berlin: Start Drive deschide Midnight Dark Rave (15 minute pe zi fără cont; nelimitat dacă ești autentificat). Autentifică-te pentru Drive the Music 30 minute pe zi. Drive+ nu este inclus.",
     link: { href: "/sounds", label: "Open sounds" },
   },
 ];

@@ -227,6 +227,7 @@ describe("Tesla purchase flow (integration)", () => {
       userId: USER_ID,
       email: "tesla-driver@example.com",
       origin: "http://localhost:5173",
+      immediateStartConsent: true,
       request: {
         plan: "drive_plus",
         interval: "yearly",
@@ -437,6 +438,7 @@ describe("Tesla purchase flow - failure states", () => {
       userId: USER_ID,
       email: "tesla-driver@example.com",
       origin: "http://localhost:5173",
+      immediateStartConsent: true,
       request: { plan: "drive_plus", interval: "yearly", source: "tesla_upgrade" },
     });
     expect(result.action).toBe("manage");

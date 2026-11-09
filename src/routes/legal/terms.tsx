@@ -85,9 +85,10 @@ function Terms() {
 
       <LegalSection title="7. Drive+ subscriptions (when offered)">
         <p>
-          Optional Drive+ is a paid subscription for extended motion sound features. Prices shown in
-          the app are in EUR unless stated otherwise. Subscriptions renew automatically until
-          canceled through your account plan settings or the payment provider customer portal.
+          Optional Drive+, Drive the Music and Drive Unlimited are paid subscriptions for extended
+          motion sound features. Prices shown in the app are in EUR unless stated otherwise
+          (currently €33.60 per year for yearly Drive+ and yearly Drive the Music, early-adopter
+          display). Payment is processed by our payment provider; we do not store full card numbers.
         </p>
         <p>
           Dynamic Drive preview, when offered, is free for eligible accounts: typically 30 minutes
@@ -95,22 +96,42 @@ function Terms() {
           before activation.
         </p>
         <p>
-          EU/EEA consumers may have a 14-day withdrawal right for distance contracts where
-          applicable law grants it. If you expressly request immediate access to digital content
-          during that period, you may lose the withdrawal right once delivery begins - as explained
-          at checkout where required.
+          Consumers have a statutory 14-day right of withdrawal (Widerrufsrecht, §§ 312g, 355 BGB)
+          for distance contracts. The{" "}
+          <Link
+            to="/legal/withdrawal"
+            className="text-foreground underline-offset-2 hover:underline"
+          >
+            withdrawal information and model form
+          </Link>{" "}
+          apply. If you expressly request immediate start of the digital service at checkout and
+          acknowledge the legal consequences, the withdrawal right for digital content expires when
+          performance starts (§ 356(5) BGB); for services you owe a pro-rata amount if you then
+          withdraw (§ 357a BGB). A valid withdrawal within 14 days refunds the payment and revokes
+          Founder perks granted by that purchase (no forever sounds / Founder seat from that
+          purchase).
         </p>
         <p>
-          Cancel anytime before renewal to avoid the next billing period. We do not prorate partial
-          periods unless required by law. Refund requests: contact{" "}
+          Ordinary termination: monthly plans may be cancelled at any time and then end at the close
+          of the current billing period. Yearly plans run for 12 months. After the initial term they
+          are cancellable at any time with one month’s notice, as permitted after 1 March 2022 (§
+          309 Nr. 9 BGB). There is no refund of the remaining yearly term except where the law
+          requires it. Forever sounds from a Founders Pack stay yours after a regular cancellation.
+          Use{" "}
+          <Link to="/legal/cancel" className="text-foreground underline-offset-2 hover:underline">
+            Cancel contract (Verträge hier kündigen)
+          </Link>{" "}
+          to terminate.
+        </p>
+        <p>
+          Refund and cancellation questions:{" "}
           <a
             className="text-foreground underline-offset-2 hover:underline"
             href={`mailto:${o.email}`}
           >
             {o.email}
           </a>
-          . Payment processing is handled by our payment provider; we do not store full card
-          numbers.
+          .
         </p>
       </LegalSection>
 
@@ -123,34 +144,64 @@ function Terms() {
           </Link>
           .
         </p>
+        <p>
+          The Founders Pack is a yearly Drive+ or yearly Drive the Music subscription at the price
+          shown at checkout (currently €33.60 per year, early-adopter display). Checkout uses those
+          existing yearly prices; there is no separate Founders Pack Stripe product. Anyone who
+          purchases one of those yearly packages from 9 November 2026 until 27 November 2026 23:59
+          Europe/Berlin becomes a Founder.
+        </p>
+        <p>
+          A Founders Pack buyer receives: (1) the package they paid for (Drive+ or Drive the Music);
+          (2) Drive Unlimited free for 4 months from the purchase date, after which access falls
+          back to the paid package; (3) four catalog sounds they choose, which remain theirs for as
+          long as we operate ELCAMOSO even if they later cancel the subscription. Existing Founders
+          who signed up and confirmed before 9 November 2026 23:59 Europe/Berlin keep Racing V10,
+          American Muscle V8 and GT V8 forever and Drive Unlimited until 27 May 2027 23:59
+          Europe/Berlin. The Black Friday Special does not grant a free Founder seat.
+        </p>
       </LegalSection>
 
       <LegalSection id="black-friday-special" title="7b. Black Friday Special">
         <p>
-          The Black Friday Special is a limited promotional offer for signed-in drivers. Logged-out
-          visitors do not receive it. Drive+ is not included.
+          The Black Friday Special runs from 9 November 2026 00:00 until 27 November 2026 23:59
+          Europe/Berlin. Drive+ is not included.
         </p>
         <p>
-          During the offer, signed-in drivers may use Drive the Music for 30 minutes per calendar
-          day per account. The daily allowance resets at midnight Europe/Berlin. Minutes do not
-          carry over. Paying users and Founders who already own Drive the Music are not limited by
-          this daily allowance.
-        </p>
-        <p>
-          The Black Friday Special runs from 9 November 2026 00:00 until the end of Black Friday, 27
+          A login (sign in or sign up) is required to receive the Black Friday Special Drive the
+          Music minutes. During the offer, signed-in drivers may use Drive the Music for 30 minutes
+          per calendar day per account. The daily allowance resets at midnight Europe/Berlin.
+          Minutes do not carry over. Paying users and Founders who already own Drive the Music
+          (including existing Founders with Drive Unlimited, and anyone who purchases the Founders
+          Pack) are not limited by this daily allowance — they keep Drive the Music without the
+          30-minute cap. Founders also receive Midnight Dark Rave without a daily limit until 27
           November 2026 23:59 Europe/Berlin.
+        </p>
+        <p>
+          Start Drive on the home page opens Midnight Dark Rave during the offer. Visitors without
+          an account may use Midnight Dark Rave for 15 minutes per calendar day. The daily allowance
+          resets at midnight Europe/Berlin. Minutes do not carry over. Signed-in drivers may use
+          Midnight Dark Rave with no daily limit until 27 November 2026 23:59 Europe/Berlin.
+          Midnight Dark Rave does not count against the 30-minute Drive the Music allowance. After
+          the offer ends, Start Drive falls back to Racing V10.
         </p>
         <p>
           Separately, Drive the Music may be offered with 4 months included at checkout as a Black
           Friday deal, as shown at purchase. That deal is independent of the daily Black Friday
-          Special minutes and runs until the end of Black Friday, 27 November 2026 23:59
+          Special minutes and of Midnight Dark Rave, and runs until 27 November 2026 23:59
           Europe/Berlin.
         </p>
         <p>
-          Buying the Founders Pack grants Drive Unlimited for 4 months from the purchase date. New
-          Founders who only claim a free seat do not receive that perk. Founders who claimed a seat
-          before 9 November 2026 13:00 Europe/Berlin keep their existing Drive Unlimited access
-          until 27 May 2027 23:59 Europe/Berlin. Further Founders Pack conditions are in the{" "}
+          The Black Friday Special does not grant free Founder status. Signed-in Black Friday
+          Special users may purchase the Founders Pack until 27 November 2026 23:59 Europe/Berlin by
+          buying yearly Drive+ or yearly Drive the Music at the prices shown at checkout. Buying
+          grants Drive Unlimited for 4 months from the purchase date (then the paid package), four
+          forever sounds chosen in the app, and the Black Friday Special benefits while the special
+          is running. Existing Founders with Drive Unlimited are not limited by the 30-minute Drive
+          the Music cap. Founders who signed up and confirmed before 9 November 2026 23:59
+          Europe/Berlin keep Racing V10, American Muscle V8 and GT V8 forever and Drive Unlimited
+          until 27 May 2027 23:59 Europe/Berlin. Further Founders Pack conditions, including how
+          forever-sound picks work, are in the{" "}
           <Link to="/legal/rewards" className="text-foreground underline-offset-2 hover:underline">
             Founders, Crew &amp; Rewards Terms
           </Link>
@@ -194,9 +245,11 @@ function Terms() {
 
       <LegalSection title="11. Governing law">
         <p>
-          These Terms are governed by the laws of {o.country}, excluding conflict-of-law rules,
-          unless mandatory consumer protection law of your habitual residence applies and cannot be
-          derogated from by agreement (especially for EU consumers).
+          These Terms are governed by the laws of the Federal Republic of Germany, excluding
+          conflict-of-law rules and excluding the UN Convention on Contracts for the International
+          Sale of Goods (CISG). Mandatory consumer protection provisions of the law of the country
+          in which you have your habitual residence remain unaffected and cannot be derogated from
+          by agreement.
         </p>
       </LegalSection>
 

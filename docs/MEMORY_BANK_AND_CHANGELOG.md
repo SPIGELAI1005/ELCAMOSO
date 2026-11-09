@@ -3,7 +3,7 @@
 Living document for product context, recent architecture decisions, and a dated changelog.
 Canonical product rules still live in `elcamoso-comprehensive-spec.md`. Update **both** when direction or architecture changes.
 
-**Last updated:** 2026-11-09
+**Last updated:** 2026-11-09 (Sign up CTA, yearly switch, 0016 welcome, German withdrawal/cancel)
 
 ---
 
@@ -156,35 +156,35 @@ Canonical product rules still live in `elcamoso-comprehensive-spec.md`. Update *
 
 ### Key files
 
-| Area                         | Path                                                                                |
-| ---------------------------- | ----------------------------------------------------------------------------------- |
-| Spec                         | `elcamoso-comprehensive-spec.md`                                                    |
-| Profiles                     | `src/lib/sound/profiles.ts`, `profiles-expansion.ts`                                |
-| Acoustic specs               | `src/lib/sound/profile-specs/` (`getAcousticProfileSpec`), `docs/FAMILY_CLASSIFICATION_MISMATCHES.md` |
-| Upgrade matrix / listening   | `docs/audio/profile-upgrade-matrix.md`, `LISTENING_AND_ASSET_STATUS.md`, `ARTIFACTS_AND_TRACKING.md` |
+| Area                         | Path                                                                                                                   |
+| ---------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| Spec                         | `elcamoso-comprehensive-spec.md`                                                                                       |
+| Profiles                     | `src/lib/sound/profiles.ts`, `profiles-expansion.ts`                                                                   |
+| Acoustic specs               | `src/lib/sound/profile-specs/` (`getAcousticProfileSpec`), `docs/FAMILY_CLASSIFICATION_MISMATCHES.md`                  |
+| Upgrade matrix / listening   | `docs/audio/profile-upgrade-matrix.md`, `LISTENING_AND_ASSET_STATUS.md`, `ARTIFACTS_AND_TRACKING.md`                   |
 | Drive Cockpit V2 plan        | `docs/DRIVE_COCKPIT_V2_PLAN.md`, `docs/DRIVE_COCKPIT_V2_PROGRESS.md`, `cursor-prompts/ELCAMOSO_DRIVE_AUDIO_UPGRADE.md` |
-| Audio comparison lab         | `src/lib/sound/lab/`, `/debug/audio-lab`, `npm run audio:lab`, `docs/audio/AUDIO_LAB.md` |
-| Muscle V8 pilot              | `docs/AMERICAN_V8_HYBRID_PILOT.md`, `src/lib/sound/realism/v2/american-v8-pilot-manifest.ts` |
-| Realism                      | `src/lib/sound/realism/*`                                                           |
-| Realism V2                   | `src/lib/sound/realism/v2/`, `docs/AUDIO_REALISM_V2.md`                             |
-| Calibration lab              | `src/lib/calibration/`, `docs/ROAD_TEST_CALIBRATION.md`                             |
-| Powertrain V2 notes          | `docs/POWERTRAIN_CALIBRATION_V2.md`                                                 |
-| Account / Google OAuth       | `src/lib/account/*`, `docs/account-google-oauth.md`                                 |
-| Session                      | `src/lib/drive/session.ts`                                                          |
-| GPS speed                    | `src/lib/drive/gps-speed.ts`                                                        |
-| Sensor fusion                | `src/lib/motion/sensor-fusion.ts`                                                   |
-| Dynamic Drive architecture   | `docs/DYNAMIC_DRIVE_ARCHITECTURE.md`                                                |
-| Sound character + engagement | `docs/SOUND_CHARACTER_SPEC.md`                                                      |
-| Audio sample requirements    | `docs/audio-asset-requirements.md`                                                  |
-| Audition hook                | `src/lib/drive/useAudition.ts`                                                      |
-| Landing                      | `src/routes/index.tsx`, `src/components/LandingHero.tsx`, `LandingPlansSection.tsx` |
-| Pricing                      | `src/routes/pricing.tsx`, `src/lib/billing/plan-display.ts`                         |
-| Story / About                | `src/routes/story.tsx`, `/about` → `/story`, `public/about/field-capture-*.mp4`     |
-| Header nav groups            | `src/components/BrandNav.tsx` (Explore / Sounds / About dropdowns + mobile accordion) |
-| Sounds UI                    | `src/routes/sounds.tsx`                                                             |
-| Legal operator               | `src/lib/legal/operator.ts`                                                         |
-| Tesla smoke test             | `docs/TESLA_BROWSER_SMOKE_TEST.md`                                                  |
-| Agent notes                  | `AGENTS.md`                                                                         |
+| Audio comparison lab         | `src/lib/sound/lab/`, `/debug/audio-lab`, `npm run audio:lab`, `docs/audio/AUDIO_LAB.md`                               |
+| Muscle V8 pilot              | `docs/AMERICAN_V8_HYBRID_PILOT.md`, `src/lib/sound/realism/v2/american-v8-pilot-manifest.ts`                           |
+| Realism                      | `src/lib/sound/realism/*`                                                                                              |
+| Realism V2                   | `src/lib/sound/realism/v2/`, `docs/AUDIO_REALISM_V2.md`                                                                |
+| Calibration lab              | `src/lib/calibration/`, `docs/ROAD_TEST_CALIBRATION.md`                                                                |
+| Powertrain V2 notes          | `docs/POWERTRAIN_CALIBRATION_V2.md`                                                                                    |
+| Account / Google OAuth       | `src/lib/account/*`, `docs/account-google-oauth.md`                                                                    |
+| Session                      | `src/lib/drive/session.ts`                                                                                             |
+| GPS speed                    | `src/lib/drive/gps-speed.ts`                                                                                           |
+| Sensor fusion                | `src/lib/motion/sensor-fusion.ts`                                                                                      |
+| Dynamic Drive architecture   | `docs/DYNAMIC_DRIVE_ARCHITECTURE.md`                                                                                   |
+| Sound character + engagement | `docs/SOUND_CHARACTER_SPEC.md`                                                                                         |
+| Audio sample requirements    | `docs/audio-asset-requirements.md`                                                                                     |
+| Audition hook                | `src/lib/drive/useAudition.ts`                                                                                         |
+| Landing                      | `src/routes/index.tsx`, `src/components/LandingHero.tsx`, `LandingPlansSection.tsx`                                    |
+| Pricing                      | `src/routes/pricing.tsx`, `src/lib/billing/plan-display.ts`                                                            |
+| Story / About                | `src/routes/story.tsx`, `/about` → `/story`, `public/about/field-capture-*.mp4`                                        |
+| Header nav groups            | `src/components/BrandNav.tsx` (Explore / Sounds / About dropdowns + mobile accordion)                                  |
+| Sounds UI                    | `src/routes/sounds.tsx`                                                                                                |
+| Legal operator               | `src/lib/legal/operator.ts`                                                                                            |
+| Tesla smoke test             | `docs/TESLA_BROWSER_SMOKE_TEST.md`                                                                                     |
+| Agent notes                  | `AGENTS.md`                                                                                                            |
 
 ### Open / known follow-ups
 
@@ -210,6 +210,25 @@ Canonical product rules still live in `elcamoso-comprehensive-spec.md`. Update *
 ---
 
 ## Changelog
+
+### 2026-11-09 (PR #17 owner feedback: Sign up, yearly switch, German withdrawal)
+
+- Banner signed-out CTA is **Sign up** (DE Registrieren, RO Înregistrare) and opens the account dialog. When the signed-out 15 min/day Midnight Dark Rave allowance expires, Sign up is primary and Sign in is secondary (EN/DE/RO).
+- Black Friday congratulations modal is once per **account** (`users.bf_welcome_seen_at`, migration `0016_bf_welcome_seen`); localStorage `elcamoso.bfWelcome.v1:<accountId>` is a cache only.
+- Monthly Drive+ / Drive the Music can switch to yearly of the same package via Stripe `subscriptions.update` + `proration_behavior: create_prorations`. A switch between 9 Nov 2026 00:00 and 27 Nov 2026 23:59 Berlin is a Founders Pack purchase (458-seat cap). **Switch to yearly** on settings and pricing. Display price remains €33.60/year.
+- Checkout: required unticked immediate-start consent; Stripe session metadata `immediateStartConsent=1`. Legal: `/legal/withdrawal`, `/legal/cancel`, footer “Cancel contract · Verträge hier kündigen” (§ 312k), Terms §7 / §11 (German law, CISG excluded). `revokeFoundersPackPurchase` exists for a 14-day withdrawal; automated Stripe refund → revoke is not wired (support/email).
+- Catalog: police-patrol, wild-west-carriage, romanian-85-carriage stay paid and pickable.
+
+### 2026-11-09 (Black Friday: Start Drive opens Midnight Dark Rave)
+
+- Landing/home **Start Drive** opens **Midnight Dark Rave** (`fusion-midnight-boost`, menu `genre:darkrave`) during the Black Friday window; after 27 Nov 2026 23:59 Berlin it falls back to Racing V10. Hero layout unchanged.
+- Signed-out: 15 min/day Berlin of Midnight Dark Rave, tracked in `localStorage` (`elcamoso.midnightDarkRaveGuest.v1`, keyed by Berlin date). Time-up prompt asks to sign in / sign up. Does not use a new DB table.
+- Signed-in: Midnight Dark Rave is unlimited until the window ends and **does not count** against the 30 min/day Drive the Music special. Other Drive the Music sounds stay at 30 min/day.
+- Banner teaser: “Limited availability until 27th of November.” Signed-out CTA is **Log In** (existing sign-in dialog); signed-in CTA stays **See the sounds**. Terms link unchanged.
+- Terms §7b, FAQ free-access / Founders, Rewards §2, Sounds hint, and the live Black Friday news item updated to the same rules. Historical 7 Days Drive Special news left as published.
+- **Founders Pack redesign:** buying yearly Drive+ or yearly Drive the Music (existing Stripe yearly prices, display €33.60/year) until 27 Nov 2026 23:59 Berlin makes you a Founder. No separate `STRIPE_PRICE_FOUNDERS_PACK` product. Grant: paid package + Drive Unlimited 4 months from purchase (then fallback to that package) + 4 forever sounds (picker, confirm, stored in `founder_sound_picks` / migration `0015_founder_sound_picks`). Globally free catalog sounds cannot be picked. Picks stay after cancel; a removed or later-free sound frees a replacement slot.
+- **Existing Founders** (verified sign-in on/before 9 Nov 2026 23:59 Berlin) unchanged: Racing V10, American Muscle V8, GT V8 forever + Drive Unlimited until 27.05.2027.
+- After sign-in during the BF window: congratulations modal once per account (`elcamoso.bfWelcome.v1:<accountId>`), Start Drive → Midnight Dark Rave, Founders Pack → `/pricing#founders`, terms link. Reminds limited availability until 27 November and that keeping access requires the Founders Pack. EN/DE/RO.
 
 ### 2026-11-09 (Black Friday Special + Founders Pack purchase perk)
 
