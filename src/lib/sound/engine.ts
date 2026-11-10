@@ -59,6 +59,12 @@ import {
   type RealismEngineMode,
 } from "@/lib/sound/realism/v2";
 import {
+  disposeGainNodes,
+  effectiveLayerGain,
+  engineLayerStackFor,
+  scaleStrategyBuses,
+} from "@/lib/sound/engine-layers";
+import {
   isDriveAudioV3Enabled,
   isRawMechanicalPilotId,
   rawMechanicalPresetFor,
@@ -75,7 +81,9 @@ const ADAPTIVE_MUSIC_PROFILE_IDS: ReadonlySet<string> = new Set(["deep-bass-puls
  * Profiles that reuse another profile's sound unchanged and add an overlay
  * (Police Patrol = American Muscle V8 + siren).
  */
-export const SOUND_ALIASES: Readonly<Record<string, { base: string; overlay: "siren"; engineGainDb?: number }>> = {
+export const SOUND_ALIASES: Readonly<
+  Record<string, { base: string; overlay: "siren"; engineGainDb?: number }>
+> = {
   // Same American Muscle V8 graph + samples (bit-identical with the siren removed),
   // just played louder; the siren sits ~5-10 % of the mix power on top.
   "police-patrol": { base: "american-muscle-v8", overlay: "siren", engineGainDb: 2.5 },
@@ -87,7 +95,6 @@ export const SOUND_ALIASES: Readonly<Record<string, { base: string; overlay: "si
  * sound, so without this the extra layers were silently skipped in the app.
  */
 export const ALWAYS_LAYERED_PROFILE_IDS: ReadonlySet<string> = new Set(["dracula-carriage"]);
-
 
 export const BACKGROUND_MUSIC_LEVELS: Readonly<Record<string, number>> = {
   // v38b: Gothic Night ~65% vs carriage ~45% (music +3.2 dB over carriage stem)
@@ -101,7 +108,9 @@ export const BACKGROUND_MUSIC_LEVELS: Readonly<Record<string, number>> = {
  * below `offKmh` (hysteresis, no flutter around the threshold). State changes
  * only; nothing is scheduled per frame.
  */
-export const BACKGROUND_MUSIC_SPEED_BOOST: Readonly<Record<string, { onKmh: number; offKmh: number; level: number; tau: number }>> = {
+export const BACKGROUND_MUSIC_SPEED_BOOST: Readonly<
+  Record<string, { onKmh: number; offKmh: number; level: number; tau: number }>
+> = {
   // v41: above 18 km/h Gothic Night ~82 % vs carriage ~18 % (music ~+13 dB over carriage stem)
   "dracula-carriage": { onKmh: 19, offKmh: 17, level: 20, tau: 0.5 },
   "bollywood-rickshaw": { onKmh: 19, offKmh: 17, level: 20, tau: 0.5 },
@@ -305,6 +314,11 @@ export class SoundEngine {
   /** Dev A/B: current engine vs Realism V2. Default v2 for combustion when eligible. */
   private realismEngine: RealismEngineMode = "v2";
   private hybrid: HybridCombustionSynth | null = null;
+  /** Secondary engine synths mixed under the requested profile (e.g. Big Twin under Muscle V8). */
+  private hybridLayers: HybridCombustionSynth[] = [];
+  private layerGainNodes: GainNode[] = [];
+  /** Lab/A-B: when false, PROFILE_ENGINE_LAYERS is ignored so unlayered baselines can be rendered. */
+  private engineLayersEnabled = true;
   private profileBus: MasterBus | null = null;
   private hybridLoadController: AbortController | null = null;
   /** hard ceiling applied before the limiter so no profile can spike */
@@ -334,6 +348,21 @@ export class SoundEngine {
 
   getRealismEngine(): RealismEngineMode {
     return this.realismEngine;
+  }
+
+  /** Dev/lab: disable profile engine layers (used for before/after loudness renders). */
+  setEngineLayersEnabled(enabled: boolean) {
+    if (this.engineLayersEnabled === enabled) return;
+    this.engineLayersEnabled = enabled;
+    if (this.profile) this.setProfile(this.requestedProfile ?? this.profile, true);
+  }
+
+  getEngineLayersEnabled() {
+    return this.engineLayersEnabled;
+  }
+
+  getEngineLayerDiagnostics() {
+    return this.hybridLayers.map((synth) => synth.getDiagnostics());
   }
 
   getHybridCombustionDiagnostics(): HybridCombustionDiagnostics | null {
@@ -379,6 +408,7 @@ export class SoundEngine {
   /** After suspend/resume — discard overdue shift sequence events. */
   notifyAudioTimelineGap(gapMs: number) {
     this.hybrid?.notifyAudioTimelineGap(gapMs);
+    for (const layer of this.hybridLayers) layer.notifyAudioTimelineGap(gapMs);
   }
 
   /** The strategy that actually owns the current graph, not merely an enabled setting. */
@@ -467,6 +497,7 @@ export class SoundEngine {
         this.world,
         this.hybrid,
       ].filter(Boolean).length,
+      engineLayerCount: this.hybridLayers.length,
     };
   }
 
@@ -536,6 +567,8 @@ export class SoundEngine {
       Math.max(0, Number.isFinite(mechanical) ? mechanical : CHARACTER_NEUTRAL),
     );
     this.hybrid?.setCharacterFeel(this.bodyCharacter, this.mechanicalCharacter);
+    for (const layer of this.hybridLayers)
+      layer.setCharacterFeel(this.bodyCharacter, this.mechanicalCharacter);
     this.applyCharacterToGraph();
   }
 
@@ -550,7 +583,9 @@ export class SoundEngine {
 
   /** Linear gain into peak-protect (may be 0 for silence). */
   private computeMasterLinear(): number {
-    const aliasDb = this.requestedProfile ? (SOUND_ALIASES[this.requestedProfile.id]?.engineGainDb ?? 0) : 0;
+    const aliasDb = this.requestedProfile
+      ? (SOUND_ALIASES[this.requestedProfile.id]?.engineGainDb ?? 0)
+      : 0;
     const trim = (this.profile ? loudnessForProfile(this.profile.id) : 1) * 10 ** (aliasDb / 20);
     const ceiling = this.profile
       ? Math.min(this.intensityCeiling, intensityCeilingForProfile(this.profile))
@@ -1150,11 +1185,20 @@ export class SoundEngine {
     return this.pinkBuffer;
   }
 
-
   /** Diagnostics/tests: siren overlay state for aliased profiles. */
-  sirenDiagnostics(): { active: boolean; gain: number; connected: boolean; mode: "wail" | "yelp" | null } {
+  sirenDiagnostics(): {
+    active: boolean;
+    gain: number;
+    connected: boolean;
+    mode: "wail" | "yelp" | null;
+  } {
     const d = this.siren?.diagnostics?.();
-    return { active: !!this.siren, gain: d?.gain ?? 0, connected: d?.connected ?? false, mode: this.siren?.mode() ?? null };
+    return {
+      active: !!this.siren,
+      gain: d?.gain ?? 0,
+      connected: d?.connected ?? false,
+      mode: this.siren?.mode() ?? null,
+    };
   }
 
   /* -------------------------------------------------------- profile switch */
@@ -1253,6 +1297,7 @@ export class SoundEngine {
       this.teardownVoices();
       this.improved = null;
       this.hybrid = null;
+      this.disposeEngineLayers();
       if (previous && previous.id !== profile.id) {
         try {
           this.buildProfile(previous);
@@ -1289,6 +1334,23 @@ export class SoundEngine {
         }
       : null;
 
+    // Scale the primary engine into the mix when this requested profile has layers.
+    // Aliases (Police Patrol) key off requestedProfile.id and are left unlayered.
+    const layerStack =
+      this.engineLayersEnabled && strategyBuses
+        ? engineLayerStackFor(this.requestedProfile?.id ?? profile.id)
+        : null;
+    let engineBuses = strategyBuses;
+    if (layerStack && strategyBuses) {
+      const scaled = scaleStrategyBuses(
+        ctx,
+        strategyBuses,
+        effectiveLayerGain(layerStack, layerStack.primaryGain),
+      );
+      this.layerGainNodes.push(...scaled.nodes);
+      engineBuses = scaled.buses;
+    }
+
     // Overlay on an aliased sound (Police Patrol siren over the V8).
     if (this.overlayKind === "siren" && this.accents) {
       // Straight into the cabin bus (stable level, not tied to throttle or the user accents mix).
@@ -1321,7 +1383,10 @@ export class SoundEngine {
     }
 
     // Drive the Music - adaptive arrangement: tempo, layers, accents and key follow the drive.
-    if ((isSymphonyProfileId(profile.id) || ADAPTIVE_MUSIC_PROFILE_IDS.has(profile.id)) && strategyBuses) {
+    if (
+      (isSymphonyProfileId(profile.id) || ADAPTIVE_MUSIC_PROFILE_IDS.has(profile.id)) &&
+      strategyBuses
+    ) {
       this.symphony = new AdaptiveMusicSynth();
       const ok = this.symphony.build(ctx, profile, strategyBuses, this.experienceSeed);
       if (ok) return;
@@ -1355,11 +1420,11 @@ export class SoundEngine {
       this.synthesisMode === "improved" &&
       isRawMechanicalPilotId(profile.id) &&
       isCombustionRealismV2Profile(profile.id) &&
-      strategyBuses
+      engineBuses
     ) {
       this.hybrid = new HybridCombustionSynth();
       const quality = resolveRawMechanicalQualityTier(ctx);
-      const ok = this.hybrid.build(ctx, profile, strategyBuses, {
+      const ok = this.hybrid.build(ctx, profile, engineBuses, {
         rawMechanical: rawMechanicalPresetFor(profile.id, quality),
       });
       if (ok) {
@@ -1370,6 +1435,7 @@ export class SoundEngine {
           const controller = new AbortController();
           this.hybridLoadController = controller;
           void this.prepareHybridSampleLayer(this.hybrid, ctx, profile, controller);
+          this.attachSecondaryEngineLayers(ctx, strategyBuses!, controller);
         }
         return;
       }
@@ -1384,10 +1450,10 @@ export class SoundEngine {
       (this.realismEngine === "v2" || this.realismEngine === "v3") &&
       this.synthesisMode === "improved" &&
       isCombustionRealismV2Profile(profile.id) &&
-      strategyBuses
+      engineBuses
     ) {
       this.hybrid = new HybridCombustionSynth();
-      const ok = this.hybrid.build(ctx, profile, strategyBuses);
+      const ok = this.hybrid.build(ctx, profile, engineBuses);
       if (ok) {
         this.hybrid.setAdvancedTransientsEnabled(this.advancedTransientsEnabled);
         this.hybrid.setShiftIntensity(this.shiftIntensity);
@@ -1396,6 +1462,7 @@ export class SoundEngine {
           const controller = new AbortController();
           this.hybridLoadController = controller;
           void this.prepareHybridSampleLayer(this.hybrid, ctx, profile, controller);
+          this.attachSecondaryEngineLayers(ctx, strategyBuses!, controller);
         }
         return;
       }
@@ -1409,19 +1476,22 @@ export class SoundEngine {
       this.realismEngine === "current" &&
       supportsDynamicDrive(profile);
 
-    if (useDynamicDrive && strategyBuses) {
+    if (useDynamicDrive && engineBuses) {
       this.dynamicDrive = new DynamicDriveSynth();
-      const ok = this.dynamicDrive.build(ctx, profile, strategyBuses);
+      const ok = this.dynamicDrive.build(ctx, profile, engineBuses);
       if (ok) return;
       this.dynamicDrive?.dispose();
       this.dynamicDrive = null;
     }
 
-    if (this.synthesisMode === "improved" && strategyBuses) {
+    if (this.synthesisMode === "improved" && engineBuses) {
       this.improved = new ImprovedSynth();
       this.improved.setExperienceEnabled(this.experienceTuningEnabled);
-      const ok = this.improved.build(ctx, profile, strategyBuses);
-      if (ok) return;
+      const ok = this.improved.build(ctx, profile, engineBuses);
+      if (ok) {
+        this.attachSecondaryEngineLayers(ctx, strategyBuses!, new AbortController());
+        return;
+      }
       // Fall through to original if no strategy registered.
       this.improved?.dispose();
       this.improved = null;
@@ -1473,7 +1543,8 @@ export class SoundEngine {
       this.lfo = { osc, gain };
     }
 
-    if (!ALWAYS_LAYERED_PROFILE_IDS.has(profile.id)) (profile.voice.textures ?? []).forEach((spec) => this.buildTexture(spec));
+    if (!ALWAYS_LAYERED_PROFILE_IDS.has(profile.id))
+      (profile.voice.textures ?? []).forEach((spec) => this.buildTexture(spec));
 
     const now = ctx.currentTime;
     this.rhythms = [profile.voice.rhythm, profile.voice.rhythmB]
@@ -1500,7 +1571,12 @@ export class SoundEngine {
   atmosphereDiagnostics() {
     return {
       textures: this.textures.map((x) => ({ kind: x.spec.kind, gain: x.gain.gain.value })),
-      signals: this.signals.map((c) => ({ kind: c.spec.kind, next: c.next, everySeconds: c.spec.everySeconds, jitter: c.spec.jitter ?? 0 })),
+      signals: this.signals.map((c) => ({
+        kind: c.spec.kind,
+        next: c.next,
+        everySeconds: c.spec.everySeconds,
+        jitter: c.spec.jitter ?? 0,
+      })),
       music: !!this.backgroundMusic,
     };
   }
@@ -1716,6 +1792,61 @@ export class SoundEngine {
     };
   }
 
+  private disposeEngineLayers() {
+    for (const synth of this.hybridLayers) {
+      try {
+        synth.dispose();
+      } catch {
+        /* already disposed */
+      }
+    }
+    this.hybridLayers = [];
+    disposeGainNodes(this.layerGainNodes);
+    this.layerGainNodes = [];
+  }
+
+  /**
+   * Run additional catalog engines in parallel under the requested profile,
+   * driven by the same RPM / throttle / speed as the primary.
+   */
+  private attachSecondaryEngineLayers(
+    ctx: BaseAudioContext,
+    buses: {
+      body: AudioNode;
+      accents: AudioNode;
+      beds: AudioNode;
+      profile: AudioNode;
+    },
+    controller: AbortController,
+  ) {
+    const requestedId = this.requestedProfile?.id ?? this.profile?.id ?? "";
+    const stack = this.engineLayersEnabled ? engineLayerStackFor(requestedId) : null;
+    if (!stack) return;
+    const loads: Promise<void>[] = [];
+    for (const spec of stack.layers) {
+      if (spec.profileId === requestedId) continue;
+      const layerProfile = getProfile(spec.profileId);
+      if (!layerProfile || !isCombustionRealismV2Profile(layerProfile.id)) continue;
+      const scaled = scaleStrategyBuses(ctx, buses, effectiveLayerGain(stack, spec.gain));
+      this.layerGainNodes.push(...scaled.nodes);
+      const synth = new HybridCombustionSynth();
+      const ok = synth.build(ctx, layerProfile, scaled.buses, {
+        continuousOnly: spec.continuousOnly === true,
+      });
+      if (!ok) {
+        synth.dispose();
+        continue;
+      }
+      synth.setCharacterFeel(this.bodyCharacter, this.mechanicalCharacter);
+      this.hybridLayers.push(synth);
+      loads.push(this.prepareHybridSampleLayer(synth, ctx, layerProfile, controller));
+    }
+    if (loads.length) {
+      const previous = this.samplesReady;
+      this.samplesReady = Promise.all([previous, ...loads]).then(() => undefined);
+    }
+  }
+
   /**
    * Prompt 05 hybrid sample layer: fetch/decode only for the active personality.
    * Stays outside AudioWorklet.process. Empty catalog → procedural, no loudness jump.
@@ -1731,11 +1862,19 @@ export class SoundEngine {
     if (recorded) {
       const ready = loadRecordedLoopBuffers(ctx, recorded, controller.signal)
         .then((buffers) => {
-          if (controller.signal.aborted || this.hybrid !== synth) return;
+          if (
+            controller.signal.aborted ||
+            (this.hybrid !== synth && !this.hybridLayers.includes(synth))
+          )
+            return;
           synth.setRecordedLoopBuffers(buffers);
         })
         .catch((error) => {
-          if (controller.signal.aborted || this.hybrid !== synth) return;
+          if (
+            controller.signal.aborted ||
+            (this.hybrid !== synth && !this.hybridLayers.includes(synth))
+          )
+            return;
           reportAudioError(error);
         });
       this.samplesReady = ready;
@@ -1750,15 +1889,28 @@ export class SoundEngine {
         personality,
         signal: controller.signal,
       });
-      if (controller.signal.aborted || this.hybrid !== synth) return;
+      if (
+        controller.signal.aborted ||
+        (this.hybrid !== synth && !this.hybridLayers.includes(synth))
+      )
+        return;
       const result = await loader.loadManifestAssets(ctx, manifest, {
         signal: controller.signal,
         generation,
       });
-      if (controller.signal.aborted || this.hybrid !== synth || result.stale) return;
+      if (
+        controller.signal.aborted ||
+        (this.hybrid !== synth && !this.hybridLayers.includes(synth)) ||
+        result.stale
+      )
+        return;
       synth.setDecodedSamples(result.buffers);
     } catch (error) {
-      if (controller.signal.aborted || this.hybrid !== synth) return;
+      if (
+        controller.signal.aborted ||
+        (this.hybrid !== synth && !this.hybridLayers.includes(synth))
+      )
+        return;
       synth.setDecodedSamples(new Map());
       reportAudioError(error);
     }
@@ -1782,7 +1934,12 @@ export class SoundEngine {
       const snorts = new HorseSnorts(this.ctx, this.cabinIn, profile.id);
       this.snorts = snorts;
       snorts.load().catch((error) => console.warn("[elcamoso] snorts unavailable", error));
-      const whinnies = new HorseWhinnies(this.ctx, this.cabinIn, profile.id, snorts.scheduler ?? null);
+      const whinnies = new HorseWhinnies(
+        this.ctx,
+        this.cabinIn,
+        profile.id,
+        snorts.scheduler ?? null,
+      );
       this.whinnies = whinnies;
       whinnies.load().catch((error) => console.warn("[elcamoso] whinnies unavailable", error));
     }
@@ -1842,7 +1999,11 @@ export class SoundEngine {
         const on = this.musicBoosted ? kmh > boost.offKmh : kmh >= boost.onKmh;
         if (on !== this.musicBoosted) {
           this.musicBoosted = on;
-          this.backgroundMusic.rampLevel(on ? boost.level : (BACKGROUND_MUSIC_LEVELS[profile.id] ?? 1), t, boost.tau);
+          this.backgroundMusic.rampLevel(
+            on ? boost.level : (BACKGROUND_MUSIC_LEVELS[profile.id] ?? 1),
+            t,
+            boost.tau,
+          );
         }
       }
     }
@@ -1862,6 +2023,7 @@ export class SoundEngine {
       if (this.world) this.world.update(state, t);
       if (this.retroArcade) this.retroArcade.update(state, t);
       if (this.hybrid) this.hybrid.update(state, t);
+      for (const layer of this.hybridLayers) layer.update(state, t);
       if (this.improved) this.improved.update(state, t);
       if (this.dynamicDrive) this.dynamicDrive.update(state, t);
       if (ALWAYS_LAYERED_PROFILE_IDS.has(profile.id)) {
@@ -2657,6 +2819,7 @@ export class SoundEngine {
     this.retroArcade = null;
     this.hybrid?.dispose();
     this.hybrid = null;
+    this.disposeEngineLayers();
     this.voices.forEach(({ osc }) => {
       try {
         osc.stop();
