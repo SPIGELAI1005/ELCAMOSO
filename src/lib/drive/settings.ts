@@ -174,7 +174,7 @@ export interface ElcamosoSettings {
   /** Optional output boost 0..6 dB (peak-protected). Does not override car hardware volume. */
   outputBoostDb: number;
   /**
-   * Master enable for Noise masking (Drive toggle + Settings heading).
+   * Master enable for Road Noise Masking (Drive toggle + Settings heading).
    * Device-local; not taken from merge imports. Audio only applies when signed in.
    */
   noiseMasking: boolean;
@@ -1274,7 +1274,7 @@ function migratePayload(payload: Record<string, unknown>, version: number) {
     }
     if (p["calmCabin"] === undefined) p["calmCabin"] = DEFAULT_CALM_CABIN;
     notes.push(
-      "Added Noise masking (on for signed-in users), Match volume to speed and Calm cabin.",
+      "Added Road Noise Masking (on for signed-in users), Match volume to speed and Calm cabin.",
     );
   }
 

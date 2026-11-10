@@ -30,8 +30,8 @@ export const DEFAULT_CALM_CABIN = false;
 export const DEFAULT_NOISE_MASKING = true;
 
 /** User-facing name (Drive toggle and Settings section heading). Rename here only. */
-export const NOISE_MASKING_LABEL = "Noise masking";
-/** Shown when a signed-out visitor taps a locked Noise masking control. */
+export const NOISE_MASKING_LABEL = "Road Noise Masking";
+/** Shown when a signed-out visitor taps a locked Road Noise Masking control. */
 export const NOISE_MASKING_SIGN_IN_REMARK = "Sign in to activate";
 
 export function isRoadLoudnessIntensity(value: unknown): value is RoadLoudnessIntensity {
@@ -105,7 +105,7 @@ export function smoothRoadSpeedKmh(
   return smoothToward(from, to, dt, tau);
 }
 
-/** Signed-in users may use Noise masking for free, permanently. Signed-out users may not. */
+/** Signed-in users may use Road Noise Masking for free, permanently. Signed-out users may not. */
 export function isNoiseMaskingAllowed(isSignedIn: boolean): boolean {
   return isSignedIn === true;
 }
