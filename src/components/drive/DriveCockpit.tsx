@@ -518,7 +518,7 @@ export function DriveCockpit({
         <PoliceLightShow speed={driveState.speed} reducedMotion={reducedMotion} className="z-0" />
       ) : null}
 
-      <header className="drive-cockpit__header relative z-[1] grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 sm:gap-3">
+      <header className="drive-cockpit__header relative z-[1] grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-start gap-2 sm:gap-3">
         <ElcamosoLogo
           variant="full"
           intensity={Math.min(1, Math.max(driveState.load, driveState.throttle))}
@@ -540,14 +540,14 @@ export function DriveCockpit({
             </p>
           ) : null}
         </div>
-        <div className="flex items-start gap-2 justify-self-end sm:gap-3">
-          <p
-            className="flex h-10 items-center text-[10px] tracking-[0.28em] text-muted-foreground uppercase"
-            aria-label={telemetry ? `Motion ${telemetry}` : "Motion"}
-          >
-            {telemetry || "\u00a0"}
-          </p>
-          <div className="flex flex-col items-center gap-1 sm:gap-1.5">
+        <div className="flex flex-col items-end gap-1 justify-self-end sm:gap-1.5">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <p
+              className="flex h-10 items-center text-[10px] tracking-[0.28em] text-muted-foreground uppercase"
+              aria-label={telemetry ? `Motion ${telemetry}` : "Motion"}
+            >
+              {telemetry || "\u00a0"}
+            </p>
             <button
               type="button"
               data-testid="open-feedback"
@@ -584,8 +584,8 @@ export function DriveCockpit({
                 </span>
               ) : null}
             </button>
-            <NoiseMaskingDriveToggle previewAllowed={noiseMaskingPreviewAllowed} />
           </div>
+          <NoiseMaskingDriveToggle previewAllowed={noiseMaskingPreviewAllowed} />
         </div>
       </header>
 

@@ -12,7 +12,7 @@ const PILL_CLASS =
 
 /**
  * Drive-cockpit control: a messages-sized pill for Road Noise Masking,
- * with a compact name + ON/OFF caption underneath.
+ * with a GPS-style caption to the left (Road Noise / Masking ON|OFF).
  */
 export function NoiseMaskingDriveToggle({
   className,
@@ -42,9 +42,30 @@ export function NoiseMaskingDriveToggle({
         onClick={() =>
           gate.requestChange(() => gate.update({ noiseMasking: !gate.settings.noiseMasking }))
         }
-        className={cn("flex flex-col items-center gap-1 bg-transparent p-0", className)}
+        className={cn("flex items-center gap-2 bg-transparent p-0 sm:gap-3", className)}
       >
-        <span className={cn(PILL_CLASS, masterOn ? "text-foreground" : "text-foreground/45")}>
+        <span
+          data-testid="road-noise-masking-caption"
+          className="flex h-10 shrink-0 flex-col justify-center whitespace-nowrap text-right text-[10px] leading-tight tracking-[0.28em] text-muted-foreground"
+          aria-hidden
+        >
+          <span>Road Noise</span>
+          <span>
+            Masking{" "}
+            <span
+              className={cn(
+                "font-semibold",
+                masterOn ? "text-foreground" : "text-muted-foreground",
+              )}
+            >
+              {stateLabel}
+            </span>
+          </span>
+        </span>
+        <span
+          data-testid="road-noise-masking-pill"
+          className={cn(PILL_CLASS, masterOn ? "text-foreground" : "text-foreground/45")}
+        >
           <RoadNoiseMaskingIcon className="h-6 w-auto" />
           {allowed ? null : (
             <span
@@ -55,21 +76,6 @@ export function NoiseMaskingDriveToggle({
               <Lock className="h-2.5 w-2.5" strokeWidth={2.4} />
             </span>
           )}
-        </span>
-        <span
-          data-testid="road-noise-masking-caption"
-          className="flex w-[3.75rem] flex-col items-center text-center leading-tight"
-          aria-hidden
-        >
-          <span className="text-[9px] text-foreground">{gate.label}</span>
-          <span
-            className={cn(
-              "mt-0.5 text-[9px] tracking-[0.08em]",
-              masterOn ? "font-semibold text-foreground" : "font-semibold text-muted-foreground",
-            )}
-          >
-            {stateLabel}
-          </span>
         </span>
       </button>
       {gate.dialog}
