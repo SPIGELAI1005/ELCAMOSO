@@ -81,18 +81,19 @@ const PROFILE_HERO_SET = new Set<string>(PROFILE_IDS_WITH_HERO);
 const HERO_BASE = "/hero/sound-profiles";
 
 /**
- * Profiles that reuse another profile's curated still (same file, no duplicate asset).
- * Midnight Dark Rave uses Motion Orchestra's purple/red stage-light car for Black Friday.
+ * Profiles that reuse a curated still at a path other than
+ * `/hero/sound-profiles/{profileId}.png` (same file, no duplicate asset).
+ * Midnight Dark Rave (`fusion-midnight-boost`) uses the Drive the Music
+ * genre still for `darkrave`, not Motion Orchestra's profile still.
  */
-const PROFILE_HERO_ASSET_ALIASES: Record<string, string> = {
-  "fusion-midnight-boost": "symphony-motion-orchestra",
+const PROFILE_HERO_SRC_OVERRIDES: Record<string, string> = {
+  "fusion-midnight-boost": "/hero/genres/darkrave.png",
 };
 
 /** Resolve a still for a sound profile, or null when none is curated. */
 export function profileHeroImageSrc(profileId: string | null | undefined): string | null {
   if (!profileId || !PROFILE_HERO_SET.has(profileId)) return null;
-  const assetId = PROFILE_HERO_ASSET_ALIASES[profileId] ?? profileId;
-  return `${HERO_BASE}/${assetId}.png`;
+  return PROFILE_HERO_SRC_OVERRIDES[profileId] ?? `${HERO_BASE}/${profileId}.png`;
 }
 
 /** Accessible / SEO-friendly alt for a curated hero still. */
