@@ -10,6 +10,8 @@ import { useReducedMotion } from "@/lib/drive/useReducedMotion";
 import { useDemoDrive } from "@/lib/drive/useDemoDrive";
 import { useHaptics } from "@/lib/drive/useHaptics";
 import { getProfileGain, getTuning, type ElcamosoSettings } from "@/lib/drive/settings";
+import { effectiveNoiseMaskingAudio } from "@/lib/sound/road-cabin";
+import { useAccount } from "@/lib/account/AccountProvider";
 import { getProfile } from "@/lib/sound/profiles";
 import { EnvironmentPicker } from "@/components/EnvironmentPicker";
 import { DemoSoundPicker } from "@/components/DemoSoundPicker";
@@ -24,13 +26,22 @@ export const Route = createFileRoute("/demo")({
   head: () => createSeoHeadFromPath("/demo"),
 });
 
-function demoSessionConfig(settings: ElcamosoSettings) {
+function demoSessionConfig(settings: ElcamosoSettings, isSignedIn: boolean) {
   const profileId = settings.profileId;
   return {
     profileId,
     volume: settings.volume,
     profileGain: getProfileGain(settings, profileId),
     outputBoostDb: settings.outputBoostDb,
+    ...effectiveNoiseMaskingAudio({
+      isSignedIn,
+      noiseMasking: settings.noiseMasking,
+      matchVolumeToSpeed: settings.matchVolumeToSpeed,
+      calmCabin: settings.calmCabin,
+    }),
+    noiseMasking: settings.noiseMasking,
+    noiseMaskingAllowed: isSignedIn,
+    matchVolumeToSpeedIntensity: settings.matchVolumeToSpeedIntensity,
     bodyCharacter: settings.bodyCharacter,
     mechanicalCharacter: settings.mechanicalCharacter,
     tuning: getTuning(settings, profileId),
@@ -42,6 +53,7 @@ function demoSessionConfig(settings: ElcamosoSettings) {
 
 function DemoDrive() {
   const { settings, update } = useSettings();
+  const { isAuthenticated } = useAccount();
   const demoSpeedFor = (mps: number) =>
     formatSpeed(mps, settings.units, settings.language, {
       profileId: settings.profileId,
@@ -72,9 +84,12 @@ function DemoDrive() {
       ? `D${state.gear}`
       : controls.selector;
 
-  const syncDemoSession = useCallback((next: ElcamosoSettings) => {
-    getSession().syncConfig(demoSessionConfig(next));
-  }, []);
+  const syncDemoSession = useCallback(
+    (next: ElcamosoSettings) => {
+      getSession().syncConfig(demoSessionConfig(next, isAuthenticated));
+    },
+    [isAuthenticated],
+  );
 
   const onProfileSelect = useCallback(
     (profileId: string) => {

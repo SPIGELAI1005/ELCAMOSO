@@ -7,6 +7,7 @@ import { useFeatureAccess } from "@/lib/entitlements/selectors";
 import { beginLiveDriveAccess, endLiveDriveAccess } from "@/lib/entitlements/live-drive-access";
 import { useEntitlements } from "@/lib/entitlements/useEntitlements";
 import { isLiveSessionStatus } from "@/lib/ui/chrome";
+import { effectiveNoiseMaskingAudio } from "@/lib/sound/road-cabin";
 
 const SILENT_WAV =
   "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA";
@@ -55,6 +56,15 @@ export function SessionBridge() {
       volume: settings.volume,
       profileGain: getProfileGain(settings, settings.profileId),
       outputBoostDb: settings.outputBoostDb,
+      ...effectiveNoiseMaskingAudio({
+        isSignedIn: access.isSignedIn,
+        noiseMasking: settings.noiseMasking,
+        matchVolumeToSpeed: settings.matchVolumeToSpeed,
+        calmCabin: settings.calmCabin,
+      }),
+      noiseMasking: settings.noiseMasking,
+      noiseMaskingAllowed: access.isSignedIn,
+      matchVolumeToSpeedIntensity: settings.matchVolumeToSpeedIntensity,
       bodyCharacter: settings.bodyCharacter,
       mechanicalCharacter: settings.mechanicalCharacter,
       tuning: getTuning(settings, settings.profileId),
@@ -84,6 +94,7 @@ export function SessionBridge() {
     access.advancedControls,
     access.dynamicDrive,
     access.virtualTransmission,
+    access.isSignedIn,
   ]);
 
   useEffect(() => {

@@ -82,6 +82,15 @@ import {
 } from "@/lib/drive/traces";
 import { summariseJourneyFromTrace, saveJourney, type JourneySummary } from "@/lib/journey";
 import { SoundEngine, type MeterReading } from "@/lib/sound/engine";
+import {
+  DEFAULT_CALM_CABIN,
+  DEFAULT_MATCH_VOLUME_TO_SPEED,
+  DEFAULT_MATCH_VOLUME_TO_SPEED_INTENSITY,
+  DEFAULT_NOISE_MASKING,
+  effectiveNoiseMaskingAudio,
+  sanitizeRoadLoudnessIntensity,
+  type RoadLoudnessIntensity,
+} from "@/lib/sound/road-cabin";
 import { getProfile } from "@/lib/sound/profiles";
 import { driveStateFromPowertrain } from "@/lib/powertrain/adapters/drive-state";
 import {
@@ -205,6 +214,12 @@ export interface SessionConfig {
   volume: number;
   profileGain: number;
   outputBoostDb: number;
+  noiseMasking: boolean;
+  /** True only when the current user is signed in. Defaults false until SessionBridge syncs. */
+  noiseMaskingAllowed: boolean;
+  matchVolumeToSpeed: boolean;
+  matchVolumeToSpeedIntensity: RoadLoudnessIntensity;
+  calmCabin: boolean;
   bodyCharacter: number;
   mechanicalCharacter: number;
   tuning?: ProfileTuning;
@@ -247,6 +262,11 @@ function configFingerprint(c: SessionConfig): string {
     volume: c.volume,
     profileGain: c.profileGain,
     outputBoostDb: c.outputBoostDb,
+    noiseMasking: c.noiseMasking,
+    noiseMaskingAllowed: c.noiseMaskingAllowed,
+    matchVolumeToSpeed: c.matchVolumeToSpeed,
+    matchVolumeToSpeedIntensity: c.matchVolumeToSpeedIntensity,
+    calmCabin: c.calmCabin,
     bodyCharacter: c.bodyCharacter,
     mechanicalCharacter: c.mechanicalCharacter,
     tuning: c.tuning,
@@ -347,6 +367,11 @@ class DriveSession {
     volume: 0.35,
     profileGain: 1,
     outputBoostDb: 0,
+    noiseMasking: DEFAULT_NOISE_MASKING,
+    noiseMaskingAllowed: false,
+    matchVolumeToSpeed: DEFAULT_MATCH_VOLUME_TO_SPEED,
+    matchVolumeToSpeedIntensity: DEFAULT_MATCH_VOLUME_TO_SPEED_INTENSITY,
+    calmCabin: DEFAULT_CALM_CABIN,
     bodyCharacter: 0.5,
     mechanicalCharacter: 0.5,
     motionSensitivity: 1,
@@ -632,6 +657,26 @@ class DriveSession {
     this.listeners.forEach((fn) => fn());
   }
 
+  private roadCabinPrefs() {
+    const gated = effectiveNoiseMaskingAudio({
+      isSignedIn: this.config.noiseMaskingAllowed,
+      noiseMasking: this.config.noiseMasking,
+      matchVolumeToSpeed: this.config.matchVolumeToSpeed,
+      calmCabin: this.config.calmCabin,
+    });
+    return {
+      matchVolumeToSpeed: gated.matchVolumeToSpeed,
+      intensity: sanitizeRoadLoudnessIntensity(this.config.matchVolumeToSpeedIntensity),
+      calmCabin: gated.calmCabin,
+    };
+  }
+
+  private applyRoadCabinToEngines() {
+    const prefs = this.roadCabinPrefs();
+    this.engine?.setRoadCabinPrefs(prefs);
+    this.engineB?.setRoadCabinPrefs(prefs);
+  }
+
   syncConfig(next: Partial<SessionConfig>) {
     const prevId = this.config.profileId;
     const prevEnv = this.config.environmentId;
@@ -652,6 +697,7 @@ class DriveSession {
     this.engine?.setVolume(this.config.volume);
     this.engine?.setProfileGain(this.config.profileGain);
     this.engine?.setOutputBoostDb(this.config.outputBoostDb);
+    this.applyRoadCabinToEngines();
     this.engine?.setCharacterFeel(this.config.bodyCharacter, this.config.mechanicalCharacter);
     this.engine?.setIntensityCeiling(intensityCeiling(profile));
     if (merged.profileId !== prevId) {
@@ -1126,6 +1172,7 @@ class DriveSession {
         ...(seed !== undefined ? { seed } : {}),
       });
       this.engineB.setVolume(0);
+      this.engineB.setRoadCabinPrefs(this.roadCabinPrefs());
       this.journeyTrace = trace;
       this.journeyReplay = sourceA;
       this.journeyAbSourceB = sourceB;
@@ -1158,6 +1205,7 @@ class DriveSession {
         mix: this.config.mix,
       });
       this.engineB.setVolume(0);
+      this.engineB.setRoadCabinPrefs(this.roadCabinPrefs());
       this.status = "running";
       this.kind = "ab";
       this.lastTick = performance.now();
@@ -1390,6 +1438,7 @@ class DriveSession {
       engine.setIntensityCeiling(intensityCeiling(profile));
       engine.setProfileGain(this.config.profileGain);
       engine.setOutputBoostDb(this.config.outputBoostDb);
+      engine.setRoadCabinPrefs(this.roadCabinPrefs());
       engine.setCharacterFeel(this.config.bodyCharacter, this.config.mechanicalCharacter);
       engine.setVolume(this.config.volume);
       engine.setDynamicDriveEnabled(this.powertrainSimActive(profile));

@@ -64,6 +64,7 @@ import { cn } from "@/lib/utils";
 import { DRIVE_PLUS_LOCKED_MESSAGE } from "@/lib/sound/profile-access-config";
 import { ModeTachometer } from "@/components/drive/ModeTachometer";
 import { FeedbackSheet } from "@/components/feedback/FeedbackSheet";
+import { NoiseMaskingDriveToggle } from "@/components/NoiseMaskingToggle";
 import { useInboxUnread } from "@/lib/inbox/inbox";
 import { track } from "@/lib/analytics/track";
 import { resolveTachThemeId, type TachThemeId } from "@/lib/drive/tach-theme";
@@ -800,6 +801,8 @@ export function DriveCockpit({
             More
           </button>
         </div>
+
+        <NoiseMaskingDriveToggle />
 
         <div
           className="flex items-center justify-between gap-2"

@@ -40,6 +40,17 @@ import {
   type PeakProtectStage,
 } from "@/lib/sound/gain-staging";
 import { intensityCeiling as intensityCeilingForProfile } from "@/lib/drive/safety";
+import { createCalmCabinBed, type CalmCabinBed } from "@/lib/sound/dsp/calm-cabin";
+import {
+  DEFAULT_MATCH_VOLUME_TO_SPEED_INTENSITY,
+  ROAD_LOUDNESS_SHELF_HZ,
+  ROAD_LOUDNESS_TAU_SECONDS,
+  calmCabinGainLinear,
+  roadLoudnessTargets,
+  sanitizeRoadLoudnessIntensity,
+  smoothRoadSpeedKmh,
+  type RoadLoudnessIntensity,
+} from "@/lib/sound/road-cabin";
 import {
   ensureCombustionWorklet,
   HybridCombustionSynth,
@@ -205,6 +216,19 @@ export class SoundEngine {
   /** @deprecated Prompt 08 — peak protect replaces DynamicsCompressor-as-limiter. */
   private limiter: DynamicsCompressorNode | null = null;
   private boostGain: GainNode | null = null;
+  /** Additive post-boost gain for Match volume to speed. */
+  private roadLoudnessGain: GainNode | null = null;
+  /** Additive lowshelf after roadLoudnessGain; not the cabin or MasterBus shelf. */
+  private roadLoudnessBass: BiquadFilterNode | null = null;
+  private calmCabinBed: CalmCabinBed | null = null;
+  /** Off until the session applies signed-in, gated prefs. */
+  private matchVolumeToSpeed = false;
+  private matchVolumeToSpeedIntensity: RoadLoudnessIntensity =
+    DEFAULT_MATCH_VOLUME_TO_SPEED_INTENSITY;
+  private calmCabin = false;
+  private smoothedRoadKmh = 0;
+  private lastRoadSpeedMs = 0;
+  private roadCabinLastTime = 0;
   /** Catalog loudness makeup (non-engine profiles) after the user-volume stage. */
   private makeupGain: GainNode | null = null;
   private makeupLimiter: DynamicsCompressorNode | null = null;
@@ -676,8 +700,10 @@ export class SoundEngine {
 
     // Prompt 08 gain path:
     // layers → cabin EQ → MasterBus (sat/EQ/gentle program) → user volume
-    // → optional boost → peak protect (−1 dBFS sample) → duck → destination.
+    // → optional boost → Match volume to speed (gain + lowshelf) → peak protect
+    // (−1 dBFS sample) → duck → destination.
     // DynamicsCompressorNode is not used as a brickwall limiter.
+    // Calm cabin is mixed at cabinIn so it follows user volume and peak protect.
     const duck = ctx.createGain();
     duck.gain.value = 1;
     duck.connect(ctx.destination);
@@ -694,9 +720,18 @@ export class SoundEngine {
     const peakProtect = createPeakProtectStage(ctx, duck);
     preAnalyser.connect(peakProtect.input);
 
+    const roadLoudnessGain = ctx.createGain();
+    roadLoudnessGain.gain.value = 1;
+    const roadLoudnessBass = ctx.createBiquadFilter();
+    roadLoudnessBass.type = "lowshelf";
+    roadLoudnessBass.frequency.value = ROAD_LOUDNESS_SHELF_HZ;
+    roadLoudnessBass.gain.value = 0;
+    roadLoudnessGain.connect(roadLoudnessBass);
+    roadLoudnessBass.connect(preAnalyser);
+
     const boostGain = ctx.createGain();
     boostGain.gain.value = 10 ** (this.outputBoostDb / 20);
-    boostGain.connect(preAnalyser);
+    boostGain.connect(roadLoudnessGain);
 
     // Catalog makeup: PROFILE_LOUDNESS trims are capped by the user-stage ceiling,
     // so quiet non-engine sounds could never reach -16 LUFS. Makeup is applied
@@ -743,6 +778,8 @@ export class SoundEngine {
     this.profileBus = profileBus;
     this.peakProtect = peakProtect;
     this.boostGain = boostGain;
+    this.roadLoudnessGain = roadLoudnessGain;
+    this.roadLoudnessBass = roadLoudnessBass;
 
     // Shared space: one convolver fed by per-layer sends.
     const reverb = ctx.createConvolver();
@@ -812,6 +849,7 @@ export class SoundEngine {
     this.filter = filter;
 
     this.applyMix();
+    this.applyRoadCabin(this.lastRoadSpeedMs);
     if (options?.snippets) void this.setSnippets(options.snippets);
 
     // Startup: a soft ELCAMOSO signature, then the profile breathes in to idle.
@@ -1552,6 +1590,63 @@ export class SoundEngine {
   setVolume(value: number) {
     this.volume = Math.min(1, Math.max(0, Number.isFinite(value) ? value : 0));
     this.applyUserStageGain(0.2);
+    this.applyRoadCabin(this.lastRoadSpeedMs);
+  }
+
+  /** Additive, off-able road-loudness / calm-cabin prefs. Does not change profile character. */
+  setRoadCabinPrefs(prefs: {
+    matchVolumeToSpeed: boolean;
+    intensity: RoadLoudnessIntensity;
+    calmCabin: boolean;
+  }) {
+    this.matchVolumeToSpeed = prefs.matchVolumeToSpeed === true;
+    this.matchVolumeToSpeedIntensity = sanitizeRoadLoudnessIntensity(prefs.intensity);
+    this.calmCabin = prefs.calmCabin === true;
+    this.applyRoadCabin(this.lastRoadSpeedMs);
+  }
+
+  private applyRoadCabin(speedMs: number) {
+    this.lastRoadSpeedMs = Number.isFinite(speedMs) ? Math.max(0, speedMs) : 0;
+    const ctx = this.ctx;
+    if (!ctx) return;
+    const t = this.now();
+    const dt =
+      this.roadCabinLastTime > 0
+        ? Math.min(0.25, Math.max(0.001, t - this.roadCabinLastTime))
+        : 1 / 60;
+    this.roadCabinLastTime = t;
+    const rawKmh = this.lastRoadSpeedMs * 3.6;
+    this.smoothedRoadKmh = smoothRoadSpeedKmh(this.smoothedRoadKmh, rawKmh, dt);
+    const loud = roadLoudnessTargets({
+      enabled: this.matchVolumeToSpeed,
+      intensity: this.matchVolumeToSpeedIntensity,
+      speedKmh: this.smoothedRoadKmh,
+      userVolume: this.volume,
+    });
+    if (this.roadLoudnessGain) {
+      this.roadLoudnessGain.gain.setTargetAtTime(
+        Math.max(0.0001, loud.gainLinear),
+        t,
+        ROAD_LOUDNESS_TAU_SECONDS,
+      );
+    }
+    if (this.roadLoudnessBass) {
+      this.roadLoudnessBass.gain.setTargetAtTime(loud.bassDb, t, ROAD_LOUDNESS_TAU_SECONDS);
+    }
+    const cabinLevel = calmCabinGainLinear({
+      enabled: this.calmCabin,
+      speedKmh: this.smoothedRoadKmh,
+      userVolume: this.volume,
+    });
+    if (this.calmCabin && cabinLevel > 0 && this.cabinIn) {
+      if (!this.calmCabinBed) {
+        this.calmCabinBed = createCalmCabinBed(ctx, this.cabinIn);
+        this.calmCabinBed.start();
+      }
+      this.calmCabinBed.setLevel(cabinLevel, t);
+    } else if (this.calmCabinBed) {
+      this.calmCabinBed.setLevel(0, t, 0.08);
+    }
   }
 
   getVolume() {
@@ -1734,6 +1829,7 @@ export class SoundEngine {
     const ctx = this.ctx;
     const profile = this.profile;
     if (!ctx || !profile || !this.filter || this.swapping) return;
+    this.applyRoadCabin(state.speed);
     const t = this.now();
     this.updateRecordedBed(state, t);
     if (this.snorts && isHorseSnortProfile(profile.id)) this.snorts.update(state, t);
@@ -2634,6 +2730,11 @@ export class SoundEngine {
     this.peakProtect?.dispose();
     this.peakProtect = null;
     this.boostGain = null;
+    this.roadLoudnessGain = null;
+    this.roadLoudnessBass = null;
+    this.calmCabinBed?.dispose();
+    this.calmCabinBed = null;
+    this.roadCabinLastTime = 0;
     this.makeupGain = null;
     this.makeupLimiter = null;
     this.appliedMakeupDb = null;
