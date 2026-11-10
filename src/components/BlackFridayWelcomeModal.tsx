@@ -8,6 +8,7 @@ import {
   isDriveSpecialActive,
   landingStartDriveProfileId,
 } from "@/lib/billing/drive-special";
+import { FOUNDERS_PRICING_HASH, FOUNDERS_PRICING_SEARCH } from "@/lib/billing/pricing-search";
 import { useAccount } from "@/lib/account/AccountProvider";
 import { writeSettings } from "@/lib/drive/settings";
 import { useSettings } from "@/lib/drive/useSettings";
@@ -99,7 +100,8 @@ export function BlackFridayWelcomeModal() {
           </button>
           <Link
             to="/pricing"
-            hash="founders"
+            search={FOUNDERS_PRICING_SEARCH}
+            hash={FOUNDERS_PRICING_HASH}
             className="rounded-full border border-white/30 px-4 py-2.5 text-sm font-semibold text-white"
             onClick={dismiss}
           >

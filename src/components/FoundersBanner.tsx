@@ -15,6 +15,7 @@ import {
   msUntilFounderDeadline,
   splitCountdown,
 } from "@/lib/founders/founders";
+import { FOUNDERS_PRICING_HASH, FOUNDERS_PRICING_SEARCH } from "@/lib/billing/pricing-search";
 import { getFoundersSeatsFn } from "@/lib/founders/server-fns";
 import { cn } from "@/lib/utils";
 
@@ -131,7 +132,8 @@ export function FoundersBanner({
     cta = foundersPackAvailable ? (
       <Link
         to="/pricing"
-        hash="founders"
+        search={FOUNDERS_PRICING_SEARCH}
+        hash={FOUNDERS_PRICING_HASH}
         className="order-4 shrink-0 border border-[#e53935] sm:order-none px-2.5 py-1 text-[10px] font-medium tracking-[0.2em] text-[#e53935] uppercase transition-colors hover:bg-[#e53935] hover:text-white"
       >
         {offer.buy}
@@ -213,6 +215,8 @@ export function FoundersBanner({
         {!compact && !founder && !full && isAuthenticated ? (
           <Link
             to="/pricing"
+            search={FOUNDERS_PRICING_SEARCH}
+            hash={FOUNDERS_PRICING_HASH}
             className="order-4 shrink-0 sm:order-none text-[10px] tracking-[0.2em] text-muted-foreground uppercase hover:text-foreground"
           >
             Perks

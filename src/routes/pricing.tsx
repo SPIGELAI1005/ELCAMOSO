@@ -15,6 +15,11 @@ import { useSettings } from "@/lib/drive/useSettings";
 import { t } from "@/lib/i18n";
 import { SoundPackageCallout } from "@/components/pricing/SoundPackageCallout";
 import {
+  parsePricingBillingParam,
+  parsePricingFromParam,
+  pricingDisplayIntervalFromSearch,
+} from "@/lib/billing/pricing-search";
+import {
   parsePricingPlanParam,
   parseSharedSoundParam,
   type SoundPackage,
@@ -37,9 +42,16 @@ export const Route = createFileRoute("/pricing")({
   component: Pricing,
   validateSearch: (
     search: Record<string, unknown>,
-  ): { plan?: SoundPackage | undefined; sound?: string | undefined } => ({
+  ): {
+    plan?: SoundPackage | undefined;
+    sound?: string | undefined;
+    billing?: "monthly" | "yearly" | undefined;
+    from?: "founders" | undefined;
+  } => ({
     plan: parsePricingPlanParam(search["plan"]),
     sound: parseSharedSoundParam(search["sound"]) ?? undefined,
+    billing: parsePricingBillingParam(search["billing"]),
+    from: parsePricingFromParam(search["from"]),
   }),
   head: () => createSeoHeadFromPath("/pricing"),
 });
@@ -114,8 +126,16 @@ function PricingFooterNotes({ showCancel = true }: { showCancel?: boolean }) {
 
 function Pricing() {
   const { plan } = useEntitlements();
-  const { plan: highlightPlan, sound: highlightSound } = Route.useSearch();
-  const [interval, setInterval] = useState<BillingDisplayInterval>("monthly");
+  const { plan: highlightPlan, sound: highlightSound, billing } = Route.useSearch();
+  const [interval, setInterval] = useState<BillingDisplayInterval>(() =>
+    pricingDisplayIntervalFromSearch(billing),
+  );
+
+  // Re-read the URL when search changes so a later /pricing visit (nav/footer)
+  // cannot keep a founders ?billing=yearly selection. The toggle is not persisted.
+  useEffect(() => {
+    setInterval(pricingDisplayIntervalFromSearch(billing));
+  }, [billing]);
   const purchaseActions = usePlanPurchaseActions(interval, "pricing");
   const billingQuery = useBillingPublicConfig();
   const purchasesClosed = isPurchasesClosedNoticeVisible(billingQuery);
@@ -162,7 +182,7 @@ function Pricing() {
             </span>
           </p>
         </section>
-        <section className="mx-auto w-full max-w-2xl px-6 sm:px-10">
+        <section id="plans" className="mx-auto w-full max-w-2xl px-6 sm:px-10">
           <PlansOverview
             monetizationEnabled={false}
             returnTo="/pricing"
@@ -202,7 +222,7 @@ function Pricing() {
         </p>
       </section>
 
-      <section className="mx-auto w-full max-w-2xl px-6 sm:px-10">
+      <section id="plans" className="mx-auto w-full max-w-2xl px-6 sm:px-10">
         <PlansOverview
           monetizationEnabled
           returnTo="/pricing"
