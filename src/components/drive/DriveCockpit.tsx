@@ -547,7 +547,7 @@ export function DriveCockpit({
           >
             {telemetry || "\u00a0"}
           </p>
-          <div className="flex flex-col items-center gap-1.5 sm:gap-2">
+          <div className="flex flex-col items-center gap-1 sm:gap-1.5">
             <button
               type="button"
               data-testid="open-feedback"
