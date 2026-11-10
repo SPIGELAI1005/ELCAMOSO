@@ -6,6 +6,7 @@ import {
   DEFAULT_MATCH_VOLUME_TO_SPEED_INTENSITY,
   DEFAULT_NOISE_MASKING,
   NOISE_MASKING_LABEL,
+  NOISE_MASKING_SIGN_IN_REMARK,
   ROAD_LOUDNESS_CAP_KMH,
   ROAD_LOUDNESS_CAPS,
   ROAD_LOUDNESS_KNEE_KMH,
@@ -104,6 +105,7 @@ describe("speed smoothing", () => {
 describe("settings sanitize and migration", () => {
   it("uses recommended defaults on a new device", () => {
     expect(NOISE_MASKING_LABEL).toBe("Noise masking");
+    expect(NOISE_MASKING_SIGN_IN_REMARK).toBe("Sign in to activate");
     expect(DEFAULT_SETTINGS.noiseMasking).toBe(DEFAULT_NOISE_MASKING);
     expect(DEFAULT_SETTINGS.matchVolumeToSpeed).toBe(DEFAULT_MATCH_VOLUME_TO_SPEED);
     expect(DEFAULT_SETTINGS.matchVolumeToSpeedIntensity).toBe(

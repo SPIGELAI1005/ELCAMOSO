@@ -32,7 +32,7 @@ export const DEFAULT_NOISE_MASKING = true;
 /** User-facing name (Drive toggle and Settings section heading). Rename here only. */
 export const NOISE_MASKING_LABEL = "Noise masking";
 /** Shown when a signed-out visitor taps a locked Noise masking control. */
-export const NOISE_MASKING_SIGN_IN_REMARK = "Sign in or sign up to use this";
+export const NOISE_MASKING_SIGN_IN_REMARK = "Sign in to activate";
 
 export function isRoadLoudnessIntensity(value: unknown): value is RoadLoudnessIntensity {
   return value === "low" || value === "medium" || value === "high";
