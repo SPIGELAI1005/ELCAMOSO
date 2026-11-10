@@ -42,6 +42,7 @@ describe("SoundEngine profile switch", () => {
       textureVoices: 0,
       snippetVoices: 0,
       strategyCount: 0,
+      engineLayerCount: 0,
     });
   });
 });

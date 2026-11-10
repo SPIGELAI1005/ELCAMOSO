@@ -8,11 +8,7 @@ import { resolvePersonalityId } from "@/lib/drive/drivetrain-resolve";
 import { PowertrainSimulator } from "@/lib/powertrain/simulator";
 import { SoundEngine } from "@/lib/sound/engine";
 import { getProfile } from "@/lib/sound/profiles";
-import {
-  getLabFixture,
-  type LabFixture,
-  type LabTelemetrySample,
-} from "@/lib/sound/lab/fixtures";
+import { getLabFixture, type LabFixture, type LabTelemetrySample } from "@/lib/sound/lab/fixtures";
 import {
   buildLabCaptureMetadata,
   type LabCapturePath,
@@ -39,6 +35,8 @@ export interface LabRenderOptions {
   environmentId?: string;
   /** Wait for recorded loops to decode before driving the fixture (offline path only). */
   waitForSamples?: boolean;
+  /** When false, skip PROFILE_ENGINE_LAYERS so an unlayered baseline can be rendered. */
+  engineLayersEnabled?: boolean;
 }
 
 function resolveSettings(partial?: Partial<LabCaptureSettings>): LabCaptureSettings {
@@ -165,8 +163,7 @@ function driveStateFromSample(
         phone: sample.primarySource === "phone" && !lost,
         browser: sample.primarySource === "tesla-browser" && !lost,
         vehicleTelemetry:
-          (sample.primarySource === "vehicle-telemetry" ||
-            sample.primarySource === "simulator") &&
+          (sample.primarySource === "vehicle-telemetry" || sample.primarySource === "simulator") &&
           !lost,
       },
       fallbackTier: lost ? "hold" : "vehicle-telemetry",
@@ -207,11 +204,13 @@ async function configureEngine(
   settings: LabCaptureSettings,
   context: AudioContext | OfflineAudioContext,
   environmentId: string = "open",
+  engineLayersEnabled = true,
 ) {
   const profile = getProfile(profileId);
   engine.setExperienceTuningEnabled(settings.experienceTuningEnabled);
   engine.setSynthesisMode(settings.synthesisMode);
   engine.setRealismEngine(settings.realismEngine);
+  engine.setEngineLayersEnabled(engineLayersEnabled);
   engine.setVolume(settings.volume);
   await engine.start(profile, {
     context,
@@ -241,7 +240,14 @@ export async function renderLabOffline(options: LabRenderOptions): Promise<LabCa
     LAB_SAMPLE_RATE,
   );
   const engine = new SoundEngine();
-  await configureEngine(engine, options.profileId, settings, context, options.environmentId ?? "open");
+  await configureEngine(
+    engine,
+    options.profileId,
+    settings,
+    context,
+    options.environmentId ?? "open",
+    options.engineLayersEnabled !== false,
+  );
   if (options.waitForSamples) await engine.whenSamplesReady();
   let simulator = createSimulator(options.profileId, fixture);
   let prevSpeed = 0;
@@ -302,9 +308,7 @@ export async function renderLabOffline(options: LabRenderOptions): Promise<LabCa
     }),
     metrics,
     wavBase64: encodeWav(channels, LAB_SAMPLE_RATE),
-    ...(options.includeSpectrum
-      ? { spectrum: magnitudeSpectrumDb(mono, LAB_SAMPLE_RATE) }
-      : {}),
+    ...(options.includeSpectrum ? { spectrum: magnitudeSpectrumDb(mono, LAB_SAMPLE_RATE) } : {}),
     renderElapsedMs: performance.now() - started,
     audioRenderMs,
     updateLoopMs,
@@ -345,7 +349,14 @@ export async function renderLabRealtime(options: LabRenderOptions): Promise<LabC
     }
   };
 
-  await configureEngine(engine, options.profileId, settings, context, options.environmentId ?? "open");
+  await configureEngine(
+    engine,
+    options.profileId,
+    settings,
+    context,
+    options.environmentId ?? "open",
+    options.engineLayersEnabled !== false,
+  );
   // Tap master destination: SoundEngine connects to context.destination.
   // ScriptProcessor must be in the graph — connect a silent gain after tap.
   const silent = context.createGain();
@@ -355,9 +366,7 @@ export async function renderLabRealtime(options: LabRenderOptions): Promise<LabC
   // to offline. Prefer Offline for accuracy; realtime path records via destination
   // stream when supported.
   const streamDest =
-    "createMediaStreamDestination" in context
-      ? context.createMediaStreamDestination()
-      : null;
+    "createMediaStreamDestination" in context ? context.createMediaStreamDestination() : null;
 
   let simulator = createSimulator(options.profileId, fixture);
   let prevSpeed = 0;
