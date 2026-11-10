@@ -33,6 +33,8 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { DEMO_PAGE_ENABLED } from "@/lib/feature-flags";
+import { useNoiseMaskingGate } from "@/lib/drive/useNoiseMaskingGate";
+import { NOISE_MASKING_LABEL } from "@/lib/sound/road-cabin";
 
 export const Route = createFileRoute("/settings")({
   validateSearch: (
@@ -75,7 +77,8 @@ const WORKSPACES: Workspace[] = [
     step: "01",
     title: "Sound",
     hint: "Volume, balance, cabin",
-    keywords: "sound volume balance profile cabin eq gear shift clip studio garage",
+    keywords:
+      "sound volume balance profile cabin eq gear shift clip studio garage noise masking match volume to speed calm cabin road noise",
   },
   {
     id: "driving",
@@ -319,6 +322,7 @@ function SoundWorkspace({
   profileGain: number;
   virtualTx: boolean;
 }) {
+  const gate = useNoiseMaskingGate();
   return (
     <div className="space-y-12">
       <Block title="Sound Volume" value={`${Math.round(settings.volume * 100)}`}>
@@ -353,6 +357,84 @@ function SoundWorkspace({
           Optional +0 to +6 dB after master volume, before peak protection. Remembered on this
           device only. Does not override Bluetooth or cabin amplifiers.
         </p>
+      </Block>
+
+      <Block title={NOISE_MASKING_LABEL}>
+        <p className="mt-3 text-sm text-muted-foreground">
+          Helps the sound stay clearer and can make road rumble less noticeable. This reduces how
+          noticeable road noise is; it is not noise cancellation. Remembered on this device only.
+          Preview works in Demo and audition. Free for signed-in drivers.
+        </p>
+        <div className="mt-4 flex items-start justify-between gap-8">
+          <p className="text-sm">{NOISE_MASKING_LABEL}</p>
+          <Toggle
+            checked={gate.masterOn}
+            onChange={(v) => gate.requestChange(() => update({ noiseMasking: v }))}
+            label={NOISE_MASKING_LABEL}
+          />
+        </div>
+        {gate.allowed ? null : (
+          <p className="mt-3 text-sm text-muted-foreground">{gate.signInRemark}</p>
+        )}
+
+        <div className="mt-8 border-t border-border/60 pt-6">
+          <div className="flex items-start justify-between gap-8">
+            <div>
+              <p className="text-base">Match volume to speed</p>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Gently raises level and bass as speed rises so the sound stays clearer over road and
+                wind noise.
+              </p>
+            </div>
+            <Toggle
+              checked={gate.allowed && settings.matchVolumeToSpeed}
+              onChange={(v) => gate.requestChange(() => update({ matchVolumeToSpeed: v }))}
+              label="Match volume to speed"
+            />
+          </div>
+          {gate.allowed && settings.matchVolumeToSpeed ? (
+            <div className="mt-5">
+              <p className="text-sm">Intensity</p>
+              <div className="mt-3 flex gap-2">
+                {(["low", "medium", "high"] as const).map((level) => (
+                  <button
+                    key={level}
+                    type="button"
+                    onClick={() =>
+                      gate.requestChange(() => update({ matchVolumeToSpeedIntensity: level }))
+                    }
+                    aria-pressed={settings.matchVolumeToSpeedIntensity === level}
+                    className={`h-11 rounded-full border px-4 text-[11px] tracking-[0.16em] uppercase ${
+                      settings.matchVolumeToSpeedIntensity === level
+                        ? "border-foreground bg-foreground text-background"
+                        : "border-border text-muted-foreground"
+                    }`}
+                  >
+                    {level}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : null}
+        </div>
+
+        <div className="mt-8">
+          <div className="flex items-start justify-between gap-8">
+            <div>
+              <p className="text-base">Calm cabin</p>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Adds a soft low background that follows speed and can make road rumble less
+                noticeable.
+              </p>
+            </div>
+            <Toggle
+              checked={gate.allowed && settings.calmCabin}
+              onChange={(v) => gate.requestChange(() => update({ calmCabin: v }))}
+              label="Calm cabin"
+            />
+          </div>
+        </div>
+        {gate.dialog}
       </Block>
 
       <details className="rounded-2xl border border-border/60 px-5 py-4">

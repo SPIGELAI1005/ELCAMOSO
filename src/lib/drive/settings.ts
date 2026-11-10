@@ -37,6 +37,14 @@ import {
   isShiftMapPresetId,
   type ShiftMapPresetId,
 } from "@/lib/powertrain/shift-presets";
+import {
+  DEFAULT_CALM_CABIN,
+  DEFAULT_MATCH_VOLUME_TO_SPEED,
+  DEFAULT_MATCH_VOLUME_TO_SPEED_INTENSITY,
+  DEFAULT_NOISE_MASKING,
+  sanitizeRoadLoudnessIntensity,
+  type RoadLoudnessIntensity,
+} from "@/lib/sound/road-cabin";
 
 /** Per-profile fine-tuning of how motion translates into sound state. */
 export interface ProfileTuning {
@@ -165,6 +173,19 @@ export interface ElcamosoSettings {
   volume: number;
   /** Optional output boost 0..6 dB (peak-protected). Does not override car hardware volume. */
   outputBoostDb: number;
+  /**
+   * Master enable for Noise masking (Drive toggle + Settings heading).
+   * Device-local; not taken from merge imports. Audio only applies when signed in.
+   */
+  noiseMasking: boolean;
+  /**
+   * Gently raise level and bass with speed so the sound stays clearer over road noise.
+   * Device-local; not taken from merge imports. Not noise cancellation.
+   */
+  matchVolumeToSpeed: boolean;
+  matchVolumeToSpeedIntensity: RoadLoudnessIntensity;
+  /** Soft low-frequency bed that follows speed when on. Device-local. */
+  calmCabin: boolean;
   /** Advanced Body character 0..1 (0.5 = authored). Settings only — not Drive cockpit. */
   bodyCharacter: number;
   /** Advanced Mechanical character 0..1 (0.5 = authored). Settings only. */
@@ -295,6 +316,10 @@ export const DEFAULT_SETTINGS: ElcamosoSettings = {
   profileId: DEFAULT_PROFILE_ID,
   volume: 0.35,
   outputBoostDb: 0,
+  noiseMasking: DEFAULT_NOISE_MASKING,
+  matchVolumeToSpeed: DEFAULT_MATCH_VOLUME_TO_SPEED,
+  matchVolumeToSpeedIntensity: DEFAULT_MATCH_VOLUME_TO_SPEED_INTENSITY,
+  calmCabin: DEFAULT_CALM_CABIN,
   bodyCharacter: 0.5,
   mechanicalCharacter: 0.5,
   demoMotion: false,
@@ -859,6 +884,10 @@ export function sanitizeSettings(input: unknown): {
     profileId,
     volume: num(p["volume"], DEFAULT_SETTINGS.volume, 0, 1),
     outputBoostDb: num(p["outputBoostDb"], DEFAULT_SETTINGS.outputBoostDb, 0, 6),
+    noiseMasking: bool(p["noiseMasking"], DEFAULT_SETTINGS.noiseMasking),
+    matchVolumeToSpeed: bool(p["matchVolumeToSpeed"], DEFAULT_SETTINGS.matchVolumeToSpeed),
+    matchVolumeToSpeedIntensity: sanitizeRoadLoudnessIntensity(p["matchVolumeToSpeedIntensity"]),
+    calmCabin: bool(p["calmCabin"], DEFAULT_SETTINGS.calmCabin),
     bodyCharacter: num(p["bodyCharacter"], DEFAULT_SETTINGS.bodyCharacter, 0, 1),
     mechanicalCharacter: num(p["mechanicalCharacter"], DEFAULT_SETTINGS.mechanicalCharacter, 0, 1),
     demoMotion: bool(p["demoMotion"], false),
@@ -1098,7 +1127,7 @@ export function readRawStored(): string | null {
 /* ---------------------------------------------------------------- transfer */
 
 const BACKUP_KIND = "elcamoso.settings.backup";
-const BACKUP_VERSION = 9;
+const BACKUP_VERSION = 10;
 
 export interface SettingsBackup {
   kind: typeof BACKUP_KIND;
@@ -1236,6 +1265,19 @@ function migratePayload(payload: Record<string, unknown>, version: number) {
     notes.push("Added output boost and advanced Body / Mechanical character controls.");
   }
 
+  if (version < 10) {
+    if (p["noiseMasking"] === undefined) p["noiseMasking"] = DEFAULT_NOISE_MASKING;
+    if (p["matchVolumeToSpeed"] === undefined)
+      p["matchVolumeToSpeed"] = DEFAULT_MATCH_VOLUME_TO_SPEED;
+    if (p["matchVolumeToSpeedIntensity"] === undefined) {
+      p["matchVolumeToSpeedIntensity"] = DEFAULT_MATCH_VOLUME_TO_SPEED_INTENSITY;
+    }
+    if (p["calmCabin"] === undefined) p["calmCabin"] = DEFAULT_CALM_CABIN;
+    notes.push(
+      "Added Noise masking (on for signed-in users), Match volume to speed and Calm cabin.",
+    );
+  }
+
   return { payload: p, notes };
 }
 
@@ -1358,6 +1400,10 @@ export function mergeBackup(
     // Prompt 08: keep this device's loudness — do not import another device's volume/boost.
     volume: current.volume,
     outputBoostDb: current.outputBoostDb,
+    noiseMasking: current.noiseMasking,
+    matchVolumeToSpeed: current.matchVolumeToSpeed,
+    matchVolumeToSpeedIntensity: current.matchVolumeToSpeedIntensity,
+    calmCabin: current.calmCabin,
     bodyCharacter: incoming.bodyCharacter,
     mechanicalCharacter: incoming.mechanicalCharacter,
     reducedMotion: incoming.reducedMotion,
@@ -1447,6 +1493,10 @@ export function restoreRecommended(): ElcamosoSettings {
   return writeSettings({
     volume: DEFAULT_SETTINGS.volume,
     outputBoostDb: DEFAULT_SETTINGS.outputBoostDb,
+    noiseMasking: DEFAULT_SETTINGS.noiseMasking,
+    matchVolumeToSpeed: DEFAULT_SETTINGS.matchVolumeToSpeed,
+    matchVolumeToSpeedIntensity: DEFAULT_SETTINGS.matchVolumeToSpeedIntensity,
+    calmCabin: DEFAULT_SETTINGS.calmCabin,
     bodyCharacter: DEFAULT_SETTINGS.bodyCharacter,
     mechanicalCharacter: DEFAULT_SETTINGS.mechanicalCharacter,
     tuning: {},
