@@ -43,6 +43,8 @@ function CockpitPreview() {
   const raw = q.get("theme") as TachThemeId | null;
   const theme: TachThemeId = raw && TACH_THEMES[raw] ? raw : "classic";
   const tesla = q.get("tesla") === "1";
+  const signedIn = q.get("signedIn") === "1";
+  const gps = q.get("gps") === "1";
   const profile = getProfile(q.get("profile") ?? PROFILE_FOR[theme]);
   const speedMps = 25;
   const state: DriveState = {
@@ -62,7 +64,8 @@ function CockpitPreview() {
         <DriveCockpit
           profile={profile}
           driveState={state}
-          productStatus="sound-active"
+          productStatus={gps ? "gps-only" : "sound-active"}
+          noiseMaskingPreviewAllowed={signedIn}
           sessionKind="simulated"
           displaySpeed={unit === "c" ? "8.3 × 10⁻⁸" : unit === "kn" ? 49 : 90}
           speedUnit={unit}

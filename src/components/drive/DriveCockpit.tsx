@@ -114,6 +114,8 @@ export interface DriveCockpitProps {
   className?: string | undefined;
   /** Dev/preview only: force a tachometer design. */
   tachThemeOverride?: TachThemeId | undefined;
+  /** Dev/preview only: treat Road Noise Masking as signed-in for layout shots. */
+  noiseMaskingPreviewAllowed?: boolean | undefined;
 }
 
 /** Round paddle / stop controls: 36px → 54px (+50%). */
@@ -281,6 +283,7 @@ export function DriveCockpit({
   onStop,
   className,
   tachThemeOverride,
+  noiseMaskingPreviewAllowed = false,
 }: DriveCockpitProps) {
   const { settings, update } = useSettings();
   const reducedMotionHook = useReducedMotion();
@@ -432,9 +435,7 @@ export function DriveCockpit({
     });
     if (outcome === "locked") {
       setSwitchStatus(
-        isMusicPackageProfileId(profileId)
-          ? "Part of Drive the Music."
-          : DRIVE_PLUS_LOCKED_MESSAGE,
+        isMusicPackageProfileId(profileId) ? "Part of Drive the Music." : DRIVE_PLUS_LOCKED_MESSAGE,
       );
       return;
     }
@@ -497,8 +498,19 @@ export function DriveCockpit({
       data-testid="drive-cockpit"
     >
       <DriveProfileBackdrop profileId={profile.id} className="z-0" />
-      <DriveCarFx profileId={profile.id} speed={driveState.speed} engineRunning={productStatus !== "idle"} reducedMotion={reducedMotion} className="z-0" />
-      <DriveGallopVideo profileId={profile.id} speed={driveState.speed} reducedMotion={reducedMotion} className="z-0" />
+      <DriveCarFx
+        profileId={profile.id}
+        speed={driveState.speed}
+        engineRunning={productStatus !== "idle"}
+        reducedMotion={reducedMotion}
+        className="z-0"
+      />
+      <DriveGallopVideo
+        profileId={profile.id}
+        speed={driveState.speed}
+        reducedMotion={reducedMotion}
+        className="z-0"
+      />
       {profile.id === POLICE_LIGHT_PROFILE_ID ? (
         <PoliceRoofLights speed={driveState.speed} reducedMotion={reducedMotion} className="z-0" />
       ) : null}
@@ -506,7 +518,7 @@ export function DriveCockpit({
         <PoliceLightShow speed={driveState.speed} reducedMotion={reducedMotion} className="z-0" />
       ) : null}
 
-      <header className="drive-cockpit__header relative z-[1] grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 sm:gap-3">
+      <header className="drive-cockpit__header relative z-[1] grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-start gap-2 sm:gap-3">
         <ElcamosoLogo
           variant="full"
           intensity={Math.min(1, Math.max(driveState.load, driveState.throttle))}
@@ -528,49 +540,52 @@ export function DriveCockpit({
             </p>
           ) : null}
         </div>
-        <div className="flex items-center gap-3 justify-self-end">
-          <p
-            className="text-[10px] tracking-[0.28em] text-muted-foreground uppercase"
-            aria-label={telemetry ? `Motion ${telemetry}` : "Motion"}
-          >
-            {telemetry || "\u00a0"}
-          </p>
-          <button
-            type="button"
-            data-testid="open-feedback"
-            aria-label={unread ? `Messages (${unread} new)` : "Messages and feedback"}
-            title="Feedback"
-            onClick={() => setFeedbackOpen(true)}
-            className="relative flex h-10 w-[3.75rem] shrink-0 items-center justify-center rounded-full border border-white/15 bg-white/[0.06] text-foreground/80 shadow-[0_0_14px_rgba(229,57,53,0.18)] backdrop-blur-md transition-colors hover:border-[#e53935]/60 hover:text-foreground"
-          >
-            <svg
-              viewBox="-2 0 94 72"
-              fill="none"
-              aria-hidden="true"
-              className="h-6 w-auto overflow-visible"
-              stroke="currentColor"
-              strokeLinecap="round"
-              strokeLinejoin="round"
+        <div className="flex flex-col items-end gap-1 justify-self-end sm:gap-1.5">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <p
+              className="flex h-10 items-center text-[10px] tracking-[0.28em] text-muted-foreground uppercase"
+              aria-label={telemetry ? `Motion ${telemetry}` : "Motion"}
             >
-              {/* "O" of the ELCAMOSO mark as a chat bubble (gap + tail bottom-left). */}
-              <path d="M9.6 49.4 A17 17 0 1 1 15.5 52.4" strokeWidth="3.4" />
-              <path d="M15.5 52.4 L4 57 L9.6 49.4" strokeWidth="3.4" />
-              <circle cx="13.5" cy="36" r="1.9" fill="currentColor" stroke="none" />
-              <circle cx="20" cy="36" r="1.9" fill="currentColor" stroke="none" />
-              <circle cx="26.5" cy="36" r="1.9" fill="currentColor" stroke="none" />
-              <path d="M40 14 C 52 24, 52 48, 40 58" strokeWidth="3.2" />
-              <path d="M54 9 C 69 22, 69 50, 54 63" strokeWidth="3.0" opacity="0.85" />
-              <path d="M68 4 C 86 20, 86 52, 68 68" strokeWidth="2.8" opacity="0.7" />
-            </svg>
-            {unread > 0 ? (
-              <span
-                data-testid="inbox-badge"
-                className="absolute -top-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-[#e53935] px-1 text-[10px] font-semibold text-white"
+              {telemetry || "\u00a0"}
+            </p>
+            <button
+              type="button"
+              data-testid="open-feedback"
+              aria-label={unread ? `Messages (${unread} new)` : "Messages and feedback"}
+              title="Feedback"
+              onClick={() => setFeedbackOpen(true)}
+              className="relative flex h-10 w-[3.75rem] shrink-0 items-center justify-center rounded-full border border-white/15 bg-white/[0.06] text-foreground/80 shadow-[0_0_14px_rgba(229,57,53,0.18)] backdrop-blur-md transition-colors hover:border-[#e53935]/60 hover:text-foreground"
+            >
+              <svg
+                viewBox="-2 0 94 72"
+                fill="none"
+                aria-hidden="true"
+                className="h-6 w-auto overflow-visible"
+                stroke="currentColor"
+                strokeLinecap="round"
+                strokeLinejoin="round"
               >
-                {unread > 9 ? "9+" : unread}
-              </span>
-            ) : null}
-          </button>
+                {/* "O" of the ELCAMOSO mark as a chat bubble (gap + tail bottom-left). */}
+                <path d="M9.6 49.4 A17 17 0 1 1 15.5 52.4" strokeWidth="3.4" />
+                <path d="M15.5 52.4 L4 57 L9.6 49.4" strokeWidth="3.4" />
+                <circle cx="13.5" cy="36" r="1.9" fill="currentColor" stroke="none" />
+                <circle cx="20" cy="36" r="1.9" fill="currentColor" stroke="none" />
+                <circle cx="26.5" cy="36" r="1.9" fill="currentColor" stroke="none" />
+                <path d="M40 14 C 52 24, 52 48, 40 58" strokeWidth="3.2" />
+                <path d="M54 9 C 69 22, 69 50, 54 63" strokeWidth="3.0" opacity="0.85" />
+                <path d="M68 4 C 86 20, 86 52, 68 68" strokeWidth="2.8" opacity="0.7" />
+              </svg>
+              {unread > 0 ? (
+                <span
+                  data-testid="inbox-badge"
+                  className="absolute -top-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-[#e53935] px-1 text-[10px] font-semibold text-white"
+                >
+                  {unread > 9 ? "9+" : unread}
+                </span>
+              ) : null}
+            </button>
+          </div>
+          <NoiseMaskingDriveToggle previewAllowed={noiseMaskingPreviewAllowed} />
         </div>
       </header>
 
@@ -801,8 +816,6 @@ export function DriveCockpit({
             More
           </button>
         </div>
-
-        <NoiseMaskingDriveToggle />
 
         <div
           className="flex items-center justify-between gap-2"

@@ -78,7 +78,7 @@ const WORKSPACES: Workspace[] = [
     title: "Sound",
     hint: "Volume, balance, cabin",
     keywords:
-      "sound volume balance profile cabin eq gear shift clip studio garage noise masking match volume to speed calm cabin road noise",
+      "sound volume balance profile cabin eq gear shift clip studio garage road noise masking match volume to speed calm cabin road noise",
   },
   {
     id: "driving",

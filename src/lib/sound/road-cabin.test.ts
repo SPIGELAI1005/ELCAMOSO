@@ -104,7 +104,7 @@ describe("speed smoothing", () => {
 
 describe("settings sanitize and migration", () => {
   it("uses recommended defaults on a new device", () => {
-    expect(NOISE_MASKING_LABEL).toBe("Noise masking");
+    expect(NOISE_MASKING_LABEL).toBe("Road Noise Masking");
     expect(NOISE_MASKING_SIGN_IN_REMARK).toBe("Sign in to activate");
     expect(DEFAULT_SETTINGS.noiseMasking).toBe(DEFAULT_NOISE_MASKING);
     expect(DEFAULT_SETTINGS.matchVolumeToSpeed).toBe(DEFAULT_MATCH_VOLUME_TO_SPEED);
