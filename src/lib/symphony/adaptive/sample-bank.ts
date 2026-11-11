@@ -1,4 +1,5 @@
 import { MUSIC_BANK, musicBankUrl } from "./sample-bank-data";
+import { PROCEDURAL_VOCAL_BANK } from "./viral-vocals";
 
 export { MUSIC_BANK, MUSIC_BANK_VERSION, musicBankUrl } from "./sample-bank-data";
 
@@ -12,8 +13,12 @@ export interface SampleRef {
 }
 
 /** Nearest rendered note; pitch-shift the rest (rendered every 3 semitones -> max 1.5 st). */
+export function hasInstrument(inst: string): boolean {
+  return inst in MUSIC_BANK || inst in PROCEDURAL_VOCAL_BANK;
+}
+
 export function pickSample(inst: string, midi: number): SampleRef | null {
-  const s = MUSIC_BANK[inst];
+  const s = MUSIC_BANK[inst] ?? PROCEDURAL_VOCAL_BANK[inst];
   if (!s) return null;
   let best = 0;
   for (let i = 1; i < s.notes.length; i++) {

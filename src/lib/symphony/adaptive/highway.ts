@@ -102,8 +102,8 @@ export const HIGHWAY_RECIPES: readonly HighwayRecipe[] = [
 
 const DRUM = /^drums_/;
 const BASS = new Set(["synthbass", "ebass", "pbass", "contrabass", "electrobass", "electrosub", "cello"]);
-const PAD = new Set(["pad", "strings", "choir", "organ", "rockorgan", "horn"]);
-const MELODY = new Set(["lead", "violin", "square", "electrolead", "trumpet", "sax", "flute", "rocklead", "glock", "leadgtr", "oboe", "clarinet", "brass"]);
+const PAD = new Set(["pad", "strings", "choir", "organ", "rockorgan", "horn", "vox_choir", "vox_choir_ooh"]);
+const MELODY = new Set(["lead", "violin", "square", "electrolead", "trumpet", "sax", "flute", "rocklead", "glock", "leadgtr", "oboe", "clarinet", "brass", "vox_hey"]);
 
 export function roleOf(inst: string): Role {
   if (DRUM.test(inst) || inst === "timpani") return "drums";

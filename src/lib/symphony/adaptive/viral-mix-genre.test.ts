@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { GENRES, PROFILE_ONLY_GENRE_IDS } from "@/lib/symphony/adaptive/genres";
 import { hasSignatureGenre, isAutoDj, resolveGenre } from "@/lib/symphony/adaptive/genre-store";
-import { MUSIC_BANK, pickSample } from "@/lib/symphony/adaptive/sample-bank";
+import { hasInstrument, pickSample } from "@/lib/symphony/adaptive/sample-bank";
 import { autoDjPool } from "@/lib/symphony/adaptive/auto-dj";
 import type { StepContext } from "@/lib/symphony/adaptive/genres";
 
@@ -25,8 +25,10 @@ describe("viralmix signature genre", () => {
   });
   const insts = (I: number, mode: StepContext["mode"] = "cruise") =>
     new Set(
-      Array.from({ length: 16 }, (_, s) => g.pattern(ctx(s, I, mode)))
-        .flat()
+      Array.from({ length: 4 }, (_, bar) =>
+        Array.from({ length: 16 }, (_, s) => g.pattern({ ...ctx(s, I, mode), bar })),
+      )
+        .flat(2)
         .map((n) => `${n.inst}:${n.midi}`),
     );
 
@@ -63,20 +65,26 @@ describe("viralmix signature genre", () => {
     const cruise = [...insts(0.5, "cruise")].join(" ");
     expect(cruise).toContain("drums_elec:39");
     expect(cruise).toContain("organ");
-    expect(cruise).not.toContain("lead:");
+    expect(cruise).toContain("lead:");
+    expect(cruise).toContain("vox_choir");
+    expect(cruise).not.toContain("vox_hey");
 
     const high = [...insts(0.85, "cruise")].join(" ");
     expect(high).toContain("lead:");
     expect(high).toContain("drums_elec:42");
     expect(high).toContain("drums_elec:46");
+    expect(high).toContain("vox_hey");
+    expect(high).toContain("vox_choir_ooh");
   });
 
-  it("only plays rendered samples", () => {
+  it("follows the i-i-i-III loop and only plays playable instruments", () => {
+    expect(g.progression.map((p) => p.deg)).toEqual([0, 0, 0, 3]);
     for (const I of [0.05, 0.25, 0.5, 0.7, 0.95]) {
       for (const mode of ["stopped", "flow", "cruise", "surge", "brake"] as const) {
         for (const s of insts(I, mode)) {
           const [inst, midi] = s.split(":");
-          expect(MUSIC_BANK[inst!], s).toBeDefined();
+          expect(hasInstrument(inst!), s).toBe(true);
+          expect(g.mix[inst!], `mix ${s}`).toBeDefined();
           expect(pickSample(inst!, Number(midi)), s).not.toBeNull();
         }
       }

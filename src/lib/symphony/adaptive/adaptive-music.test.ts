@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { createConductor, tempoForSpeed, type ConductorInput, type ConductorState } from "./conductor";
 import { createTimeline } from "./timeline";
 import { GENRES, GENRE_IDS } from "./genres";
+import { hasInstrument } from "./sample-bank";
 import { autoDjPool } from "./auto-dj";
 import { pickSample, MUSIC_BANK } from "./sample-bank";
 import { resolveGenre } from "./genre-store";
@@ -114,7 +115,7 @@ describe("adaptive timeline", () => {
           for (let step = 0; step < 16; step++) {
             const notes = g.pattern({ step, bar: step, chord: [g.key, g.key + 4, g.key + 7], root: g.key, intensity, mode, variation: step, stepDur: 0.12, barDur: 1.9, rand: Math.random });
             for (const n of notes) {
-              expect(MUSIC_BANK[n.inst], `${id} ${n.inst}`).toBeDefined();
+              expect(hasInstrument(n.inst) || MUSIC_BANK[n.inst], `${id} ${n.inst}`).toBeTruthy();
               expect(pickSample(n.inst, n.midi), `${id} ${n.inst} ${n.midi}`).not.toBeNull();
             }
           }
@@ -167,7 +168,7 @@ describe("all genres", () => {
             const root = g.key + p.deg;
             const notes = g.pattern({ step, bar, chord: p.tones.map((t) => root + t), root, intensity: I, mode, variation: bar, stepDur: 0.12, barDur: 1.9, rand: Math.random });
             for (const x of notes) {
-              expect(MUSIC_BANK[x.inst], `${id}:${x.inst}`).toBeDefined();
+              expect(hasInstrument(x.inst) || MUSIC_BANK[x.inst], `${id}:${x.inst}`).toBeTruthy();
               expect(g.mix[x.inst], `${id} mix ${x.inst}`).toBeDefined();
             }
             n += notes.length;

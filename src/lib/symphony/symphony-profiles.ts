@@ -143,7 +143,7 @@ export const SYMPHONY_SOUND_PROFILES: SoundProfile[] = [
     category: "Musical",
     traits: ["Electronic", "Disco", "Club"],
     description:
-      "An original 108 bpm disco-club groove in C# minor: stationary is a warm pad and sub swell, cruising adds a pulsing bass and four-on-the-floor kick with offbeat hats, and real pace opens claps, organ stabs and a short original synth hook.",
+      "An original 108 bpm disco-club groove in C# minor: stationary is a warm pad and sub swell, cruising adds a walking bass, kick, an original synth hook and a choir, and real pace opens a chanted Hey.",
     drivetrainMode: "continuous",
     motionModel: "ambient",
     sourceMode: "hybrid",

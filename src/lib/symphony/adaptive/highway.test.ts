@@ -12,6 +12,7 @@ import {
   rawHighwayStage,
 } from "./highway";
 import { MUSIC_BANK } from "./sample-bank-data";
+import { hasInstrument } from "./sample-bank";
 import { createTimeline } from "./timeline";
 
 const state = (speedKmh: number, intensity = 0.75): ConductorState => ({
@@ -115,7 +116,7 @@ describe("highway arrangements cover every genre", () => {
       else expect(energy).toBeLessThan(base * 1.6);
       for (const e of evs) {
         expect(e.vel).toBeLessThanOrEqual(1);
-        expect(e.inst in MUSIC_BANK).toBe(true);
+        expect(e.inst in MUSIC_BANK || hasInstrument(e.inst)).toBe(true);
         expect(Number.isFinite(e.time)).toBe(true);
       }
     }
