@@ -152,6 +152,7 @@ async function main() {
                 packId: diag?.packId ?? null,
                 activeStems: diag?.activeStems ?? [],
                 energy: diag?.energy ?? null,
+                techno: diag?.techno ?? null,
               });
             }
           }

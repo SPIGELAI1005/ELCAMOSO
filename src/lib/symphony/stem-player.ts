@@ -31,14 +31,32 @@ export function createStemPlayer(
   bus.gain.value = pack.packGain;
   const shelfGain = pack.lowShelfGain ?? -8;
   let shelf: BiquadFilterNode | null = null;
+  let limiter: DynamicsCompressorNode | null = null;
+  const bedDuck = ctx.createGain();
+  const hookDuck = ctx.createGain();
+  bedDuck.gain.value = 1;
+  hookDuck.gain.value = 1;
+  bedDuck.connect(bus);
+  hookDuck.connect(bus);
+  let output: AudioNode = bus;
+  if (pack.electronicLayers) {
+    limiter = ctx.createDynamicsCompressor();
+    limiter.threshold.value = -3.5;
+    limiter.knee.value = 4;
+    limiter.ratio.value = 3;
+    limiter.attack.value = 0.003;
+    limiter.release.value = 0.16;
+    bus.connect(limiter);
+    output = limiter;
+  }
   if (shelfGain === 0) {
-    bus.connect(destination);
+    output.connect(destination);
   } else {
     shelf = ctx.createBiquadFilter();
     shelf.type = "lowshelf";
     shelf.frequency.value = 65;
     shelf.gain.value = shelfGain;
-    bus.connect(shelf);
+    output.connect(shelf);
     shelf.connect(destination);
   }
 
@@ -60,7 +78,13 @@ export function createStemPlayer(
     source.buffer = buffer;
     source.loop = true;
     source.connect(gain);
-    gain.connect(bus);
+    if (pack.electronicLayers && (stem.id === "atmosphere" || stem.id === "piano")) {
+      gain.connect(bedDuck);
+    } else if (pack.electronicLayers && stem.id === "lead") {
+      gain.connect(hookDuck);
+    } else {
+      gain.connect(bus);
+    }
     voices.push({ id: stem.id, gain, source, buffer });
     targets[stem.id] = 0;
   }
@@ -70,6 +94,12 @@ export function createStemPlayer(
   return {
     get lateEvents() {
       return late;
+    },
+    get bus() {
+      return bus;
+    },
+    get ducks() {
+      return { bed: bedDuck, hook: hookDuck };
     },
     /** Seconds after `audioTime` when looping stems start (0 if no intro). */
     introDuration(playIntro = pack.playIntroOnStart ?? Boolean(pack.intro)): number {
@@ -207,6 +237,14 @@ export function createStemPlayer(
       if (shelf) {
         try {
           shelf.disconnect();
+        } catch {
+          /* */
+        }
+      }
+      for (const node of [bedDuck, hookDuck, limiter]) {
+        if (!node) continue;
+        try {
+          node.disconnect();
         } catch {
           /* */
         }

@@ -10,6 +10,7 @@ import { createStemPlayer, type StemPlayer } from "./stem-player";
 import type { DriveEnergyState, SymphonyDiagnostics, SymphonyPack } from "./types";
 import { getCachedSymphonyBuffers } from "./pack-loader";
 import { isSymphonyPackProductionReady } from "./asset-manifest";
+import { createViralTechno, electronicGainsFromDrive, type ViralTechno } from "./viral-techno";
 
 export class SymphonySynth {
   private pack: SymphonyPack | null = null;
@@ -18,6 +19,7 @@ export class SymphonySynth {
   private events: SymphonyEventBus | null = null;
   private arrangement: ArrangementEngine | null = null;
   private stems: StemPlayer | null = null;
+  private techno: ViralTechno | null = null;
   private seed = 1;
   private lastTs = 0;
   private lastEnergy: DriveEnergyState | null = null;
@@ -59,6 +61,10 @@ export class SymphonySynth {
     this.arrangement = createArrangementEngine(pack, this.clock, this.seed, {
       profileId: profile.id,
     });
+    if (pack.electronicLayers) {
+      this.techno = createViralTechno(ctx, this.stems.bus, this.clock, this.stems.ducks);
+      this.techno.start(start + 0.02);
+    }
     this.stems.start(start + 0.02);
     this.arrangement.setMovementState("stopped");
     this.stems.setTargets(this.arrangement.snapshot().targets, start + 0.02);
@@ -99,6 +105,14 @@ export class SymphonySynth {
     }
     const targets = this.arrangement.tick(audioTime);
     this.stems.setTargets(targets, audioTime);
+    if (this.techno) {
+      const kmh = state.speed * 3.6;
+      this.techno.setGains(
+        electronicGainsFromDrive(kmh, energy.movementState, energy.energy),
+        audioTime,
+      );
+      this.techno.schedule(audioTime);
+    }
   }
 
   getEnergy(): DriveEnergyState | null {
@@ -126,12 +140,15 @@ export class SymphonySynth {
       pendingEvents: this.events?.pendingCount() ?? 0,
       bufferReady: Boolean(this.stems),
       seed: this.seed,
-      lateEvents: this.stems?.lateEvents ?? 0,
+      lateEvents: (this.stems?.lateEvents ?? 0) + (this.techno?.lateEvents ?? 0),
       lookaheadSec: 0.1,
+      techno: this.techno?.gains,
     };
   }
 
   dispose() {
+    this.techno?.dispose();
+    this.techno = null;
     this.stems?.dispose();
     this.stems = null;
     this.arrangement = null;

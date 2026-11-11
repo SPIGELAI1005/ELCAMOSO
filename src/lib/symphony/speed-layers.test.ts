@@ -44,9 +44,9 @@ describe("Viral Mix speed layering", () => {
     expect(pace.cello).toBeGreaterThan(0.8);
 
     const peak = gainsFromSpeedGates(VIRAL_MIX_PACK, 140, "peak", 0.9);
-    expect(peak.drumsLow).toBe(1);
-    expect(peak.lead).toBe(1);
-    expect(peak.brass).toBe(1);
+    expect(peak.drumsLow).toBeGreaterThanOrEqual(1);
+    expect(peak.lead).toBeGreaterThanOrEqual(1);
+    expect(peak.brass).toBeGreaterThanOrEqual(1);
     expect(peak.cello).toBe(1);
     expect((peak.piano ?? 0) <= 0.15).toBe(true);
   });
@@ -58,6 +58,17 @@ describe("Viral Mix speed layering", () => {
     expect(decel.lead ?? 0).toBeLessThan((hot.lead ?? 0) * 0.4);
     expect(decel.atmosphere).toBeGreaterThan(0.5);
     expect(decel.bass).toBeGreaterThan(0.5);
+  });
+
+  it("adds bass and kick weight from cruise upward, not at low speed", () => {
+    const low = gainsFromSpeedGates(VIRAL_MIX_PACK, 40, "cruise", 0.25);
+    const cruise = gainsFromSpeedGates(VIRAL_MIX_PACK, 90, "cruise", 0.36);
+    const highway = gainsFromSpeedGates(VIRAL_MIX_PACK, 180, "energetic", 0.64);
+    expect(low.bass ?? 0).toBeLessThanOrEqual(1.01);
+    expect(cruise.bass ?? 0).toBeGreaterThan(low.bass ?? 0);
+    expect(cruise.drumsLow ?? 0).toBeGreaterThan(low.drumsLow ?? 0);
+    expect(highway.bass ?? 0).toBeGreaterThanOrEqual(cruise.bass ?? 0);
+    expect(VIRAL_MIX_PACK.electronicLayers).toBe(true);
   });
 
   it("smoothstep is 0 below, 1 above, and 0.5 at the midpoint", () => {

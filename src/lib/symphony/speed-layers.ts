@@ -50,6 +50,18 @@ export function gainsFromSpeedGates(
     out.piano = (out.piano ?? 0) * (1 - Math.min(1, ((out.lead ?? 0) - 0.45) / 0.55));
   }
   if (full) out.piano = Math.min(out.piano ?? 0, 0.15);
+
+  // Cruise / highway bass weight and a harder four-on-the-floor kick.
+  const cruiseW = decel ? 0 : smoothstep(72, 92, speedKmh);
+  if (cruiseW > 0) {
+    if ((out.bass ?? 0) > 0) out.bass = Math.min(1.28, (out.bass ?? 0) * (1 + 0.28 * cruiseW));
+    if ((out.drumsLow ?? 0) > 0) {
+      out.drumsLow = Math.min(1.22, (out.drumsLow ?? 0) * (1 + 0.22 * cruiseW));
+    }
+    // Hold the hook and chant up against the louder bass/techno.
+    if ((out.lead ?? 0) > 0) out.lead = Math.min(1.22, (out.lead ?? 0) * (1 + 0.22 * cruiseW));
+    if ((out.brass ?? 0) > 0) out.brass = Math.min(1.15, (out.brass ?? 0) * (1 + 0.15 * cruiseW));
+  }
   return out;
 }
 

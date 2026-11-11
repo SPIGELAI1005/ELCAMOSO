@@ -176,6 +176,8 @@ export interface SymphonyPack {
   oneShots?: readonly SymphonyOneShotDef[];
   /** Stem-gain setTarget time constant in seconds (default 0.08). */
   gainTauSeconds?: number;
+  /** Synthesize tempo-locked electronic/techno layers (Viral Mix). */
+  electronicLayers?: boolean;
   licensing: {
     source: "procedural_placeholder" | "original" | "commissioned" | "licensed";
     notes: string;
@@ -197,6 +199,7 @@ export interface SymphonyDiagnostics {
   seed: number;
   lateEvents: number;
   lookaheadSec: number;
+  techno?: Record<string, number>;
 }
 
 export interface SymphonyEnergyConfig {

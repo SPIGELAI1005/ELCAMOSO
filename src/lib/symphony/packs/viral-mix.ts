@@ -22,7 +22,7 @@ function licensedLoop(
     manifest: {
       assetId: `${PACK_ID}.${id}.licensed-loop`,
       variation: "licensed-loop",
-      version: "4.0.0",
+      version: "5.0.0",
       copyrightOwner: "George Neacsu",
       license: "Owner-licensed for ELCAMOSO Viral Mix (rights confirmed by the owner)",
       source: "licensed",
@@ -56,12 +56,13 @@ function oneShot(
  *
  * Live path is SymphonySynth with speed gates (not a full-mix loop, and not the
  * procedural viralmix genre). 4-bar loops are extracted from the sample so the
- * driver opens the arrangement with speed; one-shots fire on throttle surges.
+ * driver opens the arrangement with speed; cruise and highway add synthesized
+ * techno bass, a 4-on-the-floor kick, acid, offbeat hats and an arp.
  */
 export const VIRAL_MIX_PACK: SymphonyPack = {
   id: PACK_ID,
   name: "Viral Mix",
-  tagline: "Pads · Bass · Kick · Hook · Vocals",
+  tagline: "Pads · Bass · Techno · Hook · Vocals",
   bpm: BPM,
   key: "C# minor",
   beatsPerBar: 4,
@@ -70,6 +71,7 @@ export const VIRAL_MIX_PACK: SymphonyPack = {
   lowShelfGain: 0,
   playIntroOnStart: false,
   gainTauSeconds: 0.32,
+  electronicLayers: true,
   stems: [
     licensedLoop("atmosphere", "Pads", "pad", "loop-pads.m4a", -17.09, -30.84),
     licensedLoop("bass", "Bass", "bass", "loop-bass.m4a", -9.04, -17.48),
@@ -170,7 +172,7 @@ export const VIRAL_MIX_PACK: SymphonyPack = {
   licensing: {
     source: "licensed",
     notes:
-      "Owner-licensed recording (rights confirmed by George Neacsu). Elements were extracted as 4-bar beat-aligned loops and one-shots; SymphonySynth opens them with speed, throttle and deceleration. Not a full-mix playback of the sample. Live path is this pack, not the procedural viralmix genre.",
-    version: "4.0.0",
+      "Owner-licensed recording (rights confirmed by George Neacsu). Elements were extracted as 4-bar beat-aligned loops and one-shots; SymphonySynth opens them with speed, throttle and deceleration. Cruise and highway add synthesized techno layers (sub, 4/4 kick, offbeat/rolling bass, acid, hats, arp) on top of the extracted stems. Not a full-mix playback of the sample. Live path is this pack, not the procedural viralmix genre.",
+    version: "5.0.0",
   },
 };
