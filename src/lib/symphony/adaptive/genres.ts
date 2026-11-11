@@ -1461,11 +1461,10 @@ const VIRALMIX_HOOK: readonly (readonly [number, number, number])[][] = [
 ];
 
 /**
- * Viral Mix. Signature arrangement for symphony-viral-mix.
- * Fixed 108 BPM, C# minor. Follows the reference's i–i–i–III loop, walking
- * bass (root–5th–7th), and disco groove, with an original mid-register hook,
- * procedural choir (aah/ooh) and a chanted "Hey". Speed and throttle add layers.
- * Highway stages do not rewrite the arrangement.
+ * Viral Mix signature lock only. Live playback is the owner-licensed recording
+ * through SymphonySynth (see packs/viral-mix.ts). This genre stays registered
+ * so the picker and Auto-DJ cannot override symphony-viral-mix; it is not
+ * played on the Drive path.
  */
 const viralmix: GenreDef = {
   id: "viralmix",

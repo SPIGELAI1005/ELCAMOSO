@@ -1,7 +1,8 @@
 import type { StemGainTargets, StemId, SymphonyPack } from "./types";
-import { createMusicClock, type MusicClock } from "./music-clock";
+import type { MusicClock } from "./music-clock";
 import { generateProceduralStemBuffer } from "./procedural-stems";
 import { isSymphonyPackProductionReady } from "./asset-manifest";
+import { SYMPHONY_INTRO_BUFFER_ID } from "./pack-loader";
 
 interface StemVoice {
   id: StemId;
@@ -28,17 +29,23 @@ export function createStemPlayer(
 
   const bus = ctx.createGain();
   bus.gain.value = pack.packGain;
-  // Low shelf for Tesla speakers - target <25% LF energy
-  const shelf = ctx.createBiquadFilter();
-  shelf.type = "lowshelf";
-  shelf.frequency.value = 65;
-  shelf.gain.value = -8;
-  bus.connect(shelf);
-  shelf.connect(destination);
+  const shelfGain = pack.lowShelfGain ?? -8;
+  let shelf: BiquadFilterNode | null = null;
+  if (shelfGain === 0) {
+    bus.connect(destination);
+  } else {
+    shelf = ctx.createBiquadFilter();
+    shelf.type = "lowshelf";
+    shelf.frequency.value = 65;
+    shelf.gain.value = shelfGain;
+    bus.connect(shelf);
+    shelf.connect(destination);
+  }
 
   const voices: StemVoice[] = [];
   const targets: StemGainTargets = {};
   let late = 0;
+  const introNodes: { source: AudioBufferSourceNode; gain: GainNode }[] = [];
 
   for (const stem of pack.stems) {
     const buffer =
@@ -60,12 +67,36 @@ export function createStemPlayer(
     get lateEvents() {
       return late;
     },
-    start(audioTime: number) {
+    /** Seconds after `audioTime` when looping stems start (0 if no intro). */
+    introDuration(playIntro = pack.playIntroOnStart ?? Boolean(pack.intro)): number {
+      const introBuf = preloaded?.get(SYMPHONY_INTRO_BUFFER_ID);
+      if (!playIntro || !introBuf) return 0;
+      return pack.intro?.durationSeconds ?? introBuf.duration;
+    },
+    start(audioTime: number, opts?: { playIntro?: boolean }) {
       if (started) return;
       started = true;
+      const playIntro = opts?.playIntro ?? pack.playIntroOnStart ?? Boolean(pack.intro);
+      const introBuf = preloaded?.get(SYMPHONY_INTRO_BUFFER_ID);
+      let loopAt = audioTime;
+      if (playIntro && introBuf) {
+        const gain = ctx.createGain();
+        gain.gain.value = 1;
+        const source = ctx.createBufferSource();
+        source.buffer = introBuf;
+        source.connect(gain);
+        gain.connect(bus);
+        try {
+          source.start(audioTime);
+        } catch {
+          late += 1;
+        }
+        introNodes.push({ source, gain });
+        loopAt = audioTime + (pack.intro?.durationSeconds ?? introBuf.duration);
+      }
       for (const v of voices) {
         try {
-          v.source.start(audioTime);
+          v.source.start(loopAt);
         } catch {
           late += 1;
         }
@@ -86,6 +117,20 @@ export function createStemPlayer(
       return voices.filter((v) => (targets[v.id] ?? 0) > 0.05).map((v) => v.id);
     },
     dispose() {
+      for (const node of introNodes) {
+        try {
+          node.source.stop();
+        } catch {
+          /* already stopped */
+        }
+        try {
+          node.source.disconnect();
+          node.gain.disconnect();
+        } catch {
+          /* */
+        }
+      }
+      introNodes.length = 0;
       for (const v of voices) {
         try {
           v.source.stop();
@@ -104,10 +149,12 @@ export function createStemPlayer(
       } catch {
         /* */
       }
-      try {
-        shelf.disconnect();
-      } catch {
-        /* */
+      if (shelf) {
+        try {
+          shelf.disconnect();
+        } catch {
+          /* */
+        }
       }
       voices.length = 0;
     },

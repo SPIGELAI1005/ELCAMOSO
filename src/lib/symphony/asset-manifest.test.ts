@@ -19,13 +19,32 @@ describe("Symphony per-asset governance", () => {
     }
   });
 
-  it("blocks all current development placeholders from production", () => {
+  it("blocks development placeholders from production", () => {
     for (const pack of listSymphonyPacks()) {
+      if (pack.id === "symphony-viral-mix") continue;
       const audit = auditSymphonyAssets(pack);
       expect(audit.productionReady).toBe(false);
       expect(audit.errors.some((error) => error.includes("development-only"))).toBe(true);
       expect(audit.errors.some((error) => error.includes("no production asset path"))).toBe(true);
     }
+  });
+
+  it("marks the owner-licensed Viral Mix pack as production-ready", () => {
+    const pack = listSymphonyPacks().find((entry) => entry.id === "symphony-viral-mix");
+    expect(pack).toBeDefined();
+    const audit = auditSymphonyAssets(pack!);
+    expect(audit.errors).toEqual([]);
+    expect(audit.productionReady).toBe(true);
+    expect(pack!.licensing.source).toBe("licensed");
+    expect(pack!.stems.every((stem) => stem.manifest.source === "licensed")).toBe(true);
+    expect(pack!.stems.every((stem) => Boolean(stem.assetPath))).toBe(true);
+    expect(pack!.intro?.assetPath).toContain("/audio/symphony/symphony-viral-mix/intro-mix");
+    const cruise = pack!.intensityRules.find((rule) => rule.movementState === "cruise");
+    expect(cruise?.gains.lead).toBe(1);
+    expect(cruise?.gains.atmosphere ?? 0).toBe(0);
+    const stopped = pack!.intensityRules.find((rule) => rule.movementState === "stopped");
+    expect(stopped?.gains.lead ?? 0).toBe(0);
+    expect((stopped?.gains.atmosphere ?? 0) > 0).toBe(true);
   });
 
   it("accepts a pack only after every asset has approved provenance and analysis", () => {

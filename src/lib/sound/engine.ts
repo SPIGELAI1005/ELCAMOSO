@@ -70,7 +70,7 @@ import {
   rawMechanicalPresetFor,
   resolveRawMechanicalQualityTier,
 } from "@/lib/sound/realism/v3";
-import { isSymphonyProfileId } from "@/lib/symphony";
+import { isSymphonyProfileId, loadSymphonyPackBuffers, SymphonySynth } from "@/lib/symphony";
 import { AdaptiveMusicSynth } from "@/lib/symphony/adaptive";
 import { FusionSynth, isFusionProfileId } from "@/lib/fusion";
 import { RetroArcadeSynth, isRetroArcadeProfileId } from "@/lib/sound/retro-arcade";
@@ -302,7 +302,7 @@ export class SoundEngine {
   /** Premium transient tier for Realism V2 (demo / Drive+). Core shifts always render. */
   private advancedTransientsEnabled = true;
   private dynamicDrive: DynamicDriveSynth | null = null;
-  private symphony: AdaptiveMusicSynth | null = null;
+  private symphony: AdaptiveMusicSynth | SymphonySynth | null = null;
   private backgroundMusic: AdaptiveMusicSynth | null = null;
   private overlayKind: "siren" | null = null;
   /** Profile as the user picked it (keeps aliases like police-patrol so rebuilds keep the overlay). */
@@ -1380,6 +1380,29 @@ export class SoundEngine {
       if (ok) return;
       this.fusion.dispose();
       this.fusion = null;
+    }
+
+    // Viral Mix plays the owner-licensed recording through SymphonySynth.
+    // Do not fall through to AdaptiveMusicSynth — that path is the rejected soft procedural mix.
+    // buildProfile is synchronous, so the pack is loaded then attached via whenSamplesReady.
+    if (profile.id === "symphony-viral-mix" && strategyBuses) {
+      const load = loadSymphonyPackBuffers(ctx, profile.id);
+      this.samplesReady = load
+        .then((loaded) => {
+          if (this.profile?.id !== "symphony-viral-mix") return;
+          if (loaded.degraded || loaded.buffers.size === 0) return;
+          this.symphony?.dispose();
+          this.symphony = new SymphonySynth();
+          const ok = this.symphony.build(ctx, profile, strategyBuses, this.experienceSeed);
+          if (!ok) {
+            this.symphony.dispose();
+            this.symphony = null;
+          }
+        })
+        .catch((error) => {
+          reportAudioError(error);
+        });
+      return;
     }
 
     // Drive the Music - adaptive arrangement: tempo, layers, accents and key follow the drive.

@@ -30,6 +30,11 @@ export interface StemBufferMap {
 const memoryCache = new Map<string, StemBufferMap>();
 const CACHE_NAME_PREFIX = "elcamoso-symphony-v";
 
+/** Buffer map key for a pack's optional one-shot intro (not a StemId). */
+export const SYMPHONY_INTRO_BUFFER_ID = "__intro";
+
+const LOSSLESS_OR_LICENSED = new Set(["licensed", "original", "commissioned"]);
+
 function cacheKey(pack: SymphonyPack): string {
   return `${pack.id}@${pack.licensing.version}`;
 }
@@ -50,6 +55,21 @@ export function clearSymphonyBufferCache() {
 }
 
 async function fetchAndDecode(
+  ctx: BaseAudioContext,
+  path: string,
+  packVersion: string,
+): Promise<AudioBuffer> {
+  try {
+    return await fetchAndDecodeOnce(ctx, path, packVersion);
+  } catch (err) {
+    if (/\.m4a$/i.test(path)) {
+      return await fetchAndDecodeOnce(ctx, path.replace(/\.m4a$/i, ".mp3"), packVersion);
+    }
+    throw err;
+  }
+}
+
+async function fetchAndDecodeOnce(
   ctx: BaseAudioContext,
   path: string,
   packVersion: string,
@@ -199,6 +219,20 @@ export async function loadSymphonyPackBuffers(
 
   await Promise.all([worker(), worker(), worker()]);
 
+  if (packResolved.intro?.assetPath) {
+    try {
+      const intro = await fetchAndDecode(
+        ctx,
+        packResolved.intro.assetPath,
+        packResolved.licensing.version,
+      );
+      buffers.set(SYMPHONY_INTRO_BUFFER_ID, intro);
+    } catch (err) {
+      errors.push(`intro:${err instanceof Error ? err.message : "decode-failed"}`);
+      failed += 1;
+    }
+  }
+
   const result: StemBufferMap = {
     packId: packResolved.id,
     version: packResolved.licensing.version,
@@ -232,10 +266,22 @@ async function loadOneStem(
       return await fetchAndDecode(ctx, stem.assetPath, pack.licensing.version);
     } catch (err) {
       errors.push(`${stem.id}:${err instanceof Error ? err.message : "decode-failed"}`);
+      if (LOSSLESS_OR_LICENSED.has(stem.manifest.source)) {
+        return silentBuffer(ctx, clockConfig);
+      }
     }
   }
-  // Procedural fallback - always available
+  // Procedural fallback - always available for development placeholders
   return generateProceduralStemBuffer(ctx, clockConfig, stem, hashSeed(pack.id + stem.id));
+}
+
+function silentBuffer(
+  ctx: BaseAudioContext,
+  clockConfig: { bpm: number; beatsPerBar: number; barsPerLoop: number },
+): AudioBuffer {
+  const seconds = (clockConfig.barsPerLoop * clockConfig.beatsPerBar * 60) / clockConfig.bpm;
+  const frames = Math.max(1, Math.round(seconds * ctx.sampleRate));
+  return ctx.createBuffer(2, frames, ctx.sampleRate);
 }
 
 function hashSeed(s: string): number {

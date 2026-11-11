@@ -34,31 +34,31 @@ export class SymphonySynth {
     if (!pack) return false;
     if (import.meta.env.PROD && !isSymphonyPackProductionReady(pack)) return false;
 
+    const buffers = getCachedSymphonyBuffers(pack.id)?.buffers;
+    if (pack.licensing.source === "licensed") {
+      const missing = pack.stems.some((stem) => !buffers?.get(stem.id));
+      if (missing) return false;
+    }
+
     this.seed = seed ?? Date.now() & 0xffff;
     this.pack = pack;
     const start = "currentTime" in ctx ? ctx.currentTime : 0;
-    this.clock = createMusicClock(
-      {
-        bpm: pack.bpm,
-        beatsPerBar: pack.beatsPerBar,
-        barsPerLoop: pack.barsPerLoop,
-      },
-      start,
-    );
+    const clockConfig = {
+      bpm: pack.bpm,
+      beatsPerBar: pack.beatsPerBar,
+      barsPerLoop: pack.barsPerLoop,
+    };
+    // Clock start is set after we know whether a one-shot intro will delay the loop.
+    const bootstrapClock = createMusicClock(clockConfig, start);
     this.energy = createDriveEnergyTracker();
     this.events = createSymphonyEventBus({ seed: this.seed });
+    // Feed body bus → cabin → master (same path as other synths)
+    this.stems = createStemPlayer(ctx, buses.body, pack, bootstrapClock, this.seed, buffers);
+    const introDur = this.stems.introDuration();
+    this.clock = createMusicClock(clockConfig, start + 0.02 + introDur);
     this.arrangement = createArrangementEngine(pack, this.clock, this.seed, {
       profileId: profile.id,
     });
-    // Feed body bus → cabin → master (same path as other synths)
-    this.stems = createStemPlayer(
-      ctx,
-      buses.body,
-      pack,
-      this.clock,
-      this.seed,
-      getCachedSymphonyBuffers(pack.id)?.buffers,
-    );
     this.stems.start(start + 0.02);
     this.arrangement.setMovementState("stopped");
     this.stems.setTargets(this.arrangement.snapshot().targets, start + 0.02);

@@ -198,15 +198,15 @@ const SYMPHONY_SHELLS: readonly ExperienceDescriptor[] = [
     id: "symphony-viral-mix",
     kind: "symphony",
     name: "Viral Mix",
-    tagline: "Kick · Bass · Choir · Hey",
+    tagline: "Pads · Bass · Vocals · Full Mix",
     description:
-      "Original 108 BPM disco-club groove in C# minor: pads at rest, then a walking bass and kick, a choir bed from cruise, and a chanted Hey at pace.",
+      "Owner-licensed club mix in C# minor at ~108 BPM: pads and vocals at rest, bass when rolling, and the full recording at cruise and above.",
     artworkStyle: "score",
     entitlement: "drive_plus",
     previewMode: "playable",
     capabilities: {
       profileId: "symphony-viral-mix",
-      stems: ["Kick", "Bass", "Choir", "Hey"],
+      stems: ["Pads", "Bass", "Vocals", "Full Mix"],
       selectableInDrive: true,
       requiredEntitlement: "symphony_all",
     },

@@ -131,6 +131,21 @@ export interface SymphonyPack {
   intensityRules: readonly IntensityLayerRule[];
   /** Pack loudness scale into cabin (keep headroom) */
   packGain: number;
+  /**
+   * Optional one-shot intro played once on start, after which looping stems begin.
+   * Duration must match the decoded intro buffer.
+   */
+  intro?: {
+    assetPath: string;
+    durationSeconds: number;
+  };
+  /**
+   * Tesla-oriented low-shelf gain in dB applied in the stem player (default -8).
+   * Set to 0 to preserve the source mix (no shelf).
+   */
+  lowShelfGain?: number;
+  /** When true (default if an intro is present), play the intro once on start. */
+  playIntroOnStart?: boolean;
   licensing: {
     source: "procedural_placeholder" | "original" | "commissioned" | "licensed";
     notes: string;

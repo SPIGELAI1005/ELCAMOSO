@@ -1,102 +1,104 @@
-import type { SymphonyPack } from "../types";
-import { developmentSymphonyStem } from "../asset-manifest";
+import type { StemId, SymphonyPack, SymphonyPackStemDef } from "../types";
 
 const PACK_ID = "symphony-viral-mix";
-const stem = developmentSymphonyStem.bind(null, PACK_ID);
+const ASSET_DIR = `/audio/symphony/${PACK_ID}`;
+/** 16 bars at the measured tempo of the licensed recording (≈108 BPM). */
+const LOOP_DURATION_SECONDS = 35.66585416666667;
+const INTRO_DURATION_SECONDS = 8.916458333333333;
+const BPM = 107.666015625;
+
+function licensedLoop(
+  id: StemId,
+  label: string,
+  procedural: SymphonyPackStemDef["procedural"],
+  file: string,
+  peakDb: number,
+  rmsDb: number,
+): SymphonyPackStemDef {
+  return {
+    id,
+    label,
+    procedural,
+    assetPath: `${ASSET_DIR}/${file}`,
+    manifest: {
+      assetId: `${PACK_ID}.${id}.licensed-loop`,
+      variation: "licensed-loop",
+      version: "3.0.0",
+      copyrightOwner: "George Neacsu",
+      license: "Owner-licensed for ELCAMOSO Viral Mix (rights confirmed by the owner)",
+      source: "licensed",
+      commercialUseStatus: "approved",
+      sampleRate: 48_000,
+      durationSeconds: LOOP_DURATION_SECONDS,
+      peakDb,
+      rmsDb,
+    },
+  };
+}
 
 /**
- * Viral Mix - 108 BPM, C# minor. Original motion-responsive disco-club profile.
- * The live Drive path is the Adaptive Music signature genre `viralmix`
- * (see genres.ts). This pack stays registered but is not the playback engine.
- * Texture: warm pads, pulsing sub/bass, modest kick, offbeat hats, organ stabs,
- * original synth hook. Motion: idle = pads; cruise = bass + kick + hats; pace opens claps, organ and lead.
+ * Viral Mix — licensed recording, motion-layered.
+ *
+ * Live Drive path is SymphonySynth (not the procedural viralmix genre).
+ * Hybrid mix: pads + quiet vocals at rest, bass when rolling, the full original
+ * mix at cruise and above so loudness/punch match the source. The intro riser
+ * is a one-shot on start; the loop is bars 4–20 (16 bars), beat-aligned.
  */
 export const VIRAL_MIX_PACK: SymphonyPack = {
   id: PACK_ID,
   name: "Viral Mix",
-  tagline: "Kick · Bass · Pads · Organ",
-  bpm: 108,
+  tagline: "Pads · Bass · Vocals · Full Mix",
+  bpm: BPM,
   key: "C# minor",
   beatsPerBar: 4,
-  barsPerLoop: 8,
-  packGain: 0.48,
+  barsPerLoop: 16,
+  packGain: 1,
+  lowShelfGain: 0,
+  playIntroOnStart: true,
+  intro: {
+    assetPath: `${ASSET_DIR}/intro-mix.m4a`,
+    durationSeconds: INTRO_DURATION_SECONDS,
+  },
   stems: [
-    stem("atmosphere", "Ethereal Pad", "pad"),
-    stem("drumsLow", "Sub Pulse", "bass"),
-    stem("drumsHigh", "Rhythmic Plucks", "bright"),
-    stem("bass", "Deep Sub", "bass"),
-    stem("rhythm", "Staccato Bounce", "bright"),
-    stem("lead", "Crystal Bells", "warm"),
-    stem("fx", "Sweep Riser", "impact"),
+    licensedLoop("atmosphere", "Pads / Harmony", "pad", "loop-atmosphere.m4a", -8.991, -27.056),
+    licensedLoop("bass", "Bass", "bass", "loop-bass.m4a", -9.598, -17.693),
+    licensedLoop("rhythm", "Vocals", "warm", "loop-vocals.m4a", -16.165, -35.586),
+    licensedLoop("lead", "Full Mix", "bright", "loop-mix.m4a", -2.024, -16.428),
   ],
   intensityRules: [
     {
       movementState: "stopped",
-      gains: { atmosphere: 0.65, lead: 0.25 },
+      gains: { atmosphere: 0.9, rhythm: 0.35 },
     },
     {
       movementState: "calm",
-      gains: { atmosphere: 0.6, lead: 0.4, bass: 0.15 },
+      gains: { atmosphere: 0.9, rhythm: 0.5, bass: 1 },
     },
     {
       movementState: "cruise",
-      gains: {
-        atmosphere: 0.45,
-        lead: 0.5,
-        bass: 0.45,
-        drumsLow: 0.35,
-        rhythm: 0.3,
-      },
+      gains: { lead: 1 },
     },
     {
       movementState: "building",
-      gains: {
-        atmosphere: 0.35,
-        lead: 0.55,
-        bass: 0.6,
-        drumsLow: 0.5,
-        drumsHigh: 0.4,
-        rhythm: 0.5,
-      },
+      gains: { lead: 1 },
     },
     {
       movementState: "energetic",
-      gains: {
-        atmosphere: 0.25,
-        lead: 0.6,
-        bass: 0.72,
-        drumsLow: 0.6,
-        drumsHigh: 0.6,
-        rhythm: 0.65,
-      },
+      gains: { lead: 1 },
     },
     {
       movementState: "peak",
-      gains: {
-        atmosphere: 0.2,
-        lead: 0.65,
-        bass: 0.78,
-        drumsLow: 0.7,
-        drumsHigh: 0.75,
-        rhythm: 0.72,
-        fx: 0.25,
-      },
+      gains: { lead: 1 },
     },
     {
       movementState: "decelerating",
-      gains: {
-        atmosphere: 0.55,
-        lead: 0.45,
-        bass: 0.3,
-        drumsLow: 0.2,
-        rhythm: 0.2,
-      },
+      gains: { lead: 0.75 },
     },
   ],
   licensing: {
-    source: "procedural_placeholder",
+    source: "licensed",
     notes:
-      "Original procedural disco-club profile. Live path is the viralmix adaptive genre; this pack is not shipped as audio.",
-    version: "2.0.0",
+      "Owner-licensed recording (rights confirmed by George Neacsu). Loop skips the intro riser (bars 4–20, 16 bars at the measured ~108 BPM). Intro is optional on start. Live playback is this pack through SymphonySynth, not the procedural viralmix genre.",
+    version: "3.0.0",
   },
 };

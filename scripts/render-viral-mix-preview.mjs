@@ -1,6 +1,6 @@
 /**
  * Render Viral Mix (~30 s at a few speeds) through the production SoundEngine
- * + AdaptiveMusicSynth path (the same path Drive uses for symphony profiles).
+ * + SymphonySynth licensed-pack path (the same path Drive uses for Viral Mix).
  *
  * Usage:
  *   node scripts/render-viral-mix-preview.mjs
@@ -11,8 +11,8 @@
  *   viral-mix-preview-highway-180.wav
  *   viral-mix-preview-metadata.json
  *
- * The global genre picker is forced to "classic" first, to show the signature bind
- * still plays viralmix. Listening is not claimed.
+ * The global genre picker is forced to "classic" first, to show the signature
+ * bind cannot override this profile. Listening is not claimed.
  */
 import { chromium } from "@playwright/test";
 import { mkdir, writeFile } from "node:fs/promises";
@@ -59,13 +59,12 @@ async function main() {
         const { getProfile } = await import("/src/lib/sound/profiles.ts");
         const { resolveGenre, hasSignatureGenre } =
           await import("/src/lib/symphony/adaptive/genre-store.ts");
-        const { preloadMusicBank, isMusicBankReady } =
-          await import("/src/lib/symphony/adaptive/adaptive-synth.ts");
+        const { makeupDbForProfile } = await import("/src/lib/sound/realism/loudness.ts");
 
         const total = segmentSeconds * 3;
         const ctx = new OfflineAudioContext(2, Math.ceil(sampleRate * total), sampleRate);
         const engine = new SoundEngine();
-        engine.setVolume(0.7);
+        engine.setVolume(1);
         engine.setExperienceTuningEnabled(true);
         const profile = getProfile("symphony-viral-mix");
         await engine.start(profile, {
@@ -74,10 +73,11 @@ async function main() {
           seed,
           environmentId: "open",
         });
-        await preloadMusicBank(ctx);
-        const bankReady = isMusicBankReady();
+        await engine.whenSamplesReady();
         const genre = resolveGenre("symphony-viral-mix", "classic");
         const signature = hasSignatureGenre("symphony-viral-mix");
+        const backendAtStart = engine.getActiveBackend();
+        const diagAtStart = engine.getSymphonyDiagnostics(0);
 
         const curve = (t) => {
           if (t < segmentSeconds) return { kmh: 0, throttle: 0, accel: 0 };
@@ -85,6 +85,7 @@ async function main() {
           return { kmh: 180, throttle: 0.75, accel: 0.2 };
         };
 
+        const snapshots = [];
         for (let time = 0; time < total; time += step) {
           engine.setRenderTime(time);
           const { kmh, throttle, accel } = curve(time);
@@ -104,6 +105,19 @@ async function main() {
             speedNormalized: Math.min(1, kmh / 160),
             accelerationNormalized: Math.min(1, Math.abs(accel) / 4.5),
           });
+          const mid = [5, 15, 25, 35, 45, 55, 65, 75, 85];
+          if (mid.some((t) => Math.abs(time - t) < step / 2)) {
+            const diag = engine.getSymphonyDiagnostics(time);
+            snapshots.push({
+              time,
+              kmh,
+              backend: engine.getActiveBackend(),
+              movementState: diag?.movementState ?? null,
+              packId: diag?.packId ?? null,
+              activeStems: diag?.activeStems ?? [],
+              energy: diag?.energy ?? null,
+            });
+          }
         }
 
         const rendered = await ctx.startRendering();
@@ -158,10 +172,13 @@ async function main() {
         };
 
         return {
-          bankReady,
           genre,
           signature,
           profileName: profile.name,
+          backendAtStart,
+          diagAtStart,
+          makeupDb: makeupDbForProfile("symphony-viral-mix"),
+          snapshots,
           sampleRate: rendered.sampleRate,
           frames: left.length,
           segments: {
@@ -178,11 +195,7 @@ async function main() {
     const jobs = [
       ["viral-mix-preview-idle-0.wav", result.segments.idle, "0 km/h idle / stopped layers"],
       ["viral-mix-preview-cruise-90.wav", result.segments.cruise, "90 km/h cruise"],
-      [
-        "viral-mix-preview-highway-180.wav",
-        result.segments.highway,
-        "180 km/h highway / open hats and lead",
-      ],
+      ["viral-mix-preview-highway-180.wav", result.segments.highway, "180 km/h highway / full mix"],
     ];
     const metaSegments = [];
     for (const [name, seg, label] of jobs) {
@@ -207,24 +220,28 @@ async function main() {
       profileName: result.profileName,
       usesRealEnginePath: true,
       enginePath:
-        "Chrome OfflineAudioContext + production SoundEngine.start/update + AdaptiveMusicSynth (isSymphonyProfileId early return). Music bank preloaded via preloadMusicBank. Not a standalone oscillator demo.",
+        "Chrome OfflineAudioContext + production SoundEngine.start/update + SymphonySynth licensed pack (Viral Mix special case). Assets loaded via loadSymphonyPackBuffers / whenSamplesReady. Not a procedural AdaptiveMusicSynth render.",
+      volume: 1,
       pickerForcedTo: "classic",
       resolvedGenreWithClassicPicker: result.genre,
       hasSignatureGenre: result.signature,
-      musicBankReady: result.bankReady,
+      backendAtStart: result.backendAtStart,
+      diagAtStart: result.diagAtStart,
+      makeupDb: result.makeupDb,
+      snapshots: result.snapshots,
       sampleRate: result.sampleRate,
       segmentSeconds: SEGMENT_SECONDS,
       seed: SEED,
       listening: "not claimed — not verified by ear",
       copyright:
-        "Original procedural arrangement. Reference recording and its samples/vocals were not shipped.",
+        "Owner-licensed recording (rights confirmed by George Neacsu). Loop skips the intro riser.",
       segments: metaSegments,
     };
     const metaPath = path.join(OUTPUT_DIR, "viral-mix-preview-metadata.json");
     await writeFile(metaPath, `${JSON.stringify(metadata, null, 2)}\n`);
     console.log(`metadata: ${metaPath}`);
     console.log(
-      `resolved genre (picker=classic): ${result.genre}; bankReady=${result.bankReady}; signature=${result.signature}`,
+      `resolved genre (picker=classic): ${result.genre}; backend=${result.backendAtStart}; pack=${result.diagAtStart?.packId}; signature=${result.signature}`,
     );
   } finally {
     await browser?.close();

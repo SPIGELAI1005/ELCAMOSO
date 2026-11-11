@@ -124,7 +124,7 @@ export const PROFILE_MAKEUP_DB: Record<string, number> = {
   "symphony-latino-fiesta": 9.0,
   "symphony-piano-flow": 9.6,
   "symphony-jazz-cruise": 9.2,
-  "symphony-viral-mix": 8.8,
+  "symphony-viral-mix": 0,
   "world-space-drive": 0.9,
   "world-cyber-city": 2.0,
   "world-storm-run": 4.1,
@@ -132,7 +132,7 @@ export const PROFILE_MAKEUP_DB: Record<string, number> = {
   "fusion-mechanical-symphony": 2.9,
   "fusion-midnight-boost": 3.9,
   "fusion-future-pulse": 5.7,
-}
+};
 
 export function makeupDbForProfile(id: string): number {
   const db = PROFILE_MAKEUP_DB[id] ?? 0;
