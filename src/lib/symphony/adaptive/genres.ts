@@ -5,7 +5,7 @@
  */
 import type { MusicAccent, MusicMode } from "./conductor";
 
-export type GenreId = "classic" | "house" | "rock" | "pop" | "metal" | "hiphop" | "country" | "waltz" | "electro" | "anthem" | "darkrave" | "latino" | "gothic" | "pianoflow" | "jazz" | "cinrock" | "bwood";
+export type GenreId = "classic" | "house" | "rock" | "pop" | "metal" | "hiphop" | "country" | "waltz" | "electro" | "anthem" | "darkrave" | "latino" | "gothic" | "pianoflow" | "jazz" | "cinrock" | "bwood" | "viralmix";
 
 export interface NoteSpec {
   inst: string;
@@ -1448,7 +1448,151 @@ const bwood: GenreDef = {
   },
 };
 
-export const GENRES: Record<GenreId, GenreDef> = { classic, house, rock, pop, metal, hiphop, country, waltz, electro, anthem, darkrave, latino, gothic, pianoflow, jazz, cinrock, bwood };
+
+/** Original hook (scale-degree, duration in 16ths). Same register and rhythmic
+ *  contour as the reference, but different intervals — not a note-for-note copy
+ *  of the transcribed A4–G♯4 chant or the C♯4 lead landings.
+ */
+const VIRALMIX_HOOK: readonly (readonly [number, number, number])[][] = [
+  // even bars (i): climb a third and settle on the root, not the fifth
+  [[0, 3, 4], [4, 5, 2], [6, 7, 2], [8, 3, 4], [14, 2, 2]],
+  // odd bars: answer. On III (E) bars the chord tones still fit (3=G# / 7=B relative to E? wait — hook is in key degrees from c.root which is already the chord root)
+  [[0, 3, 2], [2, 5, 2], [4, 7, 4], [10, 10, 2], [12, 7, 4]],
+];
+
+/**
+ * Viral Mix signature lock only. Live playback is the owner-licensed recording
+ * through SymphonySynth (see packs/viral-mix.ts). This genre stays registered
+ * so the picker and Auto-DJ cannot override symphony-viral-mix; it is not
+ * played on the Drive path.
+ */
+const viralmix: GenreDef = {
+  id: "viralmix",
+  name: "Viral Mix",
+  bpmMin: 108,
+  bpmMax: 108,
+  fixedBpm: 108,
+  key: 49, // C# minor
+  reverb: 0.14,
+  surgeFillsOnly: true,
+  lockArrangement: true,
+  progression: [
+    { deg: 0, tones: [0, 3, 7, 10] },
+    { deg: 0, tones: [0, 3, 7] },
+    { deg: 0, tones: [0, 3, 7, 10] },
+    { deg: 3, tones: [0, 4, 7, 11] }, // E / III
+  ],
+  mix: {
+    drums_elec: 0.5,
+    synthbass: 0.62,
+    electrosub: 0.72,
+    pad: 0.36,
+    organ: 0.3,
+    lead: 0.32,
+    stab: 0.22,
+    vox_choir: 0.42,
+    vox_choir_ooh: 0.4,
+    vox_hey: 0.55,
+  },
+  accents: { crash: ["drums_elec", 49], fill: ["drums_elec", [38, 38, 39, 49]], low: ["drums_elec", [36, 36]] },
+  pattern(c) {
+    const out: NoteSpec[] = [];
+    const I = c.intensity;
+    const quiet = calm(c.mode);
+    const onE = c.bar % 4 === 3;
+    const bassRoot = into(c.root, 28, 40);
+    const fifth = into(c.root + 7, 28, 42);
+    const walk = onE ? into(c.root - 3, 28, 42) : into(c.root + 10, 28, 42);
+    const subRoot = into(c.root, 24, 36);
+
+    if (c.step === 0) {
+      for (const t of c.chord) {
+        out.push({
+          inst: "pad",
+          midi: into(t, 52, 72),
+          vel: quiet ? 0.34 : 0.28 + 0.16 * I,
+          dur: c.barDur * 1.02,
+          pan: (t % 2) * 0.4 - 0.2,
+        });
+      }
+    }
+
+    if (quiet) {
+      if (on(c, 0, 8)) out.push({ inst: "electrosub", midi: subRoot, vel: 0.42, dur: c.stepDur * 6 });
+      if (c.mode === "brake" && on(c, 0)) out.push({ inst: "synthbass", midi: bassRoot, vel: 0.28, dur: c.stepDur * 4 });
+      return out;
+    }
+
+    // Walking bass: C#–G#–B / E–B–C# movement from the reference, as a groove.
+    if (I > 0.12) {
+      if (on(c, 0, 8)) {
+        out.push({ inst: "electrosub", midi: subRoot, vel: 0.62 + 0.2 * I, dur: c.stepDur * 3.8 });
+        out.push({ inst: "synthbass", midi: bassRoot, vel: 0.52 + 0.24 * I, dur: c.stepDur * 3.6 });
+      }
+      if (on(c, 4, 12)) out.push({ inst: "synthbass", midi: fifth, vel: 0.44 + 0.2 * I, dur: c.stepDur * 1.8 });
+      if (on(c, 6, 14)) out.push({ inst: "synthbass", midi: walk, vel: 0.42 + 0.2 * I, dur: c.stepDur * 1.8 });
+    }
+
+    // Modest four-on-the-floor, offbeat / open hats, backbeat claps.
+    if (I > 0.18 && c.step % 4 === 0) out.push({ inst: "drums_elec", midi: 36, vel: 0.42 + 0.28 * I, dur: 0.45 });
+    if (I > 0.36 && on(c, 4, 12)) out.push({ inst: "drums_elec", midi: 39, vel: 0.4 + 0.28 * I, dur: 0.35, pan: 0.08 });
+    if (I > 0.26 && on(c, 2, 6, 10, 14))
+      out.push({ inst: "drums_elec", midi: I > 0.5 ? 46 : 42, vel: 0.28 + 0.22 * I, dur: 0.22, pan: 0.28 });
+    if (I > 0.5 && on(c, 7, 15)) out.push({ inst: "drums_elec", midi: 46, vel: 0.34 + 0.22 * I, dur: 0.28, pan: 0.32 });
+    if (I > 0.5 && c.step % 2 === 1) out.push({ inst: "drums_elec", midi: 42, vel: 0.16 + 0.16 * I, dur: 0.12, pan: -0.22 });
+
+    // Organ / stab comp, offbeat disco voicings.
+    if (I > 0.4 && on(c, 2, 6, 10, 14)) {
+      for (const t of c.chord.slice(0, 3))
+        out.push({ inst: "organ", midi: into(t, 48, 72), vel: 0.3 + 0.22 * I, dur: c.stepDur * 1.5, pan: -0.18 });
+    }
+    if (I > 0.45 && on(c, 0) && onE) {
+      for (const t of c.chord.slice(0, 3))
+        out.push({ inst: "stab", midi: into(t, 55, 72), vel: 0.32 + 0.2 * I, dur: c.stepDur * 2, pan: 0.2 });
+    }
+
+    // Original lead hook from mid cruise (more present than v1).
+    if (I > 0.42) {
+      const hook = VIRALMIX_HOOK[c.bar % 2]!;
+      for (const [st, iv, len] of hook) {
+        if (st !== c.step) continue;
+        out.push({
+          inst: "lead",
+          midi: into(c.root + iv, 59, 76),
+          vel: 0.38 + 0.32 * I,
+          dur: c.stepDur * len * 0.95,
+          pan: 0.1,
+        });
+      }
+    }
+
+    // Choir: aah on i bars, ooh on the III lift, from cruise.
+    if (I > 0.4 && c.step === 0) {
+      const inst = onE ? "vox_choir_ooh" : "vox_choir";
+      out.push({ inst, midi: into(c.root, 55, 67), vel: 0.36 + 0.22 * I, dur: c.barDur * 0.98, pan: -0.12 });
+      out.push({ inst, midi: into(c.root + 7, 62, 74), vel: 0.3 + 0.18 * I, dur: c.barDur * 0.98, pan: 0.18 });
+    }
+
+    // "Hey… Hey… Hey…" — short chants on the beat, not the reference G#–A hook.
+    // 1 and 3 at pace; 2 and 4 as well on surge / high intensity.
+    if (I > 0.5 && on(c, 0, 8))
+      out.push({ inst: "vox_hey", midi: into(c.root + 3, 55, 64), vel: 0.58 + 0.28 * I, dur: 0.28, pan: 0.06 });
+    if (c.mode === "surge" && on(c, 4, 12))
+      out.push({ inst: "vox_hey", midi: into(c.root, 52, 61), vel: 0.62 + 0.26 * I, dur: 0.28, pan: -0.06 });
+
+    if (I > 0.5 && c.step === 0 && c.bar % 8 === 0)
+      out.push({ inst: "drums_elec", midi: 49, vel: 0.4 + 0.2 * I, dur: 1.4 });
+
+    if (c.mode === "surge") {
+      const every = c.step < 8 ? 2 : 1;
+      if (c.step % every === 0) out.push({ inst: "drums_elec", midi: 38, vel: 0.28 + 0.03 * c.step, dur: 0.12 });
+      if (c.step === 0) out.push({ inst: "drums_elec", midi: 51, vel: 0.5, dur: c.barDur, pan: 0.2 });
+    }
+    return out;
+  },
+};
+
+export const GENRES: Record<GenreId, GenreDef> = { classic, house, rock, pop, metal, hiphop, country, waltz, electro, anthem, darkrave, latino, gothic, pianoflow, jazz, cinrock, bwood, viralmix };
 for (const [id, l] of Object.entries(LAYERED)) {
   const g = GENRES[id as GenreId];
   g.fixedBpm = l!.bpm;
@@ -1457,7 +1601,7 @@ for (const [id, l] of Object.entries(LAYERED)) {
 }
 export const GENRE_IDS = Object.keys(GENRES) as GenreId[];
 /** Arrangements owned by one sound profile. Hidden from the genre picker and Auto DJ. */
-export const PROFILE_ONLY_GENRE_IDS: readonly GenreId[] = ["cinrock", "bwood"];
+export const PROFILE_ONLY_GENRE_IDS: readonly GenreId[] = ["cinrock", "bwood", "viralmix"];
 export const PUBLIC_GENRE_IDS = GENRE_IDS.filter((id) => !PROFILE_ONLY_GENRE_IDS.includes(id));
 /** Genres planned next - UI lists them as coming soon. */
 export const UPCOMING_GENRES: readonly string[] = [];

@@ -90,7 +90,8 @@ export const SYMPHONY_SOUND_PROFILES: SoundProfile[] = [
       detune: 0,
       coreLevel: 0.5,
     },
-  },  {
+  },
+  {
     id: "symphony-piano-flow",
     name: "Piano Flow",
     category: "Musical",
@@ -112,7 +113,8 @@ export const SYMPHONY_SOUND_PROFILES: SoundProfile[] = [
       detune: 0,
       coreLevel: 0.5,
     },
-  },  {
+  },
+  {
     id: "symphony-jazz-cruise",
     name: "Jazz Cruise",
     category: "Musical",
@@ -139,9 +141,9 @@ export const SYMPHONY_SOUND_PROFILES: SoundProfile[] = [
     id: "symphony-viral-mix",
     name: "Viral Mix",
     category: "Musical",
-    traits: ["Electronic", "Ethereal", "Dreamy"],
+    traits: ["Stadium", "Accordion", "Chant"],
     description:
-      "An original 140 bpm electronic piece: stationary is spacious bells over ethereal pads, cruising adds sub-bass and staccato plucks, and real pace brings the full groove while keeping the synth-led character.",
+      "Original stadium anthem in C# minor at 120 BPM. A stomp-stomp-clap beat, accordion hook and ElCA / MOSO chant build with your speed, then a festival drum build-up drops into a big-room hook and a more melodic high-speed section, with an acoustic-piano melody and a loud choir.",
     drivetrainMode: "continuous",
     motionModel: "ambient",
     sourceMode: "hybrid",

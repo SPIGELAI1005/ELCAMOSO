@@ -14,7 +14,8 @@ export type StemId =
   | "brass"
   | "piano"
   | "cello"
-  | "fx";
+  | "fx"
+  | "kit";
 
 export type QuantizeGrid = "beat" | "halfBar" | "bar" | "twoBars";
 
@@ -119,6 +120,26 @@ export interface IntensityLayerRule {
   gains: Partial<Record<StemId, number>>;
 }
 
+export interface SymphonySpeedGate {
+  /** Speed where the layer begins to fade in (km/h). */
+  inKmh: number;
+  /** Speed where the layer reaches maxGain (km/h). */
+  fullKmh: number;
+  maxGain?: number;
+  /** When decelerating, this layer is reduced first. */
+  stripOnDecel?: boolean;
+}
+
+export interface SymphonyOneShotDef {
+  id: string;
+  assetPath: string;
+  triggers: readonly SymphonySemanticEvent[];
+  /** Only one shot from the same group fires per event (variants rotate). */
+  group?: string;
+  gain?: number;
+  cooldownSeconds?: number;
+}
+
 export interface SymphonyPack {
   id: string;
   name: string;
@@ -131,6 +152,43 @@ export interface SymphonyPack {
   intensityRules: readonly IntensityLayerRule[];
   /** Pack loudness scale into cabin (keep headroom) */
   packGain: number;
+  /**
+   * Optional one-shot intro played once on start, after which looping stems begin.
+   * Duration must match the decoded intro buffer.
+   */
+  intro?: {
+    assetPath: string;
+    durationSeconds: number;
+  };
+  /**
+   * Tesla-oriented low-shelf gain in dB applied in the stem player (default -8).
+   * Set to 0 to preserve the source mix (no shelf).
+   */
+  lowShelfGain?: number;
+  /** When true (default if an intro is present), play the intro once on start. */
+  playIntroOnStart?: boolean;
+  /**
+   * Optional speed-based layer gates. When present, SymphonySynth uses these
+   * (plus deceleration / peak) instead of jumping straight to intensityRules.
+   * Other packs omit this and keep the existing movement-state table.
+   */
+  speedGates?: Partial<Record<StemId, SymphonySpeedGate>>;
+  /** One-shot fills, chants and risers, triggered by semantic drive events. */
+  oneShots?: readonly SymphonyOneShotDef[];
+  /** Stem-gain setTarget time constant in seconds (default 0.08). */
+  gainTauSeconds?: number;
+  /** Synthesize tempo-locked electronic/techno layers (Viral Mix). */
+  electronicLayers?: boolean;
+  /** Soft pack-bus limiter for dense mixes (headroom). */
+  busLimiter?: boolean;
+  /** Festival build / drop / melodic section (Viral Mix). */
+  edmArrangement?: boolean;
+  /** Extra loops (melodic section, etc.) loaded alongside stems, not speed-gated. */
+  overlayLoops?: readonly {
+    id: string;
+    assetPath: string;
+    durationSeconds: number;
+  }[];
   licensing: {
     source: "procedural_placeholder" | "original" | "commissioned" | "licensed";
     notes: string;
@@ -152,6 +210,17 @@ export interface SymphonyDiagnostics {
   seed: number;
   lateEvents: number;
   lookaheadSec: number;
+  techno?: Record<string, number>;
+  edm?: {
+    phase: string;
+    barsIntoPhase: number;
+    buildProgress: number;
+    scheduledAt: number | null;
+    phaseEndsAt: number | null;
+    acousticPianoGain?: number;
+    choirGain?: number;
+    lastBarOfBuild?: boolean;
+  };
 }
 
 export interface SymphonyEnergyConfig {

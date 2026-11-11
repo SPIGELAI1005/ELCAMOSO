@@ -2161,7 +2161,7 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
   "symphony-viral-mix": {
     profileId: "symphony-viral-mix",
     family: familyForProfile("symphony-viral-mix"),
-    intendedIdentity: "Symphony viral mix — 140 bpm ethereal electronic",
+    intendedIdentity: "Symphony viral mix — 108 bpm disco-club groove",
     previousSource: "New profile",
     diagnosedProblem: "New profile",
     chosenRenderer: "symphony",
@@ -2178,7 +2178,7 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
     humanListeningStatus: "unverified",
     deviceStatus: "unverified",
     outcome: "experience-tuned",
-    audibleRationale: "Symphony viral mix — 140 bpm ethereal electronic with motion-responsive plucks",
+    audibleRationale: "Symphony viral mix — 108 bpm disco-club groove with motion-responsive plucks",
     designFamilyHint: "musical-fusion",
     experienceOverlay: {
       transitionTauSeconds: 0.14,

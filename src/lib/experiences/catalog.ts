@@ -198,14 +198,15 @@ const SYMPHONY_SHELLS: readonly ExperienceDescriptor[] = [
     id: "symphony-viral-mix",
     kind: "symphony",
     name: "Viral Mix",
-    tagline: "Bells · Pads · Sub · Plucks",
-    description: "Ethereal electronic with crystal bells and motion-responsive plucks.",
+    tagline: "Stadium Beat · Accordion · Build / Drop",
+    description:
+      "Original stadium anthem in C# minor at 120 BPM. A stomp-stomp-clap beat, accordion hook and ElCA / MOSO chant build with your speed, then a festival drum build-up drops into a big-room hook and a more melodic high-speed section, with an acoustic-piano melody and a loud choir.",
     artworkStyle: "score",
     entitlement: "drive_plus",
     previewMode: "playable",
     capabilities: {
       profileId: "symphony-viral-mix",
-      stems: ["Bells", "Pads", "Sub", "Plucks"],
+      stems: ["Stadium beat", "Accordion", "Acoustic piano", "Choir", "Drop"],
       selectableInDrive: true,
       requiredEntitlement: "symphony_all",
     },

@@ -16,6 +16,7 @@ import { chooseAltitude, fuseAcceleration, readPhoneSample } from "@/lib/phone-s
 import { isAutoDj, publishActiveGenre, resolveGenre, subscribeGenreChoice } from "./genre-store";
 import { crossfadeBars, equalPowerCurves, genreTempo, nextAutoDjDelay, pickNextGenre, AUTO_DJ_INTERVAL_SEC } from "./auto-dj";
 import { MUSIC_BANK, musicBankUrl, pickSample } from "./sample-bank";
+import { getViralVocalBuffer, isProceduralVocal, VIRAL_VOCAL_REF_MIDI } from "./viral-vocals";
 import { createTimeline, type NoteEvent, type Timeline } from "./timeline";
 
 const LOOKAHEAD_SEC = 0.35;
@@ -468,6 +469,10 @@ export class AdaptiveMusicSynth {
 
   private play(ev: NoteEvent, now: number, deck: Deck) {
     const ctx = this.ctx!;
+    if (isProceduralVocal(ev.inst)) {
+      this.playVocal(ev, now, deck);
+      return;
+    }
     const sprite = bank.get(ev.inst);
     const ref = pickSample(ev.inst, ev.midi);
     if (!sprite || !ref) return;
@@ -514,6 +519,53 @@ export class AdaptiveMusicSynth {
       }
     };
     this.voices.push({ src, end: t + dur + 0.35 });
+  }
+
+
+  private playVocal(ev: NoteEvent, now: number, deck: Deck) {
+    const ctx = this.ctx!;
+    const buf = getViralVocalBuffer(ctx, ev.inst);
+    if (!buf) return;
+    const t = Math.max(ev.time, now);
+    this.voices = this.voices.filter((v) => v.end > now);
+    if (this.voices.length >= MAX_VOICES) return;
+    const rate = Math.pow(2, (ev.midi - VIRAL_VOCAL_REF_MIDI) / 12) * (ev.detune ? Math.pow(2, ev.detune / 1200) : 1);
+    const mix = GENRES[deck.genreId].mix[ev.inst] ?? 0.4;
+    const gain = ev.vel * ev.vel * mix;
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    src.playbackRate.value = rate;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(gain, t);
+    const playable = buf.duration / Math.max(0.25, rate);
+    const dur = Math.min(ev.dur + 0.2, playable);
+    g.gain.setTargetAtTime(0, t + Math.min(ev.dur, dur), ev.inst === "vox_hey" ? 0.04 : 0.12);
+    let tail: AudioNode = g;
+    if (ev.pan && "createStereoPanner" in ctx) {
+      const p = ctx.createStereoPanner();
+      p.pan.value = ev.pan;
+      g.connect(p);
+      tail = p;
+    }
+    src.connect(g);
+    tail.connect(deck.gain);
+    try {
+      src.start(t);
+      src.stop(t + dur + 0.25);
+    } catch {
+      this.late += 1;
+      return;
+    }
+    src.onended = () => {
+      try {
+        src.disconnect();
+        g.disconnect();
+        tail.disconnect();
+      } catch {
+        /* */
+      }
+    };
+    this.voices.push({ src, end: t + dur + 0.25 });
   }
 
   getEnergy(): DriveEnergyState | null {

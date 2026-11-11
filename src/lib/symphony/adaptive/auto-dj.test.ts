@@ -10,6 +10,7 @@ describe("auto dj choice", () => {
     const pool = autoDjPool();
     expect(pool).not.toContain("waltz");
     expect(pool).not.toContain("cinrock");
+    expect(pool).not.toContain("viralmix");
     for (let i = 0; i < 40; i++) {
       const r = i / 40;
       const next = pickNextGenre("house", 124, ["pop", "house"], () => r);
@@ -45,6 +46,8 @@ describe("auto dj choice", () => {
     expect(isAutoDj("symphony-neon-run", "auto")).toBe(true);
     expect(isAutoDj("symphony-neon-run", "house")).toBe(false);
     expect(isAutoDj("symphony-latino-fiesta", "auto")).toBe(false);
+    expect(isAutoDj("symphony-viral-mix", "auto")).toBe(false);
+    expect(isAutoDj("symphony-viral-mix", "classic")).toBe(false);
   });
 });
 
