@@ -87,8 +87,16 @@ export class SymphonySynth {
     this.lastEnergy = energy;
     this.events.observe(state, energy, audioTime);
     const drained = this.events.drain();
+    this.arrangement.setDrive(state.speed * 3.6, energy);
     this.arrangement.setMovementState(energy.movementState);
-    if (drained.length) this.arrangement.ingestEvents(drained, audioTime, energy.movementState);
+    if (drained.length) {
+      this.arrangement.ingestEvents(drained, audioTime, energy.movementState);
+      const grid = this.pack?.gainTauSeconds ? "beat" : "bar";
+      for (const ev of drained) {
+        const at = this.clock.nextBoundary(audioTime, grid === "beat" ? "beat" : "bar");
+        this.stems.triggerOneShots(ev.type, at);
+      }
+    }
     const targets = this.arrangement.tick(audioTime);
     this.stems.setTargets(targets, audioTime);
   }

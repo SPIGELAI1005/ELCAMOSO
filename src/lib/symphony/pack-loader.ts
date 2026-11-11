@@ -33,6 +33,10 @@ const CACHE_NAME_PREFIX = "elcamoso-symphony-v";
 /** Buffer map key for a pack's optional one-shot intro (not a StemId). */
 export const SYMPHONY_INTRO_BUFFER_ID = "__intro";
 
+export function oneshotBufferId(id: string): string {
+  return `__oneshot:${id}`;
+}
+
 const LOSSLESS_OR_LICENSED = new Set(["licensed", "original", "commissioned"]);
 
 function cacheKey(pack: SymphonyPack): string {
@@ -230,6 +234,15 @@ export async function loadSymphonyPackBuffers(
     } catch (err) {
       errors.push(`intro:${err instanceof Error ? err.message : "decode-failed"}`);
       failed += 1;
+    }
+  }
+
+  for (const shot of packResolved.oneShots ?? []) {
+    try {
+      const buffer = await fetchAndDecode(ctx, shot.assetPath, packResolved.licensing.version);
+      buffers.set(oneshotBufferId(shot.id), buffer);
+    } catch {
+      /* optional ornaments — looping stems can still play */
     }
   }
 

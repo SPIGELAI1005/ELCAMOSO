@@ -1,18 +1,18 @@
 /**
- * Render Viral Mix (~30 s at a few speeds) through the production SoundEngine
- * + SymphonySynth licensed-pack path (the same path Drive uses for Viral Mix).
+ * Render Viral Mix through the production SoundEngine + SymphonySynth path.
  *
  * Usage:
  *   node scripts/render-viral-mix-preview.mjs
  *
  * Output (default /workspace/viral-ref/):
- *   viral-mix-preview-idle-0.wav
+ *   viral-mix-drive-buildup.wav          (~60 s, 0→180 km/h, surges, slow-down)
+ *   viral-mix-preview-idle-0.wav         (15 s held)
+ *   viral-mix-preview-roll-40.wav
  *   viral-mix-preview-cruise-90.wav
  *   viral-mix-preview-highway-180.wav
  *   viral-mix-preview-metadata.json
  *
- * The global genre picker is forced to "classic" first, to show the signature
- * bind cannot override this profile. Listening is not claimed.
+ * Listening is not claimed.
  */
 import { chromium } from "@playwright/test";
 import { mkdir, writeFile } from "node:fs/promises";
@@ -21,7 +21,8 @@ import { createServer as createNetServer } from "node:net";
 import { createServer } from "vite";
 
 const SAMPLE_RATE = 48_000;
-const SEGMENT_SECONDS = 30;
+const HOLD_SECONDS = 15;
+const BUILD_SECONDS = 60;
 const OUTPUT_DIR = process.env.VIRAL_MIX_PREVIEW_OUT ?? "/workspace/viral-ref";
 const LAB_STEP = 1 / 60;
 const SEED = 0x454c4341;
@@ -52,7 +53,7 @@ async function main() {
     await page.goto(origin, { waitUntil: "domcontentloaded" });
 
     const result = await page.evaluate(
-      async ({ sampleRate, segmentSeconds, step, seed }) => {
+      async ({ sampleRate, holdSeconds, buildSeconds, step, seed }) => {
         localStorage.setItem("elcamoso.music.genre", "classic");
 
         const { SoundEngine } = await import("/src/lib/sound/engine.ts");
@@ -61,72 +62,9 @@ async function main() {
           await import("/src/lib/symphony/adaptive/genre-store.ts");
         const { makeupDbForProfile } = await import("/src/lib/sound/realism/loudness.ts");
 
-        const total = segmentSeconds * 3;
-        const ctx = new OfflineAudioContext(2, Math.ceil(sampleRate * total), sampleRate);
-        const engine = new SoundEngine();
-        engine.setVolume(1);
-        engine.setExperienceTuningEnabled(true);
-        const profile = getProfile("symphony-viral-mix");
-        await engine.start(profile, {
-          context: ctx,
-          signature: false,
-          seed,
-          environmentId: "open",
-        });
-        await engine.whenSamplesReady();
-        const genre = resolveGenre("symphony-viral-mix", "classic");
-        const signature = hasSignatureGenre("symphony-viral-mix");
-        const backendAtStart = engine.getActiveBackend();
-        const diagAtStart = engine.getSymphonyDiagnostics(0);
-
-        const curve = (t) => {
-          if (t < segmentSeconds) return { kmh: 0, throttle: 0, accel: 0 };
-          if (t < segmentSeconds * 2) return { kmh: 90, throttle: 0.4, accel: 0 };
-          return { kmh: 180, throttle: 0.75, accel: 0.2 };
-        };
-
-        const snapshots = [];
-        for (let time = 0; time < total; time += step) {
-          engine.setRenderTime(time);
-          const { kmh, throttle, accel } = curve(time);
-          const speed = kmh / 3.6;
-          engine.update({
-            speed,
-            acceleration: accel,
-            throttle,
-            regen: 0,
-            rpm: 0,
-            gear: 0,
-            load: throttle,
-            timestamp: Math.round(time * 1000),
-            jerk: 0,
-            isShifting: false,
-            powertrainBackend: "legacy",
-            speedNormalized: Math.min(1, kmh / 160),
-            accelerationNormalized: Math.min(1, Math.abs(accel) / 4.5),
-          });
-          const mid = [5, 15, 25, 35, 45, 55, 65, 75, 85];
-          if (mid.some((t) => Math.abs(time - t) < step / 2)) {
-            const diag = engine.getSymphonyDiagnostics(time);
-            snapshots.push({
-              time,
-              kmh,
-              backend: engine.getActiveBackend(),
-              movementState: diag?.movementState ?? null,
-              packId: diag?.packId ?? null,
-              activeStems: diag?.activeStems ?? [],
-              energy: diag?.energy ?? null,
-            });
-          }
-        }
-
-        const rendered = await ctx.startRendering();
-        const left = rendered.getChannelData(0);
-        const right = rendered.numberOfChannels > 1 ? rendered.getChannelData(1) : left;
-
-        const wavB64 = (startSec) => {
+        const wavB64 = (left, right, sampleRate, startSec, durationSec) => {
           const a = Math.floor(startSec * sampleRate);
-          const b = Math.min(left.length, a + Math.floor(segmentSeconds * sampleRate));
+          const b = Math.min(left.length, a + Math.floor(durationSec * sampleRate));
           const frames = b - a;
           const bytes = new Uint8Array(44 + frames * 4);
           const view = new DataView(bytes.buffer);
@@ -171,31 +109,143 @@ async function main() {
           };
         };
 
+        const driveTo = (t, curve) => ({
+          speed: curve.kmh / 3.6,
+          acceleration: curve.accel,
+          throttle: curve.throttle,
+          regen: curve.regen ?? 0,
+          rpm: 0,
+          gear: curve.gear ?? 0,
+          load: curve.throttle,
+          timestamp: Math.round(t * 1000),
+          jerk: 0,
+          isShifting: Boolean(curve.shifting),
+          powertrainBackend: "legacy",
+          speedNormalized: Math.min(1, curve.kmh / 160),
+          accelerationNormalized: Math.min(1, Math.abs(curve.accel) / 4.5),
+        });
+
+        const render = async (seconds, curve, snapshotAt = []) => {
+          const ctx = new OfflineAudioContext(2, Math.ceil(sampleRate * seconds), sampleRate);
+          const engine = new SoundEngine();
+          engine.setVolume(1);
+          engine.setExperienceTuningEnabled(true);
+          const profile = getProfile("symphony-viral-mix");
+          await engine.start(profile, {
+            context: ctx,
+            signature: false,
+            seed,
+            environmentId: "open",
+          });
+          await engine.whenSamplesReady();
+          const snapshots = [];
+          for (let time = 0; time < seconds; time += step) {
+            engine.setRenderTime(time);
+            engine.update(driveTo(time, curve(time)));
+            if (snapshotAt.some((t) => Math.abs(time - t) < step / 2)) {
+              const diag = engine.getSymphonyDiagnostics(time);
+              snapshots.push({
+                time,
+                ...curve(time),
+                backend: engine.getActiveBackend(),
+                movementState: diag?.movementState ?? null,
+                packId: diag?.packId ?? null,
+                activeStems: diag?.activeStems ?? [],
+                energy: diag?.energy ?? null,
+              });
+            }
+          }
+          const rendered = await ctx.startRendering();
+          const left = rendered.getChannelData(0);
+          const right = rendered.numberOfChannels > 1 ? rendered.getChannelData(1) : left;
+          return {
+            backend: engine.getActiveBackend(),
+            diag: engine.getSymphonyDiagnostics(0),
+            snapshots,
+            segment: wavB64(left, right, sampleRate, 0, seconds),
+          };
+        };
+
+        const hold =
+          (kmh, throttle, accel = 0) =>
+          () => ({ kmh, throttle, accel });
+
+        const buildupCurve = (t) => {
+          if (t < 6) return { kmh: 0, throttle: 0, accel: 0 };
+          if (t < 42) {
+            const u = (t - 6) / 36;
+            const kmh = 180 * u;
+            const surge = (t >= 20 && t < 21.6) || (t >= 32 && t < 33.6);
+            return {
+              kmh,
+              throttle: surge ? 0.92 : 0.2 + 0.5 * u,
+              accel: surge ? 2.2 : 0.35,
+            };
+          }
+          if (t < 48) return { kmh: 180, throttle: 0.75, accel: 0.15 };
+          const u = (t - 48) / 12;
+          return {
+            kmh: 180 * (1 - u) + 15 * u,
+            throttle: 0,
+            accel: -1.6,
+            regen: 0.5,
+          };
+        };
+
+        const genre = resolveGenre("symphony-viral-mix", "classic");
+        const signature = hasSignatureGenre("symphony-viral-mix");
+        const makeupDb = makeupDbForProfile("symphony-viral-mix");
+
+        const buildup = await render(
+          buildSeconds,
+          buildupCurve,
+          [3, 9, 15, 20.5, 24, 32.5, 40, 46, 52, 58],
+        );
+        const idle = await render(holdSeconds, hold(0, 0), [4, 12]);
+        const roll = await render(holdSeconds, hold(40, 0.25), [4, 12]);
+        const cruise = await render(holdSeconds, hold(90, 0.4), [4, 12]);
+        const highway = await render(holdSeconds, hold(180, 0.75, 0.2), [4, 12]);
+
         return {
           genre,
           signature,
-          profileName: profile.name,
-          backendAtStart,
-          diagAtStart,
-          makeupDb: makeupDbForProfile("symphony-viral-mix"),
-          snapshots,
-          sampleRate: rendered.sampleRate,
-          frames: left.length,
+          makeupDb,
+          profileName: "Viral Mix",
+          backendAtStart: buildup.backend,
+          diagAtStart: buildup.diag,
           segments: {
-            idle: wavB64(0),
-            cruise: wavB64(segmentSeconds),
-            highway: wavB64(segmentSeconds * 2),
+            buildup: { ...buildup.segment, snapshots: buildup.snapshots },
+            idle: { ...idle.segment, snapshots: idle.snapshots },
+            roll: { ...roll.segment, snapshots: roll.snapshots },
+            cruise: { ...cruise.segment, snapshots: cruise.snapshots },
+            highway: { ...highway.segment, snapshots: highway.snapshots },
           },
         };
       },
-      { sampleRate: SAMPLE_RATE, segmentSeconds: SEGMENT_SECONDS, step: LAB_STEP, seed: SEED },
+      {
+        sampleRate: SAMPLE_RATE,
+        holdSeconds: HOLD_SECONDS,
+        buildSeconds: BUILD_SECONDS,
+        step: LAB_STEP,
+        seed: SEED,
+      },
     );
 
     await mkdir(OUTPUT_DIR, { recursive: true });
     const jobs = [
-      ["viral-mix-preview-idle-0.wav", result.segments.idle, "0 km/h idle / stopped layers"],
-      ["viral-mix-preview-cruise-90.wav", result.segments.cruise, "90 km/h cruise"],
-      ["viral-mix-preview-highway-180.wav", result.segments.highway, "180 km/h highway / full mix"],
+      [
+        "viral-mix-drive-buildup.wav",
+        result.segments.buildup,
+        "0→180 km/h build-up with surges and slow-down",
+      ],
+      ["viral-mix-preview-idle-0.wav", result.segments.idle, "0 km/h pads only"],
+      ["viral-mix-preview-roll-40.wav", result.segments.roll, "40 km/h kick + hats"],
+      ["viral-mix-preview-cruise-90.wav", result.segments.cruise, "90 km/h hook in"],
+      [
+        "viral-mix-preview-highway-180.wav",
+        result.segments.highway,
+        "180 km/h vocals + percussion",
+      ],
     ];
     const metaSegments = [];
     for (const [name, seg, label] of jobs) {
@@ -204,10 +254,11 @@ async function main() {
       metaSegments.push({
         file: out,
         label,
-        durationSeconds: seg.frames / result.sampleRate,
+        durationSeconds: seg.frames / SAMPLE_RATE,
         peakDbfs: seg.peakDbfs,
         rmsDbfs: seg.rmsDbfs,
         frames: seg.frames,
+        snapshots: seg.snapshots,
       });
       console.log(
         `${name}: peak ${seg.peakDbfs.toFixed(2)} dBFS  rms ${seg.rmsDbfs.toFixed(2)} dBFS  frames ${seg.frames}`,
@@ -220,7 +271,7 @@ async function main() {
       profileName: result.profileName,
       usesRealEnginePath: true,
       enginePath:
-        "Chrome OfflineAudioContext + production SoundEngine.start/update + SymphonySynth licensed pack (Viral Mix special case). Assets loaded via loadSymphonyPackBuffers / whenSamplesReady. Not a procedural AdaptiveMusicSynth render.",
+        "Chrome OfflineAudioContext + production SoundEngine.start/update + SymphonySynth licensed layered pack. Not a full-mix or AdaptiveMusicSynth render.",
       volume: 1,
       pickerForcedTo: "classic",
       resolvedGenreWithClassicPicker: result.genre,
@@ -228,13 +279,11 @@ async function main() {
       backendAtStart: result.backendAtStart,
       diagAtStart: result.diagAtStart,
       makeupDb: result.makeupDb,
-      snapshots: result.snapshots,
-      sampleRate: result.sampleRate,
-      segmentSeconds: SEGMENT_SECONDS,
+      sampleRate: SAMPLE_RATE,
       seed: SEED,
       listening: "not claimed — not verified by ear",
       copyright:
-        "Owner-licensed recording (rights confirmed by George Neacsu). Loop skips the intro riser.",
+        "Owner-licensed recording (rights confirmed by George Neacsu). Layered 4-bar loops and one-shots, not a straight playback of the sample.",
       segments: metaSegments,
     };
     const metaPath = path.join(OUTPUT_DIR, "viral-mix-preview-metadata.json");

@@ -143,7 +143,7 @@ export const SYMPHONY_SOUND_PROFILES: SoundProfile[] = [
     category: "Musical",
     traits: ["Electronic", "Disco", "Club"],
     description:
-      "Owner-licensed club mix in C# minor at ~108 BPM: pads and vocals at rest, bass when rolling, and the full recording at cruise and above.",
+      "Owner-licensed club mix in C# minor at ~108 BPM. Pads at rest, then bass, kick, hats, claps, keys, hook and vocals open with your speed; throttle surges fire chants and fills.",
     drivetrainMode: "continuous",
     motionModel: "ambient",
     sourceMode: "hybrid",

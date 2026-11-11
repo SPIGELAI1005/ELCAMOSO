@@ -38,13 +38,13 @@ describe("Symphony per-asset governance", () => {
     expect(pack!.licensing.source).toBe("licensed");
     expect(pack!.stems.every((stem) => stem.manifest.source === "licensed")).toBe(true);
     expect(pack!.stems.every((stem) => Boolean(stem.assetPath))).toBe(true);
-    expect(pack!.intro?.assetPath).toContain("/audio/symphony/symphony-viral-mix/intro-mix");
-    const cruise = pack!.intensityRules.find((rule) => rule.movementState === "cruise");
-    expect(cruise?.gains.lead).toBe(1);
-    expect(cruise?.gains.atmosphere ?? 0).toBe(0);
+    expect(pack!.stems.some((stem) => stem.assetPath?.includes("loop-mix"))).toBe(false);
+    expect(pack!.speedGates).toBeDefined();
+    expect(pack!.oneShots?.length).toBeGreaterThan(0);
     const stopped = pack!.intensityRules.find((rule) => rule.movementState === "stopped");
-    expect(stopped?.gains.lead ?? 0).toBe(0);
-    expect((stopped?.gains.atmosphere ?? 0) > 0).toBe(true);
+    expect(stopped?.gains).toEqual({ atmosphere: 1 });
+    expect(pack!.speedGates!.lead?.inKmh).toBeGreaterThan(70);
+    expect(pack!.speedGates!.brass?.inKmh).toBeGreaterThan(100);
   });
 
   it("accepts a pack only after every asset has approved provenance and analysis", () => {

@@ -1,8 +1,8 @@
-import type { StemGainTargets, StemId, SymphonyPack } from "./types";
+import type { StemGainTargets, StemId, SymphonyPack, SymphonySemanticEvent } from "./types";
 import type { MusicClock } from "./music-clock";
 import { generateProceduralStemBuffer } from "./procedural-stems";
 import { isSymphonyPackProductionReady } from "./asset-manifest";
-import { SYMPHONY_INTRO_BUFFER_ID } from "./pack-loader";
+import { SYMPHONY_INTRO_BUFFER_ID, oneshotBufferId } from "./pack-loader";
 
 interface StemVoice {
   id: StemId;
@@ -46,6 +46,10 @@ export function createStemPlayer(
   const targets: StemGainTargets = {};
   let late = 0;
   const introNodes: { source: AudioBufferSourceNode; gain: GainNode }[] = [];
+  const oneShotNodes: { source: AudioBufferSourceNode; gain: GainNode }[] = [];
+  const lastOneShotAt = new Map<string, number>();
+  const groupIndex = new Map<string, number>();
+  const gainTau = pack.gainTauSeconds ?? 0.08;
 
   for (const stem of pack.stems) {
     const buffer =
@@ -107,10 +111,47 @@ export function createStemPlayer(
         const g = Math.max(0.0001, next[v.id] ?? 0);
         targets[v.id] = g;
         try {
-          v.gain.gain.setTargetAtTime(g, audioTime, 0.08);
+          v.gain.gain.setTargetAtTime(g, audioTime, gainTau);
         } catch {
           late += 1;
         }
+      }
+    },
+    triggerOneShots(type: SymphonySemanticEvent, audioTime: number) {
+      const shots = pack.oneShots ?? [];
+      if (!shots.length) return;
+      const firedGroups = new Set<string>();
+      for (const shot of shots) {
+        if (!shot.triggers.includes(type)) continue;
+        if (shot.group && firedGroups.has(shot.group)) continue;
+        const key = shot.group ?? shot.id;
+        const cooldown = shot.cooldownSeconds ?? 3;
+        const last = lastOneShotAt.get(key) ?? -Infinity;
+        if (audioTime - last < cooldown) continue;
+        let chosen = shot;
+        if (shot.group) {
+          const group = shots.filter((s) => s.group === shot.group && s.triggers.includes(type));
+          const idx = groupIndex.get(shot.group) ?? 0;
+          chosen = group[idx % group.length] ?? shot;
+          groupIndex.set(shot.group, idx + 1);
+          firedGroups.add(shot.group);
+        }
+        const buffer = preloaded?.get(oneshotBufferId(chosen.id));
+        if (!buffer) continue;
+        const gain = ctx.createGain();
+        gain.gain.value = chosen.gain ?? 1;
+        const source = ctx.createBufferSource();
+        source.buffer = buffer;
+        source.connect(gain);
+        gain.connect(bus);
+        try {
+          source.start(audioTime);
+        } catch {
+          late += 1;
+          continue;
+        }
+        oneShotNodes.push({ source, gain });
+        lastOneShotAt.set(key, audioTime);
       }
     },
     activeStems(): StemId[] {
@@ -131,6 +172,20 @@ export function createStemPlayer(
         }
       }
       introNodes.length = 0;
+      for (const node of oneShotNodes) {
+        try {
+          node.source.stop();
+        } catch {
+          /* already stopped */
+        }
+        try {
+          node.source.disconnect();
+          node.gain.disconnect();
+        } catch {
+          /* */
+        }
+      }
+      oneShotNodes.length = 0;
       for (const v of voices) {
         try {
           v.source.stop();

@@ -1,10 +1,9 @@
-import type { StemId, SymphonyPack, SymphonyPackStemDef } from "../types";
+import type { StemId, SymphonyOneShotDef, SymphonyPack, SymphonyPackStemDef } from "../types";
 
 const PACK_ID = "symphony-viral-mix";
 const ASSET_DIR = `/audio/symphony/${PACK_ID}`;
-/** 16 bars at the measured tempo of the licensed recording (≈108 BPM). */
-const LOOP_DURATION_SECONDS = 35.66585416666667;
-const INTRO_DURATION_SECONDS = 8.916458333333333;
+/** 4 bars at the measured tempo of the licensed recording (≈108 BPM). */
+const LOOP_DURATION_SECONDS = 8.916479166666667;
 const BPM = 107.666015625;
 
 function licensedLoop(
@@ -23,7 +22,7 @@ function licensedLoop(
     manifest: {
       assetId: `${PACK_ID}.${id}.licensed-loop`,
       variation: "licensed-loop",
-      version: "3.0.0",
+      version: "4.0.0",
       copyrightOwner: "George Neacsu",
       license: "Owner-licensed for ELCAMOSO Viral Mix (rights confirmed by the owner)",
       source: "licensed",
@@ -36,69 +35,142 @@ function licensedLoop(
   };
 }
 
+function oneShot(
+  id: string,
+  file: string,
+  triggers: SymphonyOneShotDef["triggers"],
+  opts: { group?: string; gain?: number; cooldownSeconds?: number } = {},
+): SymphonyOneShotDef {
+  return {
+    id,
+    assetPath: `${ASSET_DIR}/${file}`,
+    triggers,
+    group: opts.group,
+    gain: opts.gain ?? 1,
+    cooldownSeconds: opts.cooldownSeconds,
+  };
+}
+
 /**
- * Viral Mix — licensed recording, motion-layered.
+ * Viral Mix — licensed recording, conducted in layers like the other Symphony packs.
  *
- * Live Drive path is SymphonySynth (not the procedural viralmix genre).
- * Hybrid mix: pads + quiet vocals at rest, bass when rolling, the full original
- * mix at cruise and above so loudness/punch match the source. The intro riser
- * is a one-shot on start; the loop is bars 4–20 (16 bars), beat-aligned.
+ * Live path is SymphonySynth with speed gates (not a full-mix loop, and not the
+ * procedural viralmix genre). 4-bar loops are extracted from the sample so the
+ * driver opens the arrangement with speed; one-shots fire on throttle surges.
  */
 export const VIRAL_MIX_PACK: SymphonyPack = {
   id: PACK_ID,
   name: "Viral Mix",
-  tagline: "Pads · Bass · Vocals · Full Mix",
+  tagline: "Pads · Bass · Kick · Hook · Vocals",
   bpm: BPM,
   key: "C# minor",
   beatsPerBar: 4,
-  barsPerLoop: 16,
+  barsPerLoop: 4,
   packGain: 1,
   lowShelfGain: 0,
-  playIntroOnStart: true,
-  intro: {
-    assetPath: `${ASSET_DIR}/intro-mix.m4a`,
-    durationSeconds: INTRO_DURATION_SECONDS,
-  },
+  playIntroOnStart: false,
+  gainTauSeconds: 0.32,
   stems: [
-    licensedLoop("atmosphere", "Pads / Harmony", "pad", "loop-atmosphere.m4a", -8.991, -27.056),
-    licensedLoop("bass", "Bass", "bass", "loop-bass.m4a", -9.598, -17.693),
-    licensedLoop("rhythm", "Vocals", "warm", "loop-vocals.m4a", -16.165, -35.586),
-    licensedLoop("lead", "Full Mix", "bright", "loop-mix.m4a", -2.024, -16.428),
+    licensedLoop("atmosphere", "Pads", "pad", "loop-pads.m4a", -17.09, -30.84),
+    licensedLoop("bass", "Bass", "bass", "loop-bass.m4a", -9.04, -17.48),
+    licensedLoop("drumsLow", "Kick", "pulse", "loop-kick.m4a", -10.87, -23.57),
+    licensedLoop("drumsHigh", "Hats", "noise", "loop-hats.m4a", -8.9, -31.61),
+    licensedLoop("rhythm", "Snare / Clap", "bright", "loop-snare.m4a", -6.25, -29.39),
+    licensedLoop("piano", "Keys / Chords", "warm", "loop-keys.m4a", -11.85, -29.11),
+    licensedLoop("lead", "Lead Hook", "bright", "loop-hook.m4a", -12.56, -31.66),
+    licensedLoop("brass", "Vocal Chant", "warm", "loop-vocals.m4a", -16.16, -31.59),
+    licensedLoop("cello", "Percussion", "impact", "loop-percussion.m4a", -8.82, -30.23),
   ],
+  // Coarse fallback if speed gates are ignored; live path uses speedGates.
   intensityRules: [
-    {
-      movementState: "stopped",
-      gains: { atmosphere: 0.9, rhythm: 0.35 },
-    },
-    {
-      movementState: "calm",
-      gains: { atmosphere: 0.9, rhythm: 0.5, bass: 1 },
-    },
+    { movementState: "stopped", gains: { atmosphere: 1 } },
+    { movementState: "calm", gains: { atmosphere: 1, bass: 1 } },
     {
       movementState: "cruise",
-      gains: { lead: 1 },
+      gains: { atmosphere: 1, bass: 1, drumsLow: 1, drumsHigh: 0.85 },
     },
     {
       movementState: "building",
-      gains: { lead: 1 },
+      gains: {
+        atmosphere: 1,
+        bass: 1,
+        drumsLow: 1,
+        drumsHigh: 1,
+        rhythm: 1,
+        piano: 0.85,
+      },
     },
     {
       movementState: "energetic",
-      gains: { lead: 1 },
+      gains: {
+        atmosphere: 0.9,
+        bass: 1,
+        drumsLow: 1,
+        drumsHigh: 1,
+        rhythm: 1,
+        lead: 1,
+        brass: 0.85,
+        cello: 0.7,
+      },
     },
     {
       movementState: "peak",
-      gains: { lead: 1 },
+      gains: {
+        atmosphere: 0.9,
+        bass: 1,
+        drumsLow: 1,
+        drumsHigh: 1,
+        rhythm: 1,
+        lead: 1,
+        brass: 1,
+        cello: 1,
+      },
     },
     {
       movementState: "decelerating",
-      gains: { lead: 0.75 },
+      gains: { atmosphere: 1, bass: 0.85, drumsLow: 0.45, drumsHigh: 0.25 },
     },
+  ],
+  speedGates: {
+    atmosphere: { inKmh: 0, fullKmh: 0, maxGain: 1 },
+    bass: { inKmh: 5, fullKmh: 18 },
+    drumsLow: { inKmh: 28, fullKmh: 42 },
+    drumsHigh: { inKmh: 30, fullKmh: 48 },
+    rhythm: { inKmh: 55, fullKmh: 72, stripOnDecel: true },
+    piano: { inKmh: 58, fullKmh: 78, stripOnDecel: true },
+    lead: { inKmh: 75, fullKmh: 95, stripOnDecel: true },
+    brass: { inKmh: 125, fullKmh: 155, stripOnDecel: true },
+    cello: { inKmh: 140, fullKmh: 170, stripOnDecel: true },
+  },
+  oneShots: [
+    oneShot("hey-1", "oneshot-hey-1.m4a", ["strong_acceleration", "kickdown", "energy_rise"], {
+      group: "hey",
+      gain: 1,
+      cooldownSeconds: 3.2,
+    }),
+    oneShot("hey-2", "oneshot-hey-2.m4a", ["strong_acceleration", "kickdown", "energy_rise"], {
+      group: "hey",
+      gain: 1,
+      cooldownSeconds: 3.2,
+    }),
+    oneShot("hey-3", "oneshot-hey-3.m4a", ["strong_acceleration", "kickdown", "energy_rise"], {
+      group: "hey",
+      gain: 1,
+      cooldownSeconds: 3.2,
+    }),
+    oneShot("riser", "oneshot-riser.m4a", ["movement_started", "energy_rise"], {
+      gain: 0.85,
+      cooldownSeconds: 12,
+    }),
+    oneShot("fill", "oneshot-fill.m4a", ["kickdown", "upshift", "cruise_enter"], {
+      gain: 0.9,
+      cooldownSeconds: 7,
+    }),
   ],
   licensing: {
     source: "licensed",
     notes:
-      "Owner-licensed recording (rights confirmed by George Neacsu). Loop skips the intro riser (bars 4–20, 16 bars at the measured ~108 BPM). Intro is optional on start. Live playback is this pack through SymphonySynth, not the procedural viralmix genre.",
-    version: "3.0.0",
+      "Owner-licensed recording (rights confirmed by George Neacsu). Elements were extracted as 4-bar beat-aligned loops and one-shots; SymphonySynth opens them with speed, throttle and deceleration. Not a full-mix playback of the sample. Live path is this pack, not the procedural viralmix genre.",
+    version: "4.0.0",
   },
 };

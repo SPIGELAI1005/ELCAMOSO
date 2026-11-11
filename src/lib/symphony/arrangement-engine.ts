@@ -1,4 +1,5 @@
 import type {
+  DriveEnergyState,
   IntensityLayerRule,
   MovementState,
   QuantizeGrid,
@@ -8,6 +9,7 @@ import type {
   SymphonySemanticEvent,
 } from "./types";
 import type { SemanticEventRecord } from "./events";
+import { gainsFromSpeedGates, hasSpeedGates } from "./speed-layers";
 import type { MusicClock } from "./music-clock";
 import {
   applySymphonyStudioToGains,
@@ -90,7 +92,11 @@ export function createArrangementEngine(
 ) {
   const rand = mulberry32(seed);
   let movement: MovementState = "stopped";
-  let current: StemGainTargets = gainsFromRule(ruleFor(pack, "stopped"), pack.stems);
+  let speedKmh = 0;
+  let energyValue = 0;
+  let current: StemGainTargets = hasSpeedGates(pack)
+    ? gainsFromSpeedGates(pack, 0, "stopped", 0)
+    : gainsFromRule(ruleFor(pack, "stopped"), pack.stems);
   let scheduled: ScheduledTransition | null = null;
   let fillBudgetUntil = 0;
 
@@ -103,6 +109,25 @@ export function createArrangementEngine(
   function shape(gains: StemGainTargets): StemGainTargets {
     const p = studio();
     return p ? applySymphonyStudioToGains(gains, p, movement) : gains;
+  }
+
+  function resolveBase(state: MovementState): StemGainTargets {
+    if (hasSpeedGates(pack)) return gainsFromSpeedGates(pack, speedKmh, state, energyValue);
+    return gainsFromRule(ruleFor(pack, state), pack.stems);
+  }
+
+  function withVariation(gains: StemGainTargets, audioTime: number): StemGainTargets {
+    if (!hasSpeedGates(pack)) return gains;
+    const bar = clock.snapshot(audioTime).bar;
+    if (bar % 8 < 4) return gains;
+    const next = { ...gains };
+    if ((next.drumsHigh ?? 0) > 0.2) {
+      next.drumsHigh = Math.min(1, (next.drumsHigh ?? 0) * 1.08);
+    }
+    if ((next.cello ?? 0) > 0.15) {
+      next.cello = Math.min(1, (next.cello ?? 0) + 0.08);
+    }
+    return next;
   }
 
   function applyAccent(gains: StemGainTargets, type: SymphonySemanticEvent, audioTime: number) {
@@ -131,13 +156,19 @@ export function createArrangementEngine(
     },
     setMovementState(state: MovementState) {
       movement = state;
-      current = shape(gainsFromRule(ruleFor(pack, state), pack.stems));
+      current = shape(resolveBase(state));
+    },
+    setDrive(nextSpeedKmh: number, energy: DriveEnergyState) {
+      speedKmh = nextSpeedKmh;
+      energyValue = energy.energy;
+      movement = energy.movementState;
+      current = shape(resolveBase(movement));
     },
     ingestEvents(events: SemanticEventRecord[], audioTime: number, movementState: MovementState) {
       movement = movementState;
       const p = studio();
       const fast = p ? prefersFasterTransitions(p) : false;
-      const base = shape(gainsFromRule(ruleFor(pack, movementState), pack.stems));
+      const base = shape(resolveBase(movementState));
       for (const ev of events) {
         const grid = eventGrid(ev.type, fast);
         const at = clock.nextBoundary(audioTime, grid);
@@ -153,7 +184,7 @@ export function createArrangementEngine(
         current = scheduled.gains;
         scheduled = null;
       }
-      return shape({ ...current });
+      return shape(withVariation({ ...current }, audioTime));
     },
   };
 }

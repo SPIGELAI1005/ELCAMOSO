@@ -119,6 +119,26 @@ export interface IntensityLayerRule {
   gains: Partial<Record<StemId, number>>;
 }
 
+export interface SymphonySpeedGate {
+  /** Speed where the layer begins to fade in (km/h). */
+  inKmh: number;
+  /** Speed where the layer reaches maxGain (km/h). */
+  fullKmh: number;
+  maxGain?: number;
+  /** When decelerating, this layer is reduced first. */
+  stripOnDecel?: boolean;
+}
+
+export interface SymphonyOneShotDef {
+  id: string;
+  assetPath: string;
+  triggers: readonly SymphonySemanticEvent[];
+  /** Only one shot from the same group fires per event (variants rotate). */
+  group?: string;
+  gain?: number;
+  cooldownSeconds?: number;
+}
+
 export interface SymphonyPack {
   id: string;
   name: string;
@@ -146,6 +166,16 @@ export interface SymphonyPack {
   lowShelfGain?: number;
   /** When true (default if an intro is present), play the intro once on start. */
   playIntroOnStart?: boolean;
+  /**
+   * Optional speed-based layer gates. When present, SymphonySynth uses these
+   * (plus deceleration / peak) instead of jumping straight to intensityRules.
+   * Other packs omit this and keep the existing movement-state table.
+   */
+  speedGates?: Partial<Record<StemId, SymphonySpeedGate>>;
+  /** One-shot fills, chants and risers, triggered by semantic drive events. */
+  oneShots?: readonly SymphonyOneShotDef[];
+  /** Stem-gain setTarget time constant in seconds (default 0.08). */
+  gainTauSeconds?: number;
   licensing: {
     source: "procedural_placeholder" | "original" | "commissioned" | "licensed";
     notes: string;
