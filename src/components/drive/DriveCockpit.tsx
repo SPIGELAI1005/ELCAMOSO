@@ -65,6 +65,7 @@ import { DRIVE_PLUS_LOCKED_MESSAGE } from "@/lib/sound/profile-access-config";
 import { ModeTachometer } from "@/components/drive/ModeTachometer";
 import { FeedbackSheet } from "@/components/feedback/FeedbackSheet";
 import { NoiseMaskingDriveToggle } from "@/components/NoiseMaskingToggle";
+import { DRIVE_PILL_BADGE_ON_CLASS, DrivePillBadge } from "@/components/drive/DrivePillBadge";
 import { useInboxUnread } from "@/lib/inbox/inbox";
 import { track } from "@/lib/analytics/track";
 import { resolveTachThemeId, type TachThemeId } from "@/lib/drive/tach-theme";
@@ -576,12 +577,9 @@ export function DriveCockpit({
                 <path d="M68 4 C 86 20, 86 52, 68 68" strokeWidth="2.8" opacity="0.7" />
               </svg>
               {unread > 0 ? (
-                <span
-                  data-testid="inbox-badge"
-                  className="absolute -top-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-[#e53935] px-1 text-[10px] font-semibold text-white"
-                >
+                <DrivePillBadge testId="inbox-badge" className={DRIVE_PILL_BADGE_ON_CLASS}>
                   {unread > 9 ? "9+" : unread}
-                </span>
+                </DrivePillBadge>
               ) : null}
             </button>
           </div>
