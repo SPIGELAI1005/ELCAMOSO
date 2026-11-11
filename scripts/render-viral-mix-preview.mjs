@@ -5,12 +5,9 @@
  *   node scripts/render-viral-mix-preview.mjs
  *
  * Output (default /workspace/viral-ref/):
- *   viral-mix-drive-buildup.wav          (~60 s, 0→180 km/h, surges, slow-down)
- *   viral-mix-preview-idle-0.wav         (15 s held)
- *   viral-mix-preview-roll-20.wav
- *   viral-mix-preview-build-45.wav
- *   viral-mix-preview-cruise-90.wav
- *   viral-mix-preview-highway-160.wav
+ *   viral-mix-drive-buildup.wav          (~85 s, 0→180, build → drop → melodic, slow-down)
+ *   viral-mix-buildup-and-drop.wav       (30 s solo at high speed)
+ *   viral-mix-preview-melodic-150.wav    (melodic section at ~150 km/h)
  *   viral-mix-preview-metadata.json
  *
  * Listening is not claimed.
@@ -23,7 +20,7 @@ import { createServer } from "vite";
 
 const SAMPLE_RATE = 48_000;
 const HOLD_SECONDS = 15;
-const BUILD_SECONDS = 72;
+const BUILD_SECONDS = 85;
 const OUTPUT_DIR = process.env.VIRAL_MIX_PREVIEW_OUT ?? "/workspace/viral-ref";
 const LAB_STEP = 1 / 60;
 const SEED = 0x454c4341;
@@ -126,7 +123,7 @@ async function main() {
           accelerationNormalized: Math.min(1, Math.abs(curve.accel) / 4.5),
         });
 
-        const render = async (seconds, curve, snapshotAt = []) => {
+        const render = async (seconds, curve, snapshotAt = [], slices = []) => {
           const ctx = new OfflineAudioContext(2, Math.ceil(sampleRate * seconds), sampleRate);
           const engine = new SoundEngine();
           engine.setVolume(1);
@@ -154,17 +151,24 @@ async function main() {
                 activeStems: diag?.activeStems ?? [],
                 energy: diag?.energy ?? null,
                 techno: diag?.techno ?? null,
+                edm: diag?.edm ?? null,
               });
             }
           }
           const rendered = await ctx.startRendering();
           const left = rendered.getChannelData(0);
           const right = rendered.numberOfChannels > 1 ? rendered.getChannelData(1) : left;
+          const segment = wavB64(left, right, sampleRate, 0, seconds);
+          const extra = {};
+          for (const sl of slices) {
+            extra[sl.name] = wavB64(left, right, sampleRate, sl.start, sl.duration);
+          }
           return {
             backend: engine.getActiveBackend(),
             diag: engine.getSymphonyDiagnostics(0),
             snapshots,
-            segment: wavB64(left, right, sampleRate, 0, seconds),
+            segment,
+            slices: extra,
           };
         };
 
@@ -173,25 +177,27 @@ async function main() {
           () => ({ kmh, throttle, accel });
 
         const buildupCurve = (t) => {
+          // Timed so speed crosses 100 km/h around t=26, the next 8-bar
+          // phrase is t≈32 (build), drop at t≈48, melodic at t≈64, then slow.
           if (t < 6) return { kmh: 0, throttle: 0, accel: 0 };
-          if (t < 50) {
-            const u = (t - 6) / 44;
-            const kmh = 180 * u;
-            const surge = (t >= 22 && t < 23.8) || (t >= 38 && t < 39.8);
-            return {
-              kmh,
-              throttle: surge ? 0.92 : 0.2 + 0.5 * u,
-              accel: surge ? 2.2 : 0.35,
-            };
+          if (t < 26) {
+            const u = (t - 6) / 20;
+            const kmh = 102 * u;
+            const surge = t >= 16 && t < 17.6;
+            return { kmh, throttle: surge ? 0.9 : 0.25 + 0.4 * u, accel: surge ? 2.0 : 0.35 };
           }
-          if (t < 56) return { kmh: 180, throttle: 0.75, accel: 0.15 };
-          const u = (t - 56) / 16;
-          return {
-            kmh: 180 * (1 - u) + 15 * u,
-            throttle: 0,
-            accel: -1.6,
-            regen: 0.5,
-          };
+          if (t < 32) {
+            const u = (t - 26) / 6;
+            return { kmh: 102 + 23 * u, throttle: 0.88, accel: 0.5 };
+          }
+          if (t < 48) {
+            const u = (t - 32) / 16;
+            const surge = t >= 40 && t < 41.5;
+            return { kmh: 125 + 40 * u, throttle: surge ? 0.95 : 0.8, accel: surge ? 1.8 : 0.35 };
+          }
+          if (t < 76) return { kmh: 180, throttle: 0.85, accel: 0.12 };
+          const u = (t - 76) / 9;
+          return { kmh: 180 * (1 - u) + 18 * u, throttle: 0, accel: -1.7, regen: 0.55 };
         };
 
         const genre = resolveGenre("symphony-viral-mix", "classic");
@@ -201,13 +207,15 @@ async function main() {
         const buildup = await render(
           buildSeconds,
           buildupCurve,
-          [3, 9, 15, 22, 28, 36, 44, 52, 60, 68],
+          [3, 9, 18, 26, 30, 34, 40, 47, 50, 56, 64, 70, 80],
         );
-        const idle = await render(holdSeconds, hold(0, 0), [4, 12]);
-        const roll = await render(holdSeconds, hold(20, 0.2), [4, 12]);
-        const build = await render(holdSeconds, hold(45, 0.3), [4, 12]);
-        const cruise = await render(holdSeconds, hold(90, 0.4), [4, 12]);
-        const highway = await render(holdSeconds, hold(160, 0.7, 0.2), [4, 12]);
+        const dropClip = await render(30, hold(150, 0.9, 0.15), [1, 8, 15, 16.1, 24]);
+        const melodicHold = await render(
+          48,
+          hold(150, 0.85, 0.12),
+          [4, 16, 24, 32.1, 40],
+          [{ name: "melodic", start: 32, duration: 16 }],
+        );
 
         return {
           genre,
@@ -218,11 +226,11 @@ async function main() {
           diagAtStart: buildup.diag,
           segments: {
             buildup: { ...buildup.segment, snapshots: buildup.snapshots },
-            idle: { ...idle.segment, snapshots: idle.snapshots },
-            roll: { ...roll.segment, snapshots: roll.snapshots },
-            build: { ...build.segment, snapshots: build.snapshots },
-            cruise: { ...cruise.segment, snapshots: cruise.snapshots },
-            highway: { ...highway.segment, snapshots: highway.snapshots },
+            dropClip: { ...dropClip.segment, snapshots: dropClip.snapshots },
+            melodic: {
+              ...(melodicHold.slices.melodic ?? melodicHold.segment),
+              snapshots: (melodicHold.snapshots ?? []).filter((s) => (s.time ?? 0) >= 32),
+            },
           },
         };
       },
@@ -240,16 +248,17 @@ async function main() {
       [
         "viral-mix-drive-buildup.wav",
         result.segments.buildup,
-        "0→180 km/h build-up with surges and slow-down",
+        "0→180 km/h: v6 layers, then festival build → drop → melodic, then slow-down",
       ],
-      ["viral-mix-preview-idle-0.wav", result.segments.idle, "0 km/h stadium beat"],
-      ["viral-mix-preview-roll-20.wav", result.segments.roll, "20 km/h accordion hook"],
-      ["viral-mix-preview-build-45.wav", result.segments.build, "45 km/h chant + Q&A melody"],
-      ["viral-mix-preview-cruise-90.wav", result.segments.cruise, "90 km/h bass + brass stabs"],
       [
-        "viral-mix-preview-highway-160.wav",
-        result.segments.highway,
-        "160 km/h supersaw + Hey + full stadium",
+        "viral-mix-buildup-and-drop.wav",
+        result.segments.dropClip,
+        "30 s solo: 8-bar build then festival drop (held at 150 km/h)",
+      ],
+      [
+        "viral-mix-preview-melodic-150.wav",
+        result.segments.melodic,
+        "Melodic section at ~150 km/h (slice after the drop)",
       ],
     ];
     const metaSegments = [];
@@ -288,7 +297,7 @@ async function main() {
       seed: SEED,
       listening: "not claimed — not verified by ear",
       copyright:
-        "Original ELCAMOSO stadium-anthem production (120 BPM, C# minor). Synthesized stems + local Piper TTS chant. Not verified by ear.",
+        "Original ELCAMOSO stadium-anthem + festival build/drop/melodic section (120 BPM, C# minor). Not verified by ear.",
       segments: metaSegments,
     };
     const metaPath = path.join(OUTPUT_DIR, "viral-mix-preview-metadata.json");

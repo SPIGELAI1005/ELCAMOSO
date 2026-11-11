@@ -11,6 +11,13 @@ import type { DriveEnergyState, SymphonyDiagnostics, SymphonyPack } from "./type
 import { getCachedSymphonyBuffers } from "./pack-loader";
 import { isSymphonyPackProductionReady } from "./asset-manifest";
 import { createViralTechno, electronicGainsFromDrive, type ViralTechno } from "./viral-techno";
+import { createViralEdm, type ViralEdm } from "./viral-edm";
+import {
+  applyStemScale,
+  createEdmMachine,
+  type EdmMachine,
+  type EdmSnapshot,
+} from "./viral-edm-machine";
 
 export class SymphonySynth {
   private pack: SymphonyPack | null = null;
@@ -20,9 +27,12 @@ export class SymphonySynth {
   private arrangement: ArrangementEngine | null = null;
   private stems: StemPlayer | null = null;
   private techno: ViralTechno | null = null;
+  private edm: ViralEdm | null = null;
+  private edmMachine: EdmMachine | null = null;
   private seed = 1;
   private lastTs = 0;
   private lastEnergy: DriveEnergyState | null = null;
+  private lastEdmSnap: EdmSnapshot | null = null;
   private built = false;
 
   build(
@@ -65,6 +75,11 @@ export class SymphonySynth {
       this.techno = createViralTechno(ctx, this.stems.bus, this.clock, this.stems.ducks);
       this.techno.start(start + 0.02);
     }
+    if (pack.edmArrangement) {
+      this.edmMachine = createEdmMachine();
+      this.edm = createViralEdm(ctx, this.stems, this.clock, buffers, this.stems.ducks);
+      this.edm.start(start + 0.02);
+    }
     this.stems.start(start + 0.02);
     this.arrangement.setMovementState("stopped");
     this.stems.setTargets(this.arrangement.snapshot().targets, start + 0.02);
@@ -103,7 +118,33 @@ export class SymphonySynth {
         this.stems.triggerOneShots(ev.type, at);
       }
     }
-    const targets = this.arrangement.tick(audioTime);
+    let targets = this.arrangement.tick(audioTime);
+    let edmSnap = null;
+    if (this.edm && this.edmMachine && this.clock) {
+      const kmh = state.speed * 3.6;
+      edmSnap = this.edmMachine.tick({
+        kmh,
+        throttle: state.throttle,
+        movement: energy.movementState,
+        audioTime,
+        clockOrigin: this.clock.origin,
+        barDuration: this.clock.snapshot(audioTime).barDuration,
+      });
+      targets = applyStemScale(targets, edmSnap.stemScale);
+      this.lastEdmSnap = edmSnap;
+      this.edm.update(
+        {
+          kmh,
+          throttle: state.throttle,
+          movement: energy.movementState,
+          audioTime,
+          clockOrigin: this.clock.origin,
+          barDuration: this.clock.snapshot(audioTime).barDuration,
+        },
+        edmSnap,
+        audioTime,
+      );
+    }
     this.stems.setTargets(targets, audioTime);
     if (this.techno) {
       const kmh = state.speed * 3.6;
@@ -140,13 +181,29 @@ export class SymphonySynth {
       pendingEvents: this.events?.pendingCount() ?? 0,
       bufferReady: Boolean(this.stems),
       seed: this.seed,
-      lateEvents: (this.stems?.lateEvents ?? 0) + (this.techno?.lateEvents ?? 0),
+      lateEvents:
+        (this.stems?.lateEvents ?? 0) +
+        (this.techno?.lateEvents ?? 0) +
+        (this.edm?.lateEvents ?? 0),
       lookaheadSec: 0.1,
       techno: this.techno?.gains,
+      edm: this.lastEdmSnap
+        ? {
+            phase: this.lastEdmSnap.phase,
+            barsIntoPhase: this.lastEdmSnap.barsIntoPhase,
+            buildProgress: this.lastEdmSnap.buildProgress,
+            scheduledAt: this.lastEdmSnap.scheduledAt,
+            phaseEndsAt: this.lastEdmSnap.phaseEndsAt,
+          }
+        : undefined,
     };
   }
 
   dispose() {
+    this.edm?.dispose();
+    this.edm = null;
+    this.edmMachine = null;
+    this.lastEdmSnap = null;
     this.techno?.dispose();
     this.techno = null;
     this.stems?.dispose();

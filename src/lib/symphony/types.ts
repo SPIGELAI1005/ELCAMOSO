@@ -14,7 +14,8 @@ export type StemId =
   | "brass"
   | "piano"
   | "cello"
-  | "fx";
+  | "fx"
+  | "kit";
 
 export type QuantizeGrid = "beat" | "halfBar" | "bar" | "twoBars";
 
@@ -180,6 +181,14 @@ export interface SymphonyPack {
   electronicLayers?: boolean;
   /** Soft pack-bus limiter for dense mixes (headroom). */
   busLimiter?: boolean;
+  /** Festival build / drop / melodic section (Viral Mix). */
+  edmArrangement?: boolean;
+  /** Extra loops (melodic section, etc.) loaded alongside stems, not speed-gated. */
+  overlayLoops?: readonly {
+    id: string;
+    assetPath: string;
+    durationSeconds: number;
+  }[];
   licensing: {
     source: "procedural_placeholder" | "original" | "commissioned" | "licensed";
     notes: string;
@@ -202,6 +211,13 @@ export interface SymphonyDiagnostics {
   lateEvents: number;
   lookaheadSec: number;
   techno?: Record<string, number>;
+  edm?: {
+    phase: string;
+    barsIntoPhase: number;
+    buildProgress: number;
+    scheduledAt: number | null;
+    phaseEndsAt: number | null;
+  };
 }
 
 export interface SymphonyEnergyConfig {

@@ -37,6 +37,10 @@ export function oneshotBufferId(id: string): string {
   return `__oneshot:${id}`;
 }
 
+export function overlayBufferId(id: string): string {
+  return `__overlay:${id}`;
+}
+
 const LOSSLESS_OR_LICENSED = new Set(["licensed", "original", "commissioned"]);
 
 function cacheKey(pack: SymphonyPack): string {
@@ -243,6 +247,16 @@ export async function loadSymphonyPackBuffers(
       buffers.set(oneshotBufferId(shot.id), buffer);
     } catch {
       /* optional ornaments — looping stems can still play */
+    }
+  }
+
+  for (const overlay of packResolved.overlayLoops ?? []) {
+    try {
+      const buffer = await fetchAndDecode(ctx, overlay.assetPath, packResolved.licensing.version);
+      buffers.set(overlayBufferId(overlay.id), buffer);
+    } catch (err) {
+      errors.push(`overlay:${overlay.id}:${err instanceof Error ? err.message : "decode-failed"}`);
+      failed += 1;
     }
   }
 

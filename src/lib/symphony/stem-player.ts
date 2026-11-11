@@ -38,8 +38,32 @@ export function createStemPlayer(
   hookDuck.gain.value = 1;
   bedDuck.connect(bus);
   hookDuck.connect(bus);
+  let mixHp: BiquadFilterNode | null = null;
+  let makeup: GainNode | null = null;
   let output: AudioNode = bus;
-  if (pack.electronicLayers || pack.busLimiter) {
+  const needsLimiter = Boolean(pack.electronicLayers || pack.busLimiter || pack.edmArrangement);
+  if (pack.edmArrangement) {
+    mixHp = ctx.createBiquadFilter();
+    mixHp.type = "highpass";
+    mixHp.frequency.value = 30;
+    mixHp.Q.value = 0.7;
+    makeup = ctx.createGain();
+    makeup.gain.value = 1;
+    bus.connect(mixHp);
+    if (needsLimiter) {
+      limiter = ctx.createDynamicsCompressor();
+      limiter.threshold.value = -2.8;
+      limiter.knee.value = 4;
+      limiter.ratio.value = 4;
+      limiter.attack.value = 0.003;
+      limiter.release.value = 0.14;
+      mixHp.connect(limiter);
+      limiter.connect(makeup);
+    } else {
+      mixHp.connect(makeup);
+    }
+    output = makeup;
+  } else if (needsLimiter) {
     limiter = ctx.createDynamicsCompressor();
     limiter.threshold.value = -3.5;
     limiter.knee.value = 4;
@@ -78,9 +102,10 @@ export function createStemPlayer(
     source.buffer = buffer;
     source.loop = true;
     source.connect(gain);
-    if (pack.electronicLayers && (stem.id === "atmosphere" || stem.id === "piano")) {
+    const duckBeds = pack.electronicLayers || pack.edmArrangement;
+    if (duckBeds && (stem.id === "atmosphere" || stem.id === "piano" || stem.id === "strings")) {
       gain.connect(bedDuck);
-    } else if (pack.electronicLayers && stem.id === "lead") {
+    } else if (duckBeds && stem.id === "lead") {
       gain.connect(hookDuck);
     } else {
       gain.connect(bus);
@@ -100,6 +125,34 @@ export function createStemPlayer(
     },
     get ducks() {
       return { bed: bedDuck, hook: hookDuck };
+    },
+    get mixHp() {
+      return mixHp;
+    },
+    setMixHp(hz: number, audioTime: number, tau = 0.08) {
+      if (!mixHp) return;
+      try {
+        mixHp.frequency.setTargetAtTime(Math.max(20, hz), audioTime, tau);
+      } catch {
+        late += 1;
+      }
+    },
+    snapMixHp(hz: number, audioTime: number) {
+      if (!mixHp) return;
+      try {
+        mixHp.frequency.cancelScheduledValues(audioTime);
+        mixHp.frequency.setValueAtTime(Math.max(20, hz), audioTime);
+      } catch {
+        late += 1;
+      }
+    },
+    setMakeup(gain: number, audioTime: number, tau = 0.12) {
+      if (!makeup) return;
+      try {
+        makeup.gain.setTargetAtTime(Math.max(0.3, gain), audioTime, tau);
+      } catch {
+        late += 1;
+      }
     },
     /** Seconds after `audioTime` when looping stems start (0 if no intro). */
     introDuration(playIntro = pack.playIntroOnStart ?? Boolean(pack.intro)): number {
@@ -241,7 +294,7 @@ export function createStemPlayer(
           /* */
         }
       }
-      for (const node of [bedDuck, hookDuck, limiter]) {
+      for (const node of [bedDuck, hookDuck, mixHp, makeup, limiter]) {
         if (!node) continue;
         try {
           node.disconnect();

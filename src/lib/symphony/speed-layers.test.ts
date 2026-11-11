@@ -67,6 +67,18 @@ describe("Viral Mix speed layering", () => {
     expect(decel.cello).toBeGreaterThan(0.3);
   });
 
+  it("adds the festival kit with speed, not at idle or low roll", () => {
+    const idle = gainsFromSpeedGates(VIRAL_MIX_PACK, 0, "stopped", 0);
+    const roll = gainsFromSpeedGates(VIRAL_MIX_PACK, 20, "calm", 0.15);
+    const mid = gainsFromSpeedGates(VIRAL_MIX_PACK, 70, "building", 0.4);
+    const cruise = gainsFromSpeedGates(VIRAL_MIX_PACK, 90, "cruise", 0.36);
+    expect(idle.kit ?? 0).toBe(0);
+    expect(roll.kit ?? 0).toBe(0);
+    expect(mid.kit ?? 0).toBeGreaterThan(0.3);
+    expect(cruise.kit ?? 0).toBeGreaterThan(0.9);
+    expect(VIRAL_MIX_PACK.edmArrangement).toBe(true);
+  });
+
   it("smoothstep is 0 below, 1 above, and 0.5 at the midpoint", () => {
     expect(smoothstep(10, 20, 5)).toBe(0);
     expect(smoothstep(10, 20, 20)).toBe(1);
