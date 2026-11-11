@@ -39,7 +39,7 @@ export function createStemPlayer(
   bedDuck.connect(bus);
   hookDuck.connect(bus);
   let output: AudioNode = bus;
-  if (pack.electronicLayers) {
+  if (pack.electronicLayers || pack.busLimiter) {
     limiter = ctx.createDynamicsCompressor();
     limiter.threshold.value = -3.5;
     limiter.knee.value = 4;

@@ -7,9 +7,10 @@
  * Output (default /workspace/viral-ref/):
  *   viral-mix-drive-buildup.wav          (~60 s, 0→180 km/h, surges, slow-down)
  *   viral-mix-preview-idle-0.wav         (15 s held)
- *   viral-mix-preview-roll-40.wav
+ *   viral-mix-preview-roll-20.wav
+ *   viral-mix-preview-build-45.wav
  *   viral-mix-preview-cruise-90.wav
- *   viral-mix-preview-highway-180.wav
+ *   viral-mix-preview-highway-160.wav
  *   viral-mix-preview-metadata.json
  *
  * Listening is not claimed.
@@ -22,7 +23,7 @@ import { createServer } from "vite";
 
 const SAMPLE_RATE = 48_000;
 const HOLD_SECONDS = 15;
-const BUILD_SECONDS = 60;
+const BUILD_SECONDS = 72;
 const OUTPUT_DIR = process.env.VIRAL_MIX_PREVIEW_OUT ?? "/workspace/viral-ref";
 const LAB_STEP = 1 / 60;
 const SEED = 0x454c4341;
@@ -173,18 +174,18 @@ async function main() {
 
         const buildupCurve = (t) => {
           if (t < 6) return { kmh: 0, throttle: 0, accel: 0 };
-          if (t < 42) {
-            const u = (t - 6) / 36;
+          if (t < 50) {
+            const u = (t - 6) / 44;
             const kmh = 180 * u;
-            const surge = (t >= 20 && t < 21.6) || (t >= 32 && t < 33.6);
+            const surge = (t >= 22 && t < 23.8) || (t >= 38 && t < 39.8);
             return {
               kmh,
               throttle: surge ? 0.92 : 0.2 + 0.5 * u,
               accel: surge ? 2.2 : 0.35,
             };
           }
-          if (t < 48) return { kmh: 180, throttle: 0.75, accel: 0.15 };
-          const u = (t - 48) / 12;
+          if (t < 56) return { kmh: 180, throttle: 0.75, accel: 0.15 };
+          const u = (t - 56) / 16;
           return {
             kmh: 180 * (1 - u) + 15 * u,
             throttle: 0,
@@ -200,12 +201,13 @@ async function main() {
         const buildup = await render(
           buildSeconds,
           buildupCurve,
-          [3, 9, 15, 20.5, 24, 32.5, 40, 46, 52, 58],
+          [3, 9, 15, 22, 28, 36, 44, 52, 60, 68],
         );
         const idle = await render(holdSeconds, hold(0, 0), [4, 12]);
-        const roll = await render(holdSeconds, hold(40, 0.25), [4, 12]);
+        const roll = await render(holdSeconds, hold(20, 0.2), [4, 12]);
+        const build = await render(holdSeconds, hold(45, 0.3), [4, 12]);
         const cruise = await render(holdSeconds, hold(90, 0.4), [4, 12]);
-        const highway = await render(holdSeconds, hold(180, 0.75, 0.2), [4, 12]);
+        const highway = await render(holdSeconds, hold(160, 0.7, 0.2), [4, 12]);
 
         return {
           genre,
@@ -218,6 +220,7 @@ async function main() {
             buildup: { ...buildup.segment, snapshots: buildup.snapshots },
             idle: { ...idle.segment, snapshots: idle.snapshots },
             roll: { ...roll.segment, snapshots: roll.snapshots },
+            build: { ...build.segment, snapshots: build.snapshots },
             cruise: { ...cruise.segment, snapshots: cruise.snapshots },
             highway: { ...highway.segment, snapshots: highway.snapshots },
           },
@@ -239,13 +242,14 @@ async function main() {
         result.segments.buildup,
         "0→180 km/h build-up with surges and slow-down",
       ],
-      ["viral-mix-preview-idle-0.wav", result.segments.idle, "0 km/h pads only"],
-      ["viral-mix-preview-roll-40.wav", result.segments.roll, "40 km/h kick + hats"],
-      ["viral-mix-preview-cruise-90.wav", result.segments.cruise, "90 km/h hook in"],
+      ["viral-mix-preview-idle-0.wav", result.segments.idle, "0 km/h stadium beat"],
+      ["viral-mix-preview-roll-20.wav", result.segments.roll, "20 km/h accordion hook"],
+      ["viral-mix-preview-build-45.wav", result.segments.build, "45 km/h chant + Q&A melody"],
+      ["viral-mix-preview-cruise-90.wav", result.segments.cruise, "90 km/h bass + brass stabs"],
       [
-        "viral-mix-preview-highway-180.wav",
+        "viral-mix-preview-highway-160.wav",
         result.segments.highway,
-        "180 km/h vocals + percussion",
+        "160 km/h supersaw + Hey + full stadium",
       ],
     ];
     const metaSegments = [];
@@ -272,7 +276,7 @@ async function main() {
       profileName: result.profileName,
       usesRealEnginePath: true,
       enginePath:
-        "Chrome OfflineAudioContext + production SoundEngine.start/update + SymphonySynth licensed layered pack. Not a full-mix or AdaptiveMusicSynth render.",
+        "Chrome OfflineAudioContext + production SoundEngine.start/update + SymphonySynth original stadium pack. Not a full-mix or AdaptiveMusicSynth render.",
       volume: 1,
       pickerForcedTo: "classic",
       resolvedGenreWithClassicPicker: result.genre,
@@ -284,7 +288,7 @@ async function main() {
       seed: SEED,
       listening: "not claimed — not verified by ear",
       copyright:
-        "Owner-licensed recording (rights confirmed by George Neacsu). Layered 4-bar loops and one-shots, not a straight playback of the sample.",
+        "Original ELCAMOSO stadium-anthem production (120 BPM, C# minor). Synthesized stems + local Piper TTS chant. Not verified by ear.",
       segments: metaSegments,
     };
     const metaPath = path.join(OUTPUT_DIR, "viral-mix-preview-metadata.json");

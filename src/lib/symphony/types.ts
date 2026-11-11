@@ -178,6 +178,8 @@ export interface SymphonyPack {
   gainTauSeconds?: number;
   /** Synthesize tempo-locked electronic/techno layers (Viral Mix). */
   electronicLayers?: boolean;
+  /** Soft pack-bus limiter for dense mixes (headroom). */
+  busLimiter?: boolean;
   licensing: {
     source: "procedural_placeholder" | "original" | "commissioned" | "licensed";
     notes: string;

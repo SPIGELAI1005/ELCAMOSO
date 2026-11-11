@@ -1,0 +1,17 @@
+ElCA / MOSO voice swap
+======================
+To replace the current local-TTS chant with a real recording (recommended:
+George + friends, stadium-style call and response):
+
+  loop-chant.m4a / loop-chant.mp3
+      4 bars, 120 BPM, 8.000 s, 48 kHz stereo.
+      "ElCA…" on bars 1 and 3 (beats 1), "MOSO!" on bars 2 and 4 (beats 1).
+      Sit it a little behind the beat; leave headroom (peak around -10 dBFS).
+
+  oneshot-elca.m4a / .mp3     MC call "El-CA" (EL-KAH), PA/megaphone + room.
+  oneshot-moso.m4a / .mp3     Crowd answer "MO-so", many voices, stadium reverb.
+
+Keep the same filenames. No other pack changes are required.
+Current files are Piper TTS (en_US-ryan-medium for the MC; ryan, lessac, alan
+and joe layered for the crowd), processed through a PA/megaphone filter and
+stadium reverb. A real recorded chant will be a clear upgrade.

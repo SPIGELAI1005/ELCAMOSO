@@ -198,15 +198,15 @@ const SYMPHONY_SHELLS: readonly ExperienceDescriptor[] = [
     id: "symphony-viral-mix",
     kind: "symphony",
     name: "Viral Mix",
-    tagline: "Pads · Bass · Techno · Hook · Vocals",
+    tagline: "Stadium Beat · Accordion · ElCA / MOSO",
     description:
-      "Owner-licensed club mix in C# minor at ~108 BPM. Pads at rest, then bass, kick, hats, claps, keys, hook and vocals open with your speed. Cruise and highway add techno bass, a four-on-the-floor kick, acid and offbeat hats; throttle surges fire chants and fills.",
+      "Original stadium anthem in C# minor at 120 BPM. A stomp-stomp-clap beat starts at rest, then a catchy accordion hook, an ElCA / MOSO call-and-response, a higher question-and-answer melody, bass, horns and a supersaw lead open with your speed. Throttle surges fire crowd shouts and fills.",
     artworkStyle: "score",
     entitlement: "drive_plus",
     previewMode: "playable",
     capabilities: {
       profileId: "symphony-viral-mix",
-      stems: ["Pads", "Bass", "Kick", "Techno", "Hook", "Vocals"],
+      stems: ["Stadium beat", "Accordion", "ElCA / MOSO", "Brass", "Lead"],
       selectableInDrive: true,
       requiredEntitlement: "symphony_all",
     },
