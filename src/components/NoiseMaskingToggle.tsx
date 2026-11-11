@@ -3,6 +3,12 @@
 import { Lock } from "lucide-react";
 
 import { RoadNoiseMaskingIcon } from "@/components/RoadNoiseMaskingIcon";
+import {
+  DRIVE_PILL_BADGE_OFF_CLASS,
+  DRIVE_PILL_BADGE_ON_CLASS,
+  DRIVE_PILL_BADGE_WIDE_CLASS,
+  DrivePillBadge,
+} from "@/components/drive/DrivePillBadge";
 import { useNoiseMaskingGate } from "@/lib/drive/useNoiseMaskingGate";
 import { cn } from "@/lib/utils";
 
@@ -12,7 +18,9 @@ const PILL_CLASS =
 
 /**
  * Drive-cockpit control: a messages-sized pill for Road Noise Masking,
- * with a GPS-style caption to the left (Road Noise / Masking ON|OFF).
+ * with a GPS-style caption to the left (Road Noise / Masking) and an
+ * ON/OFF status bubble on the upper-right of the pill, matching the
+ * messages counter badge.
  */
 export function NoiseMaskingDriveToggle({
   className,
@@ -25,7 +33,6 @@ export function NoiseMaskingDriveToggle({
   const gate = useNoiseMaskingGate();
   const allowed = gate.allowed || (import.meta.env.DEV && previewAllowed === true);
   const masterOn = allowed && gate.settings.noiseMasking;
-  const stateLabel = masterOn ? "ON" : "OFF";
   const aria = allowed
     ? `${gate.label}, ${masterOn ? "on" : "off"}`
     : `${gate.label} (locked). ${gate.signInRemark}`;
@@ -50,28 +57,27 @@ export function NoiseMaskingDriveToggle({
           aria-hidden
         >
           <span>Road Noise</span>
-          <span>
-            Masking{" "}
-            <span
-              className={cn(
-                "font-semibold",
-                masterOn ? "text-foreground" : "text-muted-foreground",
-              )}
-            >
-              {stateLabel}
-            </span>
-          </span>
+          <span>Masking</span>
         </span>
         <span
           data-testid="road-noise-masking-pill"
           className={cn(PILL_CLASS, masterOn ? "text-foreground" : "text-foreground/45")}
         >
           <RoadNoiseMaskingIcon className="h-6 w-auto" />
+          <DrivePillBadge
+            testId="road-noise-masking-badge"
+            className={cn(
+              DRIVE_PILL_BADGE_WIDE_CLASS,
+              masterOn ? DRIVE_PILL_BADGE_ON_CLASS : DRIVE_PILL_BADGE_OFF_CLASS,
+            )}
+          >
+            {masterOn ? "ON" : "OFF"}
+          </DrivePillBadge>
           {allowed ? null : (
             <span
               data-testid="road-noise-masking-lock"
               aria-hidden
-              className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full border border-white/25 bg-background/90 text-foreground shadow-[0_0_8px_rgba(0,0,0,0.35)]"
+              className="absolute -right-1 -bottom-1 flex h-4 w-4 items-center justify-center rounded-full border border-white/25 bg-background/90 text-foreground shadow-[0_0_8px_rgba(0,0,0,0.35)]"
             >
               <Lock className="h-2.5 w-2.5" strokeWidth={2.4} />
             </span>

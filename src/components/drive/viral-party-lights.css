@@ -1,0 +1,26 @@
+@keyframes viral-party-confetti {
+  0% {
+    transform: translate3d(0, 0, 0) scale(0.65);
+    opacity: 0;
+  }
+  12% {
+    opacity: 0.55;
+  }
+  100% {
+    transform: translate3d(8px, -140px, 0) scale(1);
+    opacity: 0;
+  }
+}
+
+.viral-party-confetti-speck {
+  position: absolute;
+  width: 5px;
+  height: 8px;
+  border-radius: 1px 4px 2px 4px;
+  background: #ffc400;
+  pointer-events: none;
+  will-change: transform, opacity;
+  animation-name: viral-party-confetti;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+}

@@ -40,10 +40,14 @@ import { useFeatureAccess } from "@/lib/entitlements/selectors";
 import { DriveProfileBackdrop } from "@/components/drive/DriveProfileBackdrop";
 import { PoliceLightShow } from "@/components/drive/PoliceLightShow";
 import { PoliceRoofLights } from "@/components/drive/PoliceRoofLights";
+import { ViralPartyStageLights } from "@/components/drive/ViralPartyStageLights";
+import { ViralPartyLightShow } from "@/components/drive/ViralPartyLightShow";
+import { ViralPartyLightToggle } from "@/components/drive/ViralPartyLightToggle";
 import { DriveGenreSubtitle } from "@/components/drive/DriveGenreSubtitle";
 import { DriveCarFx } from "@/components/drive/DriveCarFx";
 import { DriveGallopVideo } from "@/components/drive/DriveGallopVideo";
 import { POLICE_LIGHT_PROFILE_ID } from "@/lib/drive/police-lights";
+import { VIRAL_PARTY_LIGHT_PROFILE_ID } from "@/lib/drive/viral-party-lights";
 import {
   getProfile,
   PROFILE_CATEGORIES,
@@ -65,6 +69,7 @@ import { DRIVE_PLUS_LOCKED_MESSAGE } from "@/lib/sound/profile-access-config";
 import { ModeTachometer } from "@/components/drive/ModeTachometer";
 import { FeedbackSheet } from "@/components/feedback/FeedbackSheet";
 import { NoiseMaskingDriveToggle } from "@/components/NoiseMaskingToggle";
+import { DRIVE_PILL_BADGE_ON_CLASS, DrivePillBadge } from "@/components/drive/DrivePillBadge";
 import { useInboxUnread } from "@/lib/inbox/inbox";
 import { track } from "@/lib/analytics/track";
 import { resolveTachThemeId, type TachThemeId } from "@/lib/drive/tach-theme";
@@ -517,6 +522,20 @@ export function DriveCockpit({
       {profile.id === POLICE_LIGHT_PROFILE_ID ? (
         <PoliceLightShow speed={driveState.speed} reducedMotion={reducedMotion} className="z-0" />
       ) : null}
+      {profile.id === VIRAL_PARTY_LIGHT_PROFILE_ID ? (
+        <ViralPartyStageLights
+          speed={driveState.speed}
+          reducedMotion={reducedMotion}
+          className="z-0"
+        />
+      ) : null}
+      {profile.id === VIRAL_PARTY_LIGHT_PROFILE_ID ? (
+        <ViralPartyLightShow
+          speed={driveState.speed}
+          reducedMotion={reducedMotion}
+          className="z-0"
+        />
+      ) : null}
 
       <header className="drive-cockpit__header relative z-[1] grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-start gap-2 sm:gap-3">
         <ElcamosoLogo
@@ -576,16 +595,16 @@ export function DriveCockpit({
                 <path d="M68 4 C 86 20, 86 52, 68 68" strokeWidth="2.8" opacity="0.7" />
               </svg>
               {unread > 0 ? (
-                <span
-                  data-testid="inbox-badge"
-                  className="absolute -top-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-[#e53935] px-1 text-[10px] font-semibold text-white"
-                >
+                <DrivePillBadge testId="inbox-badge" className={DRIVE_PILL_BADGE_ON_CLASS}>
                   {unread > 9 ? "9+" : unread}
-                </span>
+                </DrivePillBadge>
               ) : null}
             </button>
           </div>
           <NoiseMaskingDriveToggle previewAllowed={noiseMaskingPreviewAllowed} />
+          {profile.id === VIRAL_PARTY_LIGHT_PROFILE_ID ? (
+            <ViralPartyLightToggle reducedMotion={reducedMotion} />
+          ) : null}
         </div>
       </header>
 
