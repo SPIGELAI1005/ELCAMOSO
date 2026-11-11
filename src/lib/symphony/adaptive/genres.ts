@@ -1451,8 +1451,21 @@ const bwood: GenreDef = {
 
 /** Original 2-bar hook (scale-degree, duration in 16ths). Written for this profile; not taken from the reference recording. */
 const VIRALMIX_HOOK: readonly (readonly [number, number, number])[][] = [
-  [[0, 0, 2], [3, 3, 1], [6, 7, 2], [10, 8, 2], [12, 7, 2], [15, 5, 1]],
-  [[0, 7, 2], [4, 8, 1], [6, 10, 2], [10, 12, 2], [14, 7, 2]],
+  [
+    [0, 0, 2],
+    [3, 3, 1],
+    [6, 7, 2],
+    [10, 8, 2],
+    [12, 7, 2],
+    [15, 5, 1],
+  ],
+  [
+    [0, 7, 2],
+    [4, 8, 1],
+    [6, 10, 2],
+    [10, 12, 2],
+    [14, 7, 2],
+  ],
 ];
 
 /**
@@ -1490,7 +1503,11 @@ const viralmix: GenreDef = {
     lead: 0.22,
     stab: 0.24,
   },
-  accents: { crash: ["drums_elec", 49], fill: ["drums_elec", [38, 38, 39, 49]], low: ["drums_elec", [36, 36]] },
+  accents: {
+    crash: ["drums_elec", 49],
+    fill: ["drums_elec", [38, 38, 39, 49]],
+    low: ["drums_elec", [36, 36]],
+  },
   pattern(c) {
     const out: NoteSpec[] = [];
     const I = c.intensity;
@@ -1500,38 +1517,132 @@ const viralmix: GenreDef = {
 
     if (c.step === 0) {
       for (const t of c.chord) {
-        out.push({ inst: "pad", midi: into(t, 52, 72), vel: quiet ? 0.34 : 0.28 + 0.16 * I, dur: c.barDur * 1.02, pan: (t % 2) * 0.4 - 0.2 });
+        out.push({
+          inst: "pad",
+          midi: into(t, 52, 72),
+          vel: quiet ? 0.34 : 0.28 + 0.16 * I,
+          dur: c.barDur * 1.02,
+          pan: (t % 2) * 0.4 - 0.2,
+        });
       }
     }
 
     if (quiet) {
-      if (on(c, 0, 8)) out.push({ inst: "electrosub", midi: subRoot, vel: 0.42, dur: c.stepDur * 6 });
-      if (c.mode === "brake" && on(c, 0)) out.push({ inst: "synthbass", midi: bassRoot, vel: 0.28, dur: c.stepDur * 4 });
+      if (on(c, 0, 8))
+        out.push({
+          inst: "electrosub",
+          midi: subRoot,
+          vel: 0.42,
+          dur: c.stepDur * 6,
+        });
+      if (c.mode === "brake" && on(c, 0))
+        out.push({
+          inst: "synthbass",
+          midi: bassRoot,
+          vel: 0.28,
+          dur: c.stepDur * 4,
+        });
       return out;
     }
 
     // Pulsing bass / sub bed (the reference is harmonic-heavy in the low end).
     if (I > 0.12 && on(c, 0, 8)) {
-      out.push({ inst: "electrosub", midi: subRoot, vel: 0.62 + 0.2 * I, dur: c.stepDur * 3.6 });
-      out.push({ inst: "synthbass", midi: bassRoot, vel: 0.48 + 0.22 * I, dur: c.stepDur * 2.2 });
+      out.push({
+        inst: "electrosub",
+        midi: subRoot,
+        vel: 0.62 + 0.2 * I,
+        dur: c.stepDur * 3.6,
+      });
+      out.push({
+        inst: "synthbass",
+        midi: bassRoot,
+        vel: 0.48 + 0.22 * I,
+        dur: c.stepDur * 2.2,
+      });
     }
-    if (I > 0.28 && on(c, 4, 12)) out.push({ inst: "synthbass", midi: into(c.root + 7, 28, 42), vel: 0.4 + 0.2 * I, dur: c.stepDur * 1.8 });
-    if (I > 0.42 && on(c, 2, 6, 10, 14)) out.push({ inst: "synthbass", midi: bassRoot, vel: 0.34 + 0.18 * I, dur: c.stepDur * 1.3 });
-    if (I > 0.42 && c.step === 15) out.push({ inst: "synthbass", midi: into(c.root - 2, 28, 40), vel: 0.4, dur: c.stepDur * 0.9 });
+    if (I > 0.28 && on(c, 4, 12))
+      out.push({
+        inst: "synthbass",
+        midi: into(c.root + 7, 28, 42),
+        vel: 0.4 + 0.2 * I,
+        dur: c.stepDur * 1.8,
+      });
+    if (I > 0.42 && on(c, 2, 6, 10, 14))
+      out.push({
+        inst: "synthbass",
+        midi: bassRoot,
+        vel: 0.34 + 0.18 * I,
+        dur: c.stepDur * 1.3,
+      });
+    if (I > 0.42 && c.step === 15)
+      out.push({
+        inst: "synthbass",
+        midi: into(c.root - 2, 28, 40),
+        vel: 0.4,
+        dur: c.stepDur * 0.9,
+      });
 
     // Modest four-on-the-floor; not a drum-forward house mix.
-    if (I > 0.18 && c.step % 4 === 0) out.push({ inst: "drums_elec", midi: 36, vel: 0.42 + 0.28 * I, dur: 0.45 });
-    if (I > 0.36 && on(c, 4, 12)) out.push({ inst: "drums_elec", midi: 39, vel: 0.4 + 0.28 * I, dur: 0.35, pan: 0.08 });
-    if (I > 0.26 && on(c, 2, 6, 10, 14)) out.push({ inst: "drums_elec", midi: I > 0.5 ? 46 : 42, vel: 0.28 + 0.22 * I, dur: 0.22, pan: 0.28 });
-    if (I > 0.5 && on(c, 7, 15)) out.push({ inst: "drums_elec", midi: 46, vel: 0.34 + 0.22 * I, dur: 0.28, pan: 0.32 });
-    if (I > 0.5 && c.step % 2 === 1) out.push({ inst: "drums_elec", midi: 42, vel: 0.16 + 0.16 * I, dur: 0.12, pan: -0.22 });
+    if (I > 0.18 && c.step % 4 === 0)
+      out.push({
+        inst: "drums_elec",
+        midi: 36,
+        vel: 0.42 + 0.28 * I,
+        dur: 0.45,
+      });
+    if (I > 0.36 && on(c, 4, 12))
+      out.push({
+        inst: "drums_elec",
+        midi: 39,
+        vel: 0.4 + 0.28 * I,
+        dur: 0.35,
+        pan: 0.08,
+      });
+    if (I > 0.26 && on(c, 2, 6, 10, 14))
+      out.push({
+        inst: "drums_elec",
+        midi: I > 0.5 ? 46 : 42,
+        vel: 0.28 + 0.22 * I,
+        dur: 0.22,
+        pan: 0.28,
+      });
+    if (I > 0.5 && on(c, 7, 15))
+      out.push({
+        inst: "drums_elec",
+        midi: 46,
+        vel: 0.34 + 0.22 * I,
+        dur: 0.28,
+        pan: 0.32,
+      });
+    if (I > 0.5 && c.step % 2 === 1)
+      out.push({
+        inst: "drums_elec",
+        midi: 42,
+        vel: 0.16 + 0.16 * I,
+        dur: 0.12,
+        pan: -0.22,
+      });
 
     // Organ and synth stabs — original offbeat disco voicings, not a transcribed riff.
     if (I > 0.45 && on(c, 2, 6, 10, 14)) {
-      for (const t of c.chord.slice(0, 3)) out.push({ inst: "organ", midi: into(t, 48, 72), vel: 0.32 + 0.22 * I, dur: c.stepDur * 1.5, pan: -0.18 });
+      for (const t of c.chord.slice(0, 3))
+        out.push({
+          inst: "organ",
+          midi: into(t, 48, 72),
+          vel: 0.32 + 0.22 * I,
+          dur: c.stepDur * 1.5,
+          pan: -0.18,
+        });
     }
     if (I > 0.45 && on(c, 0) && c.bar % 4 >= 2) {
-      for (const t of c.chord.slice(0, 3)) out.push({ inst: "stab", midi: into(t, 55, 72), vel: 0.3 + 0.2 * I, dur: c.stepDur * 1.8, pan: 0.2 });
+      for (const t of c.chord.slice(0, 3))
+        out.push({
+          inst: "stab",
+          midi: into(t, 55, 72),
+          vel: 0.3 + 0.2 * I,
+          dur: c.stepDur * 1.8,
+          pan: 0.2,
+        });
     }
 
     // Original lead hook at cruise and above (never a copy of the reference melody).
@@ -1539,21 +1650,42 @@ const viralmix: GenreDef = {
       const hook = VIRALMIX_HOOK[c.bar % 2]!;
       for (const [st, iv, len] of hook) {
         if (st !== c.step) continue;
-        out.push({ inst: "lead", midi: into(c.root + iv, 60, 79), vel: 0.34 + 0.28 * I, dur: c.stepDur * len * 0.92, pan: 0.12 });
+        out.push({
+          inst: "lead",
+          midi: into(c.root + iv, 60, 79),
+          vel: 0.34 + 0.28 * I,
+          dur: c.stepDur * len * 0.92,
+          pan: 0.12,
+        });
       }
     }
 
-    if (I > 0.5 && c.step === 0 && c.bar % 8 === 0) out.push({ inst: "drums_elec", midi: 49, vel: 0.4 + 0.2 * I, dur: 1.4 });
+    if (I > 0.5 && c.step === 0 && c.bar % 8 === 0)
+      out.push({ inst: "drums_elec", midi: 49, vel: 0.4 + 0.2 * I, dur: 1.4 });
 
     // Surge: tightening snare + ride as a riser stand-in (no copyrighted sweep sample).
     if (c.mode === "surge") {
       const every = c.step < 8 ? 2 : 1;
-      if (c.step % every === 0) out.push({ inst: "drums_elec", midi: 38, vel: 0.28 + 0.03 * c.step, dur: 0.12 });
-      if (c.step === 0) out.push({ inst: "drums_elec", midi: 51, vel: 0.5, dur: c.barDur, pan: 0.2 });
+      if (c.step % every === 0)
+        out.push({
+          inst: "drums_elec",
+          midi: 38,
+          vel: 0.28 + 0.03 * c.step,
+          dur: 0.12,
+        });
+      if (c.step === 0)
+        out.push({
+          inst: "drums_elec",
+          midi: 51,
+          vel: 0.5,
+          dur: c.barDur,
+          pan: 0.2,
+        });
     }
     return out;
   },
 };
+
 
 export const GENRES: Record<GenreId, GenreDef> = { classic, house, rock, pop, metal, hiphop, country, waltz, electro, anthem, darkrave, latino, gothic, pianoflow, jazz, cinrock, bwood, viralmix };
 for (const [id, l] of Object.entries(LAYERED)) {
