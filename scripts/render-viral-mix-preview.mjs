@@ -207,7 +207,7 @@ async function main() {
         const buildup = await render(
           buildSeconds,
           buildupCurve,
-          [3, 9, 18, 26, 30, 34, 40, 47, 50, 56, 64, 70, 80],
+          [3, 9, 12, 16, 18, 23, 26, 30, 34, 40, 47, 50, 56, 64, 70, 80],
         );
         const dropClip = await render(30, hold(150, 0.9, 0.15), [1, 8, 15, 16.1, 24]);
         const melodicHold = await render(
@@ -215,6 +215,13 @@ async function main() {
           hold(150, 0.85, 0.12),
           [4, 16, 24, 32.1, 40],
           [{ name: "melodic", start: 32, duration: 16 }],
+        );
+        const pianoSolo = await render(8, hold(42, 0.35, 0.08), [2, 6]);
+        const choirHold = await render(
+          24,
+          hold(150, 0.9, 0.15),
+          [16.1, 20],
+          [{ name: "choir", start: 16, duration: 8 }],
         );
 
         return {
@@ -230,6 +237,11 @@ async function main() {
             melodic: {
               ...(melodicHold.slices.melodic ?? melodicHold.segment),
               snapshots: (melodicHold.snapshots ?? []).filter((s) => (s.time ?? 0) >= 32),
+            },
+            pianoSolo: { ...pianoSolo.segment, snapshots: pianoSolo.snapshots },
+            choirSolo: {
+              ...(choirHold.slices.choir ?? choirHold.segment),
+              snapshots: (choirHold.snapshots ?? []).filter((s) => (s.time ?? 0) >= 16),
             },
           },
         };
@@ -259,6 +271,16 @@ async function main() {
         "viral-mix-preview-melodic-150.wav",
         result.segments.melodic,
         "Melodic section at ~150 km/h (slice after the drop)",
+      ],
+      [
+        "viral-mix-preview-piano-solo.wav",
+        result.segments.pianoSolo,
+        "8 s acoustic piano at ~42 km/h (accordion hook still present; choir not yet in)",
+      ],
+      [
+        "viral-mix-preview-choir-solo.wav",
+        result.segments.choirSolo,
+        "8 s choir at full power (first 8 s of the festival drop at 150 km/h; not isolated)",
       ],
     ];
     const metaSegments = [];

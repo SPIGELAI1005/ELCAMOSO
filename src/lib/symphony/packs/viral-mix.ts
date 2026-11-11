@@ -22,7 +22,7 @@ function originalLoop(
     manifest: {
       assetId: `${PACK_ID}.${id}.original-loop`,
       variation: "original-loop",
-      version: "7.0.0",
+      version: "8.0.0",
       copyrightOwner: "ELCAMOSO / George Neacsu",
       license:
         "Original ELCAMOSO production (synthesized + local Piper TTS), approved for the product",
@@ -53,13 +53,17 @@ function oneShot(
 }
 
 /**
- * Viral Mix v7 — stadium anthem plus festival drums, build, drop and a
- * melodic (Guetta-style, original) high-speed section.
+ * Viral Mix v8 — stadium anthem plus festival drums, build, drop, a
+ * melodic (Guetta-style, original) high-speed section, an acoustic-piano
+ * melody that doubles and answers the accordion hook, and a loud SATB
+ * choir in the Midnight Boost (darkrave / FluidR3_GM) style.
  *
  * Tempo is 120 BPM in C# minor. The v6 stadium bed is unchanged in spirit:
  *   0 km/h          stadium stomp-stomp-clap + kick (drumsLow, rhythm)
  *   5–22            catchy accordion hook (piano)
  *   10–28           MC “ElCA…” / crowd “MOSO!” every 2 bars (cello, max 0.5)
+ *   30–50           acoustic grand melody doubles / answers the hook
+ *   ~88–120         epic SATB choir enters (highway); swells in the build
  *   38–48           higher counter-melody + question/answer (strings)
  *   55–90           fuller EDM kit (kit) layers in with speed
  *   60–80           bass + extra hats/claps (bass, drumsHigh)
@@ -72,8 +76,10 @@ function oneShot(
  *   → 8ths → 16ths → 32nds, rising noise + pitch synth, HP sweep, kick out
  *   on the last bar, ElCA/Hey then a 1-beat gap) → 8-bar drop (sidechained
  *   kick + bass, supersaw hook, MOSO on the downbeat) → 16-bar melodic
- *   section (piano C#m–A–E–B, pluck arp, warm pads, soaring lead). Cycles
- *   with hysteresis while speed stays high; slowing returns to the v6 bed.
+ *   section (piano C#m–A–E–B, acoustic piano, pluck arp, warm pads, soaring
+ *   lead, full choir). Cycles with hysteresis while speed stays high;
+ *   slowing returns to the v6 bed. Last bar of the build features a solo
+ *   acoustic piano, then the choir returns at full power on the drop.
  *
  * Voice swap: replace loop-chant, oneshot-elca and oneshot-moso with a real
  * recording (George + friends), same 48 kHz / 8 s loop and short one-shots,
@@ -252,11 +258,31 @@ export const VIRAL_MIX_PACK: SymphonyPack = {
       assetPath: `${ASSET_DIR}/loop-melodic-soar.m4a`,
       durationSeconds: LOOP_DURATION_SECONDS,
     },
+    {
+      id: "acoustic-piano",
+      assetPath: `${ASSET_DIR}/loop-acoustic-piano.m4a`,
+      durationSeconds: LOOP_DURATION_SECONDS,
+    },
+    {
+      id: "acoustic-piano-melodic",
+      assetPath: `${ASSET_DIR}/loop-acoustic-piano-melodic.m4a`,
+      durationSeconds: LOOP_DURATION_SECONDS,
+    },
+    {
+      id: "choir",
+      assetPath: `${ASSET_DIR}/loop-choir.m4a`,
+      durationSeconds: LOOP_DURATION_SECONDS,
+    },
+    {
+      id: "choir-melodic",
+      assetPath: `${ASSET_DIR}/loop-choir-melodic.m4a`,
+      durationSeconds: LOOP_DURATION_SECONDS,
+    },
   ],
   licensing: {
     source: "original",
     notes:
-      "Original ELCAMOSO stadium-anthem plus festival build/drop/melodic section at 120 BPM, C# minor. Loops and one-shots are synthesized (accordion, drums, bass, brass, lead) plus local Piper TTS for the ElCA/MOSO chant, processed as a PA/crowd. Not derived from the previous licensed extract. Swap loop-chant, oneshot-elca and oneshot-moso for a real recorded chant (same 48 kHz, 8 s loop) without any other pack changes. Live path is this pack, not the procedural viralmix genre.",
-    version: "7.0.0",
+      "Original ELCAMOSO stadium-anthem plus festival build/drop/melodic section at 120 BPM, C# minor, with an acoustic-piano melody and an SATB choir. Piano and choir loops are original arrangements rendered from the in-app music-v1 sprites (FluidR3_GM soundfont, MIT License — see SAMPLES.txt). Other loops and one-shots are synthesized plus local Piper TTS for the ElCA/MOSO chant. Not derived from the previous licensed extract. Live path is this pack, not the procedural viralmix genre.",
+    version: "8.0.0",
   },
 };

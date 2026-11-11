@@ -79,6 +79,32 @@ export function createViralEdm(
   melBus.connect(melDuck);
   melDuck.connect(bus);
 
+  const pianoBus = ctx.createGain();
+  pianoBus.gain.value = 0.0001;
+  const pianoBedGain = ctx.createGain();
+  pianoBedGain.gain.value = 0.0001;
+  const pianoMelGain = ctx.createGain();
+  pianoMelGain.gain.value = 0.0001;
+  const pianoDuck = ctx.createGain();
+  pianoDuck.gain.value = 1;
+  pianoBedGain.connect(pianoBus);
+  pianoMelGain.connect(pianoBus);
+  pianoBus.connect(pianoDuck);
+  pianoDuck.connect(bus);
+
+  const choirBus = ctx.createGain();
+  choirBus.gain.value = 0.0001;
+  const choirBedGain = ctx.createGain();
+  choirBedGain.gain.value = 0.0001;
+  const choirMelGain = ctx.createGain();
+  choirMelGain.gain.value = 0.0001;
+  const choirDuck = ctx.createGain();
+  choirDuck.gain.value = 1;
+  choirBedGain.connect(choirBus);
+  choirMelGain.connect(choirBus);
+  choirBus.connect(choirDuck);
+  choirDuck.connect(bus);
+
   const kickBuf = makeKickBuffer(ctx);
   const snareBuf = makeSnareBuffer(ctx);
   const noiseBuf = makeNoiseBuffer(ctx, 2);
@@ -140,6 +166,10 @@ export function createViralEdm(
       dropDuck.gain.setTargetAtTime(1, at + 0.015, tau);
       melDuck.gain.setValueAtTime(Math.max(0.0001, 1 - depth * 0.7), at);
       melDuck.gain.setTargetAtTime(1, at + 0.015, tau);
+      pianoDuck.gain.setValueAtTime(Math.max(0.0001, 1 - depth * 0.25), at);
+      pianoDuck.gain.setTargetAtTime(1, at + 0.015, tau);
+      choirDuck.gain.setValueAtTime(Math.max(0.0001, 1 - depth * 0.45), at);
+      choirDuck.gain.setTargetAtTime(1, at + 0.015, tau);
     } catch {
       late += 1;
     }
@@ -367,7 +397,14 @@ export function createViralEdm(
     },
     start(audioTime: number) {
       started = true;
-      void audioTime;
+      const pBed = buffers?.get(overlayBufferId("acoustic-piano"));
+      const pMel = buffers?.get(overlayBufferId("acoustic-piano-melodic"));
+      const cBed = buffers?.get(overlayBufferId("choir"));
+      const cMel = buffers?.get(overlayBufferId("choir-melodic"));
+      if (pBed) startLoop("acoustic-piano", pBed, pianoBedGain, audioTime, 1);
+      if (pMel) startLoop("acoustic-piano-melodic", pMel, pianoMelGain, audioTime, 1);
+      if (cBed) startLoop("choir", cBed, choirBedGain, audioTime, 1);
+      if (cMel) startLoop("choir-melodic", cMel, choirMelGain, audioTime, 1);
     },
     update(input: EdmDriveInput, snap: EdmSnapshot, audioTime: number) {
       if (!started) return;
@@ -382,6 +419,18 @@ export function createViralEdm(
       try {
         dropBus.gain.setTargetAtTime(Math.max(0.0001, snap.dropGain), audioTime, 0.04);
         melBus.gain.setTargetAtTime(Math.max(0.0001, snap.melodicGain), audioTime, 0.08);
+        const useMelodic = snap.phase === "melodic" ? 1 : 0;
+        pianoBedGain.gain.setTargetAtTime(Math.max(0.0001, 1 - useMelodic), audioTime, 0.08);
+        pianoMelGain.gain.setTargetAtTime(Math.max(0.0001, useMelodic), audioTime, 0.08);
+        choirBedGain.gain.setTargetAtTime(Math.max(0.0001, 1 - useMelodic), audioTime, 0.08);
+        choirMelGain.gain.setTargetAtTime(Math.max(0.0001, useMelodic), audioTime, 0.08);
+        const pianoTau = snap.lastBarOfBuild ? 0.04 : 0.1;
+        pianoBus.gain.setTargetAtTime(
+          Math.max(0.0001, snap.acousticPianoGain),
+          audioTime,
+          pianoTau,
+        );
+        choirBus.gain.setTargetAtTime(Math.max(0.0001, snap.choirGain), audioTime, 0.1);
       } catch {
         late += 1;
       }
@@ -450,6 +499,14 @@ export function createViralEdm(
         dropBus.disconnect();
         dropDuck.disconnect();
         melBus.disconnect();
+        pianoBus.disconnect();
+        choirBus.disconnect();
+        pianoBedGain.disconnect();
+        pianoMelGain.disconnect();
+        choirBedGain.disconnect();
+        choirMelGain.disconnect();
+        pianoDuck.disconnect();
+        choirDuck.disconnect();
         melDuck.disconnect();
       } catch {
         /* */

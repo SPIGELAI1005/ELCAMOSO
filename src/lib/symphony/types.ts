@@ -217,6 +217,9 @@ export interface SymphonyDiagnostics {
     buildProgress: number;
     scheduledAt: number | null;
     phaseEndsAt: number | null;
+    acousticPianoGain?: number;
+    choirGain?: number;
+    lastBarOfBuild?: boolean;
   };
 }
 

@@ -3,6 +3,8 @@ import {
   VIRAL_EDM_CONFIG,
   applyStemScale,
   createEdmMachine,
+  acousticPianoGain,
+  choirGain,
   kitGainFromSpeed,
   nextPhraseTime,
   phraseStartIfEarly,
@@ -108,5 +110,46 @@ describe("Viral Mix EDM form", () => {
     expect(out.piano).toBeCloseTo(0.5);
     expect(out.cello).toBeCloseTo(0.5);
     expect(out.lead).toBeCloseTo(0.2);
+  });
+});
+
+describe("acoustic piano and choir gates", () => {
+  it("brings the acoustic piano in softly between 30 and 50 km/h", () => {
+    expect(acousticPianoGain(20, "cruise", "bed", false)).toBe(0);
+    expect(acousticPianoGain(40, "cruise", "bed", false)).toBeGreaterThan(0.3);
+    expect(acousticPianoGain(40, "cruise", "bed", false)).toBeLessThan(0.85);
+    expect(acousticPianoGain(55, "cruise", "bed", false)).toBeGreaterThan(0.8);
+  });
+
+  it("features the piano in the melodic section and on the last build bar", () => {
+    const bed = acousticPianoGain(120, "cruise", "bed", false);
+    const solo = acousticPianoGain(150, "energetic", "build", true);
+    const melodic = acousticPianoGain(150, "cruise", "melodic", false);
+    const drop = acousticPianoGain(150, "energetic", "drop", false);
+    expect(solo).toBeGreaterThan(bed);
+    expect(melodic).toBeGreaterThan(bed);
+    expect(melodic).toBeGreaterThan(drop);
+  });
+
+  it("keeps the choir out until highway and swells it through the build into a loud drop", () => {
+    expect(choirGain(50, "cruise", "bed", 0, false)).toBe(0);
+    expect(choirGain(100, "cruise", "bed", 0, false)).toBeGreaterThan(0.2);
+    const early = choirGain(140, "energetic", "build", 0.1, false);
+    const late = choirGain(160, "energetic", "build", 0.9, false);
+    const drop = choirGain(180, "energetic", "drop", 0, false);
+    const last = choirGain(170, "energetic", "build", 0.95, true);
+    expect(late).toBeGreaterThan(early);
+    expect(drop).toBeGreaterThan(late);
+    expect(drop).toBeGreaterThan(1.5);
+    expect(last).toBeLessThan(early);
+  });
+
+  it("strips piano and choir back when slowing in the bed", () => {
+    const cruise = acousticPianoGain(80, "cruise", "bed", false);
+    const decel = acousticPianoGain(80, "decelerating", "bed", false);
+    expect(decel).toBeLessThan(cruise);
+    expect(choirGain(100, "decelerating", "bed", 0, false)).toBeLessThan(
+      choirGain(100, "cruise", "bed", 0, false),
+    );
   });
 });

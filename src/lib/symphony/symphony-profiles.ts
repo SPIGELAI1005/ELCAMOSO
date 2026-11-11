@@ -143,7 +143,7 @@ export const SYMPHONY_SOUND_PROFILES: SoundProfile[] = [
     category: "Musical",
     traits: ["Stadium", "Accordion", "Chant"],
     description:
-      "Original stadium anthem in C# minor at 120 BPM. A stomp-stomp-clap beat, accordion hook and ElCA / MOSO chant build with your speed, then a festival drum build-up drops into a big-room hook and a more melodic high-speed section.",
+      "Original stadium anthem in C# minor at 120 BPM. A stomp-stomp-clap beat, accordion hook and ElCA / MOSO chant build with your speed, then a festival drum build-up drops into a big-room hook and a more melodic high-speed section, with an acoustic-piano melody and a loud choir.",
     drivetrainMode: "continuous",
     motionModel: "ambient",
     sourceMode: "hybrid",

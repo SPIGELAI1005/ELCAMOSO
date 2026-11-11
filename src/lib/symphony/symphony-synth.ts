@@ -194,6 +194,9 @@ export class SymphonySynth {
             buildProgress: this.lastEdmSnap.buildProgress,
             scheduledAt: this.lastEdmSnap.scheduledAt,
             phaseEndsAt: this.lastEdmSnap.phaseEndsAt,
+            acousticPianoGain: this.lastEdmSnap.acousticPianoGain,
+            choirGain: this.lastEdmSnap.choirGain,
+            lastBarOfBuild: this.lastEdmSnap.lastBarOfBuild,
           }
         : undefined,
     };

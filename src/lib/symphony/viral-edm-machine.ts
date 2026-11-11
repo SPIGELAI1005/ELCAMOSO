@@ -57,6 +57,8 @@ export interface EdmSnapshot {
   kitGate: number;
   dropGain: number;
   melodicGain: number;
+  acousticPianoGain: number;
+  choirGain: number;
 }
 
 const OPEN_HP = 30;
@@ -160,6 +162,57 @@ export function kitGainFromSpeed(kmh: number, movement: MovementState): number {
   return movement === "decelerating" ? s * 0.35 : s;
 }
 
+/** Soft acoustic-piano entry 30–50 km/h; featured after the drop and on the last build bar. */
+export function acousticPianoGain(
+  kmh: number,
+  movement: MovementState,
+  phase: EdmPhase,
+  lastBarOfBuild: boolean,
+): number {
+  let gate = 0;
+  if (kmh <= 30) gate = 0;
+  else if (kmh >= 50) gate = 1;
+  else {
+    const u = (kmh - 30) / 20;
+    gate = u * u * (3 - 2 * u);
+  }
+  if (movement === "decelerating" && phase === "bed") gate *= 0.45;
+  let scale = 0.85;
+  if (lastBarOfBuild) scale = 1.55;
+  else if (phase === "melodic") scale = 1.45;
+  else if (phase === "build") scale = 1.05;
+  else if (phase === "drop") scale = 0.7;
+  return gate * scale;
+}
+
+/**
+ * Choir enters around highway (~88–120 km/h), swells through the build,
+ * and hits full power on the drop and melodic section.
+ */
+export function choirGain(
+  kmh: number,
+  movement: MovementState,
+  phase: EdmPhase,
+  buildProgress: number,
+  lastBarOfBuild: boolean,
+): number {
+  let gate = 0;
+  if (kmh <= 88) gate = 0;
+  else if (kmh >= 120) gate = 1;
+  else {
+    const u = (kmh - 88) / 32;
+    gate = u * u * (3 - 2 * u);
+  }
+  if (movement === "decelerating" && phase === "bed") gate *= 0.3;
+  if (phase === "drop") return gate * 2.45;
+  if (phase === "melodic") return gate * 2.15;
+  if (phase === "build") {
+    if (lastBarOfBuild) return gate * 0.6;
+    return gate * (1.3 + 1.1 * Math.min(1, Math.max(0, buildProgress)));
+  }
+  return gate * 1.2;
+}
+
 export function createEdmMachine(config: EdmConfig = VIRAL_EDM_CONFIG) {
   let phase: EdmPhase = "bed";
   let scheduledPhase: EdmPhase | null = null;
@@ -243,6 +296,8 @@ export function createEdmMachine(config: EdmConfig = VIRAL_EDM_CONFIG) {
       kitGate,
       dropGain: phase === "drop" ? 0.6 : 0,
       melodicGain: phase === "melodic" ? 1 : 0,
+      acousticPianoGain: acousticPianoGain(input.kmh, input.movement, phase, lastBarOfBuild),
+      choirGain: choirGain(input.kmh, input.movement, phase, buildProgress, lastBarOfBuild),
     };
   }
 
