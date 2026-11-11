@@ -1,8 +1,8 @@
 /**
  * Viral Epic Party light show: beat-synced colour wash on the Drive page.
  * Palette is hot pink, violet, electric cyan and gold. Never white, no hard
- * strobe — soft cosine fades only. Peak brightness 60% by default, 85% max.
- * Off under reduced motion.
+ * strobe — soft cosine fades only. A header ON/OFF toggle (default ON)
+ * runs the show at 60% peak. Off under reduced motion.
  *
  * Screen-edge glows stay as a soft colour wash. The per-section light show
  * also plays through the background stage fixtures, clipped above the car
@@ -30,9 +30,12 @@ export const VIRAL_PARTY_ROLL_KMH = VIRAL_MIX_PACK.speedGates!.piano!.inKmh;
 /** ElCA / MOSO chant gate (cello stem). */
 export const VIRAL_PARTY_CHANT_KMH = VIRAL_MIX_PACK.speedGates!.cello!.inKmh;
 
-export type ViralPartyLightLevel = "off" | "60" | "85";
-export const VIRAL_PARTY_LIGHT_LEVELS: readonly ViralPartyLightLevel[] = ["60", "85", "off"];
+/** Stored as "on" / "off". Legacy "60" and "85" values still read as on. */
 const STORAGE_KEY = "elcamoso.viral-party.lights";
+/** Peak brightness while the Light Show toggle is on. */
+export const VIRAL_PARTY_LIGHT_ON_PEAK = 0.6;
+
+const lightOnListeners = new Set<() => void>();
 
 export type ViralPartyColor = "pink" | "violet" | "cyan" | "gold";
 export const VIRAL_PARTY_COLOR_NAMES: readonly ViralPartyColor[] = [
@@ -98,35 +101,41 @@ export function emptyColorMix(): ColorMix {
   return { pink: 0, violet: 0, cyan: 0, gold: 0 };
 }
 
-export function viralPartyLightOpacity(level: ViralPartyLightLevel): number {
-  return level === "85" ? 0.85 : level === "60" ? 0.6 : 0;
+export function viralPartyLightPeak(on: boolean): number {
+  return on ? VIRAL_PARTY_LIGHT_ON_PEAK : 0;
 }
 
-export function nextViralPartyLightLevel(level: ViralPartyLightLevel): ViralPartyLightLevel {
-  const i = VIRAL_PARTY_LIGHT_LEVELS.indexOf(level);
-  return VIRAL_PARTY_LIGHT_LEVELS[(i + 1) % VIRAL_PARTY_LIGHT_LEVELS.length]!;
-}
-
-export function getViralPartyLightLevel(
+/** True unless the user has stored "off". Missing / legacy "60" / "85" count as on. */
+export function isViralPartyLightOn(
   storage: Storage | undefined = globalThis.localStorage,
-): ViralPartyLightLevel {
+): boolean {
   try {
     const v = storage?.getItem(STORAGE_KEY);
-    return v === "off" || v === "85" || v === "60" ? v : "60";
+    return v !== "off";
   } catch {
-    return "60";
+    return true;
   }
 }
 
-export function setViralPartyLightLevel(
-  level: ViralPartyLightLevel,
+export function setViralPartyLightOn(
+  on: boolean,
   storage: Storage | undefined = globalThis.localStorage,
 ): void {
   try {
-    storage?.setItem(STORAGE_KEY, level);
+    storage?.setItem(STORAGE_KEY, on ? "on" : "off");
   } catch {
     /* private mode */
   }
+  setViralPartyLivePeak(viralPartyLightPeak(on));
+  for (const listener of lightOnListeners) listener();
+}
+
+/** Subscribe to Light Show on/off changes (used by the header toggle and the show). */
+export function subscribeViralPartyLightOn(listener: () => void): () => void {
+  lightOnListeners.add(listener);
+  return () => {
+    lightOnListeners.delete(listener);
+  };
 }
 
 export function resolveViralPartySection(phase: ViralEdmReadPhase, kmh: number): ViralPartySection {

@@ -42,6 +42,7 @@ import { PoliceLightShow } from "@/components/drive/PoliceLightShow";
 import { PoliceRoofLights } from "@/components/drive/PoliceRoofLights";
 import { ViralPartyStageLights } from "@/components/drive/ViralPartyStageLights";
 import { ViralPartyLightShow } from "@/components/drive/ViralPartyLightShow";
+import { ViralPartyLightToggle } from "@/components/drive/ViralPartyLightToggle";
 import { DriveGenreSubtitle } from "@/components/drive/DriveGenreSubtitle";
 import { DriveCarFx } from "@/components/drive/DriveCarFx";
 import { DriveGallopVideo } from "@/components/drive/DriveGallopVideo";
@@ -601,6 +602,9 @@ export function DriveCockpit({
             </button>
           </div>
           <NoiseMaskingDriveToggle previewAllowed={noiseMaskingPreviewAllowed} />
+          {profile.id === VIRAL_PARTY_LIGHT_PROFILE_ID ? (
+            <ViralPartyLightToggle reducedMotion={reducedMotion} />
+          ) : null}
         </div>
       </header>
 

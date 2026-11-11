@@ -16,13 +16,13 @@ import {
   cosineFade,
   cosineWindow,
   fallbackViralPartyClock,
-  getViralPartyLightLevel,
-  nextViralPartyLightLevel,
+  isViralPartyLightOn,
   resolveViralPartySection,
-  setViralPartyLightLevel,
+  setViralPartyLightOn,
   viralPartyClockAt,
   viralPartyLightFrame,
-  viralPartyLightOpacity,
+  viralPartyLightPeak,
+  VIRAL_PARTY_LIGHT_ON_PEAK,
   type ColorMix,
   type ViralPartyLightFrame,
   type ViralPartyLightParams,
@@ -93,25 +93,38 @@ function frameAt(
 }
 
 describe("Viral Epic Party light levels", () => {
-  it("defaults to 60%, caps at 85%, and is off when set off", () => {
-    expect(viralPartyLightOpacity("60")).toBe(0.6);
-    expect(viralPartyLightOpacity("85")).toBe(0.85);
-    expect(viralPartyLightOpacity("off")).toBe(0);
-    expect(nextViralPartyLightLevel("60")).toBe("85");
-    expect(nextViralPartyLightLevel("85")).toBe("off");
-    expect(nextViralPartyLightLevel("off")).toBe("60");
+  it("is on by default at 60% peak, and off when toggled off", () => {
+    expect(viralPartyLightPeak(true)).toBe(VIRAL_PARTY_LIGHT_ON_PEAK);
+    expect(VIRAL_PARTY_LIGHT_ON_PEAK).toBe(0.6);
+    expect(viralPartyLightPeak(false)).toBe(0);
+    const storage = memoryStorage();
+    expect(isViralPartyLightOn(storage)).toBe(true);
+    setViralPartyLightOn(false, storage);
+    expect(isViralPartyLightOn(storage)).toBe(false);
+    setViralPartyLightOn(true, storage);
+    expect(isViralPartyLightOn(storage)).toBe(true);
+    expect(storage.getItem("elcamoso.viral-party.lights")).toBe("on");
   });
 
   it("persists on its own localStorage key and does not touch Police Patrol", () => {
     const storage = memoryStorage();
-    expect(getViralPartyLightLevel(storage)).toBe("60");
-    setViralPartyLightLevel("85", storage);
-    expect(getViralPartyLightLevel(storage)).toBe("85");
+    expect(isViralPartyLightOn(storage)).toBe(true);
+    setViralPartyLightOn(false, storage);
     setPoliceLightLevel("off", storage);
-    expect(getViralPartyLightLevel(storage)).toBe("85");
+    expect(isViralPartyLightOn(storage)).toBe(false);
     expect(policeLightOpacity("off")).toBe(0);
-    expect(storage.getItem("elcamoso.viral-party.lights")).toBe("85");
+    expect(storage.getItem("elcamoso.viral-party.lights")).toBe("off");
     expect(storage.getItem("elcamoso.police.lights")).toBe("off");
+  });
+
+  it("treats legacy 60 and 85 storage values as on", () => {
+    const storage = memoryStorage();
+    storage.setItem("elcamoso.viral-party.lights", "60");
+    expect(isViralPartyLightOn(storage)).toBe(true);
+    storage.setItem("elcamoso.viral-party.lights", "85");
+    expect(isViralPartyLightOn(storage)).toBe(true);
+    storage.setItem("elcamoso.viral-party.lights", "off");
+    expect(isViralPartyLightOn(storage)).toBe(false);
   });
 
   it("never puts white in the palette", () => {

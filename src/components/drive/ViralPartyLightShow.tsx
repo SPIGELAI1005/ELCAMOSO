@@ -1,16 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import {
-  getViralPartyLightLevel,
-  nextViralPartyLightLevel,
-  setViralPartyLightLevel,
+  isViralPartyLightOn,
   setViralPartyLivePeak,
+  subscribeViralPartyLightOn,
   viralPartyFrameAt,
-  viralPartyLightOpacity,
+  viralPartyLightPeak,
   VIRAL_PARTY_COLORS,
   VIRAL_PARTY_CONFETTI_COUNT,
   type ColorMix,
   type ViralPartyColor,
-  type ViralPartyLightLevel,
 } from "@/lib/drive/viral-party-lights";
 import { cn } from "@/lib/utils";
 import "./viral-party-lights.css";
@@ -21,12 +19,6 @@ interface ViralPartyLightShowProps {
   reducedMotion: boolean;
   className?: string;
 }
-
-const LABEL: Record<ViralPartyLightLevel, string> = {
-  "60": "Lights 60%",
-  "85": "Lights 85%",
-  off: "Lights off",
-};
 
 const EDGE_GRADIENT: Record<"left" | "right" | "top" | "bottom", string> = {
   left: "ellipse at left",
@@ -76,7 +68,7 @@ function applyMix(nodes: Record<ViralPartyColor, HTMLDivElement | null>, mix: Co
 
 /** Soft edge wash + brightness toggle for Viral Epic Party, beat-synced in rAF. */
 export function ViralPartyLightShow({ speed, reducedMotion, className }: ViralPartyLightShowProps) {
-  const [level, setLevel] = useState<ViralPartyLightLevel>("60");
+  const [on, setOn] = useState(true);
   const rootRef = useRef<HTMLDivElement>(null);
   const climbRef = useRef<HTMLDivElement>(null);
   const confettiRef = useRef<HTMLDivElement>(null);
@@ -101,9 +93,13 @@ export function ViralPartyLightShow({ speed, reducedMotion, className }: ViralPa
     >,
   });
 
-  useEffect(() => setLevel(getViralPartyLightLevel()), []);
+  useEffect(() => {
+    const sync = () => setOn(isViralPartyLightOn());
+    sync();
+    return subscribeViralPartyLightOn(sync);
+  }, []);
 
-  const peak = reducedMotion ? 0 : viralPartyLightOpacity(level);
+  const peak = reducedMotion ? 0 : viralPartyLightPeak(on);
 
   useEffect(() => {
     setViralPartyLivePeak(peak);
@@ -193,21 +189,6 @@ export function ViralPartyLightShow({ speed, reducedMotion, className }: ViralPa
           </div>
         </div>
       ) : null}
-      {reducedMotion ? null : (
-        <button
-          type="button"
-          onClick={() => {
-            const next = nextViralPartyLightLevel(level);
-            setLevel(next);
-            setViralPartyLightLevel(next);
-          }}
-          className="fixed bottom-[max(0.75rem,env(safe-area-inset-bottom))] left-3 z-[2] rounded-full border border-border bg-background/70 px-3 py-1.5 text-[11px] text-muted-foreground backdrop-blur"
-          aria-label={`Viral Epic Party lights: ${LABEL[level]}. Tap to change.`}
-          data-testid="viral-party-light-toggle"
-        >
-          {LABEL[level]}
-        </button>
-      )}
     </>
   );
 }
