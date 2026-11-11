@@ -40,10 +40,13 @@ import { useFeatureAccess } from "@/lib/entitlements/selectors";
 import { DriveProfileBackdrop } from "@/components/drive/DriveProfileBackdrop";
 import { PoliceLightShow } from "@/components/drive/PoliceLightShow";
 import { PoliceRoofLights } from "@/components/drive/PoliceRoofLights";
+import { ViralPartyCarLights } from "@/components/drive/ViralPartyCarLights";
+import { ViralPartyLightShow } from "@/components/drive/ViralPartyLightShow";
 import { DriveGenreSubtitle } from "@/components/drive/DriveGenreSubtitle";
 import { DriveCarFx } from "@/components/drive/DriveCarFx";
 import { DriveGallopVideo } from "@/components/drive/DriveGallopVideo";
 import { POLICE_LIGHT_PROFILE_ID } from "@/lib/drive/police-lights";
+import { VIRAL_PARTY_LIGHT_PROFILE_ID } from "@/lib/drive/viral-party-lights";
 import {
   getProfile,
   PROFILE_CATEGORIES,
@@ -516,6 +519,20 @@ export function DriveCockpit({
       ) : null}
       {profile.id === POLICE_LIGHT_PROFILE_ID ? (
         <PoliceLightShow speed={driveState.speed} reducedMotion={reducedMotion} className="z-0" />
+      ) : null}
+      {profile.id === VIRAL_PARTY_LIGHT_PROFILE_ID ? (
+        <ViralPartyCarLights
+          speed={driveState.speed}
+          reducedMotion={reducedMotion}
+          className="z-0"
+        />
+      ) : null}
+      {profile.id === VIRAL_PARTY_LIGHT_PROFILE_ID ? (
+        <ViralPartyLightShow
+          speed={driveState.speed}
+          reducedMotion={reducedMotion}
+          className="z-0"
+        />
       ) : null}
 
       <header className="drive-cockpit__header relative z-[1] grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-start gap-2 sm:gap-3">

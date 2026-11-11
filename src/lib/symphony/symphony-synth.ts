@@ -18,6 +18,11 @@ import {
   type EdmMachine,
   type EdmSnapshot,
 } from "./viral-edm-machine";
+import {
+  clearViralEdmTransport,
+  publishViralEdmTransport,
+  VIRAL_EDM_LIGHTS_PACK_ID,
+} from "./viral-edm-read";
 
 export class SymphonySynth {
   private pack: SymphonyPack | null = null;
@@ -154,6 +159,33 @@ export class SymphonySynth {
       );
       this.techno.schedule(audioTime);
     }
+    if (this.pack?.id === VIRAL_EDM_LIGHTS_PACK_ID && this.clock) {
+      const clockSnap = this.clock.snapshot(audioTime);
+      const perfNow =
+        typeof performance !== "undefined" && typeof performance.now === "function"
+          ? performance.now()
+          : Date.now();
+      publishViralEdmTransport({
+        packId: this.pack.id,
+        audioTime,
+        origin: this.clock.origin,
+        perfNow,
+        bpm: clockSnap.bpm,
+        beatsPerBar: clockSnap.beatsPerBar,
+        barsPerLoop: clockSnap.barsPerLoop,
+        beatDuration: clockSnap.beatDuration,
+        barDuration: clockSnap.barDuration,
+        beatPhase: clockSnap.beatPhase,
+        bar: clockSnap.bar,
+        beat: clockSnap.beat,
+        absoluteBeat: clockSnap.absoluteBeat,
+        phase: edmSnap?.phase ?? "bed",
+        barsIntoPhase: edmSnap?.barsIntoPhase ?? 0,
+        buildProgress: edmSnap?.buildProgress ?? 0,
+        lastBarOfBuild: edmSnap?.lastBarOfBuild ?? false,
+        kmh: state.speed * 3.6,
+      });
+    }
   }
 
   getEnergy(): DriveEnergyState | null {
@@ -203,6 +235,9 @@ export class SymphonySynth {
   }
 
   dispose() {
+    if (this.pack?.id === VIRAL_EDM_LIGHTS_PACK_ID) {
+      clearViralEdmTransport(this.pack.id);
+    }
     this.edm?.dispose();
     this.edm = null;
     this.edmMachine = null;
