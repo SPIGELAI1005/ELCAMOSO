@@ -16,6 +16,7 @@ const SIGNATURE_GENRES: Readonly<Record<string, GenreId>> = {
   "symphony-jazz-cruise": "jazz",
   "symphony-cinematic-rock": "cinrock",
   "bollywood-rickshaw": "bwood",
+  "symphony-viral-mix": "viralmix",
 };
 
 /** True when the profile always plays its own genre (picker ignored). */

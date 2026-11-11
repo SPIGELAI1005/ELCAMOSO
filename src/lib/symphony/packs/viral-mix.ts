@@ -5,18 +5,18 @@ const PACK_ID = "symphony-viral-mix";
 const stem = developmentSymphonyStem.bind(null, PACK_ID);
 
 /**
- * Viral Mix - 140 BPM. Original motion-responsive electronic profile.
- * Texture: spacious ethereal pads, crystalline bell lead, warm sub-bass,
- * bouncy staccato plucks on acceleration. Dreamy/mysterious mood.
- * Motion: low speed = spacious bells/pads; acceleration = rhythmic plucks;
- * cruise = fuller groove while preserving synth-led character.
+ * Viral Mix - 108 BPM, C# minor. Original motion-responsive disco-club profile.
+ * The live Drive path is the Adaptive Music signature genre `viralmix`
+ * (see genres.ts). This pack stays registered but is not the playback engine.
+ * Texture: warm pads, pulsing sub/bass, modest kick, offbeat hats, organ stabs,
+ * original synth hook. Motion: idle = pads; cruise = bass + kick + hats; pace opens claps, organ and lead.
  */
 export const VIRAL_MIX_PACK: SymphonyPack = {
   id: PACK_ID,
   name: "Viral Mix",
-  tagline: "Bells · Pads · Sub · Plucks",
-  bpm: 140,
-  key: "F minor",
+  tagline: "Kick · Bass · Pads · Organ",
+  bpm: 108,
+  key: "C# minor",
   beatsPerBar: 4,
   barsPerLoop: 8,
   packGain: 0.48,
@@ -95,7 +95,8 @@ export const VIRAL_MIX_PACK: SymphonyPack = {
   ],
   licensing: {
     source: "procedural_placeholder",
-    notes: "Original procedural electronic profile - dreamy synth-led motion-responsive music.",
-    version: "1.0.0",
+    notes:
+      "Original procedural disco-club profile. Live path is the viralmix adaptive genre; this pack is not shipped as audio.",
+    version: "2.0.0",
   },
 };

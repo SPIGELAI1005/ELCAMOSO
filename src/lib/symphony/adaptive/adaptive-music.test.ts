@@ -146,6 +146,9 @@ describe("adaptive timeline", () => {
     expect(resolveGenre("fusion-road-anthem", "house")).toBe("anthem");
     expect(resolveGenre("fusion-midnight-boost", "waltz")).toBe("darkrave");
     expect(resolveGenre("fusion-midnight-boost", "auto")).toBe("darkrave");
+    expect(resolveGenre("symphony-viral-mix", "auto")).toBe("viralmix");
+    expect(resolveGenre("symphony-viral-mix", "classic")).toBe("viralmix");
+    expect(resolveGenre("symphony-viral-mix", "house")).toBe("viralmix");
   });
 });
 

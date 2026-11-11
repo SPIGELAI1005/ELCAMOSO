@@ -90,7 +90,8 @@ export const SYMPHONY_SOUND_PROFILES: SoundProfile[] = [
       detune: 0,
       coreLevel: 0.5,
     },
-  },  {
+  },
+  {
     id: "symphony-piano-flow",
     name: "Piano Flow",
     category: "Musical",
@@ -112,7 +113,8 @@ export const SYMPHONY_SOUND_PROFILES: SoundProfile[] = [
       detune: 0,
       coreLevel: 0.5,
     },
-  },  {
+  },
+  {
     id: "symphony-jazz-cruise",
     name: "Jazz Cruise",
     category: "Musical",
@@ -139,9 +141,9 @@ export const SYMPHONY_SOUND_PROFILES: SoundProfile[] = [
     id: "symphony-viral-mix",
     name: "Viral Mix",
     category: "Musical",
-    traits: ["Electronic", "Ethereal", "Dreamy"],
+    traits: ["Electronic", "Disco", "Club"],
     description:
-      "An original 140 bpm electronic piece: stationary is spacious bells over ethereal pads, cruising adds sub-bass and staccato plucks, and real pace brings the full groove while keeping the synth-led character.",
+      "An original 108 bpm disco-club groove in C# minor: stationary is a warm pad and sub swell, cruising adds a pulsing bass and four-on-the-floor kick with offbeat hats, and real pace opens claps, organ stabs and a short original synth hook.",
     drivetrainMode: "continuous",
     motionModel: "ambient",
     sourceMode: "hybrid",

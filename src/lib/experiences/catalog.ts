@@ -198,14 +198,15 @@ const SYMPHONY_SHELLS: readonly ExperienceDescriptor[] = [
     id: "symphony-viral-mix",
     kind: "symphony",
     name: "Viral Mix",
-    tagline: "Bells · Pads · Sub · Plucks",
-    description: "Ethereal electronic with crystal bells and motion-responsive plucks.",
+    tagline: "Kick · Bass · Pads · Organ",
+    description:
+      "Original 108 BPM disco-club groove in C# minor: pads at rest, then pulsing bass, kick, hats and organ as you pick up speed.",
     artworkStyle: "score",
     entitlement: "drive_plus",
     previewMode: "playable",
     capabilities: {
       profileId: "symphony-viral-mix",
-      stems: ["Bells", "Pads", "Sub", "Plucks"],
+      stems: ["Kick", "Bass", "Pads", "Organ"],
       selectableInDrive: true,
       requiredEntitlement: "symphony_all",
     },
