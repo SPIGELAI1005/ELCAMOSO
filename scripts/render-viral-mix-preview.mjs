@@ -228,7 +228,7 @@ async function main() {
           genre,
           signature,
           makeupDb,
-          profileName: "Viral Mix",
+          profileName: "Viral Epic Party",
           backendAtStart: buildup.backend,
           diagAtStart: buildup.diag,
           segments: {

@@ -68,6 +68,7 @@ const PROFILE_IDS_WITH_HERO = [
   "symphony-latino-fiesta",
   "symphony-piano-flow",
   "symphony-jazz-cruise",
+  "symphony-viral-mix",
   "traby",
   "bollywood-rickshaw",
   "classic-vespa",
@@ -96,12 +97,18 @@ export function profileHeroImageSrc(profileId: string | null | undefined): strin
   return PROFILE_HERO_SRC_OVERRIDES[profileId] ?? `${HERO_BASE}/${profileId}.png`;
 }
 
+const PROFILE_HERO_ALT_LABEL: Record<string, string> = {
+  "symphony-viral-mix": "Viral Epic Party",
+};
+
 /** Accessible / SEO-friendly alt for a curated hero still. */
 export function profileHeroImageAlt(profileId: string): string {
-  const label = profileId
-    .replace(/^(world|symphony|fusion)-/, "")
-    .replace(/-/g, " ")
-    .replace(/\b\w/g, (c) => c.toUpperCase());
+  const label =
+    PROFILE_HERO_ALT_LABEL[profileId] ??
+    profileId
+      .replace(/^(world|symphony|fusion)-/, "")
+      .replace(/-/g, " ")
+      .replace(/\b\w/g, (c) => c.toUpperCase());
   return `ELCAMOSO ${label} sound experience - turn motion into sound`;
 }
 
@@ -176,7 +183,8 @@ export function driveGenreBackdropSrc(
   choice: string,
   hasSignature: (id: string) => boolean,
 ): string | null {
-  if (!profileId?.startsWith("symphony-") || hasSignature(profileId) || choice === "auto") return null;
+  if (!profileId?.startsWith("symphony-") || hasSignature(profileId) || choice === "auto")
+    return null;
   if (DEDICATED_HERO_PROFILES.has(profileId)) return null;
   return genreHeroImageSrc(choice);
 }

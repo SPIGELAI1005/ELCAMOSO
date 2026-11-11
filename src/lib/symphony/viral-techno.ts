@@ -85,7 +85,7 @@ function envGain(ctx: BaseAudioContext, at: number, peak: number, attack: number
 }
 
 /**
- * Web-Audio techno overlay for Viral Mix. Notes are scheduled against the
+ * Web-Audio techno overlay for Viral Epic Party. Notes are scheduled against the
  * pack clock (107.666 BPM, 4-bar i–i–i–III). No extra sample assets.
  */
 export function createViralTechno(

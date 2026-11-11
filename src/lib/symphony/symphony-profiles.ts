@@ -139,7 +139,7 @@ export const SYMPHONY_SOUND_PROFILES: SoundProfile[] = [
   },
   {
     id: "symphony-viral-mix",
-    name: "Viral Mix",
+    name: "Viral Epic Party",
     category: "Musical",
     traits: ["Stadium", "Accordion", "Chant"],
     description:

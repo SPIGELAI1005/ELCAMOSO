@@ -29,7 +29,7 @@ function input(
   };
 }
 
-describe("Viral Mix EDM form", () => {
+describe("Viral Epic Party EDM form", () => {
   it("aligns phrase starts to 8-bar (16 s) downbeats", () => {
     expect(nextPhraseTime(1, origin, bar, 8)).toBeCloseTo(origin + 16, 5);
     expect(nextPhraseTime(16.02, origin, bar, 8)).toBeCloseTo(origin + 32, 5);

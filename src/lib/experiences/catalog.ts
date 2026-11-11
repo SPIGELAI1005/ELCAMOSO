@@ -197,7 +197,7 @@ const SYMPHONY_SHELLS: readonly ExperienceDescriptor[] = [
   {
     id: "symphony-viral-mix",
     kind: "symphony",
-    name: "Viral Mix",
+    name: "Viral Epic Party",
     tagline: "Stadium Beat · Accordion · Build / Drop",
     description:
       "Original stadium anthem in C# minor at 120 BPM. A stomp-stomp-clap beat, accordion hook and ElCA / MOSO chant build with your speed, then a festival drum build-up drops into a big-room hook and a more melodic high-speed section, with an acoustic-piano melody and a loud choir.",

@@ -29,7 +29,7 @@ describe("Symphony per-asset governance", () => {
     }
   });
 
-  it("marks the original Viral Mix pack as production-ready", () => {
+  it("marks the original Viral Epic Party pack as production-ready", () => {
     const pack = listSymphonyPacks().find((entry) => entry.id === "symphony-viral-mix");
     expect(pack).toBeDefined();
     const audit = auditSymphonyAssets(pack!);
