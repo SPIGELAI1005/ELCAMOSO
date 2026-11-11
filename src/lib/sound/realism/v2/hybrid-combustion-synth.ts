@@ -109,6 +109,60 @@ export interface HybridBuildOptions {
    * Used when this synth is mixed as a secondary layer under another profile.
    */
   continuousOnly?: boolean;
+  /** CPU tuning for car browsers; omit for unchanged behaviour (see engine-perf.ts). */
+  perf?: HybridPerfOptions | null;
+}
+
+/**
+ * Cost-only tuning (Tesla / low-power browsers). None of these change the intended voice:
+ * the same nodes, levels and curves play, they are just evaluated more cheaply.
+ */
+export interface HybridPerfOptions {
+  /**
+   * Biquad frequency / Q / gain automation evaluated once per 128-sample render quantum
+   * (k-rate, ~2.7 ms) instead of per sample. Chrome recomputes biquad coefficients for every
+   * sample while an a-rate param is automating, which is ~3x the cost of a static filter.
+   */
+  kRateFilters?: boolean;
+  /**
+   * Secondary layer under another profile (Big Twin under Muscle V8): one grain stream per
+   * recorded source instead of two decorrelated ones, at equal power.
+   */
+  layerLite?: boolean;
+  /** Low-power device: 2x (not 4x) output limiter oversampling. */
+  lowPower?: boolean;
+  /** Grain scheduling look-ahead in seconds (main-thread stall tolerance). */
+  grainLookaheadS?: number;
+}
+
+/** Run `fn` with every biquad the context creates switched to k-rate automation. */
+function withKRateBiquads<T>(ctx: BaseAudioContext, enabled: boolean, fn: () => T): T {
+  if (!enabled || typeof ctx.createBiquadFilter !== "function") return fn();
+  const target = ctx as BaseAudioContext & { createBiquadFilter: () => BiquadFilterNode };
+  const hadOwn = Object.prototype.hasOwnProperty.call(target, "createBiquadFilter");
+  const original = target.createBiquadFilter;
+  target.createBiquadFilter = function createKRateBiquad(this: BaseAudioContext) {
+    const filter = original.call(target);
+    setKRate(filter);
+    return filter;
+  };
+  try {
+    return fn();
+  } finally {
+    if (hadOwn) target.createBiquadFilter = original;
+    else delete (target as { createBiquadFilter?: unknown }).createBiquadFilter;
+  }
+}
+
+function setKRate(filter: BiquadFilterNode) {
+  for (const param of [filter.frequency, filter.Q, filter.gain, filter.detune]) {
+    if (!param || !("automationRate" in param)) continue;
+    try {
+      param.automationRate = "k-rate";
+    } catch {
+      /* not supported: stays a-rate */
+    }
+  }
 }
 
 export interface HybridCombustionDiagnostics {
@@ -482,6 +536,25 @@ export class HybridCombustionSynth {
     buses: StrategyBuses,
     options?: HybridBuildOptions,
   ): boolean {
+    this.perf = options?.perf ?? null;
+    return withKRateBiquads(ctx, this.perf?.kRateFilters === true, () =>
+      this.buildGraph(ctx, profile, buses, options),
+    );
+  }
+
+  /** Performance tuning applied at build (diagnostics / tests). */
+  getPerfOptions(): HybridPerfOptions | null {
+    return this.perf;
+  }
+
+  private perf: HybridPerfOptions | null = null;
+
+  private buildGraph(
+    ctx: BaseAudioContext,
+    profile: SoundProfile,
+    buses: StrategyBuses,
+    options?: HybridBuildOptions,
+  ): boolean {
     this.dispose();
     this.disposed = false;
     this.shiftConsumer.reset();
@@ -761,7 +834,8 @@ export class HybridCombustionSynth {
       limiter.curve = makeSamplePeakCeilingCurve(
         OUTPUT_PEAK_CEILING_LINEAR,
       ) as Float32Array<ArrayBuffer>;
-      limiter.oversample = "4x";
+      // Low-power devices use 2x: the curve is linear below the knee, so only clipped peaks differ.
+      limiter.oversample = this.perf?.lowPower ? "2x" : "4x";
       // Route all engine output through the limiter (via the synth match-EQ when the
       // personality has recorded material, so the synth sounds like the same engine).
       let into: AudioNode = limiter;
@@ -1108,16 +1182,25 @@ export class HybridCombustionSynth {
     // Spec §NEW-D: Lower Q values reduce filter ringing that can cause click artifacts.
     // Click regression fix: further reduced Q for softer transients.
     // Shift: Q 0.9→0.75; Thump: Q 1.2→1.0; Pop: Q 1.3→1.1
-    this.voices = {
-      shift: makeVoice("shift", "pink", "bandpass", 760, 0.75),
-      thump: makeVoice("thump", "brown", "lowpass", 160, 1.0),
-      pop: makeVoice("pop", "pink", "bandpass", 520, 1.1),
-      ...(cfg.forcedInduction ? { turbo: makeVoice("turbo", "white", "bandpass", 1500, 2.0) } : {}),
-    };
+    // A continuous-only layer never fires transients: skip their always-running noise voices.
+    this.voices = this.continuousOnly
+      ? {}
+      : {
+          shift: makeVoice("shift", "pink", "bandpass", 760, 0.75),
+          thump: makeVoice("thump", "brown", "lowpass", 160, 1.0),
+          pop: makeVoice("pop", "pink", "bandpass", 520, 1.1),
+          ...(cfg.forcedInduction
+            ? { turbo: makeVoice("turbo", "white", "bandpass", 1500, 2.0) }
+            : {}),
+        };
 
     // Exhaust pop chain: pressure impulse → body low-pass + pipe-mode resonators → mild
     // saturation → high-mid cut. Sounds like fuel lighting off in the pipe, not a raw noise slap.
-    if (typeof ctx.createWaveShaper === "function" && typeof ctx.createBuffer === "function") {
+    if (
+      !this.continuousOnly &&
+      typeof ctx.createWaveShaper === "function" &&
+      typeof ctx.createBuffer === "function"
+    ) {
       const input = ctx.createGain();
       input.gain.value = 1;
       const sum = ctx.createGain();
@@ -2334,6 +2417,15 @@ export class HybridCombustionSynth {
     }
   }
 
+  private streamsPerSource(): number {
+    return this.perf?.layerLite ? 1 : 2;
+  }
+
+  /** Per-stream level so the summed streams keep the source's power (w² either way). */
+  private streamGainScale(): number {
+    return this.streamsPerSource() === 1 ? 1 : Math.SQRT1_2;
+  }
+
   private updateRecordedLoops(rpm: number, demand: number, audioTime: number) {
     const bank = this.recordedBank!;
     const ctx = this.ctx!;
@@ -2350,12 +2442,22 @@ export class HybridCombustionSynth {
       for (const source of bank.sources) {
         const buf = this.recordedBuffers.get(source.id);
         if (!buf) continue;
-        // Two decorrelated streams per source, each with its own level node.
-        for (let k = 0; k < 2; k += 1) {
+        // Two decorrelated streams per source, each with its own level node
+        // (one at equal power for a lite layer).
+        for (let k = 0; k < this.streamsPerSource(); k += 1) {
           const g = ctx.createGain();
-          g.gain.value = source.weight / Math.SQRT2;
+          g.gain.value = source.weight * this.streamGainScale();
           g.connect(this.sampleBus!);
-          this.recordedStreams.push(new GranularStream(ctx, buf, source, g, (seed += 0x9e3779b9)));
+          this.recordedStreams.push(
+            new GranularStream(
+              ctx,
+              buf,
+              source,
+              g,
+              (seed += 0x9e3779b9),
+              this.perf?.grainLookaheadS,
+            ),
+          );
           this.recordedStreamGains.push({ gain: g, source });
         }
       }
@@ -2384,7 +2486,7 @@ export class HybridCombustionSynth {
           // Long (0.6 s) equal-power glide so load changes never switch layers abruptly.
           targetParam(
             sg.gain.gain,
-            Math.max(0.0001, (sg.source.weight / Math.SQRT2) * lg),
+            Math.max(0.0001, sg.source.weight * this.streamGainScale() * lg),
             audioTime,
             0.6,
           );
@@ -2394,7 +2496,7 @@ export class HybridCombustionSynth {
           const g = sourceRpmGain(sg.source, rpm);
           targetParam(
             sg.gain.gain,
-            Math.max(0.0001, (sg.source.weight / Math.SQRT2) * g),
+            Math.max(0.0001, sg.source.weight * this.streamGainScale() * g),
             audioTime,
             0.12,
           );

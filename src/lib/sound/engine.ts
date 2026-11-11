@@ -21,7 +21,11 @@ import {
   makeupDbForProfile,
   makeupStageSettings,
 } from "@/lib/sound/realism/loudness";
-import type { DynamicLayerDebugInfo, SynthesisMode } from "@/lib/sound/realism/types";
+import type {
+  DynamicLayerDebugInfo,
+  StrategyBuses,
+  SynthesisMode,
+} from "@/lib/sound/realism/types";
 import type { AudioLayerRole } from "@/lib/sound/profile-experience-config";
 import { DynamicDriveSynth } from "@/lib/sound/dynamic-drive/synth";
 import { supportsDynamicDrive } from "@/lib/powertrain/adapters/profile-map";
@@ -58,6 +62,14 @@ import {
   type HybridCombustionDiagnostics,
   type RealismEngineMode,
 } from "@/lib/sound/realism/v2";
+import {
+  hybridPerfOptionsFor,
+  RESUME_RETRY_INTERVAL_MS,
+  START_RESUME_TIMEOUT_MS,
+  WORKLET_START_TIMEOUT_MS,
+  resumeWithTimeout,
+  withTimeout,
+} from "@/lib/sound/engine-perf";
 import {
   disposeGainNodes,
   effectiveLayerGain,
@@ -363,6 +375,14 @@ export class SoundEngine {
 
   getEngineLayerDiagnostics() {
     return this.hybridLayers.map((synth) => synth.getDiagnostics());
+  }
+
+  /** Car-browser perf tuning on the active hybrid engine and its layers (null = untouched). */
+  getEnginePerfDiagnostics() {
+    return {
+      primary: this.hybrid?.getPerfOptions() ?? null,
+      layers: this.hybridLayers.map((synth) => synth.getPerfOptions()),
+    };
   }
 
   getHybridCombustionDiagnostics(): HybridCombustionDiagnostics | null {
@@ -673,6 +693,54 @@ export class SoundEngine {
     if (this.live()?.state === "interrupted") this.interruptHandler?.();
   };
 
+  /** True between fadeAndSuspend() and resumeFromIdle(): the session parked the audio. */
+  private intentionalSuspend = false;
+  private lastResumeAttemptMs = 0;
+  private gestureResumeCleanup: (() => void) | null = null;
+
+  /**
+   * Car browsers can suspend the context (audio focus, Bluetooth source switch) or leave a
+   * start-up resume() pending. Retry about once a second while a drive wants sound.
+   */
+  private resumeIfUnexpectedlySuspended() {
+    const ctx = this.live();
+    if (!ctx || this.intentionalSuspend || ctx.state !== "suspended") return;
+    const now = typeof performance !== "undefined" ? performance.now() : Date.now();
+    if (now - this.lastResumeAttemptMs < RESUME_RETRY_INTERVAL_MS) return;
+    this.lastResumeAttemptMs = now;
+    ctx.resume().catch(() => undefined);
+    this.armGestureResume(ctx);
+  }
+
+  /** Resume on the next tap / key press (user activation lets resume() through). */
+  private armGestureResume(ctx: BaseAudioContext) {
+    if (this.gestureResumeCleanup || typeof window === "undefined") return;
+    if (!(ctx instanceof AudioContext)) return;
+    const events = ["pointerdown", "touchend", "keydown", "click"] as const;
+    const onGesture = () => {
+      if (this.ctx !== ctx || ctx.state === "closed") {
+        cleanup();
+        return;
+      }
+      if (ctx.state === "running") {
+        cleanup();
+        return;
+      }
+      if (!this.intentionalSuspend) ctx.resume().then(cleanup, () => undefined);
+    };
+    const onState = () => {
+      if (ctx.state === "running" || ctx.state === "closed") cleanup();
+    };
+    const cleanup = () => {
+      for (const type of events) window.removeEventListener(type, onGesture, true);
+      ctx.removeEventListener("statechange", onState);
+      if (this.gestureResumeCleanup === cleanup) this.gestureResumeCleanup = null;
+    };
+    for (const type of events) window.addEventListener(type, onGesture, true);
+    ctx.addEventListener("statechange", onState);
+    this.gestureResumeCleanup = cleanup;
+  }
+
   /** Fade master to silence (~80 ms) then suspend, so idle never clicks. */
   async fadeAndSuspend() {
     const ctx = this.live();
@@ -682,6 +750,7 @@ export class SoundEngine {
     this.master.gain.setValueAtTime(Math.max(0.0001, this.master.gain.value), t);
     this.master.gain.linearRampToValueAtTime(0.0001, t + 0.08);
     await new Promise((r) => setTimeout(r, 90));
+    this.intentionalSuspend = true;
     if (ctx.state === "running") await ctx.suspend();
   }
 
@@ -691,7 +760,11 @@ export class SoundEngine {
     if (!ctx || !this.master) return;
     // Treat resume as a timeline gap so overdue shift events never burst-fire.
     this.notifyAudioTimelineGap(DEFAULT_TIMELINE_GAP_FLUSH_MS * 3);
-    if (ctx.state !== "running") await ctx.resume();
+    this.intentionalSuspend = false;
+    // A resume() outside a user gesture can stay pending forever: never block on it.
+    if (ctx.state !== "running" && !(await resumeWithTimeout(ctx, START_RESUME_TIMEOUT_MS))) {
+      this.armGestureResume(ctx);
+    }
     const t = ctx.currentTime;
     this.lastLoadScale = 1;
     const target = this.computeMasterLinear() * STARTUP_VOLUME_SCALE;
@@ -723,12 +796,27 @@ export class SoundEngine {
       return;
     }
     const ctx = options?.context ?? new AudioContext({ latencyHint: "playback" });
+    this.intentionalSuspend = false;
     if (ctx instanceof AudioContext && ctx.state !== "running") {
-      await ctx.resume();
+      // resume() outside a user gesture can stay pending forever (no error, no sound, drive
+      // stuck on "starting"). Build the graph anyway and resume on the next tap / frame.
+      const running = await resumeWithTimeout(ctx, START_RESUME_TIMEOUT_MS);
+      if (!running) this.armGestureResume(ctx);
     }
     this.ctx = ctx;
-    // Prefetch combustion worklet for Realism V2 (safe no-op if unavailable).
-    await ensureCombustionWorklet(ctx);
+    // Prefetch combustion worklet for Realism V2 (safe no-op if unavailable). A stalled
+    // module fetch (weak in-car LTE) must not block the start: continue on the tonal
+    // fallback and rebuild onto the worklet as soon as it arrives.
+    const worklet = ensureCombustionWorklet(ctx);
+    const workletReady = await withTimeout(worklet, WORKLET_START_TIMEOUT_MS);
+    if (workletReady === null) {
+      void worklet.then((ok) => {
+        if (!ok || this.ctx !== ctx || !this.hybrid) return;
+        if (this.hybrid.getDiagnostics().excitationMode === "worklet") return;
+        const current = this.requestedProfile ?? this.profile;
+        if (current) this.setProfile(current, true);
+      });
+    }
 
     this.environment = getEnvironment(options?.environmentId ?? profile.environmentId);
     this.mix = normalizeMix(options?.mix ?? profile.mix);
@@ -1340,7 +1428,7 @@ export class SoundEngine {
       this.engineLayersEnabled && strategyBuses
         ? engineLayerStackFor(this.requestedProfile?.id ?? profile.id)
         : null;
-    let engineBuses = strategyBuses;
+    let engineBuses: StrategyBuses | null = strategyBuses;
     if (layerStack && strategyBuses) {
       const scaled = scaleStrategyBuses(
         ctx,
@@ -1449,6 +1537,7 @@ export class SoundEngine {
       const quality = resolveRawMechanicalQualityTier(ctx);
       const ok = this.hybrid.build(ctx, profile, engineBuses, {
         rawMechanical: rawMechanicalPresetFor(profile.id, quality),
+        perf: hybridPerfOptionsFor(profile.id, ctx),
       });
       if (ok) {
         this.hybrid.setAdvancedTransientsEnabled(this.advancedTransientsEnabled);
@@ -1476,7 +1565,9 @@ export class SoundEngine {
       engineBuses
     ) {
       this.hybrid = new HybridCombustionSynth();
-      const ok = this.hybrid.build(ctx, profile, engineBuses);
+      const ok = this.hybrid.build(ctx, profile, engineBuses, {
+        perf: hybridPerfOptionsFor(profile.id, ctx),
+      });
       if (ok) {
         this.hybrid.setAdvancedTransientsEnabled(this.advancedTransientsEnabled);
         this.hybrid.setShiftIntensity(this.shiftIntensity);
@@ -1855,6 +1946,7 @@ export class SoundEngine {
       const synth = new HybridCombustionSynth();
       const ok = synth.build(ctx, layerProfile, scaled.buses, {
         continuousOnly: spec.continuousOnly === true,
+        perf: hybridPerfOptionsFor(this.profile?.id ?? requestedId, ctx, "layer"),
       });
       if (!ok) {
         synth.dispose();
@@ -2009,6 +2101,7 @@ export class SoundEngine {
     const ctx = this.ctx;
     const profile = this.profile;
     if (!ctx || !profile || !this.filter || this.swapping) return;
+    this.resumeIfUnexpectedlySuspended();
     this.applyRoadCabin(state.speed);
     const t = this.now();
     this.updateRecordedBed(state, t);
@@ -2905,6 +2998,7 @@ export class SoundEngine {
     this.snippets = [];
     this.teardownVoices();
     this.live()?.removeEventListener("statechange", this.onStateChange);
+    this.gestureResumeCleanup?.();
     if ("close" in ctx && typeof ctx.close === "function") await ctx.close();
     this.ctx = null;
     this.master = null;
