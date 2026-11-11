@@ -35,6 +35,7 @@ export {
   HybridCombustionSynth,
   type HybridCombustionDiagnostics,
   type HybridBuildOptions,
+  type HybridPerfOptions,
   type RealismEngineMode,
 } from "@/lib/sound/realism/v2/hybrid-combustion-synth";
 export {

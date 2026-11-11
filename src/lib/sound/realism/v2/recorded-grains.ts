@@ -44,14 +44,20 @@ export class GranularStream {
   private readonly curveScratch = new Float32Array(64);
   private readonly minRate: number;
   private readonly maxRate: number;
+  private readonly lookahead: number;
   constructor(
     private readonly ctx: BaseAudioContext,
     private readonly buffer: AudioBuffer,
     private readonly source: RecordedSource,
     private readonly out: AudioNode,
     seed: number,
+    lookahead?: number,
   ) {
     this.rng = seed >>> 0 || 1;
+    this.lookahead =
+      typeof lookahead === "number" && Number.isFinite(lookahead) && lookahead > 0
+        ? Math.min(1.5, lookahead)
+        : LOOKAHEAD;
     this.minRate = source.minRate ?? MIN_GRAIN_RATE;
     this.maxRate = source.maxRate ?? MAX_GRAIN_RATE;
   }
@@ -79,7 +85,7 @@ export class GranularStream {
       return true;
     });
     if (this.next < audioTime) this.next = audioTime;
-    while (this.next < audioTime + LOOKAHEAD) {
+    while (this.next < audioTime + this.lookahead) {
       this.spawn(rpm, this.next);
     }
   }
