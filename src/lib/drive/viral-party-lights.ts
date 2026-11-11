@@ -3,6 +3,10 @@
  * Palette is hot pink, violet, electric cyan and gold. Never white, no hard
  * strobe — soft cosine fades only. Peak brightness 60% by default, 85% max.
  * Off under reduced motion.
+ *
+ * Screen-edge glows stay as a soft colour wash. The per-section light show
+ * also plays through the background stage fixtures, clipped above the car
+ * and crowd so nothing lights up on the vehicle itself.
  */
 import { VIRAL_MIX_PACK } from "@/lib/symphony/packs/viral-mix";
 import {
@@ -52,24 +56,11 @@ export const VIRAL_PARTY_COLORS = {
 
 export const VIRAL_PARTY_HERO_SIZE = { w: 1672, h: 941 } as const;
 
-/** Headlight cluster of public/hero/sound-profiles/symphony-viral-mix.png, image pixels. */
-export const VIRAL_PARTY_HEADLIGHTS = {
-  lamps: [
-    { cx: 613, cy: 558, rx: 22, ry: 12 },
-    { cx: 656, cy: 554, rx: 22, ry: 12 },
-    { cx: 690, cy: 550, rx: 24, ry: 12 },
-    { cx: 732, cy: 548, rx: 26, ry: 12 },
-  ],
-  glow: { cx: 672, cy: 553, rx: 140, ry: 40 },
-} as const;
-
-/** Chassis underglow, hugging the splitter / rocker / wheel contact in image pixels. */
-export const VIRAL_PARTY_UNDERGLOW = [
-  { cx: 330, cy: 718, rx: 150, ry: 20 },
-  { cx: 620, cy: 738, rx: 200, ry: 20 },
-  { cx: 900, cy: 755, rx: 200, ry: 22 },
-  { cx: 1180, cy: 722, rx: 180, ry: 20 },
-] as const;
+/**
+ * Clip stage beams and background confetti above this image Y so they stay
+ * over the truss / crowd haze and never cover the car body.
+ */
+export const VIRAL_PARTY_BEAM_CLIP_Y = 400;
 
 /** Stage fixtures whose beams we pulse. Coordinates are lamp centres in image pixels. */
 export const VIRAL_PARTY_SPOTS = [
@@ -85,13 +76,17 @@ export const VIRAL_PARTY_SPOTS = [
   { cx: 1546, cy: 18, rx: 22, ry: 14, beam: 240 },
 ] as const;
 
+const IMAGE_MID_X = VIRAL_PARTY_HERO_SIZE.w / 2;
+export const VIRAL_PARTY_LEFT_SPOTS = VIRAL_PARTY_SPOTS.filter((s) => s.cx < IMAGE_MID_X);
+export const VIRAL_PARTY_RIGHT_SPOTS = VIRAL_PARTY_SPOTS.filter((s) => s.cx >= IMAGE_MID_X);
+
 export type ViralPartySection = "idle" | "roll" | "chant" | "build" | "drop" | "melodic";
 
 export type ColorMix = Record<ViralPartyColor, number>;
 
 export interface ViralPartyLightFrame {
   edges: { left: ColorMix; right: ColorMix; top: ColorMix; bottom: ColorMix };
-  car: ColorMix;
+  beams: { left: ColorMix; right: ColorMix };
   climb: number;
   climbOpacity: number;
   confetti: boolean;
@@ -182,14 +177,6 @@ function add(mix: ColorMix, color: ViralPartyColor, amount: number): void {
   mix[color] = Math.min(1, mix[color] + Math.max(0, amount));
 }
 
-function mixMax(a: ColorMix, b: ColorMix, c?: ColorMix, d?: ColorMix): ColorMix {
-  const out = emptyColorMix();
-  for (const name of VIRAL_PARTY_COLOR_NAMES) {
-    out[name] = Math.max(a[name], b[name], c?.[name] ?? 0, d?.[name] ?? 0);
-  }
-  return out;
-}
-
 function cycleColor(t: number): ViralPartyColor {
   const i = Math.floor((((t % 1) + 1) % 1) * VIRAL_PARTY_COLOR_NAMES.length);
   return VIRAL_PARTY_COLOR_NAMES[i] ?? "pink";
@@ -213,6 +200,8 @@ export function viralPartyLightFrame(params: ViralPartyLightParams): ViralPartyL
   const right = emptyColorMix();
   const top = emptyColorMix();
   const bottom = emptyColorMix();
+  const leftBeams = emptyColorMix();
+  const rightBeams = emptyColorMix();
   let climb = 0;
   let climbOpacity = 0;
   let confetti = false;
@@ -220,7 +209,7 @@ export function viralPartyLightFrame(params: ViralPartyLightParams): ViralPartyL
   if (peak <= 0) {
     return {
       edges: { left, right, top, bottom },
-      car: emptyColorMix(),
+      beams: { left: leftBeams, right: rightBeams },
       climb,
       climbOpacity,
       confetti,
@@ -235,6 +224,8 @@ export function viralPartyLightFrame(params: ViralPartyLightParams): ViralPartyL
       add(right, "violet", breath);
       add(top, "violet", breath * 0.7);
       add(bottom, "violet", breath * 0.85);
+      add(leftBeams, "violet", breath);
+      add(rightBeams, "violet", breath);
       break;
     }
     case "roll": {
@@ -244,14 +235,23 @@ export function viralPartyLightFrame(params: ViralPartyLightParams): ViralPartyL
       add(left, "violet", 1 - swap);
       add(right, "violet", swap);
       add(right, "pink", 1 - swap);
+      add(leftBeams, "pink", swap);
+      add(leftBeams, "violet", 1 - swap);
+      add(rightBeams, "violet", swap);
+      add(rightBeams, "pink", 1 - swap);
       break;
     }
     case "chant": {
       // Soft flash covering the first two beats of the bar (the sung word).
       const beatsIntoBar = params.barPhase * VIRAL_PARTY_BEATS_PER_BAR;
       const flash = cosineWindow(beatsIntoBar, 2);
-      if (chantCallOnBar(params.barInLoop) === "elca") add(left, "pink", flash);
-      else add(right, "gold", flash);
+      if (chantCallOnBar(params.barInLoop) === "elca") {
+        add(left, "pink", flash);
+        add(leftBeams, "pink", flash);
+      } else {
+        add(right, "gold", flash);
+        add(rightBeams, "gold", flash);
+      }
       break;
     }
     case "build": {
@@ -265,6 +265,8 @@ export function viralPartyLightFrame(params: ViralPartyLightParams): ViralPartyL
         // Near-dark last bar, a faint residual that dies into the gap.
         const residual = 0.08 * (1 - params.barPhase);
         add(bottom, "violet", residual);
+        add(leftBeams, "violet", residual);
+        add(rightBeams, "violet", residual);
         climb = 1;
         climbOpacity = residual;
         break;
@@ -284,6 +286,8 @@ export function viralPartyLightFrame(params: ViralPartyLightParams): ViralPartyL
       add(top, color, bright * climb);
       add(left, color, bright * 0.7);
       add(right, color, bright * 0.7);
+      add(leftBeams, color, bright);
+      add(rightBeams, color, bright);
       break;
     }
     case "drop": {
@@ -301,6 +305,10 @@ export function viralPartyLightFrame(params: ViralPartyLightParams): ViralPartyL
       // Crossfade the neighbour colour in so the swap is never a hard cut.
       add(left, b, burst * (1 - fade) * 0.5);
       add(right, a, burst * (1 - fade) * 0.5);
+      add(leftBeams, a, burst);
+      add(leftBeams, b, burst * (1 - fade) * 0.5);
+      add(rightBeams, b, burst);
+      add(rightBeams, a, burst * (1 - fade) * 0.5);
       break;
     }
     case "melodic": {
@@ -317,6 +325,12 @@ export function viralPartyLightFrame(params: ViralPartyLightParams): ViralPartyL
       add(top, "cyan", cyan * 0.35);
       add(right, "gold", gold * 0.3);
       add(left, "cyan", cyan * 0.3);
+      add(leftBeams, "pink", pink);
+      add(leftBeams, "cyan", cyan * 0.45);
+      add(leftBeams, "gold", gold * 0.25);
+      add(rightBeams, "cyan", cyan);
+      add(rightBeams, "gold", gold * 0.7);
+      add(rightBeams, "pink", pink * 0.25);
       break;
     }
   }
@@ -327,9 +341,13 @@ export function viralPartyLightFrame(params: ViralPartyLightParams): ViralPartyL
     top: scaleMix(top, peak),
     bottom: scaleMix(bottom, peak),
   };
+  const beams = {
+    left: scaleMix(leftBeams, peak),
+    right: scaleMix(rightBeams, peak),
+  };
   return {
     edges,
-    car: scaleMix(mixMax(edges.left, edges.right, edges.top, edges.bottom), 1),
+    beams,
     climb,
     climbOpacity: climbOpacity * peak,
     confetti,
@@ -425,7 +443,7 @@ export function viralPartyClockAt(nowMs: number, kmh: number): ViralPartyClock {
   };
 }
 
-/** Live peak written by the toggle so the car overlay stays in lockstep without a React render. */
+/** Live peak written by the toggle so stage beams stay in lockstep without a React render. */
 let livePeak = 0.6;
 export function setViralPartyLivePeak(peak: number): void {
   livePeak = Math.min(0.85, Math.max(0, peak));
@@ -451,7 +469,7 @@ const frameCache = {
   }),
 };
 
-/** Idempotent per animation-frame timestamp so edge and car overlays stay in phase. */
+/** Idempotent per animation-frame timestamp so edge and stage-beam overlays stay in phase. */
 export function viralPartyFrameAt(nowMs: number, peak: number, kmh: number): ViralPartyLightFrame {
   if (frameCache.now === nowMs && frameCache.peak === peak && frameCache.kmh === kmh) {
     return frameCache.frame;

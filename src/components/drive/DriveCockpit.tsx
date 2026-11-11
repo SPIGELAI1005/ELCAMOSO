@@ -40,7 +40,7 @@ import { useFeatureAccess } from "@/lib/entitlements/selectors";
 import { DriveProfileBackdrop } from "@/components/drive/DriveProfileBackdrop";
 import { PoliceLightShow } from "@/components/drive/PoliceLightShow";
 import { PoliceRoofLights } from "@/components/drive/PoliceRoofLights";
-import { ViralPartyCarLights } from "@/components/drive/ViralPartyCarLights";
+import { ViralPartyStageLights } from "@/components/drive/ViralPartyStageLights";
 import { ViralPartyLightShow } from "@/components/drive/ViralPartyLightShow";
 import { DriveGenreSubtitle } from "@/components/drive/DriveGenreSubtitle";
 import { DriveCarFx } from "@/components/drive/DriveCarFx";
@@ -521,7 +521,7 @@ export function DriveCockpit({
         <PoliceLightShow speed={driveState.speed} reducedMotion={reducedMotion} className="z-0" />
       ) : null}
       {profile.id === VIRAL_PARTY_LIGHT_PROFILE_ID ? (
-        <ViralPartyCarLights
+        <ViralPartyStageLights
           speed={driveState.speed}
           reducedMotion={reducedMotion}
           className="z-0"

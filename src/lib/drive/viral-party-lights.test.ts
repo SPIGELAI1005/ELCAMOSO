@@ -1,13 +1,17 @@
 import { describe, expect, it } from "vitest";
 import { policeLightOpacity, setPoliceLightLevel } from "@/lib/drive/police-lights";
 import {
+  VIRAL_PARTY_BEAM_CLIP_Y,
   VIRAL_PARTY_CHANT_KMH,
   VIRAL_PARTY_COLORS,
   VIRAL_PARTY_COLOR_NAMES,
   VIRAL_PARTY_CONFETTI_COUNT,
   VIRAL_PARTY_HERO_SIZE,
+  VIRAL_PARTY_LEFT_SPOTS,
   VIRAL_PARTY_LIGHT_PROFILE_ID,
+  VIRAL_PARTY_RIGHT_SPOTS,
   VIRAL_PARTY_ROLL_KMH,
+  VIRAL_PARTY_SPOTS,
   chantCallOnBar,
   cosineFade,
   cosineWindow,
@@ -21,6 +25,8 @@ import {
   viralPartyLightOpacity,
   type ColorMix,
   type ViralPartyLightFrame,
+  type ViralPartyLightParams,
+  type ViralPartySection,
 } from "@/lib/drive/viral-party-lights";
 import {
   clearViralEdmTransport,
@@ -56,21 +62,22 @@ function maxEdge(frame: ViralPartyLightFrame): number {
     maxChannel(frame.edges.right),
     maxChannel(frame.edges.top),
     maxChannel(frame.edges.bottom),
-    maxChannel(frame.car),
     frame.climbOpacity,
   );
 }
 
+function maxBeams(frame: ViralPartyLightFrame): number {
+  return Math.max(maxChannel(frame.beams.left), maxChannel(frame.beams.right));
+}
+
 function frameAt(
-  section: ViralPartyLightFrame extends never
-    ? never
-    : Parameters<typeof viralPartyLightFrame>[0]["section"],
+  section: ViralPartySection,
   beat: number,
-  extra: Partial<Parameters<typeof viralPartyLightFrame>[0]> = {},
-) {
+  extra: Partial<ViralPartyLightParams> = {},
+): ViralPartyLightFrame {
   const beatPhase = beat - Math.floor(beat);
   const barInLoop = Math.floor(beat / 4) % 4;
-  const barPhase = (beat % 4) / 4;
+  const barPhase = (((beat % 4) + 4) % 4) / 4;
   return viralPartyLightFrame({
     section,
     peak: 0.6,
@@ -170,15 +177,19 @@ describe("Viral Epic Party frame logic", () => {
   it("returns nothing when the peak is off, and never exceeds 0.85", () => {
     const off = frameAt("drop", 0, { peak: 0 });
     expect(maxEdge(off)).toBe(0);
+    expect(maxBeams(off)).toBe(0);
     expect(off.confetti).toBe(false);
     const hot = frameAt("drop", 0, { peak: 0.85 });
     expect(maxEdge(hot)).toBeGreaterThan(0.4);
+    expect(maxBeams(hot)).toBeGreaterThan(0.4);
     expect(maxEdge(hot)).toBeLessThanOrEqual(0.85);
+    expect(maxBeams(hot)).toBeLessThanOrEqual(0.85);
     const clipped = frameAt("drop", 0, { peak: 2 });
     expect(maxEdge(clipped)).toBeLessThanOrEqual(0.85);
+    expect(maxBeams(clipped)).toBeLessThanOrEqual(0.85);
   });
 
-  it("idles as a slow violet breath on every edge", () => {
+  it("idles as a slow violet breath on every edge and both stage-beam sides", () => {
     const a = frameAt("idle", 0);
     const b = frameAt("idle", 4);
     expect(a.edges.left.violet).toBeGreaterThan(0.2);
@@ -186,8 +197,13 @@ describe("Viral Epic Party frame logic", () => {
     expect(a.edges.left.pink).toBe(0);
     expect(a.edges.left.cyan).toBe(0);
     expect(a.edges.left.gold).toBe(0);
+    expect(a.beams.left.violet).toBeGreaterThan(0.2);
+    expect(a.beams.right.violet).toBeGreaterThan(0.2);
+    expect(a.beams.left.pink).toBe(0);
+    expect(a.beams.right.gold).toBe(0);
     // Mid-breath is dimmer than the peak.
     expect(b.edges.left.violet).toBeLessThan(a.edges.left.violet);
+    expect(b.beams.left.violet).toBeLessThan(a.beams.left.violet);
   });
 
   it("swaps pink and violet left/right on each beat during the accordion roll", () => {
@@ -197,21 +213,31 @@ describe("Viral Epic Party frame logic", () => {
     expect(even.edges.right.violet).toBeGreaterThan(even.edges.right.pink);
     expect(odd.edges.left.violet).toBeGreaterThan(odd.edges.left.pink);
     expect(odd.edges.right.pink).toBeGreaterThan(odd.edges.right.violet);
+    expect(even.beams.left.pink).toBeGreaterThan(even.beams.left.violet);
+    expect(even.beams.right.violet).toBeGreaterThan(even.beams.right.pink);
+    expect(odd.beams.left.violet).toBeGreaterThan(odd.beams.left.pink);
+    expect(odd.beams.right.pink).toBeGreaterThan(odd.beams.right.violet);
     // Mid-beat is a blend, not a hard cut.
     const mid = frameAt("roll", 0.5);
     expect(Math.abs(mid.edges.left.pink - mid.edges.left.violet)).toBeLessThan(0.05);
+    expect(Math.abs(mid.beams.left.pink - mid.beams.left.violet)).toBeLessThan(0.05);
   });
 
   it("flashes pink on the left for ElCA and gold on the right for MOSO", () => {
-    const elca = frameAt("chant", 1); // midpoint of the 2-beat ElCA window, bar 0
-    const moso = frameAt("chant", 5); // midpoint of the MOSO window, bar 1
+    const elca = frameAt("chant", 1);
+    const moso = frameAt("chant", 5);
     expect(elca.edges.left.pink).toBeGreaterThan(0.4);
     expect(elca.edges.right.gold).toBe(0);
     expect(moso.edges.right.gold).toBeGreaterThan(0.4);
     expect(moso.edges.left.pink).toBe(0);
+    expect(elca.beams.left.pink).toBeGreaterThan(0.4);
+    expect(elca.beams.right.gold).toBe(0);
+    expect(moso.beams.right.gold).toBeGreaterThan(0.4);
+    expect(moso.beams.left.pink).toBe(0);
     // Quiet in the second half of the bar.
     const rest = frameAt("chant", 2.2);
     expect(maxEdge(rest)).toBeLessThan(0.05);
+    expect(maxBeams(rest)).toBeLessThan(0.05);
   });
 
   it("climbs and brightens through the build, then goes near-dark on the last bar", () => {
@@ -232,12 +258,15 @@ describe("Viral Epic Party frame logic", () => {
     expect(early.climb).toBeLessThan(late.climb);
     expect(late.climb).toBeCloseTo(5 / 8, 5);
     expect(late.climbOpacity).toBeGreaterThan(early.climbOpacity);
+    expect(maxBeams(late)).toBeGreaterThan(maxBeams(early));
     expect(maxEdge(last)).toBeLessThan(0.08);
+    expect(maxBeams(last)).toBeLessThan(0.08);
     expect(maxEdge(gap)).toBe(0);
+    expect(maxBeams(gap)).toBe(0);
     expect(gap.climbOpacity).toBe(0);
   });
 
-  it("bursts all four edges on the drop and raises gold confetti", () => {
+  it("bursts all four edges and both beam sides on the drop, with background confetti", () => {
     const drop = frameAt("drop", 8);
     expect(drop.confetti).toBe(true);
     expect(VIRAL_PARTY_CONFETTI_COUNT).toBe(12);
@@ -245,6 +274,8 @@ describe("Viral Epic Party frame logic", () => {
     expect(maxChannel(drop.edges.right)).toBeGreaterThan(0.3);
     expect(maxChannel(drop.edges.top)).toBeGreaterThan(0.3);
     expect(maxChannel(drop.edges.bottom)).toBeGreaterThan(0.3);
+    expect(maxChannel(drop.beams.left)).toBeGreaterThan(0.3);
+    expect(maxChannel(drop.beams.right)).toBeGreaterThan(0.3);
   });
 
   it("washes slow wide pink, cyan and gold waves in the melodic section", () => {
@@ -254,9 +285,14 @@ describe("Viral Epic Party frame logic", () => {
     expect(a.edges.right.cyan).toBeGreaterThan(0.1);
     expect(a.edges.top.gold).toBeGreaterThan(0.1);
     expect(a.edges.left.violet).toBe(0);
+    expect(a.beams.left.pink).toBeGreaterThan(0.2);
+    expect(a.beams.right.cyan).toBeGreaterThan(0.1);
+    expect(a.beams.left.violet).toBe(0);
+    expect(a.beams.right.violet).toBe(0);
     // Cyan is phase-offset by a third of the 16-beat cycle.
     expect(cyanPeak.edges.right.cyan).toBeGreaterThan(a.edges.right.cyan);
     expect(cyanPeak.edges.right.cyan).toBeGreaterThan(0.4);
+    expect(cyanPeak.beams.right.cyan).toBeGreaterThan(a.beams.right.cyan);
     expect(a.confetti).toBe(false);
   });
 });
@@ -318,8 +354,21 @@ describe("Viral Epic Party transport read", () => {
   });
 });
 
-describe("Viral Epic Party hero coordinates", () => {
-  it("places glows inside the 1672x941 still", () => {
+describe("Viral Epic Party stage fixtures", () => {
+  it("keeps every stage fixture above the crowd/car clip line and splits left from right", () => {
     expect(VIRAL_PARTY_HERO_SIZE).toEqual({ w: 1672, h: 941 });
+    expect(VIRAL_PARTY_BEAM_CLIP_Y).toBe(400);
+    expect(VIRAL_PARTY_LEFT_SPOTS.length + VIRAL_PARTY_RIGHT_SPOTS.length).toBe(
+      VIRAL_PARTY_SPOTS.length,
+    );
+    for (const spot of VIRAL_PARTY_SPOTS) {
+      expect(spot.cy).toBeLessThan(VIRAL_PARTY_BEAM_CLIP_Y);
+    }
+    for (const spot of VIRAL_PARTY_LEFT_SPOTS) {
+      expect(spot.cx).toBeLessThan(VIRAL_PARTY_HERO_SIZE.w / 2);
+    }
+    for (const spot of VIRAL_PARTY_RIGHT_SPOTS) {
+      expect(spot.cx).toBeGreaterThanOrEqual(VIRAL_PARTY_HERO_SIZE.w / 2);
+    }
   });
 });

@@ -60,8 +60,8 @@ const EDGES = ["left", "right", "top", "bottom"] as const;
 const COLORS: ViralPartyColor[] = ["pink", "violet", "cyan", "gold"];
 
 const CONFETTI = Array.from({ length: VIRAL_PARTY_CONFETTI_COUNT }, (_, i) => ({
-  left: `${18 + ((i * 17) % 64)}%`,
-  bottom: `${8 + (i % 5) * 6}%`,
+  left: `${14 + ((i * 19) % 72)}%`,
+  top: `${10 + (i % 5) * 12}%`,
   delay: `${(i * 0.17) % 1.8}s`,
   duration: `${2.2 + (i % 4) * 0.25}s`,
   size: 4 + (i % 3),
@@ -172,7 +172,7 @@ export function ViralPartyLightShow({ speed, reducedMotion, className }: ViralPa
           />
           <div
             ref={confettiRef}
-            className="absolute inset-0"
+            className="absolute inset-x-0 top-0 h-[40%] overflow-hidden"
             style={{ opacity: 0, willChange: "opacity" }}
             data-testid="viral-party-confetti"
           >
@@ -182,7 +182,7 @@ export function ViralPartyLightShow({ speed, reducedMotion, className }: ViralPa
                 className="viral-party-confetti-speck"
                 style={{
                   left: speck.left,
-                  bottom: speck.bottom,
+                  top: speck.top,
                   width: speck.size,
                   height: speck.size + 3,
                   animationDelay: speck.delay,
