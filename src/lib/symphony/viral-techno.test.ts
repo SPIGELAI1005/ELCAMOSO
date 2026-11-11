@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { electronicGainsFromDrive, midiToHz } from "./viral-techno";
 
-describe("Viral Mix techno layers", () => {
+describe("Viral Epic Party techno layers", () => {
   it("stays silent at idle and low speed", () => {
     const idle = electronicGainsFromDrive(0, "stopped", 0);
     const roll = electronicGainsFromDrive(40, "calm", 0.22);

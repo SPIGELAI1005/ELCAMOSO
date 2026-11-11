@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { VIRAL_MIX_PACK } from "./packs/viral-mix";
 import { gainsFromSpeedGates, smoothstep } from "./speed-layers";
 
-describe("Viral Mix speed layering", () => {
+describe("Viral Epic Party speed layering", () => {
   it("starts with a distinctive stadium beat at a standstill", () => {
     const g = gainsFromSpeedGates(VIRAL_MIX_PACK, 0, "stopped", 0);
     expect(g.drumsLow).toBeGreaterThan(0.8);

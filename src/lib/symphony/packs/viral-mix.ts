@@ -53,7 +53,7 @@ function oneShot(
 }
 
 /**
- * Viral Mix v8 — stadium anthem plus festival drums, build, drop, a
+ * Viral Epic Party v8 — stadium anthem plus festival drums, build, drop, a
  * melodic (Guetta-style, original) high-speed section, an acoustic-piano
  * melody that doubles and answers the accordion hook, and a loud SATB
  * choir in the Midnight Boost (darkrave / FluidR3_GM) style.
@@ -90,7 +90,7 @@ function oneShot(
  */
 export const VIRAL_MIX_PACK: SymphonyPack = {
   id: PACK_ID,
-  name: "Viral Mix",
+  name: "Viral Epic Party",
   tagline: "Stadium Beat · Accordion · Build / Drop",
   bpm: BPM,
   key: "C# minor",

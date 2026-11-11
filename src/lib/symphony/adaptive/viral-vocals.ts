@@ -1,5 +1,5 @@
 /**
- * Procedural "Hey" chants and choir vowels for Viral Mix.
+ * Procedural "Hey" chants and choir vowels for Viral Epic Party.
  * Buffers are synthesized once in JS (formant band-passes, no reference samples)
  * and then played like ordinary sprites. Cheap on the Tesla path after init.
  */

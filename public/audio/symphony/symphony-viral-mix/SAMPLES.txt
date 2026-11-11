@@ -9,13 +9,13 @@ shared Adaptive Music sprites already in the app:
 Those sprites were generated from the FluidR3_GM soundfont (MIT License),
 Copyright (c) Frank Wen and contributors. FluidR3_GM is used unchanged as
 a sample source; the musical lines, voicing, hall/room treatment and loops
-are original to ELCAMOSO Viral Mix and are not Midnight Boost audio files.
+are original to ELCAMOSO Viral Epic Party and are not Midnight Boost audio files.
 
 Midnight Boost (fusion-midnight-boost) itself was not modified. Its choir
 is the same music-v1 "choir" sprite, played by the darkrave Auto-DJ genre
 (stacked chord tones, hall reverb ~2.8 s, mix 0.36, entering at intensity
-> 0.6). Viral Mix reuses that sample and the stacked-chord + hall approach,
+> 0.6). Viral Epic Party reuses that sample and the stacked-chord + hall approach,
 voiced SATB and arranged to the accordion hook.
 
-Other Viral Mix stems (stadium beat, accordion, chant, kit, etc.) are
+Other Viral Epic Party stems (stadium beat, accordion, chant, kit, etc.) are
 original synthesis / Piper TTS and do not use FluidR3_GM.

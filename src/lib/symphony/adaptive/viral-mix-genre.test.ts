@@ -32,7 +32,9 @@ describe("viralmix signature genre", () => {
         .map((n) => `${n.inst}:${n.midi}`),
     );
 
-  it("is a fixed 108 bpm C# minor signature genre bound to Viral Mix", () => {
+  it("is a fixed 108 bpm C# minor signature genre bound to Viral Epic Party", () => {
+    expect(g.name).toBe("Viral Epic Party");
+    expect(g.id).toBe("viralmix");
     expect(g.fixedBpm).toBe(108);
     expect(g.key).toBe(49);
     expect(g.lockArrangement).toBe(true);

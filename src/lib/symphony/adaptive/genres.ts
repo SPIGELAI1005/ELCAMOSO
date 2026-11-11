@@ -1461,14 +1461,14 @@ const VIRALMIX_HOOK: readonly (readonly [number, number, number])[][] = [
 ];
 
 /**
- * Viral Mix signature lock only. Live playback is the owner-licensed recording
+ * Viral Epic Party signature lock only. Live playback is the owner-licensed recording
  * through SymphonySynth (see packs/viral-mix.ts). This genre stays registered
  * so the picker and Auto-DJ cannot override symphony-viral-mix; it is not
  * played on the Drive path.
  */
 const viralmix: GenreDef = {
   id: "viralmix",
-  name: "Viral Mix",
+  name: "Viral Epic Party",
   bpmMin: 108,
   bpmMax: 108,
   fixedBpm: 108,

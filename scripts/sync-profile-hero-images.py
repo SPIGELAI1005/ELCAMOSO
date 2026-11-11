@@ -76,6 +76,7 @@ MAP: dict[str, str] = {
     "fusion-road-anthem": "Road Anthem.png",
     "fusion-mechanical-symphony": "Mechanical Symphony.png",
     "fusion-midnight-boost": "Midnight Boost.png",
+    "symphony-viral-mix": "Viral Epic Party.png",
 }
 
 # Extra stills kept in the source folder on purpose - not mapped to a Sound Profile.

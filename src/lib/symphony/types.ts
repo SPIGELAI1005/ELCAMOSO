@@ -177,11 +177,11 @@ export interface SymphonyPack {
   oneShots?: readonly SymphonyOneShotDef[];
   /** Stem-gain setTarget time constant in seconds (default 0.08). */
   gainTauSeconds?: number;
-  /** Synthesize tempo-locked electronic/techno layers (Viral Mix). */
+  /** Synthesize tempo-locked electronic/techno layers (Viral Epic Party). */
   electronicLayers?: boolean;
   /** Soft pack-bus limiter for dense mixes (headroom). */
   busLimiter?: boolean;
-  /** Festival build / drop / melodic section (Viral Mix). */
+  /** Festival build / drop / melodic section (Viral Epic Party). */
   edmArrangement?: boolean;
   /** Extra loops (melodic section, etc.) loaded alongside stems, not speed-gated. */
   overlayLoops?: readonly {
