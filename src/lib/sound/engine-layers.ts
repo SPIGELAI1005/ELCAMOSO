@@ -34,19 +34,15 @@ export interface EngineLayerStack {
  * Extra engine profiles mixed under a catalog sound. Keyed by the *requested*
  * profile id so aliases (e.g. Police Patrol → Muscle V8) are not affected.
  */
-export const PROFILE_ENGINE_LAYERS: Readonly<Record<string, EngineLayerStack>> = {
-  "american-muscle-v8": {
-    primaryGain: MUSCLE_V8_LAYER_PRIMARY_GAIN,
-    makeupGain: MUSCLE_V8_LAYER_MAKEUP_GAIN,
-    layers: [
-      {
-        profileId: MUSCLE_V8_LAYER_SECONDARY_PROFILE_ID,
-        gain: MUSCLE_V8_LAYER_SECONDARY_GAIN,
-        continuousOnly: true,
-      },
-    ],
-  },
-};
+/**
+ * Extra engine profiles mixed under a catalog sound. Keyed by the *requested*
+ * profile id so aliases (e.g. Police Patrol → Muscle V8) are not affected.
+ *
+ * Empty since Nov 2026: American Muscle V8 used to run Big Twin live under the V8
+ * (60 / 40). That second engine overloaded the Tesla browser, so the blend now lives
+ * in one pre-rendered loop bank (src/lib/sound/coyote-v8) and no layer is mixed live.
+ */
+export const PROFILE_ENGINE_LAYERS: Readonly<Record<string, EngineLayerStack>> = {};
 
 export function engineLayerStackFor(profileId: string | null | undefined): EngineLayerStack | null {
   if (!profileId) return null;
