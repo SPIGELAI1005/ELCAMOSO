@@ -15,7 +15,7 @@ export function EffortLegend({ compact = false }: { compact?: boolean }) {
         {EFFORT_ZONES.map((z) => (
           <div key={z.id} className="flex items-center gap-2">
             <span className="h-1.5 w-4 shrink-0 rounded-full" style={{ background: z.color }} />
-            <span className="text-[10px] text-foreground/80">{z.label}</span>
+            <span className="whitespace-nowrap text-[10px] text-foreground/80">{z.label}</span>
           </div>
         ))}
       </div>

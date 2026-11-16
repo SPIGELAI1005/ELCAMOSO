@@ -17,7 +17,7 @@ export function RunSummary({
     <div className="flex min-h-0 flex-1 flex-col overflow-y-auto" data-testid="rumoso-summary">
       <div className="relative h-[42vh] min-h-[220px] w-full shrink-0">
         <RumosoMap points={run.points} follow={false} fitRoute className="size-full" />
-        <div className="absolute top-3 right-3">
+        <div className="absolute top-3 right-3 z-10">
           <EffortLegend compact />
         </div>
       </div>

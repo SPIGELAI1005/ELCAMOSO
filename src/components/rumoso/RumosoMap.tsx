@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import "maplibre-gl/dist/maplibre-gl.css";
+import "./rumoso-map.css";
 import type { TrackPoint } from "@/lib/rumoso/types";
 import { colorForEffort } from "@/lib/rumoso/colors";
 import { routeFeatureCollection } from "./route-geo";
@@ -32,6 +33,7 @@ export function RumosoMap({ points, follow = true, className, fitRoute }: Rumoso
     let map: import("maplibre-gl").Map | null = null;
     let started = false;
     let ro: ResizeObserver | null = null;
+    const attribTimers: number[] = [];
 
     const attach = (instance: import("maplibre-gl").Map) => {
       ro = new ResizeObserver(() => instance.resize());
@@ -56,8 +58,23 @@ export function RumosoMap({ points, follow = true, className, fitRoute }: Rumoso
           pitchWithRotate: false,
         });
         mapRef.current = map;
-        map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
+        // Pinch-to-zoom is enough on a phone; keep +/- on wider screens, away from the legend.
+        if (window.matchMedia("(min-width: 768px)").matches) {
+          map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "bottom-right");
+        }
         attach(map);
+        const collapseAttribution = () => {
+          const el = map?.getContainer().querySelector(".maplibregl-ctrl-attrib");
+          if (!el) return;
+          el.classList.add("maplibregl-compact");
+          el.classList.remove("maplibregl-compact-show");
+          el.removeAttribute("open");
+        };
+        // MapLibre 5 expands compact attribution on init (and again when style
+        // attributions arrive). Collapse to the "i" button after load; retries
+        // cover the late attribution update. After that, a tap on "i" stays open.
+        map.once("idle", collapseAttribution);
+        attribTimers.push(window.setTimeout(collapseAttribution, 400), window.setTimeout(collapseAttribution, 1600));
         map.on("load", () => {
           if (cancelled || !map) return;
           map.resize();
@@ -109,6 +126,7 @@ export function RumosoMap({ points, follow = true, className, fitRoute }: Rumoso
     return () => {
       cancelled = true;
       window.clearTimeout(late);
+      for (const id of attribTimers) window.clearTimeout(id);
       waiter.disconnect();
       ro?.disconnect();
       readyRef.current = false;
@@ -126,7 +144,7 @@ export function RumosoMap({ points, follow = true, className, fitRoute }: Rumoso
   return (
     <div
       ref={containerRef}
-      className={className}
+      className={["rumoso-map", className].filter(Boolean).join(" ")}
       data-testid="rumoso-map"
       role="img"
       aria-label="Run route map, coloured by effort"

@@ -569,14 +569,14 @@ export function RumosoApp({
         />
       ) : (
         <>
-          <div className="relative min-h-[46vh] flex-1">
+          <div className="rumoso-map-hud relative min-h-[46vh] flex-1">
             <RumosoMap
               points={points}
               follow={live && !diagnostics && points.length < 8}
               fitRoute={points.length >= 8}
               className="size-full"
             />
-            <div className="pointer-events-none absolute inset-x-0 top-0 flex items-start justify-between p-3">
+            <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex items-start justify-between p-3">
               <div className="pointer-events-none rounded-2xl border border-white/10 bg-black/55 px-3 py-2 backdrop-blur-md">
                 <p className="font-mono text-3xl font-light tabular-nums leading-none">
                   {formatDuration(elapsedMs)}
@@ -585,12 +585,12 @@ export function RumosoApp({
               </div>
               <EffortLegend compact />
             </div>
-            <div className="pointer-events-none absolute inset-x-0 bottom-0 grid grid-cols-4 gap-2 p-3">
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 grid grid-cols-4 items-stretch gap-1.5 p-3">
               <LiveStat label="Distance" value={`${formatDistanceKm(distanceM)}`} unit="km" />
               <LiveStat label="Pace" value={formatPace(paceSec)} />
               <LiveStat label="Cadence" value={cadence > 0 ? `${Math.round(cadence)}` : "—"} unit="spm" />
-              <div className="rounded-2xl border border-white/10 bg-black/55 px-2 py-2 backdrop-blur-md">
-                <EffortGauge effort={effort} />
+              <div className="flex items-center justify-center rounded-xl border border-white/10 bg-black/55 px-1 py-1 backdrop-blur-md">
+                <EffortGauge effort={effort} compact />
               </div>
             </div>
           </div>
@@ -690,10 +690,13 @@ export function RumosoApp({
 
             {diagnostics ? <DiagnosticsPanel log={log.current} ticks={diagTick} /> : null}
 
-            <p className="text-center text-[10px] text-muted-foreground">
-              Private test · {accessEmail}
-              {voiceFallback ? " · coach falling back to speechSynthesis" : ""}
-            </p>
+            {formatPrivateTestFooter(accessEmail, dev) || voiceFallback ? (
+              <p className="text-center text-[10px] text-muted-foreground">
+                {[formatPrivateTestFooter(accessEmail, dev), voiceFallback ? "coach falling back to speechSynthesis" : null]
+                  .filter(Boolean)
+                  .join(" · ")}
+              </p>
+            ) : null}
           </div>
         </>
       )}
@@ -707,14 +710,23 @@ function formatPaceValue(fix: TrackPoint): number | null {
 
 function LiveStat({ label, value, unit }: { label: string; value: string; unit?: string }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-black/55 px-2.5 py-2 backdrop-blur-md">
-      <p className="font-mono text-lg font-light tabular-nums leading-tight">
+    <div className="flex h-full min-h-0 flex-col justify-center rounded-xl border border-white/10 bg-black/55 px-2 py-1.5 backdrop-blur-md">
+      <p className="font-mono text-base font-light tabular-nums leading-none">
         {value}
-        {unit ? <span className="ml-0.5 text-[10px] text-muted-foreground">{unit}</span> : null}
+        {unit ? <span className="ml-0.5 text-[9px] text-muted-foreground">{unit}</span> : null}
       </p>
-      <p className="mt-0.5 text-[9px] tracking-[0.18em] text-muted-foreground uppercase">{label}</p>
+      <p className="mt-1 text-[8px] tracking-[0.18em] text-muted-foreground uppercase">{label}</p>
     </div>
   );
+}
+
+/** Dev may show dev@localhost. Production shows the signed-in admin email, or nothing — never the dev placeholder. */
+export function formatPrivateTestFooter(email: string, dev: boolean): string | null {
+  const value = email.trim();
+  const isDevPlaceholder = !value || /^dev@localhost$/i.test(value);
+  if (dev) return `Private test · ${value || "dev@localhost"}`;
+  if (isDevPlaceholder) return "Private test";
+  return `Private test · ${value}`;
 }
 
 function ReadySettings(props: {
