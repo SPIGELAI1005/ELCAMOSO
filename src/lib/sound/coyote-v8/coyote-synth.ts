@@ -33,6 +33,12 @@ import {
 export const COYOTE_OUTPUT_GAIN = 1.48;
 /** Without the bank after this long, a tiny procedural idle loop covers until it arrives. */
 export const COYOTE_FALLBACK_DELAY_MS = 1500;
+/** Throttle must stay closed this long before a lift counts (not a shift's torque cut). */
+const POP_LIFT_HOLD_S = 0.2;
+/** No lift-off pops this soon after a gear change (no pop on every shift). */
+const POP_SHIFT_GUARD_S = 0.8;
+/** Minimum gap between pop clusters. */
+const POP_COOLDOWN_S = 4;
 /** Startup only plays when the bank is ready this soon after the profile was built. */
 const STARTUP_WINDOW_S = 4;
 const LOADS: readonly CoyoteLoad[] = ["light", "on", "over"];
@@ -113,6 +119,9 @@ export class CoyoteV8Synth {
   private barkCooldownUntil = 0;
   private shiftCooldownUntil = 0;
   private liftArmed = false;
+  private liftAt: number | null = null;
+  private lastShiftAt = -10;
+  private popCooldownUntil = 0;
   private oneShotsFired = 0;
   private shotLog: string[] = [];
   private shiftIntensity = 1;
@@ -368,7 +377,8 @@ export class CoyoteV8Synth {
     const minRecent = this.thrHistory.reduce((m, s) => Math.min(m, s.v), 1);
     const jump = state.throttle - minRecent;
     if (jump > 0.32 && state.throttle > 0.6 && t >= this.barkCooldownUntil) {
-      const rate = Math.min(1.6, Math.max(0.75, rpm / 2000));
+      // Pitched to the real RPM: a stab at low RPM in a tall gear stays deep and heavy.
+      const rate = Math.min(1.6, Math.max(0.45, rpm / 2000));
       this.fireOneShot("bark", t + 0.01, rate, 0.45 + 0.55 * Math.min(1, jump), this.shotBus);
       this.barkCooldownUntil = t + 1.5;
       this.thrHistory = [];
@@ -377,71 +387,107 @@ export class CoyoteV8Synth {
     // Shifts: prefer the powertrain's once-per-shift event, else a gear change.
     let dir: "up" | "down" | null = null;
     let fromGear = this.lastGear;
+    let reason = "";
     const ev = state.powertrain?.shiftEvent ?? null;
     if (state.powertrain) {
       if (ev && ev.sequenceId !== this.lastShiftSeq) {
         this.lastShiftSeq = ev.sequenceId;
         fromGear = ev.fromGear;
+        reason = ev.reason ?? "";
         if (ev.fromGear >= 1 && ev.toGear >= 1) dir = ev.direction;
       }
     } else if (state.gear !== this.lastGear && this.lastGear >= 1 && state.gear >= 1) {
       dir = state.gear > this.lastGear ? "up" : "down";
     }
     this.lastGear = state.gear;
+    if (dir) this.lastShiftAt = t;
     if (dir && t >= this.shiftCooldownUntil && this.shiftIntensity > 0) {
       const intensity = this.shiftIntensity;
+      const onLoad = this.loads.on;
       if (dir === "up") {
-        const level = (0.3 + 0.7 * this.loads.on) * intensity;
-        const rate = Math.min(1.5, Math.max(0.55, rpm / 4000));
-        this.fireOneShot(
-          audioRandom() < 0.5 ? "upshift1" : "upshift2",
-          t + 0.005,
-          rate,
-          level,
-          this.shotBus,
-        );
-        // Brief torque cut under load: the loops dip while the shift one-shot carries it.
-        if (this.loopBus && this.loads.on > 0.3) {
-          const g = this.loopBus.gain;
-          const base = COYOTE_OUTPUT_GAIN;
-          g.cancelScheduledValues(t);
-          g.setTargetAtTime(base * (1 - 0.45 * this.loads.on * Math.min(1, intensity)), t, 0.02);
-          g.setTargetAtTime(base, t + 0.12, 0.06);
+        // Throttle unloads -> note softens -> RPM drops (powertrain) -> power returns.
+        // Light throttle: a soft, short dip only. Hard throttle: a deeper cut and, only
+        // sometimes, the short re-engage "brup" one-shot. Never an explosion.
+        this.dipLoops(t, (0.12 + 0.36 * onLoad) * Math.min(1, intensity), 0.07 + 0.06 * onLoad);
+        if (onLoad > 0.75 && audioRandom() < 0.65) {
+          const rate = Math.min(1.5, Math.max(0.55, rpm / 4000));
+          this.fireOneShot(
+            audioRandom() < 0.5 ? "upshift1" : "upshift2",
+            t + 0.005,
+            rate,
+            (0.35 + 0.5 * onLoad) * intensity,
+            this.shotBus,
+          );
         }
-      } else if (this.popsEnabled && state.speed > 3 && fromGear >= 2) {
-        // Rev-matched downshift: the powertrain flares the RPM; the blip adds the throttle stab.
-        const rate = Math.min(1.6, Math.max(0.6, rpm / 2000));
-        this.fireOneShot(
-          audioRandom() < 0.5 ? "blip1" : "blip2",
-          t + 0.005,
-          rate,
-          0.55 * intensity,
-          this.shotBus,
-        );
+      } else {
+        // Rev-matched downshift while slowing: a short tonal blip. A kickdown (throttle
+        // open) gets no blip: the RPM jump comes from the loops and the bark covers the
+        // attack. Never near idle (the car is about to stop).
+        const kickdown = reason === "kickdown" || state.throttle > 0.3 || onLoad > 0.35;
+        if (this.popsEnabled && !kickdown && state.speed > 3 && fromGear >= 2 && rpm > 1000) {
+          const rate = Math.min(1.6, Math.max(0.6, rpm / 2000));
+          this.dipLoops(t, 0.35, 0.22);
+          this.fireOneShot(
+            audioRandom() < 0.5 ? "blip1" : "blip2",
+            t + 0.005,
+            rate,
+            0.55 * intensity,
+            this.shotBus,
+          );
+        }
       }
       this.shiftCooldownUntil = t + 0.35;
     }
 
-    // Lift-off: sparse 0-3 pops in the overrun, never in the same place twice.
-    if (state.throttle > 0.45 && rpm > 2300) this.liftArmed = true;
+    // Lift-off: a qualifying lift (from real load, held closed for a moment, not a shift's
+    // torque cut) may give a sparse 0-3 pops, with a cooldown so a deceleration never
+    // turns into a machine-gun sequence.
+    if (state.throttle > 0.45 && rpm > 2300) {
+      this.liftArmed = true;
+      this.liftAt = null;
+    }
     if (this.liftArmed && state.throttle < 0.1) {
-      this.liftArmed = false;
-      if (this.popsEnabled && rpm > 2300 && state.speed > 3) {
-        const count = coyotePopCount(audioRandom());
-        let at = t + 0.18 + audioRandom() * 0.25;
-        for (let i = 0; i < count; i += 1) {
-          const variant = 1 + Math.floor(audioRandom() * 3);
-          this.fireOneShot(
-            `pop${variant}`,
-            at,
-            0.92 + audioRandom() * 0.16,
-            0.35 + audioRandom() * 0.4,
-            this.popBus,
-          );
-          at += 0.12 + audioRandom() * 0.5;
+      this.liftAt ??= t;
+      if (t - this.liftAt >= POP_LIFT_HOLD_S) {
+        this.liftArmed = false;
+        this.liftAt = null;
+        const nearShift = t - this.lastShiftAt < POP_SHIFT_GUARD_S;
+        if (
+          this.popsEnabled &&
+          !nearShift &&
+          t >= this.popCooldownUntil &&
+          rpm > 2100 &&
+          state.speed > 3
+        ) {
+          const count = coyotePopCount(audioRandom());
+          let at = t + 0.05 + audioRandom() * 0.25;
+          for (let i = 0; i < count; i += 1) {
+            const variant = 1 + Math.floor(audioRandom() * 3);
+            this.fireOneShot(
+              `pop${variant}`,
+              at,
+              0.92 + audioRandom() * 0.16,
+              0.35 + audioRandom() * 0.4,
+              this.popBus,
+            );
+            at += 0.12 + audioRandom() * 0.5;
+          }
+          this.popCooldownUntil = t + POP_COOLDOWN_S;
         }
       }
+    } else if (state.throttle >= 0.1) {
+      this.liftAt = null;
     }
+  }
+
+  /** Brief loop-bus dip (shift torque cut / blip handover), restored on the audio clock. */
+  private dipLoops(t: number, depth: number, hold: number) {
+    if (!this.loopBus || depth <= 0 || t < this.holdLoopsUntil) return;
+    const g = this.loopBus.gain;
+    const base = COYOTE_OUTPUT_GAIN;
+    g.cancelScheduledValues(t);
+    g.setTargetAtTime(base * (1 - Math.min(0.6, depth)), t, 0.02);
+    g.setTargetAtTime(base, t + hold, 0.06);
   }
 
   private fireOneShot(id: string, at: number, rate: number, level: number, bus: GainNode | null) {

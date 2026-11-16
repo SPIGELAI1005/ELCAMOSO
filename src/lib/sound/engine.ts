@@ -329,6 +329,8 @@ export class SoundEngine {
   private hybrid: HybridCombustionSynth | null = null;
   /** American Muscle V8 (and Police Patrol): pre-rendered Coyote loop bank, no live synth. */
   private coyote: CoyoteV8Synth | null = null;
+  /** Audio context that already got the V8 startup: rebuilds (settings, stops) never replay it. */
+  private coyoteStartupCtx: BaseAudioContext | null = null;
   /** Secondary engine synths mixed under the requested profile (e.g. Big Twin under Muscle V8). */
   private hybridLayers: HybridCombustionSynth[] = [];
   private layerGainNodes: GainNode[] = [];
@@ -1537,8 +1539,12 @@ export class SoundEngine {
     // American Muscle V8 (Coyote v2, Nov 2026): one pre-rendered loop bank replaces the
     // live V8 + Big Twin engines that overloaded the Tesla browser. Police Patrol reuses it.
     if (isCoyoteV8ProfileId(profile.id) && strategyBuses) {
-      const startup = !(globalThis as { __ELC_COYOTE_NO_STARTUP?: boolean })
-        .__ELC_COYOTE_NO_STARTUP;
+      // Startup is a once-per-drive event (spec: never replay the flare when the car stops
+      // or the graph is rebuilt for a settings change); a new start() makes a new context.
+      const startup =
+        !(globalThis as { __ELC_COYOTE_NO_STARTUP?: boolean }).__ELC_COYOTE_NO_STARTUP &&
+        this.coyoteStartupCtx !== ctx;
+      this.coyoteStartupCtx = ctx;
       const coyote = new CoyoteV8Synth({ startup });
       coyote.build(ctx, strategyBuses);
       coyote.setShiftIntensity(this.shiftIntensity / 0.72);

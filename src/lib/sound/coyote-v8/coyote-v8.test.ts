@@ -167,3 +167,24 @@ describe("Coyote V8 loop bank (American Muscle V8 v2)", () => {
     await gt.stop();
   }, 30_000);
 });
+
+describe("Coyote V8 startup is once per drive", () => {
+  it("does not replay the startup when the graph is rebuilt in the same drive", async () => {
+    const Offline = globalThis.OfflineAudioContext;
+    if (!Offline) return;
+    const engine = new SoundEngine();
+    const ctx = new Offline(2, 48000, 48000);
+    await engine.start(getProfile("american-muscle-v8"), {
+      context: ctx,
+      signature: false,
+      seed: 1,
+    });
+    const first = (engine as unknown as { coyote: { startupAllowed: boolean } }).coyote;
+    expect(first.startupAllowed).toBe(true);
+    engine.setEngineLayersEnabled(false); // forces a rebuild
+    const second = (engine as unknown as { coyote: { startupAllowed: boolean } }).coyote;
+    expect(second).not.toBe(first);
+    expect(second.startupAllowed).toBe(false);
+    await engine.stop();
+  }, 30_000);
+});
