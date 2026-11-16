@@ -108,7 +108,12 @@ export function createSeoHeadFromPath(
     path: policy.path,
     robots: robotsForPolicy(policy),
   };
-  if (policy.image) input.image = policy.image;
+  if (policy.image) {
+    // Static /rumoso/ assets must be emitted as absolute URLs. resolveOgImage
+    // only honours preferred images that are already absolute (or /api/og),
+    // and we must not change that behaviour for other routes.
+    input.image = policy.path === "/rumoso" ? absoluteSeoUrl(policy.image) : policy.image;
+  }
   if (policy.imageAlt) input.imageAlt = policy.imageAlt;
   if (policy.breadcrumbs) input.breadcrumbs = policy.breadcrumbs;
   if (structured) input.structuredData = structured;

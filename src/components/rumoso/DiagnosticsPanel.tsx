@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { copyText, downloadText, type RumosoDebugLog } from "@/lib/rumoso/debug-log";
+import { RumosoIcon } from "./RumosoIcon";
 
 export function DiagnosticsPanel({
   log,
@@ -25,7 +26,8 @@ export function DiagnosticsPanel({
       data-testid="rumoso-diagnostics"
     >
       <header className="flex items-center justify-between gap-2">
-        <h2 className="text-[10px] tracking-[0.22em] text-muted-foreground uppercase">
+        <h2 className="flex items-center gap-1.5 text-[10px] tracking-[0.22em] text-muted-foreground uppercase">
+          <RumosoIcon name="diagnostics" className="size-3.5" />
           Diagnostics
         </h2>
         <div className="flex gap-2">

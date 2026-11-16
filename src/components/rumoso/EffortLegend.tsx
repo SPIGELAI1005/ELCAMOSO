@@ -1,4 +1,5 @@
 import { EFFORT_ZONES } from "@/lib/rumoso/colors";
+import { ZoneFigure } from "./RumosoIcon";
 
 export function EffortLegend({ compact = false }: { compact?: boolean }) {
   return (
@@ -13,8 +14,8 @@ export function EffortLegend({ compact = false }: { compact?: boolean }) {
       </p>
       <div className="flex flex-col gap-1">
         {EFFORT_ZONES.map((z) => (
-          <div key={z.id} className="flex items-center gap-2">
-            <span className="h-1.5 w-4 shrink-0 rounded-full" style={{ background: z.color }} />
+          <div key={z.id} className="flex items-center gap-1.5">
+            <ZoneFigure zone={z.id} className="size-3.5" />
             <span className="whitespace-nowrap text-[10px] text-foreground/80">{z.label}</span>
           </div>
         ))}

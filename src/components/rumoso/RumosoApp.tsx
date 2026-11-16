@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { ElcamosoMark } from "@/components/ElcamosoLogo";
 import { requestGeolocationPermission, requestMotionPermission, motionRequiresUserGesture, PHONE_GPS_WATCH_OPTIONS } from "@/lib/motion/phone-sensor-permissions";
 import { keepScreenAwake, type KeepAwake } from "@/lib/phone-sync/wake-lock";
 import { CadenceDetector } from "@/lib/rumoso/cadence";
@@ -45,6 +44,7 @@ import { EffortGauge } from "./EffortGauge";
 import { EffortBar, EffortLegend } from "./EffortLegend";
 import { RumosoMap } from "./RumosoMap";
 import { RunSummary } from "./RunSummary";
+import { RUMOSO_ASSET, RumosoIcon, RumosoLockup, type RumosoUiIconName } from "./RumosoIcon";
 
 export type RumosoDemoView = "ready" | "running" | "summary" | "diagnostics";
 
@@ -537,22 +537,19 @@ export function RumosoApp({
 
   return (
     <div className="flex h-[100dvh] flex-col bg-background text-foreground" data-testid="rumoso-app">
-      <header className="flex items-center justify-between gap-3 px-5 pt-[max(0.75rem,env(safe-area-inset-top))] pb-2">
-        <div className="flex items-center gap-2.5">
-          <ElcamosoMark className="size-7" intensity={effort / 100} />
-          <div>
-            <p className="text-[10px] tracking-[0.28em] text-muted-foreground uppercase">ELCAMOSO</p>
-            <h1 className="font-light text-xl leading-tight tracking-[0.18em]">RUMOSO</h1>
-          </div>
-        </div>
+      <header className="relative z-[2] flex items-center justify-between gap-3 px-5 pt-[max(0.75rem,env(safe-area-inset-top))] pb-2">
+        <h1 className="m-0 min-w-0">
+          <RumosoLockup className="h-8 w-auto max-w-[min(100%,13.5rem)]" />
+        </h1>
         <button
           type="button"
           onClick={() => setDiagnostics((v) => !v)}
-          className={`rounded-full border px-3 py-1 text-[10px] tracking-[0.18em] uppercase ${
+          className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1 text-[10px] tracking-[0.18em] uppercase ${
             diagnostics ? "border-foreground bg-foreground text-background" : "border-white/15 text-muted-foreground"
           }`}
           data-testid="rumoso-diagnostics-toggle"
         >
+          <RumosoIcon name="diagnostics" className="size-3.5" />
           Diagnostics
         </button>
       </header>
@@ -576,6 +573,20 @@ export function RumosoApp({
               fitRoute={points.length >= 8}
               className="size-full"
             />
+            {phase === "ready" ? (
+              <div className="pointer-events-none absolute inset-0 z-[1] overflow-hidden" aria-hidden>
+                <img
+                  src={RUMOSO_ASSET.heroMobile}
+                  alt=""
+                  width={900}
+                  height={1636}
+                  loading="lazy"
+                  decoding="async"
+                  className="size-full object-cover object-[center_58%] opacity-40"
+                />
+                <div className="absolute inset-0 bg-gradient-to-b from-black/45 via-black/25 to-black/70" />
+              </div>
+            ) : null}
             <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex items-start justify-between p-3">
               <div className="pointer-events-none rounded-2xl border border-white/10 bg-black/55 px-3 py-2 backdrop-blur-md">
                 <p className="font-mono text-3xl font-light tabular-nums leading-none">
@@ -586,9 +597,9 @@ export function RumosoApp({
               <EffortLegend compact />
             </div>
             <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 grid grid-cols-4 items-stretch gap-1.5 p-3">
-              <LiveStat label="Distance" value={`${formatDistanceKm(distanceM)}`} unit="km" />
-              <LiveStat label="Pace" value={formatPace(paceSec)} />
-              <LiveStat label="Cadence" value={cadence > 0 ? `${Math.round(cadence)}` : "—"} unit="spm" />
+              <LiveStat icon="distance" label="Distance" value={`${formatDistanceKm(distanceM)}`} unit="km" />
+              <LiveStat icon="pace" label="Pace" value={formatPace(paceSec)} />
+              <LiveStat icon="cadence" label="Cadence" value={cadence > 0 ? `${Math.round(cadence)}` : "—"} unit="spm" />
               <div className="flex items-center justify-center rounded-xl border border-white/10 bg-black/55 px-1 py-1 backdrop-blur-md">
                 <EffortGauge effort={effort} compact />
               </div>
@@ -611,17 +622,19 @@ export function RumosoApp({
                 <button
                   type="button"
                   onClick={onPauseToggle}
-                  className="h-14 flex-1 rounded-full border border-white/20 text-sm tracking-[0.2em] uppercase"
+                  className="inline-flex h-14 flex-1 items-center justify-center gap-2 rounded-full border border-white/20 text-sm tracking-[0.2em] uppercase"
                   data-testid="rumoso-pause"
                 >
+                  <RumosoIcon name={phase === "paused" ? "run-start" : "pause"} className="size-4" />
                   {phase === "paused" ? "Resume" : "Pause"}
                 </button>
                 <button
                   type="button"
                   onClick={() => void finishRun()}
-                  className="h-14 flex-1 rounded-full bg-foreground text-sm tracking-[0.2em] text-background uppercase"
+                  className="inline-flex h-14 flex-1 items-center justify-center gap-2 rounded-full bg-foreground text-sm tracking-[0.2em] text-background uppercase"
                   data-testid="rumoso-stop"
                 >
+                  <RumosoIcon name="stop" className="size-4" />
                   Stop
                 </button>
               </div>
@@ -649,9 +662,10 @@ export function RumosoApp({
                 <button
                   type="button"
                   onClick={() => void startRun()}
-                  className="h-14 w-full rounded-full bg-foreground text-sm tracking-[0.22em] text-background uppercase"
+                  className="inline-flex h-14 w-full items-center justify-center gap-2 rounded-full bg-foreground text-sm tracking-[0.22em] text-background uppercase"
                   data-testid="rumoso-start"
                 >
+                  <RumosoIcon name="run-start" className="size-4" />
                   Start run
                 </button>
                 {recent.length > 0 ? (
@@ -708,14 +722,27 @@ function formatPaceValue(fix: TrackPoint): number | null {
   return fix.speedMps != null && fix.speedMps > 0.4 ? 1000 / fix.speedMps : null;
 }
 
-function LiveStat({ label, value, unit }: { label: string; value: string; unit?: string }) {
+function LiveStat({
+  icon,
+  label,
+  value,
+  unit,
+}: {
+  icon: RumosoUiIconName;
+  label: string;
+  value: string;
+  unit?: string;
+}) {
   return (
     <div className="flex h-full min-h-0 flex-col justify-center rounded-xl border border-white/10 bg-black/55 px-2 py-1.5 backdrop-blur-md">
       <p className="font-mono text-base font-light tabular-nums leading-none">
         {value}
         {unit ? <span className="ml-0.5 text-[9px] text-muted-foreground">{unit}</span> : null}
       </p>
-      <p className="mt-1 text-[8px] tracking-[0.18em] text-muted-foreground uppercase">{label}</p>
+      <p className="mt-1 flex items-center gap-1 text-[8px] tracking-[0.18em] text-muted-foreground uppercase">
+        <RumosoIcon name={icon} className="size-2.5" />
+        {label}
+      </p>
     </div>
   );
 }
@@ -746,7 +773,10 @@ function ReadySettings(props: {
   return (
     <div className="space-y-3">
       <div>
-        <p className="mb-1.5 text-[10px] tracking-[0.22em] text-muted-foreground uppercase">Music</p>
+        <p className="mb-1.5 flex items-center gap-1.5 text-[10px] tracking-[0.22em] text-muted-foreground uppercase">
+          <RumosoIcon name="music-profile" className="size-3.5" />
+          Music
+        </p>
         <div className="flex gap-2">
           {RUMOSO_MUSIC_PROFILES.map((p) => (
             <button
@@ -764,7 +794,10 @@ function ReadySettings(props: {
         </div>
       </div>
       <div>
-        <p className="mb-1.5 text-[10px] tracking-[0.22em] text-muted-foreground uppercase">Coach</p>
+        <p className="mb-1.5 flex items-center gap-1.5 text-[10px] tracking-[0.22em] text-muted-foreground uppercase">
+          <RumosoIcon name="coach-voice" className="size-3.5" />
+          Coach
+        </p>
         <div className="grid grid-cols-3 gap-2">
           {(["calm", "hype", "off"] as const).map((m) => (
             <button

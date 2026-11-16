@@ -421,6 +421,8 @@ export const NOINDEX_ROUTE_POLICIES: SeoRoutePolicy[] = [
     nofollow: true,
     title: "RUMOSO - Running Motion Sound | ELCAMOSO",
     description: "Private RUMOSO running-mode test. Unlisted; same admin allowlist as the admin page.",
+    image: "/rumoso/hero/rumoso-og-1200x630.jpg",
+    imageAlt: "RUMOSO — Turn running into sound.",
   },
 ];
 

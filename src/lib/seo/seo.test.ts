@@ -55,6 +55,17 @@ describe("SEO platform", () => {
     expect(rumoso.meta.some((m) => m.name === "robots" && m.content === "noindex, nofollow")).toBe(
       true,
     );
+    expect(
+      rumoso.meta.some(
+        (m) =>
+          m.property === "og:image" &&
+          m.content === "https://www.elcamoso.com/rumoso/hero/rumoso-og-1200x630.jpg",
+      ),
+    ).toBe(true);
+    const symphony = createSeoHeadFromPath("/symphony");
+    expect(symphony.meta.some((m) => m.property === "og:image" && m.content?.includes("/rumoso/"))).toBe(
+      false,
+    );
   });
 
   it("sitemap contains indexable and excludes private routes", () => {

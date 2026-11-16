@@ -3,7 +3,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 
 import { AccountSignInDialog } from "@/components/AccountSignInDialog";
 import { RumosoApp, type RumosoDemoView } from "@/components/rumoso/RumosoApp";
-import { ElcamosoMark } from "@/components/ElcamosoLogo";
+import { RumosoLockup } from "@/components/rumoso/RumosoIcon";
 import { createSeoHeadFromPath } from "@/lib/seo";
 import { getRumosoAccessFn, type RumosoAccessResult } from "@/lib/rumoso/server-fns";
 
@@ -24,8 +24,29 @@ export const Route = createFileRoute("/rumoso")({
     return demo ? { demo } : {};
   },
   component: RumosoPage,
-  head: () => createSeoHeadFromPath("/rumoso"),
+  head: rumosoHead,
 });
+
+/** Route-scoped icons and OG for /rumoso only. Does not change the global ELCAMOSO favicon, manifest or default OG. */
+function rumosoHead() {
+  const base = createSeoHeadFromPath("/rumoso");
+  return {
+    ...base,
+    meta: [
+      ...base.meta,
+      { name: "apple-mobile-web-app-title", content: "RUMOSO" },
+    ],
+    links: [
+      ...base.links,
+      { rel: "icon", type: "image/svg+xml", href: "/rumoso/icons/favicon-16.svg" },
+      { rel: "icon", type: "image/png", sizes: "32x32", href: "/rumoso/icons/favicon-32.png" },
+      { rel: "icon", type: "image/png", sizes: "16x16", href: "/rumoso/icons/favicon-16.png" },
+      { rel: "shortcut icon", href: "/rumoso/icons/favicon.ico" },
+      { rel: "apple-touch-icon", href: "/rumoso/icons/apple-touch-icon.png" },
+      { rel: "manifest", href: "/rumoso/manifest.webmanifest" },
+    ],
+  };
+}
 
 function RumosoPage() {
   const result = Route.useLoaderData();
@@ -49,10 +70,10 @@ function RumosoDenied({ status }: { status: 401 | 403 }) {
       className="mx-auto flex min-h-[100dvh] max-w-md flex-col justify-center px-6 py-16"
       data-testid="rumoso-denied"
     >
-      <ElcamosoMark className="size-10" />
-      <p className="mt-6 text-[10px] tracking-[0.28em] text-muted-foreground uppercase">ELCAMOSO</p>
-      <h1 className="mt-1 text-3xl font-light tracking-[0.18em]">RUMOSO</h1>
-      <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
+      <h1 className="m-0">
+        <RumosoLockup className="h-10 w-auto max-w-full" />
+      </h1>
+      <p className="mt-6 text-sm leading-relaxed text-muted-foreground">
         {status === 401
           ? "Sign in with an admin account to test RUMOSO. This page is unlisted and uses the same allowlist as Admin."
           : "This account does not have access to the RUMOSO test. It is limited to the admin allowlist while it is in private preview."}

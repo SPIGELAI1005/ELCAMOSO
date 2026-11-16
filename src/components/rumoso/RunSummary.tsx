@@ -3,6 +3,7 @@ import { formatDistanceKm, formatDuration, formatPace } from "@/lib/rumoso/gps-p
 import type { StoredRun } from "@/lib/rumoso/types";
 import { EffortLegend } from "./EffortLegend";
 import { RumosoMap } from "./RumosoMap";
+import { ZoneFigure } from "./RumosoIcon";
 
 export function RunSummary({
   run,
@@ -66,10 +67,7 @@ export function RunSummary({
             {run.zones.map((z) => (
               <li key={z.id} className="flex items-center justify-between text-sm">
                 <span className="flex items-center gap-2">
-                  <span
-                    className="size-2 rounded-full"
-                    style={{ background: EFFORT_ZONES.find((e) => e.id === z.id)?.color }}
-                  />
+                  <ZoneFigure zone={z.id} className="size-4" />
                   {z.label}
                 </span>
                 <span className="font-mono text-xs tabular-nums text-muted-foreground">
