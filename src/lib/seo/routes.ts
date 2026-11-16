@@ -415,6 +415,13 @@ export const NOINDEX_ROUTE_POLICIES: SeoRoutePolicy[] = [
     title: "Drive sensor recorder - ELCAMOSO",
     description: "Internal drive sensor recorder.",
   },
+  {
+    path: "/rumoso",
+    indexable: false,
+    nofollow: true,
+    title: "RUMOSO - Running Motion Sound | ELCAMOSO",
+    description: "Private RUMOSO running-mode test. Unlisted; same admin allowlist as the admin page.",
+  },
 ];
 
 export function robotsForPolicy(policy: Pick<SeoRoutePolicy, "indexable" | "nofollow">): SeoRobots {

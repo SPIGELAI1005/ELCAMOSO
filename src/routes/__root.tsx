@@ -175,7 +175,8 @@ function RootShell({ children }: { children: ReactNode }) {
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const showMiniPlayer = pathname !== "/";
+  const onRumoso = pathname === "/rumoso" || pathname.startsWith("/rumoso/");
+  const showMiniPlayer = pathname !== "/" && !onRumoso;
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
@@ -203,8 +204,8 @@ function RootComponent() {
             <DynamicDriveTrialBridge />
             <VehicleTelemetryBridge />
             <TelemetryBridge />
-            <BrandNav />
-            <AppChrome showMiniPlayer={showMiniPlayer} />
+            {onRumoso ? null : <BrandNav />}
+            <AppChrome showMiniPlayer={showMiniPlayer} standalone={onRumoso} />
             <CookieConsent />
           </div>
         </EntitlementsProvider>
@@ -213,7 +214,7 @@ function RootComponent() {
   );
 }
 
-function AppChrome({ showMiniPlayer }: { showMiniPlayer: boolean }) {
+function AppChrome({ showMiniPlayer, standalone = false }: { showMiniPlayer: boolean; standalone?: boolean }) {
   useEffect(() => {
     // Deliver a drive left unfinished when the tab was closed (drive route handles its own pop-up).
     if (!window.location.pathname.startsWith("/drive")) void deliverPendingDrive();
@@ -224,24 +225,24 @@ function AppChrome({ showMiniPlayer }: { showMiniPlayer: boolean }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const onDrive = pathname === "/drive" || pathname.startsWith("/drive/");
   const hideTop = safetyMode && onDrive;
-  const padTop = hideTop
+  const padTop = standalone || hideTop
     ? "pt-[env(safe-area-inset-top,0px)]"
     : "pt-[calc(3.85rem+env(safe-area-inset-top,0px))] sm:pt-[calc(4.4rem+env(safe-area-inset-top,0px))]";
   const padBottom =
-    safetyMode && onDrive
+    standalone || (safetyMode && onDrive)
       ? "pb-[env(safe-area-inset-bottom,0px)]"
       : "pb-[calc(3.5rem+env(safe-area-inset-bottom,0px))] md:pb-0";
 
   return (
     <div className={`flex flex-1 flex-col ${padTop} ${padBottom}`}>
       {showMiniPlayer ? <MiniPlayer /> : null}
-      <InstallPrompt />
-      <SmileReferralBridge />
+      {standalone ? null : <InstallPrompt />}
+      {standalone ? null : <SmileReferralBridge />}
       <div className="flex-1">
         <Outlet />
       </div>
-      <SiteFooter />
-      <PrimaryBottomNav />
+      {standalone ? null : <SiteFooter />}
+      {standalone ? null : <PrimaryBottomNav />}
     </div>
   );
 }
