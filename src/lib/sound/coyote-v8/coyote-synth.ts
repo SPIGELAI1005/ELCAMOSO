@@ -39,6 +39,10 @@ const POP_LIFT_HOLD_S = 0.2;
 const POP_SHIFT_GUARD_S = 0.8;
 /** Minimum gap between pop clusters. */
 const POP_COOLDOWN_S = 4;
+/** Pedal brake / regen above this is meaningfully braking (not a coast / overrun). */
+const POP_BRAKE_THRESH = 0.15;
+/** After the brake comes off, still no new pop clusters for this long. */
+const POP_BRAKE_HOLD_S = 0.5;
 /** Startup only plays when the bank is ready this soon after the profile was built. */
 const STARTUP_WINDOW_S = 4;
 const LOADS: readonly CoyoteLoad[] = ["light", "on", "over"];
@@ -122,6 +126,9 @@ export class CoyoteV8Synth {
   private liftAt: number | null = null;
   private lastShiftAt = -10;
   private popCooldownUntil = 0;
+  private brakeHeldUntil = -10;
+  private pendingPops: { src: AudioBufferSourceNode; gain: GainNode; when: number; log: string }[] =
+    [];
   private oneShotsFired = 0;
   private shotLog: string[] = [];
   private shiftIntensity = 1;
@@ -439,6 +446,13 @@ export class CoyoteV8Synth {
       this.shiftCooldownUntil = t + 0.35;
     }
 
+    // Brake / regen: no new overrun pops, and silence any that were already scheduled.
+    // Coasting lift-off (regen/brake at or below the threshold) can still pop.
+    const brakeDemand = Math.max(state.regen, state.powertrain?.diagnostics?.braking ?? 0);
+    if (brakeDemand > POP_BRAKE_THRESH) this.brakeHeldUntil = t + POP_BRAKE_HOLD_S;
+    const brakeGate = t < this.brakeHeldUntil;
+    if (brakeGate) this.cancelPendingPops(t);
+
     // Lift-off: a qualifying lift (from real load, held closed for a moment, not a shift's
     // torque cut) may give a sparse 0-3 pops, with a cooldown so a deceleration never
     // turns into a machine-gun sequence.
@@ -455,6 +469,7 @@ export class CoyoteV8Synth {
         if (
           this.popsEnabled &&
           !nearShift &&
+          !brakeGate &&
           t >= this.popCooldownUntil &&
           rpm > 2100 &&
           state.speed > 3
@@ -478,6 +493,28 @@ export class CoyoteV8Synth {
     } else if (state.throttle >= 0.1) {
       this.liftAt = null;
     }
+  }
+
+  /** Stop scheduled / still-playing overrun pops and drop unplayed ones from the log. */
+  private cancelPendingPops(t: number) {
+    if (this.pendingPops.length === 0) return;
+    const now = Math.max(t, this.ctx?.currentTime ?? t);
+    for (const pop of this.pendingPops) {
+      const unplayed = pop.when > now + 1e-4;
+      try {
+        pop.gain.gain.cancelScheduledValues(now);
+        pop.gain.gain.setValueAtTime(0, now);
+        pop.src.stop(now);
+      } catch {
+        /* already stopped */
+      }
+      if (unplayed) {
+        const idx = this.shotLog.lastIndexOf(pop.log);
+        if (idx >= 0) this.shotLog.splice(idx, 1);
+        if (this.oneShotsFired > 0) this.oneShotsFired -= 1;
+      }
+    }
+    this.pendingPops = [];
   }
 
   /** Brief loop-bus dip (shift torque cut / blip handover), restored on the audio clock. */
@@ -505,10 +542,13 @@ export class CoyoteV8Synth {
     src.start(when, shot.start, shot.duration);
     this.live.add(src);
     this.oneShotsFired += 1;
-    this.shotLog.push(`${id}@${when.toFixed(2)}`);
+    const log = `${id}@${when.toFixed(2)}`;
+    this.shotLog.push(log);
     if (this.shotLog.length > 40) this.shotLog.shift();
+    if (id.startsWith("pop")) this.pendingPops.push({ src, gain: g, when, log });
     src.onended = () => {
       this.live.delete(src);
+      this.pendingPops = this.pendingPops.filter((p) => p.src !== src);
       src.disconnect();
       g.disconnect();
     };

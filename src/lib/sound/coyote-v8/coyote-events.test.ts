@@ -135,18 +135,64 @@ describe("Coyote V8 transient rules (George's spec 4, 5, 8-12)", () => {
       r.step({ throttle: 0.05, load: 0.3, rpm: 3800, gear: g + 1 }, 3); // 0.1 s cut
     }
     expect(r.shots().filter((s) => s.startsWith("pop"))).toHaveLength(0);
-    // repeated lifts: at most one pop cluster (<= 3 pops) per 4 s
+    // repeated lifts without braking: at most one pop cluster (<= 3 pops) per 4 s
     let clusters = 0;
     for (let i = 0; i < 6; i += 1) {
       const before = r.shots().filter((s) => s.startsWith("pop")).length;
-      r.step({ throttle: 0.9, load: 0.8, rpm: 4000, gear: 3 }, 15);
-      r.step({ throttle: 0, load: 0, rpm: 3800, gear: 3, regen: 0.6 }, 30); // braking too
+      r.step({ throttle: 0.9, load: 0.8, rpm: 4000, gear: 3, regen: 0 }, 15);
+      r.step({ throttle: 0, load: 0, rpm: 3800, gear: 3, regen: 0 }, 30);
       const added = r.shots().filter((s) => s.startsWith("pop")).length - before;
       expect(added).toBeLessThanOrEqual(3);
       if (added > 0) clusters += 1;
     }
-    // 6 lifts over ~9 s: the cooldown allows at most 3 clusters
+    // 6 lifts over ~9 s: a plain lift-off can still pop, and the cooldown caps clusters
+    expect(clusters).toBeGreaterThan(0);
     expect(clusters).toBeLessThanOrEqual(3);
+  });
+
+  it("does not pop while braking, and cancels pending pops when the brake goes on", () => {
+    seedAudioRandom(6);
+    const braking = rig();
+    for (let i = 0; i < 6; i += 1) {
+      braking.step({ throttle: 0.9, load: 0.8, rpm: 4000, gear: 3, regen: 0 }, 15);
+      braking.step({ throttle: 0, load: 0, rpm: 3800, gear: 3, regen: 0.6 }, 30);
+    }
+    expect(braking.shots().filter((s) => s.startsWith("pop"))).toHaveLength(0);
+
+    // Same lift, no brake: at least one of several seeds must be able to pop
+    // (coyotePopCount is 0 about 35% of the time).
+    let plainPops = 0;
+    for (const seed of [6, 7, 8, 9, 10]) {
+      seedAudioRandom(seed);
+      const plain = rig();
+      plain.step({ throttle: 0.9, load: 0.8, rpm: 4000, gear: 3, regen: 0 }, 15);
+      plain.step({ throttle: 0, load: 0, rpm: 3800, gear: 3, regen: 0 }, 30);
+      plainPops += plain.shots().filter((s) => s.startsWith("pop")).length;
+    }
+    expect(plainPops).toBeGreaterThan(0);
+
+    // Schedule a cluster on a lift, then put the brake on before the shots play.
+    let cancel: ReturnType<typeof rig> | null = null;
+    for (const seed of [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]) {
+      seedAudioRandom(seed);
+      const attempt = rig();
+      attempt.step({ throttle: 0.9, load: 0.8, rpm: 4000, gear: 3, regen: 0 }, 15);
+      attempt.step({ throttle: 0, load: 0, rpm: 3800, gear: 3, regen: 0 }, 8); // ~0.27s: hold done
+      if (attempt.shots().some((s) => s.startsWith("pop"))) {
+        cancel = attempt;
+        break;
+      }
+    }
+    expect(cancel, "needed a seed that schedules a lift-off pop").not.toBeNull();
+    expect(cancel!.shots().filter((s) => s.startsWith("pop")).length).toBeGreaterThan(0);
+    cancel!.step({ throttle: 0, load: 0, rpm: 3800, gear: 3, regen: 0.6 }, 2);
+    expect(cancel!.shots().filter((s) => s.startsWith("pop"))).toHaveLength(0);
+    // After the brake is released, the 0.5s hold still blocks a new lift's pops.
+    // Arm and qualify the lift inside that 0.5s window (short arm + 0.2s hold).
+    cancel!.step({ throttle: 0, load: 0, rpm: 3800, gear: 3, regen: 0 }, 1);
+    cancel!.step({ throttle: 0.9, load: 0.8, rpm: 4000, gear: 3, regen: 0 }, 6);
+    cancel!.step({ throttle: 0, load: 0, rpm: 3800, gear: 3, regen: 0 }, 8);
+    expect(cancel!.shots().filter((s) => s.startsWith("pop"))).toHaveLength(0);
   });
 
   it("plays the startup only when asked (engine passes false on rebuilds)", () => {
