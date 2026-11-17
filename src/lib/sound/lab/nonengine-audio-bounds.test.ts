@@ -35,6 +35,7 @@ const NON_ENGINE_PROFILES = [
   "farting-car",
   "wild-west-carriage",
   "romanian-85-carriage",
+  "caravan-carriage",
   "horse-gallop",
   "wiesn-tractor",
 ];

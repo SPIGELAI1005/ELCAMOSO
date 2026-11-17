@@ -208,6 +208,15 @@ export const FUELS: Record<string, FuelSpec> = {
     co2: 0.05,
     quip: "The căruță needs {a} of hay — plus a carrot as a thank-you.",
   },
+  "caravan-carriage": {
+    name: "Hay & carrots",
+    emoji: "🥕",
+    unit: "kg",
+    perKm: 0.5,
+    priceEur: 0.35,
+    co2: 0.05,
+    quip: "The caravan horse needs {a} of hay — plus a carrot as a thank-you.",
+  },
   "santa-sleigh": {
     name: "Carrots",
     emoji: "🦌",

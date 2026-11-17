@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-const live = { beds: new Set<string>(), snorts: new Set<string>(), whinnies: new Set<string>() };
+const live = { beds: new Set<string>(), snorts: new Set<string>(), whinnies: new Set<string>(), calls: new Set<string>() };
 
 vi.mock("@/lib/sound/recorded-beds", async (orig) => {
   const real = await orig<typeof import("@/lib/sound/recorded-beds")>();
@@ -36,17 +36,29 @@ vi.mock("@/lib/sound/horse-whinnies", async (orig) => {
   return { ...real, HorseWhinnies };
 });
 
+vi.mock("@/lib/sound/caravan-street-calls", async (orig) => {
+  const real = await orig<typeof import("@/lib/sound/caravan-street-calls")>();
+  class CaravanStreetCalls {
+    constructor() { live.calls.add("caravan-carriage"); }
+    load() { return Promise.resolve(); }
+    update() {}
+    dispose() { live.calls.delete("caravan-carriage"); }
+  }
+  return { ...real, CaravanStreetCalls };
+});
+
 import { SoundEngine } from "@/lib/sound/engine";
 import { getProfile } from "@/lib/sound/profiles";
 
 /** Regression: carriage hooves/snorts kept playing under the motorcycles after a switch. */
 describe("motorcycle profiles never carry horse or carriage layers", () => {
   for (const moto of ["motorcycle-inline-4", "v-twin-cruiser"]) {
-    for (const from of ["wild-west-carriage", "romanian-85-carriage", "horse-gallop"]) {
+    for (const from of ["wild-west-carriage", "romanian-85-carriage", "caravan-carriage", "horse-gallop"]) {
       it(`${from} -> ${moto} stops the horse bed, snorts and whinnies`, () => {
         live.beds.clear();
         live.snorts.clear();
         live.whinnies.clear();
+        live.calls.clear();
         const engine = new SoundEngine() as unknown as {
           ctx: unknown; cabinIn: unknown; buildRecordedBed(p: unknown): void;
         };
@@ -59,6 +71,7 @@ describe("motorcycle profiles never carry horse or carriage layers", () => {
         expect([...live.beds]).toEqual([]);
         expect([...live.snorts]).toEqual([]);
         expect([...live.whinnies]).toEqual([]);
+        expect([...live.calls]).toEqual([]);
       });
     }
   }
@@ -67,7 +80,7 @@ describe("motorcycle profiles never carry horse or carriage layers", () => {
 describe("high-speed gallop layer", () => {
   it("is only in horse profiles, never in motorcycles", async () => {
     const { RECORDED_BEDS } = await import("@/lib/sound/recorded-beds");
-    for (const id of ["wild-west-carriage", "romanian-85-carriage", "horse-gallop"]) {
+    for (const id of ["wild-west-carriage", "romanian-85-carriage", "caravan-carriage", "horse-gallop"]) {
       const top = Math.max(...RECORDED_BEDS[id].loops.map((l) => l.ref));
       expect(top).toBeGreaterThanOrEqual(35);
     }

@@ -55,6 +55,15 @@ const ALIASES: Record<string, string[]> = {
   "thunder-beast": ["beast", "thunder", "dark pressure"],
   "steam-train": ["steam", "chuff", "locomotive"],
   tank: ["tank", "tracks", "armor"],
+  "caravan-carriage": [
+    "caravan",
+    "wagon",
+    "covered wagon",
+    "cart",
+    "fiare vechi",
+    "street cry",
+    "romanian carriage",
+  ],
 };
 
 function tokens(text: string): string[] {

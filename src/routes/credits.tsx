@@ -8,6 +8,7 @@ import { SIREN_CREDIT } from "@/lib/sound/dsp/siren-overlay";
 import { HORSE_SNORT_CREDITS } from "@/lib/sound/horse-snorts";
 import type { RecordedCredit } from "@/lib/sound/realism/v2/recorded-loops";
 import { HORSE_WHINNY_CREDITS } from "@/lib/sound/horse-whinnies";
+import { STREET_CALL_CREDITS } from "@/lib/sound/caravan-street-calls";
 
 const MUSIC_SOUNDFONT_CREDIT: RecordedCredit = {
   title: "FluidR3_GM General MIDI soundfont (saxophone, electric piano, brush kit)",
@@ -19,7 +20,7 @@ const MUSIC_SOUNDFONT_CREDIT: RecordedCredit = {
   usedIn: "Drive Symphony: Piano Flow and Jazz Cruise",
 };
 
-const CREDITS = [...RECORDED_LOOP_CREDITS, ...RECORDED_BED_CREDITS, ...HORSE_SNORT_CREDITS, ...HORSE_WHINNY_CREDITS, ...DEBRIS_GRAIN_CREDITS, SIREN_CREDIT, MUSIC_SOUNDFONT_CREDIT];
+const CREDITS = [...RECORDED_LOOP_CREDITS, ...RECORDED_BED_CREDITS, ...HORSE_SNORT_CREDITS, ...HORSE_WHINNY_CREDITS, ...DEBRIS_GRAIN_CREDITS, SIREN_CREDIT, MUSIC_SOUNDFONT_CREDIT, ...STREET_CALL_CREDITS];
 
 export const Route = createFileRoute("/credits")({
   component: CreditsPage,

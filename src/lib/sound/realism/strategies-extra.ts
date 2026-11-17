@@ -12,6 +12,7 @@ import {
   createGearboxWhineLayer,
   createHarmonicEngineLayer,
   createHoofLayer,
+  createCreakLayer,
   createImpactLayer,
   createIntakeRoarLayer,
   createMechanicalLayer,
@@ -986,6 +987,53 @@ export const EXPANSION_STRATEGIES: ProfileStrategy[] = [
           cruise: 0.15,
         }),
         createDebrisLayer(ctx, { id: "chrono-debris", destination: buses.accents, level: 4.0, metal: 0.4, pitch: 1.05 }),
+      ];
+    },
+  },
+  // Same improved-synth layers as romanian-85-carriage (gait, cobbles, creak, iron rim).
+  // Street calls are a recorded one-shot player, not part of this graph.
+  {
+    id: "caravan-carriage",
+    build(ctx, buses) {
+      return [
+        createHoofLayer(ctx, {
+          id: "horse",
+          destination: buses.accents,
+          horses: 1,
+          tone: 320,
+          level: 0.28,
+          softOnset: true,
+        }),
+        createImpactLayer(ctx, {
+          id: "cobbles",
+          destination: buses.beds,
+          kind: "cobble",
+          level: 0.3,
+          softOnset: true,
+        }),
+        createCreakLayer(ctx, {
+          id: "heavy-creak",
+          destination: buses.accents,
+          tone: 140,
+          metal: true,
+          smooth: true,
+          level: 0.16,
+        }),
+        createFilteredNoiseLayer(ctx, {
+          id: "iron-rim",
+          destination: buses.accents,
+          color: "white",
+          filterType: "bandpass",
+          tone: 900,
+          q: 5,
+          level: 0.08,
+        }),
+        createResonantBodyLayer(ctx, {
+          id: "cart-body",
+          destination: buses.body,
+          freqs: [70, 110],
+          level: 0.14,
+        }),
       ];
     },
   },
