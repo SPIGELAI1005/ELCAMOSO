@@ -55,6 +55,10 @@ describe("SEO platform", () => {
     expect(rumoso.meta.some((m) => m.name === "robots" && m.content === "noindex, nofollow")).toBe(
       true,
     );
+    const run = createSeoHeadFromPath("/run");
+    expect(run.meta.some((m) => m.name === "robots" && m.content === "noindex, nofollow")).toBe(
+      true,
+    );
     expect(
       rumoso.meta.some(
         (m) =>
@@ -84,6 +88,7 @@ describe("SEO platform", () => {
     expect(paths).not.toContain("/admin");
     expect(paths).not.toContain("/recorder");
     expect(paths).not.toContain("/rumoso");
+    expect(paths).not.toContain("/run");
     expect(paths).not.toContain("/auth");
     const xml = buildSitemapXml(paths);
     expect(xml).toContain("https://www.elcamoso.com/explore");

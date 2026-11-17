@@ -1,9 +1,9 @@
 import { Link } from "@tanstack/react-router";
-import type { ExperienceFamilyMeta, ExperienceKind } from "@/lib/experiences";
+import type { ExperienceFamilyKind, ExperienceFamilyMeta } from "@/lib/experiences";
 import { cn } from "@/lib/utils";
 import { MODE_DEMO_SRC, ModeDemoButton } from "./ModeDemoButton";
 
-const KIND_ORDER: ExperienceKind[] = ["engine", "symphony", "world", "fusion"];
+const KIND_ORDER: ExperienceFamilyKind[] = ["engine", "symphony", "world", "rumoso", "fusion"];
 
 export function ExperienceFamilyGrid({
   families,
@@ -55,7 +55,7 @@ export function ExperienceFamilyGrid({
               Open
             </span>
           </Link>
-          {demos && MODE_DEMO_SRC[family.kind] ? (
+          {demos && family.kind !== "rumoso" && MODE_DEMO_SRC[family.kind] ? (
             <ModeDemoButton src={MODE_DEMO_SRC[family.kind]!} className="mt-2 self-start" />
           ) : null}
         </li>

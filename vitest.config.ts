@@ -12,7 +12,7 @@ export default defineConfig({
     environment: "node",
     // PGlite boots can exceed 10s when the whole suite runs in parallel.
     hookTimeout: 60_000,
-    include: ["src/**/*.test.ts"],
+    include: ["src/**/*.test.ts", "src/**/*.test.tsx"],
     // Gating tests assert real Drive+ behaviour: keep the testing unlock off and
     // simulate a post-gate "now" (gate = 9 Nov 2026 Europe/Berlin). Tests that
     // pass an explicit `now` are unaffected; see sound-tier-gate.test.ts.

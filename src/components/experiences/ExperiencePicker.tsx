@@ -8,12 +8,19 @@ import {
   listFusionExperiences,
   listSymphonyExperiences,
   listWorldExperiences,
+  type ExperienceFamilyMeta,
   type ExperienceKind,
 } from "@/lib/experiences";
 import { useSettings } from "@/lib/drive/useSettings";
 import { useEntitlements } from "@/lib/entitlements/useEntitlements";
 import { trackEvent } from "@/lib/telemetry/analytics";
 import { cn } from "@/lib/utils";
+
+function isDriveFamily(
+  family: ExperienceFamilyMeta,
+): family is ExperienceFamilyMeta & { kind: ExperienceKind } {
+  return family.kind !== "rumoso";
+}
 
 interface ExperiencePickerProps {
   open: boolean;
@@ -68,7 +75,7 @@ export function ExperiencePicker({ open, onClose, className }: ExperiencePickerP
         </div>
 
         <div className="mt-6 flex flex-wrap gap-2">
-          {EXPERIENCE_FAMILIES.map((family) => (
+          {EXPERIENCE_FAMILIES.filter(isDriveFamily).map((family) => (
             <button
               key={family.kind}
               type="button"

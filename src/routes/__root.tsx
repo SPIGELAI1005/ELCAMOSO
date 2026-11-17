@@ -175,7 +175,8 @@ function RootShell({ children }: { children: ReactNode }) {
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const onRumoso = pathname === "/rumoso" || pathname.startsWith("/rumoso/");
+  const onRumoso =
+    pathname === "/rumoso" || pathname.startsWith("/rumoso/") || pathname === "/run";
   const showMiniPlayer = pathname !== "/" && !onRumoso;
   const [hydrated, setHydrated] = useState(false);
 
