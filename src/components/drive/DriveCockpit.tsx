@@ -66,6 +66,8 @@ import {
 } from "@/lib/drive/drive-shift-persona";
 import { cn } from "@/lib/utils";
 import { DRIVE_PLUS_LOCKED_MESSAGE } from "@/lib/sound/profile-access-config";
+import { visibleProfileList } from "@/lib/sound/admin-only-profiles";
+import { useAccount } from "@/lib/account/AccountProvider";
 import { ModeTachometer } from "@/components/drive/ModeTachometer";
 import { FeedbackSheet } from "@/components/feedback/FeedbackSheet";
 import { NoiseMaskingDriveToggle } from "@/components/NoiseMaskingToggle";
@@ -291,6 +293,7 @@ export function DriveCockpit({
   noiseMaskingPreviewAllowed = false,
 }: DriveCockpitProps) {
   const { settings, update } = useSettings();
+  const { isAdmin } = useAccount();
   const reducedMotionHook = useReducedMotion();
   const reducedMotion = reducedMotionProp ?? reducedMotionHook;
   const { canDriveWithProfile } = useFeatureAccess();
@@ -336,18 +339,21 @@ export function DriveCockpit({
   const isShifting = Boolean(driveState.powertrain?.shifting ?? driveState.isShifting);
   const inRedline = showTachRedline && arcProgress >= REDLINE_ZONE_START;
 
+  const catalog = useMemo(() => visibleProfileList(SOUND_PROFILES, isAdmin), [isAdmin]);
+  const catalogIds = useMemo(() => new Set(catalog.map((p) => p.id)), [catalog]);
+
   const favourites = useMemo(
-    () => cockpitFavouriteSlots(settings.favourites, CATALOG_IDS, 3),
-    [settings.favourites],
+    () => cockpitFavouriteSlots(settings.favourites, catalogIds, 3),
+    [settings.favourites, catalogIds],
   );
 
   const soundGroups = useMemo(
     () =>
       PROFILE_CATEGORIES.map((category) => ({
         category,
-        profiles: SOUND_PROFILES.filter((p) => p.category === category),
+        profiles: catalog.filter((p) => p.category === category),
       })).filter((group) => group.profiles.length > 0),
-    [],
+    [catalog],
   );
 
   const telemetry = cockpitTelemetryLabel(productStatus);

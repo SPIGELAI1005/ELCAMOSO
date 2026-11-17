@@ -12,6 +12,7 @@ import { useHaptics } from "@/lib/drive/useHaptics";
 import { getProfileGain, getTuning, type ElcamosoSettings } from "@/lib/drive/settings";
 import { effectiveNoiseMaskingAudio } from "@/lib/sound/road-cabin";
 import { useAccount } from "@/lib/account/AccountProvider";
+import { resolveVisibleProfileId } from "@/lib/sound/admin-only-profiles";
 import { getProfile } from "@/lib/sound/profiles";
 import { EnvironmentPicker } from "@/components/EnvironmentPicker";
 import { DemoSoundPicker } from "@/components/DemoSoundPicker";
@@ -26,10 +27,11 @@ export const Route = createFileRoute("/demo")({
   head: () => createSeoHeadFromPath("/demo"),
 });
 
-function demoSessionConfig(settings: ElcamosoSettings, isSignedIn: boolean) {
-  const profileId = settings.profileId;
+function demoSessionConfig(settings: ElcamosoSettings, isSignedIn: boolean, isAdmin = false) {
+  const profileId = resolveVisibleProfileId(settings.profileId, isAdmin);
   return {
     profileId,
+    isAdmin,
     volume: settings.volume,
     profileGain: getProfileGain(settings, profileId),
     outputBoostDb: settings.outputBoostDb,
@@ -53,19 +55,20 @@ function demoSessionConfig(settings: ElcamosoSettings, isSignedIn: boolean) {
 
 function DemoDrive() {
   const { settings, update } = useSettings();
-  const { isAuthenticated } = useAccount();
+  const { isAuthenticated, isAdmin } = useAccount();
   const demoSpeedFor = (mps: number) =>
     formatSpeed(mps, settings.units, settings.language, {
       profileId: settings.profileId,
       knotsForNautical: settings.knotsForNautical,
     });
   const reducedMotion = useReducedMotion();
-  const profile = getProfile(settings.profileId);
+  const playableId = resolveVisibleProfileId(settings.profileId, isAdmin);
+  const profile = getProfile(playableId);
   const { active, state, controls, setControls, reset, start, stop } = useDemoDrive({
-    profileId: settings.profileId,
+    profileId: playableId,
     volume: settings.volume,
-    profileGain: getProfileGain(settings, settings.profileId),
-    tuning: getTuning(settings, settings.profileId),
+    profileGain: getProfileGain(settings, playableId),
+    tuning: getTuning(settings, playableId),
     environmentId: settings.environmentId,
     mix: settings.layerMix,
     snippets: settings.snippets,
@@ -86,9 +89,9 @@ function DemoDrive() {
 
   const syncDemoSession = useCallback(
     (next: ElcamosoSettings) => {
-      getSession().syncConfig(demoSessionConfig(next, isAuthenticated));
+      getSession().syncConfig(demoSessionConfig(next, isAuthenticated, isAdmin));
     },
-    [isAuthenticated],
+    [isAuthenticated, isAdmin],
   );
 
   const onProfileSelect = useCallback(

@@ -12,6 +12,8 @@ import {
 import { getSession } from "@/lib/drive/session";
 import { useSettings } from "@/lib/drive/useSettings";
 import { allProfiles } from "@/lib/sound/profiles";
+import { visibleProfileList } from "@/lib/sound/admin-only-profiles";
+import { useAccount } from "@/lib/account/AccountProvider";
 import { familyForProfile } from "@/lib/sound/realism/families";
 import { demoStateAt, demoTotalDurationSec } from "@/lib/symphony";
 
@@ -22,9 +24,10 @@ export const Route = createFileRoute("/fusion")({
 
 function FusionPage() {
   const { settings, update } = useSettings();
+  const { isAdmin } = useAccount();
   const navigate = useNavigate();
   const enabled = isFusionEnabled();
-  const engines = allProfiles().filter((p) => familyForProfile(p) === "physical");
+  const engines = visibleProfileList(allProfiles(), isAdmin).filter((p) => familyForProfile(p) === "physical");
   const symphonies = listSymphonyExperiences().filter((s) => s.capabilities.profileId);
   const presets = listFusionExperiences();
 

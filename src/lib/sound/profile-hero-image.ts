@@ -72,6 +72,7 @@ const PROFILE_IDS_WITH_HERO = [
   "traby",
   "bollywood-rickshaw",
   "classic-vespa",
+  "caravan-carriage",
   "ge-squared",
   "ge-squared-90",
   "police-patrol",

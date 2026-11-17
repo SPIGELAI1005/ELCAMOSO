@@ -2443,6 +2443,37 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
       transitionTauSeconds: 0.09,
     },
   },
+  "caravan-carriage": {
+    profileId: "caravan-carriage",
+    family: familyForProfile("caravan-carriage"),
+    intendedIdentity: "Painted caravan — same Romanian '85 carriage engine, plus street calls",
+    previousSource: "romanian-85-carriage (reused unchanged)",
+    diagnosedProblem: "New profile identity; audio reused, not retuned",
+    chosenRenderer: "improved-strategy",
+    layerOrderBalance: "Mechanical/env + occasional street-call one-shots",
+    rpmLoadShaping: "Slower cadence feel",
+    bassBodyAdjustment: "Heavier cruise bed",
+    harshnessTreatment: "Softer accel",
+    transmissionEvents: "Few events; street calls every few minutes",
+    sampleStatus: "asset-pending",
+    changedCode: ["by-profile.ts:caravan-carriage", "applyExperienceCatalogTuning"],
+    baselineCapturePath: "artifacts/audio-lab/prompt-07-catalog/caravan-carriage__baseline",
+    afterCapturePath: "artifacts/audio-lab/prompt-07-catalog/caravan-carriage__after",
+    automatedCheck: "pending",
+    humanListeningStatus: "unverified",
+    deviceStatus: "unverified",
+    outcome: "experience-tuned",
+    audibleRationale: "Same experience overlay as romanian-85-carriage",
+    designFamilyHint: "creature-cinematic",
+    experienceOverlay: {
+      phases: {
+        accelerationTexture: 1.04,
+        cruiseIntrusiveScale: 0.74,
+        releaseCharacter: 0.72,
+      },
+      transitionTauSeconds: 0.24,
+    },
+  },
 };
 
 export function catalogTuningForProfile(profileId: string): CatalogTuningRecord | null {

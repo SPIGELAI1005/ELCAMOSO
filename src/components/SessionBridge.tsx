@@ -8,6 +8,8 @@ import { beginLiveDriveAccess, endLiveDriveAccess } from "@/lib/entitlements/liv
 import { useEntitlements } from "@/lib/entitlements/useEntitlements";
 import { isLiveSessionStatus } from "@/lib/ui/chrome";
 import { effectiveNoiseMaskingAudio } from "@/lib/sound/road-cabin";
+import { useAccount } from "@/lib/account/AccountProvider";
+import { isAdminOnlyProfile, resolveVisibleProfileId } from "@/lib/sound/admin-only-profiles";
 
 const SILENT_WAV =
   "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA";
@@ -15,6 +17,7 @@ const SILENT_WAV =
 /** Keeps the drive session singleton in sync with saved settings. */
 export function SessionBridge() {
   const { settings, update } = useSettings();
+  const { isAdmin } = useAccount();
   const access = useFeatureAccess();
   const { entitlements, snapshot } = useEntitlements();
   const sessionSnap = useSessionSelector((s) => ({ kind: s.kind, status: s.status }));
@@ -51,10 +54,12 @@ export function SessionBridge() {
 
   useEffect(() => {
     const dynamicDrive = settings.dynamicDrive && access.dynamicDrive;
+    const profileId = resolveVisibleProfileId(settings.profileId, isAdmin);
     getSession().syncConfig({
-      profileId: settings.profileId,
+      profileId,
+      isAdmin,
       volume: settings.volume,
-      profileGain: getProfileGain(settings, settings.profileId),
+      profileGain: getProfileGain(settings, profileId),
       outputBoostDb: settings.outputBoostDb,
       ...effectiveNoiseMaskingAudio({
         isSignedIn: access.isSignedIn,
@@ -67,7 +72,7 @@ export function SessionBridge() {
       matchVolumeToSpeedIntensity: settings.matchVolumeToSpeedIntensity,
       bodyCharacter: settings.bodyCharacter,
       mechanicalCharacter: settings.mechanicalCharacter,
-      tuning: getTuning(settings, settings.profileId),
+      tuning: getTuning(settings, profileId),
       motionSensitivity: settings.motionSensitivity,
       motionNoiseFloor: settings.motionNoiseFloor,
       environmentId: activeCustom?.environmentId ?? settings.environmentId,
@@ -91,6 +96,7 @@ export function SessionBridge() {
   }, [
     settings,
     activeCustom,
+    isAdmin,
     access.advancedControls,
     access.dynamicDrive,
     access.virtualTransmission,
@@ -103,11 +109,13 @@ export function SessionBridge() {
 
     if (sessionUi.kind !== "drive" || sessionUi.status !== "running") return;
     if (sessionUi.profileId === settings.profileId) return;
+    // Don't wipe a saved admin-only pick when the session is clamped for a non-admin.
+    if (isAdminOnlyProfile(settings.profileId) && !isAdmin) return;
     // Settings lead the session in the effect above; only mirror session -> settings
     // when the live drive session changed profile on its own (rules, playlist, etc.).
     if (prevSessionProfileId === sessionUi.profileId) return;
     update({ profileId: sessionUi.profileId });
-  }, [sessionUi.kind, sessionUi.status, sessionUi.profileId, settings.profileId, update]);
+  }, [sessionUi.kind, sessionUi.status, sessionUi.profileId, settings.profileId, isAdmin, update]);
 
   useEffect(() => {
     if (typeof navigator === "undefined" || !("serviceWorker" in navigator)) return;

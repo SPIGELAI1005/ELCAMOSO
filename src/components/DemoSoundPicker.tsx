@@ -6,6 +6,8 @@ import {
   type SoundProfile,
 } from "@/lib/sound/profiles";
 import type { ElcamosoSettings } from "@/lib/drive/settings";
+import { useAccount } from "@/lib/account/AccountProvider";
+import { visibleProfileList } from "@/lib/sound/admin-only-profiles";
 
 /**
  * Compact Sound Profile picker for Demo Drive: categories + profile chips.
@@ -19,9 +21,11 @@ export function DemoSoundPicker({
   onSelect: (profileId: string) => void;
   className?: string;
 }) {
+  const { isAdmin } = useAccount();
+  const catalog = useMemo(() => visibleProfileList(allProfiles(), isAdmin), [isAdmin]);
   const current = useMemo(
-    () => allProfiles().find((p) => p.id === settings.profileId),
-    [settings.profileId],
+    () => catalog.find((p) => p.id === settings.profileId),
+    [catalog, settings.profileId],
   );
   const [category, setCategory] = useState<ProfileCategory | "Favourites">(
     () => current?.category ?? "Classic",
@@ -47,13 +51,12 @@ export function DemoSoundPicker({
   }, [settings.customSounds.length]);
 
   const profiles = useMemo((): SoundProfile[] => {
-    const all = allProfiles();
     if (category === "Favourites") {
       const starred = new Set(settings.favourites);
-      return all.filter((p) => starred.has(p.id));
+      return catalog.filter((p) => starred.has(p.id));
     }
-    return all.filter((p) => p.category === category);
-  }, [category, settings.favourites]);
+    return catalog.filter((p) => p.category === category);
+  }, [category, settings.favourites, catalog]);
 
   return (
     <div className={className}>

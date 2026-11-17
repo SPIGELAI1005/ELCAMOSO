@@ -29,6 +29,7 @@ This package was derived from the current GitHub portfolio and preserves all 57 
 | `santa-sleigh` | Santa Sleigh | Festive | environmental | `continuous` |
 | `wild-west-carriage` | Wild West Carriage | Heritage | environmental | `continuous` |
 | `romanian-85-carriage` | Romanian '85 Carriage | Heritage | environmental | `continuous` |
+| `caravan-carriage` | Caravan Carriage | Heritage | environmental | `continuous` |
 | `laughing-machine` | Laughing Machine | Playful | environmental | `continuous` |
 | `farting-car` | Farting Car | Playful | designed | `virtual-transmission` |
 | `steam-train` | Steam Train | Heritage | physical | `continuous` |

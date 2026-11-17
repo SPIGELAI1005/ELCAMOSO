@@ -5,6 +5,7 @@
 import type { Locale } from "@/lib/i18n";
 import { SOUND_PROFILES } from "@/lib/sound/profiles";
 import { profileHeroImageSrc } from "@/lib/sound/profile-hero-image";
+import { isAdminOnlyProfile } from "@/lib/sound/admin-only-profiles";
 
 export const SHARE_SOUND_PARAM = "sound";
 export const SHARE_SITE_ORIGIN = "https://www.elcamoso.com";
@@ -70,13 +71,22 @@ export function shareIntentUrls(share: SoundShare): { whatsapp: string; x: strin
 }
 
 /** Social preview data for /drive?sound=<id> (server-rendered head). */
-export function soundShareSocialMeta(profileId: string): {
+export function soundShareSocialMeta(profileId: string, isAdmin = false): {
   title: string;
   description: string;
   image?: string;
   imageAlt: string;
   path: string;
 } {
+  // Crawlers and logged-out visitors must not get admin-only name or artwork.
+  if (isAdminOnlyProfile(profileId) && !isAdmin) {
+    return {
+      title: "ELCAMOSO Drive",
+      description: "Turn motion into sound.",
+      imageAlt: "ELCAMOSO Drive",
+      path: `/drive?${SHARE_SOUND_PARAM}=${encodeURIComponent(profileId)}`,
+    };
+  }
   const name = soundDisplayName(profileId);
   const hero = profileHeroImageSrc(profileId);
   return {
@@ -144,9 +154,11 @@ export function shouldApplySharedSound(opts: {
   lockedFallback: string | null;
   fallbackId: string;
   canDrive: (id: string) => boolean;
+  isAdmin?: boolean;
 }): boolean {
-  const { current, shared, alreadyApplied, lockedFallback, fallbackId, canDrive } = opts;
+  const { current, shared, alreadyApplied, lockedFallback, fallbackId, canDrive, isAdmin = false } = opts;
   if (!shared || current === shared) return false;
+  if (isAdminOnlyProfile(shared) && !isAdmin) return false;
   if (!alreadyApplied) return true;
   // Entitlements resolved after the enforcer clamped the shared sound: restore it.
   return current === fallbackId && lockedFallback === shared && canDrive(shared);

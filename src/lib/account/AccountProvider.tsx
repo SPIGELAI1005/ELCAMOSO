@@ -28,6 +28,8 @@ import { useSettings } from "@/lib/drive/useSettings";
 export interface AccountContextValue {
   session: PersistedAccountSession | null;
   isAuthenticated: boolean;
+  /** Same requireAdmin check as /admin and RUMOSO. False until the session is confirmed. */
+  isAdmin: boolean;
   isLoading: boolean;
   saveSession: (session: PersistedAccountSession) => void;
   signOut: () => Promise<void>;
@@ -39,6 +41,7 @@ const AccountContext = createContext<AccountContextValue | null>(null);
 export function AccountProvider({ children }: { children: ReactNode }) {
   const { settings, update } = useSettings();
   const [session, setSession] = useState<PersistedAccountSession | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
   const saveSession = useCallback(
@@ -59,9 +62,11 @@ export function AccountProvider({ children }: { children: ReactNode }) {
       if (!result.authenticated) {
         clearPersistedAccountSession();
         setSession(null);
+        setIsAdmin(false);
         update(clearAccountSettingsPatch());
         return;
       }
+      setIsAdmin(Boolean(result.isAdmin));
       const next: PersistedAccountSession = {
         userId: result.userId,
         email: result.email,
@@ -71,6 +76,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
       setSession(next);
       update(accountSessionToSettingsPatch(next));
     } catch {
+      setIsAdmin(false);
       const persisted =
         readPersistedAccountSession() ??
         (settings.accountUserId && settings.accountEmail
@@ -112,6 +118,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
       if (event.type === "signed-out") {
         clearPersistedAccountSession();
         setSession(null);
+        setIsAdmin(false);
         update(clearAccountSettingsPatch());
         return;
       }
@@ -152,6 +159,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     if (ms <= 0) {
       clearPersistedAccountSession();
       setSession(null);
+      setIsAdmin(false);
       update(clearAccountSettingsPatch());
       return;
     }
@@ -169,6 +177,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     }
     clearPersistedAccountSession();
     setSession(null);
+    setIsAdmin(false);
     update(clearAccountSettingsPatch());
     publishAccountSyncEvent({ type: "signed-out", at: Date.now() });
   }, [update]);
@@ -177,12 +186,13 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     (): AccountContextValue => ({
       session,
       isAuthenticated: session != null,
+      isAdmin,
       isLoading,
       saveSession,
       signOut,
       refresh,
     }),
-    [isLoading, refresh, saveSession, session, signOut],
+    [isAdmin, isLoading, refresh, saveSession, session, signOut],
   );
 
   return <AccountContext.Provider value={value}>{children}</AccountContext.Provider>;
