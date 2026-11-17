@@ -23,6 +23,7 @@ import {
   type ProfileCategory,
   type SoundProfile,
 } from "@/lib/sound/profiles";
+import { visibleProfileList } from "@/lib/sound/admin-only-profiles";
 import { useSessionSelector } from "@/lib/store/session-store";
 import { cn } from "@/lib/utils";
 import { HALLOWEEN_ORANGE, HALLOWEEN_TAG, halloweenPinned } from "@/lib/halloween/halloween";
@@ -55,9 +56,10 @@ type MenuGroup = {
  * Black Friday Special: music + the named engine sounds pinned first.
  * Halloween profiles pinned next (only inside the window), then the normal categories.
  */
-export function profilesByCategory(now?: number): MenuGroup[] {
-  const special = isDriveSpecialActive(now) ? driveSpecialPinned(SOUND_PROFILES) : null;
-  const base = special ? special.rest : SOUND_PROFILES;
+export function profilesByCategory(now?: number, isAdmin = false): MenuGroup[] {
+  const catalog = visibleProfileList(SOUND_PROFILES, isAdmin);
+  const special = isDriveSpecialActive(now) ? driveSpecialPinned(catalog) : null;
+  const base = special ? special.rest : catalog;
   const { pinned, rest } = halloweenPinned(base, now);
   const groups: MenuGroup[] = PROFILE_CATEGORIES.map((category) => ({
     category,
@@ -100,10 +102,10 @@ export function HeaderSoundsMenu({
   const { canDriveWithProfile, canPreviewProfile } = useFeatureAccess();
   const sessionStatus = useSessionSelector((snap) => snap.status);
   const [sheetOpen, setSheetOpen] = useState(false);
-  const { isAuthenticated } = useAccount();
+  const { isAuthenticated, isAdmin } = useAccount();
   const gateActive = isSoundTierGateActive();
   const [upsellFor, setUpsellFor] = useState<string | null>(null);
-  const allGroups = useMemo(() => profilesByCategory(), []);
+  const allGroups = useMemo(() => profilesByCategory(undefined, isAdmin), [isAdmin]);
   const [query, setQuery] = useState("");
   const groups = useMemo(() => filterMenuGroups(allGroups, query), [allGroups, query]);
   const specialActive = isDriveSpecialActive();

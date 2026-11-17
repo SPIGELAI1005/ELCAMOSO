@@ -92,6 +92,7 @@ import {
   type RoadLoudnessIntensity,
 } from "@/lib/sound/road-cabin";
 import { getProfile } from "@/lib/sound/profiles";
+import { resolveVisibleProfileId } from "@/lib/sound/admin-only-profiles";
 import { driveStateFromPowertrain } from "@/lib/powertrain/adapters/drive-state";
 import {
   powertrainProfileForSound,
@@ -217,6 +218,8 @@ export interface SessionConfig {
   noiseMasking: boolean;
   /** True only when the current user is signed in. Defaults false until SessionBridge syncs. */
   noiseMaskingAllowed: boolean;
+  /** Same requireAdmin check as /admin and RUMOSO. Defaults false until SessionBridge syncs. */
+  isAdmin: boolean;
   matchVolumeToSpeed: boolean;
   matchVolumeToSpeedIntensity: RoadLoudnessIntensity;
   calmCabin: boolean;
@@ -264,6 +267,7 @@ function configFingerprint(c: SessionConfig): string {
     outputBoostDb: c.outputBoostDb,
     noiseMasking: c.noiseMasking,
     noiseMaskingAllowed: c.noiseMaskingAllowed,
+    isAdmin: c.isAdmin,
     matchVolumeToSpeed: c.matchVolumeToSpeed,
     matchVolumeToSpeedIntensity: c.matchVolumeToSpeedIntensity,
     calmCabin: c.calmCabin,
@@ -369,6 +373,7 @@ class DriveSession {
     outputBoostDb: 0,
     noiseMasking: DEFAULT_NOISE_MASKING,
     noiseMaskingAllowed: false,
+    isAdmin: false,
     matchVolumeToSpeed: DEFAULT_MATCH_VOLUME_TO_SPEED,
     matchVolumeToSpeedIntensity: DEFAULT_MATCH_VOLUME_TO_SPEED_INTENSITY,
     calmCabin: DEFAULT_CALM_CABIN,
@@ -681,6 +686,7 @@ class DriveSession {
     const prevId = this.config.profileId;
     const prevEnv = this.config.environmentId;
     const merged: SessionConfig = { ...this.config, ...next };
+    merged.profileId = resolveVisibleProfileId(merged.profileId, Boolean(merged.isAdmin));
     if (next.mix) merged.mix = normalizeMix(next.mix);
 
     // Skip emit when content is unchanged. Callers often pass fresh object
@@ -761,12 +767,13 @@ class DriveSession {
   }
 
   private applyProfile(profileId: string) {
-    if (profileId === this.config.profileId) return;
-    this.config.profileId = profileId;
+    const nextId = resolveVisibleProfileId(profileId, Boolean(this.config.isAdmin));
+    if (nextId === this.config.profileId) return;
+    this.config.profileId = nextId;
     this.powertrainSim = null;
     this.powertrainSoundProfileId = null;
     try {
-      this.engine?.setProfile(getProfile(profileId));
+      this.engine?.setProfile(getProfile(nextId));
     } catch (error) {
       reportAudioError(error);
     }

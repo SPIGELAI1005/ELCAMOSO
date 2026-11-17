@@ -19,6 +19,8 @@ import { ElcamosoMark } from "@/components/ElcamosoLogo";
 import { BrandLoader } from "@/components/BrandLoader";
 import { StartDriveMarkControl } from "@/components/StartDriveMarkControl";
 import { useSettings } from "@/lib/drive/useSettings";
+import { useAccount } from "@/lib/account/AccountProvider";
+import { isAdminOnlyProfile, resolveVisibleProfileId } from "@/lib/sound/admin-only-profiles";
 import { useReducedMotion } from "@/lib/drive/useReducedMotion";
 import { getProfileGain } from "@/lib/drive/settings";
 import { useHaptics } from "@/lib/drive/useHaptics";
@@ -114,6 +116,7 @@ export const Route = createFileRoute("/drive")({
   head: ({ match }) => {
     const sound = (match?.search as { sound?: string } | undefined)?.sound;
     if (!sound) return createSeoHeadFromPath("/drive");
+    if (isAdminOnlyProfile(sound)) return createSeoHeadFromPath("/drive");
     const social = soundShareSocialMeta(sound);
     return createSeoHeadFromPath("/drive", {
       title: social.title,
@@ -165,7 +168,9 @@ function DriveScreen() {
   const [relaySessionId, setRelaySessionId] = useState<string | null>(null);
   const [showTeslaUpgrade, setShowTeslaUpgrade] = useState(false);
   const { settings, update, loaded, loadReport } = useSettings();
-  const profile = getProfile(settings.profileId);
+  const { isAdmin, isLoading: accountLoading } = useAccount();
+  const playableId = resolveVisibleProfileId(settings.profileId, isAdmin);
+  const profile = getProfile(playableId);
   const reducedMotion = useReducedMotion();
   const { status, error, state, sessionSnap, start, stop } = useDriveSession({
     demoMotion: settings.demoMotion,
@@ -194,9 +199,11 @@ function DriveScreen() {
   const monetizationEnabled = useMonetizationEnabled();
   const lockedFallbackId = useLockedFallback();
   const sharedAccess = useSharedSoundAccess();
+  const publicShared =
+    sharedSound && isAdminOnlyProfile(sharedSound) && !isAdmin ? undefined : sharedSound;
   const displayed = resolveDisplayedProfileId({
-    current: settings.profileId,
-    shared: sharedSound,
+    current: playableId,
+    shared: publicShared,
     lockedFallback: lockedFallbackId,
     fallbackId: SHARED_FALLBACK_ID,
     canDrive: sharedAccess.canDriveWithProfile,
@@ -222,6 +229,7 @@ function DriveScreen() {
   const sharedSoundHandled = useRef(false);
   useEffect(() => {
     if (!sharedSound || !loaded) return;
+    if (isAdminOnlyProfile(sharedSound) && accountLoading) return;
     const apply = shouldApplySharedSound({
       current: settings.profileId,
       shared: sharedSound,
@@ -229,13 +237,16 @@ function DriveScreen() {
       lockedFallback: lockedFallbackId,
       fallbackId: SHARED_FALLBACK_ID,
       canDrive: sharedAccess.canDriveWithProfile,
+      isAdmin,
     });
     if (!sharedSoundHandled.current) {
       sharedSoundHandled.current = true;
-      track("share_visit", { kind: "drive-sound", profileId: sharedSound });
+      if (!(isAdminOnlyProfile(sharedSound) && !isAdmin)) {
+        track("share_visit", { kind: "drive-sound", profileId: sharedSound });
+      }
     }
     if (apply) update({ profileId: sharedSound });
-  }, [loaded, settings.profileId, sharedSound, update, lockedFallbackId, sharedAccess]);
+  }, [loaded, settings.profileId, sharedSound, update, lockedFallbackId, sharedAccess, isAdmin, accountLoading]);
 
   useEffect(() => {
     if (!activateTrial) return;
@@ -416,7 +427,7 @@ function DriveScreen() {
         <PostSilentCaptureExperience
           journeyTraceId={postCaptureTraceId}
           capturePausedByBrowser={captureHadBrowserPause}
-          carProfileId={settings.profileId}
+          carProfileId={playableId}
           locale={settings.language}
           onDismiss={() => setPostCaptureTraceId(null)}
         />

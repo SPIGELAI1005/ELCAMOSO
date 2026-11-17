@@ -15,6 +15,8 @@ Occasional Romanian scrap-collector cries. Exact text:
 - Man: Fiare vechi, frigidere vechi, calorifere, electronice luăm
 
 
+This profile is **admin-only** for the live test: signed-in admins (the same requireAdmin check as /admin and RUMOSO) can see and play it; everyone else does not see it in Sounds, Symphony, Drive pickers, search, sitemap or public catalog counts, and `/drive?sound=caravan-carriage` falls back to the default profile.
+
 **TEST ONLY:** the runtime overlays are currently cuts from the Suno song “Fiare Vechi Luam” (https://suno.com/s/vVWzRwhQvHSreHOw), made on the free plan and **not licensed for commercial use**. They must be replaced by a paid-plan regeneration or the Piper v2 fallback in `assets/caravan-carriage/fiare-vechi-*-piper-v2.*` before this is merged.
 
 The first cry (the woman) starts 2–4 s after speed first stays above 20 km/h, so a brief spike does not trigger it. After that, cries alternate woman / man / woman / man about every 30 s, measured start to start, with about ±3 s of jitter. If a clip is longer than the gap, the next start waits until the clip ends plus 2 s, so they never overlap. If speed drops below about 17 km/h the schedule pauses; a playing clip is left to finish (no cut-off). When speed goes back above 20 km/h, the next voice resumes after another 2–4 s. Speed comes from the same GPS / Tesla / simulator source as other Drive features.

@@ -20,6 +20,7 @@ import { t } from "@/lib/i18n";
 import { FindSoundPanel } from "@/components/FindSoundPanel";
 import { useFeatureAccess } from "@/lib/entitlements/selectors";
 import { useAccount } from "@/lib/account/AccountProvider";
+import { isAdminOnlyProfile, resolveVisibleProfileId, visibleProfileList } from "@/lib/sound/admin-only-profiles";
 import { isMusicPackageProfileId } from "@/lib/entitlements/plans";
 import {
   DRIVE_SPECIAL_BADGE,
@@ -53,7 +54,7 @@ export const Route = createFileRoute("/sounds")({
 function Sounds() {
   const { settings, update } = useSettings();
   const access = useFeatureAccess();
-  const { isAuthenticated } = useAccount();
+  const { isAuthenticated, isAdmin } = useAccount();
   const specialActive = isDriveSpecialActive();
   const signUpLabel = driveSpecialBannerText(settings.language).signup;
   const [signUpOpen, setSignUpOpen] = useState(false);
@@ -69,15 +70,15 @@ function Sounds() {
   const packRef = useRef<HTMLInputElement>(null);
   const previewTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const selected = getProfile(settings.profileId);
+  const selected = getProfile(resolveVisibleProfileId(settings.profileId, isAdmin));
   const detail = detailId ? getProfile(detailId) : null;
   const liveMini = isLiveSessionStatus(snap.status);
 
   const profiles = useMemo(
-    () => searchProfiles(query, mood).filter((p) => p.category !== "Garage"),
+    () => searchProfiles(query, mood, isAdmin).filter((p) => p.category !== "Garage"),
     // customSounds length refreshes when Garage customs register into allProfiles()
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional content gate
-    [query, mood, settings.customSounds.length],
+    [query, mood, settings.customSounds.length, isAdmin],
   );
   // Free users: everything they can drive first ("Free"), Drive+ sounds below with a lock.
   const canDrive = access.canDriveWithProfile;
@@ -144,7 +145,8 @@ function Sounds() {
     if (forDrive && !access.canDriveWithProfile(id)) return;
     if (!forDrive && !access.canPreviewProfile(id) && !access.canDriveWithProfile(id)) return;
 
-    const profile = allProfiles().find((p) => p.id === id);
+    if (isAdminOnlyProfile(id) && !isAdmin) return;
+    const profile = visibleProfileList(allProfiles(), isAdmin).find((p) => p.id === id);
     if (
       forDrive &&
       profile &&
@@ -465,7 +467,7 @@ function Sounds() {
                     onChange={(e) => update({ profileId: e.target.value })}
                     className="h-11 border border-border bg-background px-3 text-sm"
                   >
-                    {allProfiles().map((p) => (
+                    {visibleProfileList(allProfiles(), isAdmin).map((p) => (
                       <option key={p.id} value={p.id}>
                         {p.name}
                       </option>
@@ -477,7 +479,7 @@ function Sounds() {
                     onChange={(e) => setAbB(e.target.value)}
                     className="h-11 border border-border bg-background px-3 text-sm"
                   >
-                    {allProfiles().map((p) => (
+                    {visibleProfileList(allProfiles(), isAdmin).map((p) => (
                       <option key={p.id} value={p.id}>
                         {p.name}
                       </option>

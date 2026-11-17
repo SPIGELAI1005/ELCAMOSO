@@ -24,6 +24,8 @@ Disallow: /upgrade
 Disallow: /share
 Disallow: /rewards
 Disallow: /debug
+Disallow: /sample-packs/caravan-carriage
+Disallow: /hero/sound-profiles/caravan-carriage.png
 
 # AI and search crawlers are welcome on public pages.
 User-agent: GPTBot

@@ -17,7 +17,16 @@ export const loadGarageFn = createServerFn({ method: "POST" })
 export const findSoundFn = createServerFn({ method: "POST" })
   .inputValidator((data: { prompt: string }) => data)
   .handler(async ({ data }): Promise<{ matches: SoundMatch[] }> => {
-    const local = findSoundsFromPrompt(data.prompt, 5);
+    let isAdmin = false;
+    try {
+      const { tryResolveRequestSessionToken } = await import("@/lib/account/session-cookies.server");
+      const { requireAdmin } = await import("@/lib/admin/admin-store.server");
+      await requireAdmin(tryResolveRequestSessionToken(null));
+      isAdmin = true;
+    } catch {
+      isAdmin = false;
+    }
+    const local = findSoundsFromPrompt(data.prompt, 5, isAdmin);
     const key = process.env["OPENAI_API_KEY"];
     if (!key || local.length === 0) return { matches: local.slice(0, 3) };
     try {

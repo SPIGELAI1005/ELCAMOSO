@@ -6,14 +6,23 @@ export const getAccountSessionFn = createServerFn({ method: "POST" })
     const { getAccountSession } = await import("@/lib/account/auth-service");
     const { tryResolveRequestSessionToken } = await import("@/lib/account/session-cookies.server");
     const token = tryResolveRequestSessionToken(data.sessionToken);
-    if (!token) return { authenticated: false as const };
+    if (!token) return { authenticated: false as const, isAdmin: false as const };
     const session = getAccountSession(token);
-    if (!session) return { authenticated: false as const };
+    if (!session) return { authenticated: false as const, isAdmin: false as const };
+    let isAdmin = false;
+    try {
+      const { requireAdmin } = await import("@/lib/admin/admin-store.server");
+      await requireAdmin(token);
+      isAdmin = true;
+    } catch {
+      isAdmin = false;
+    }
     return {
       authenticated: true as const,
       userId: session.userId,
       email: session.email,
       expiresAt: session.expiresAt,
+      isAdmin,
     };
   });
 
