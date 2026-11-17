@@ -44,13 +44,8 @@ import { EffortGauge } from "./EffortGauge";
 import { EffortBar, EffortLegend } from "./EffortLegend";
 import { RumosoMap } from "./RumosoMap";
 import { RunSummary } from "./RunSummary";
-import {
-  RUMOSO_ASSET,
-  RumosoIcon,
-  RumosoLockup,
-  RumosoTaglineLockup,
-  type RumosoUiIconName,
-} from "./RumosoIcon";
+import { ReadyBackdrop } from "./ReadyBackdrop";
+import { RumosoIcon, RumosoLockup, type RumosoUiIconName } from "./RumosoIcon";
 
 export type RumosoDemoView = "ready" | "running" | "summary" | "diagnostics";
 
@@ -579,23 +574,7 @@ export function RumosoApp({
               fitRoute={points.length >= 8}
               className="size-full"
             />
-            {phase === "ready" ? (
-              <div className="pointer-events-none absolute inset-0 z-[1] overflow-hidden" aria-hidden>
-                <img
-                  src={RUMOSO_ASSET.heroMobile}
-                  alt=""
-                  width={900}
-                  height={1636}
-                  loading="lazy"
-                  decoding="async"
-                  className="size-full object-cover object-[center_58%] opacity-40"
-                />
-                <div className="absolute inset-0 bg-gradient-to-b from-black/45 via-black/25 to-black/70" />
-                <div className="absolute inset-0 flex items-center justify-center pt-4">
-                  <RumosoTaglineLockup className="h-[min(11rem,30vh)] w-auto opacity-95 drop-shadow-[0_2px_12px_rgba(0,0,0,0.7)]" />
-                </div>
-              </div>
-            ) : null}
+            {phase === "ready" ? <ReadyBackdrop /> : null}
             <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex items-start justify-between p-3">
               <div className="pointer-events-none rounded-2xl border border-white/10 bg-black/55 px-3 py-2 backdrop-blur-md">
                 <p className="font-mono text-3xl font-light tabular-nums leading-none">

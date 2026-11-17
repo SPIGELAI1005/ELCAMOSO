@@ -6,7 +6,6 @@ export const RUMOSO_ASSET = {
   /** George's stacked lockup with "Running Motion Sound" and "by ELCAMOSO". */
   lockupTagline: "/rumoso/logo/rumoso-lockup-tagline-white.svg",
   mark: "/rumoso/logo/rumoso-mark-white.svg",
-  heroMobile: "/rumoso/hero/rumoso-hero-mobile.webp",
   og: "/rumoso/hero/rumoso-og-1200x630.jpg",
 } as const;
 
