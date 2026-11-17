@@ -2,6 +2,7 @@ export type {
   ExperienceCapabilities,
   ExperienceDescriptor,
   ExperienceEntitlement,
+  ExperienceFamilyKind,
   ExperienceFamilyMeta,
   ExperienceKind,
   ExperiencePreviewMode,

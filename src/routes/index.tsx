@@ -31,7 +31,7 @@ function Landing() {
       </div>
       <LandingHero />
 
-      <section className="mx-auto w-full max-w-5xl px-6 py-20 sm:px-12">
+      <section id="experiences" className="mx-auto w-full max-w-5xl px-6 py-20 sm:px-12">
         <p className="text-sm text-muted-foreground">
           Explore 79+ sound experiences—from powerful engines to music, immersive worlds and playful
           surprises.
@@ -40,7 +40,7 @@ function Landing() {
           Choose your experience
         </h2>
         <p className="mt-3 max-w-lg text-muted-foreground">
-          Machine. Music. Another world. Turn motion into sound.
+          Machine. Music. Another world. The run. Turn motion into sound.
         </p>
         <ExperienceFamilyGrid className="mt-12" families={families} large demos />
         {fusion ? (

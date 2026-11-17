@@ -28,7 +28,7 @@ test.describe("Landing /", () => {
       .getByRole("heading", { name: /Choose your experience/i })
       .locator("..");
     await expect(experiences).toContainText(
-      "Machine. Music. Another world. Turn motion into sound.",
+      "Machine. Music. Another world. The run. Turn motion into sound.",
     );
   });
 
@@ -58,6 +58,7 @@ test.describe("Landing /", () => {
   test("experience families are present", async ({ page }) => {
     await page.getByRole("heading", { name: /Choose your experience/i }).scrollIntoViewIfNeeded();
     await expect(page.getByRole("link", { name: /Engine Feel a machine/i })).toBeVisible();
+    await expect(page.getByRole("link", { name: /RUMOSO Run the music/i })).toBeVisible();
     await page.getByRole("link", { name: /Engine Feel a machine/i }).click();
     await expect(page).toHaveURL(/\/sounds/);
   });

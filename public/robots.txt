@@ -26,6 +26,8 @@ Disallow: /rewards
 Disallow: /debug
 Disallow: /sample-packs/caravan-carriage
 Disallow: /hero/sound-profiles/caravan-carriage.png
+Disallow: /rumoso
+Disallow: /run
 
 # AI and search crawlers are welcome on public pages.
 User-agent: GPTBot
@@ -33,53 +35,71 @@ Allow: /
 Disallow: /api
 Disallow: /admin
 Disallow: /debug
+Disallow: /rumoso
+Disallow: /run
 
 User-agent: OAI-SearchBot
 Allow: /
 Disallow: /api
 Disallow: /admin
 Disallow: /debug
+Disallow: /rumoso
+Disallow: /run
 
 User-agent: ChatGPT-User
 Allow: /
 Disallow: /api
 Disallow: /admin
 Disallow: /debug
+Disallow: /rumoso
+Disallow: /run
 
 User-agent: PerplexityBot
 Allow: /
 Disallow: /api
 Disallow: /admin
 Disallow: /debug
+Disallow: /rumoso
+Disallow: /run
 
 User-agent: ClaudeBot
 Allow: /
 Disallow: /api
 Disallow: /admin
 Disallow: /debug
+Disallow: /rumoso
+Disallow: /run
 
 User-agent: Claude-SearchBot
 Allow: /
 Disallow: /api
 Disallow: /admin
 Disallow: /debug
+Disallow: /rumoso
+Disallow: /run
 
 User-agent: Google-Extended
 Allow: /
 Disallow: /api
 Disallow: /admin
 Disallow: /debug
+Disallow: /rumoso
+Disallow: /run
 
 User-agent: Bingbot
 Allow: /
 Disallow: /api
 Disallow: /admin
 Disallow: /debug
+Disallow: /rumoso
+Disallow: /run
 
 User-agent: Applebot-Extended
 Allow: /
 Disallow: /api
 Disallow: /admin
 Disallow: /debug
+Disallow: /rumoso
+Disallow: /run
 
 Sitemap: https://www.elcamoso.com/sitemap.xml

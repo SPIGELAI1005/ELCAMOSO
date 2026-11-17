@@ -33,6 +33,8 @@ import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as RecorderRouteImport } from './routes/recorder'
 import { Route as ReplayRouteImport } from './routes/replay'
 import { Route as RewardsRouteImport } from './routes/rewards'
+import { Route as RumosoRouteImport } from './routes/rumoso'
+import { Route as RunRouteImport } from './routes/run'
 import { Route as ScienceRouteImport } from './routes/science'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as ShareRouteImport } from './routes/share'
@@ -213,6 +215,16 @@ const ReplayRoute = ReplayRouteImport.update({
 const RewardsRoute = RewardsRouteImport.update({
   id: '/rewards',
   path: '/rewards',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RumosoRoute = RumosoRouteImport.update({
+  id: '/rumoso',
+  path: '/rumoso',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RunRoute = RunRouteImport.update({
+  id: '/run',
+  path: '/run',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ScienceRoute = ScienceRouteImport.update({
@@ -547,6 +559,8 @@ export interface FileRoutesByFullPath {
   '/recorder': typeof RecorderRoute
   '/replay': typeof ReplayRoute
   '/rewards': typeof RewardsRoute
+  '/rumoso': typeof RumosoRoute
+  '/run': typeof RunRoute
   '/science': typeof ScienceRoute
   '/settings': typeof SettingsRoute
   '/share': typeof ShareRouteWithChildren
@@ -633,6 +647,8 @@ export interface FileRoutesByTo {
   '/recorder': typeof RecorderRoute
   '/replay': typeof ReplayRoute
   '/rewards': typeof RewardsRoute
+  '/rumoso': typeof RumosoRoute
+  '/run': typeof RunRoute
   '/science': typeof ScienceRoute
   '/settings': typeof SettingsRoute
   '/share': typeof ShareRouteWithChildren
@@ -721,6 +737,8 @@ export interface FileRoutesById {
   '/recorder': typeof RecorderRoute
   '/replay': typeof ReplayRoute
   '/rewards': typeof RewardsRoute
+  '/rumoso': typeof RumosoRoute
+  '/run': typeof RunRoute
   '/science': typeof ScienceRoute
   '/settings': typeof SettingsRoute
   '/share': typeof ShareRouteWithChildren
@@ -810,6 +828,8 @@ export interface FileRouteTypes {
     | '/recorder'
     | '/replay'
     | '/rewards'
+    | '/rumoso'
+    | '/run'
     | '/science'
     | '/settings'
     | '/share'
@@ -896,6 +916,8 @@ export interface FileRouteTypes {
     | '/recorder'
     | '/replay'
     | '/rewards'
+    | '/rumoso'
+    | '/run'
     | '/science'
     | '/settings'
     | '/share'
@@ -983,6 +1005,8 @@ export interface FileRouteTypes {
     | '/recorder'
     | '/replay'
     | '/rewards'
+    | '/rumoso'
+    | '/run'
     | '/science'
     | '/settings'
     | '/share'
@@ -1071,6 +1095,8 @@ export interface RootRouteChildren {
   RecorderRoute: typeof RecorderRoute
   ReplayRoute: typeof ReplayRoute
   RewardsRoute: typeof RewardsRoute
+  RumosoRoute: typeof RumosoRoute
+  RunRoute: typeof RunRoute
   ScienceRoute: typeof ScienceRoute
   SettingsRoute: typeof SettingsRoute
   ShareRoute: typeof ShareRouteWithChildren
@@ -1283,6 +1309,20 @@ declare module '@tanstack/react-router' {
       path: '/rewards'
       fullPath: '/rewards'
       preLoaderRoute: typeof RewardsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/rumoso': {
+      id: '/rumoso'
+      path: '/rumoso'
+      fullPath: '/rumoso'
+      preLoaderRoute: typeof RumosoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/run': {
+      id: '/run'
+      path: '/run'
+      fullPath: '/run'
+      preLoaderRoute: typeof RunRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/science': {
@@ -1812,6 +1852,8 @@ const rootRouteChildren: RootRouteChildren = {
   RecorderRoute: RecorderRoute,
   ReplayRoute: ReplayRoute,
   RewardsRoute: RewardsRoute,
+  RumosoRoute: RumosoRoute,
+  RunRoute: RunRoute,
   ScienceRoute: ScienceRoute,
   SettingsRoute: SettingsRoute,
   ShareRoute: ShareRouteWithChildren,
