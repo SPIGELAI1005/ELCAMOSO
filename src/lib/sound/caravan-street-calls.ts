@@ -1,9 +1,16 @@
 /**
  * Occasional Romanian scrap-collector street calls for Caravan Carriage only.
  *
- * Woman first, then the man a little later. The pair plays after a short delay
- * from session start, then at most once every few minutes. Routed into the
- * same cabin bus as snorts/whinnies so master volume and cabin processing apply.
+ * The first cry (the woman) starts 2–4 s after speed first stays above 20 km/h,
+ * so a brief spike does not trigger it. After that, cries alternate
+ * woman / man / woman / man about every 30 s, measured start to start, with
+ * about ±3 s of jitter. If a clip is longer than the gap, the next start waits
+ * until the clip ends plus 2 s, so they never overlap. If speed drops below
+ * about 17 km/h the schedule pauses; a playing clip is left to finish (no
+ * cut-off). When speed goes back above 20 km/h, the next voice resumes after
+ * another 2–4 s. Speed is the same GPS / Tesla / simulator source other Drive
+ * features use (`state.speed` in m/s). Routed into the same cabin bus as
+ * snorts/whinnies so master volume and cabin processing apply.
  *
  * Lines (exact text with diacritics):
  *   woman: "Fiare vechi. Fiare vechi luăm"
@@ -32,6 +39,12 @@ export function isCaravanStreetCallProfile(id: string | null | undefined): boole
   return id === CARAVAN_STREET_CALL_PROFILE_ID;
 }
 
+/** DriveState.speed is metres per second; other speed-gated features use × 3.6. */
+export function streetCallSpeedKmh(state: Pick<DriveState, "speed">): number {
+  const mps = Number.isFinite(state.speed) ? Math.max(0, state.speed) : 0;
+  return mps * 3.6;
+}
+
 export const STREET_CALL_TEXT = {
   woman: "Fiare vechi. Fiare vechi luăm",
   man: "Fiare vechi, frigidere vechi, calorifere, electronice luăm",
@@ -45,16 +58,21 @@ export const STREET_CALL_URLS: Record<StreetCallKind, string> = {
   man: `${BASE}/fiare-vechi-man.m4a`,
 };
 
-/** Seconds. First pair after a sensible delay; then not more than once every few minutes. */
+/** Seconds and km/h. */
 export const STREET_CALL_TIMING = {
-  firstMin: 25,
-  firstMax: 45,
-  /** Gap after the woman finishes before the man starts. */
-  manGapMin: 7,
-  manGapMax: 12,
-  /** Quiet period after the man finishes before the next woman. */
-  cycleMin: 180,
-  cycleMax: 300,
+  /** Start or resume arming when speed exceeds this. */
+  enterKmh: 20,
+  /** Pause the schedule when speed drops below this (hysteresis). */
+  exitKmh: 17,
+  /** Hold after crossing enterKmh before the next cry (avoids brief spikes). */
+  armMin: 2,
+  armMax: 4,
+  /** Target start-to-start interval. */
+  interval: 30,
+  /** Jitter around the interval (± seconds). */
+  jitter: 3,
+  /** After a clip ends, wait at least this long before the next start. */
+  afterClipGap: 2,
 } as const;
 
 const STREET_CALL_LEVEL = 0.72;
@@ -63,11 +81,14 @@ export interface StreetCallEvent {
   kind: StreetCallKind;
 }
 
-/** Pure trigger / cooldown logic (unit-tested). `t` is seconds. */
+/** Pure trigger / cooldown logic (unit-tested). `t` is seconds, `kmh` is km/h. */
 export class StreetCallScheduler {
-  private startedAt: number | null = null;
-  private nextWomanAt: number | null = null;
-  private pendingManAt: number | null = null;
+  private active = false;
+  private armStartedAt: number | null = null;
+  private armHold = 0;
+  private nextKind: StreetCallKind = "woman";
+  private nextAt: number | null = null;
+  private playingUntil: number | null = null;
 
   constructor(private readonly rand: () => number = Math.random) {}
 
@@ -75,27 +96,57 @@ export class StreetCallScheduler {
     return min + this.rand() * (max - min);
   }
 
+  private speed(kmh: number): number {
+    return Number.isFinite(kmh) ? Math.max(0, kmh) : 0;
+  }
+
   /**
    * `durations` are the decoded clip lengths in seconds (woman, then man).
-   * The man is scheduled from when the woman *finishes*, plus a short gap.
+   * A playing clip is never cancelled here; the player lets it finish.
    */
-  step(t: number, durations: { woman: number; man: number }): StreetCallEvent | null {
+  step(t: number, kmh: number, durations: { woman: number; man: number }): StreetCallEvent | null {
     const T = STREET_CALL_TIMING;
-    if (this.startedAt === null) {
-      this.startedAt = t;
-      this.nextWomanAt = t + this.between(T.firstMin, T.firstMax);
+    const speed = this.speed(kmh);
+
+    if (speed < T.exitKmh) {
+      this.active = false;
+      this.armStartedAt = null;
+      this.nextAt = null;
+      return null;
     }
-    if (this.pendingManAt !== null && t >= this.pendingManAt) {
-      this.pendingManAt = null;
-      this.nextWomanAt = t + Math.max(0.5, durations.man) + this.between(T.cycleMin, T.cycleMax);
-      return { kind: "man" };
+
+    if (!this.active) {
+      if (speed <= T.enterKmh) {
+        // 17–20 km/h before first arm, or a dip during the 2–4 s hold: cancel.
+        this.armStartedAt = null;
+        return null;
+      }
+      if (this.armStartedAt === null) {
+        this.armStartedAt = t;
+        this.armHold = this.between(T.armMin, T.armMax);
+      }
+      if (t < this.armStartedAt + this.armHold) return null;
+      this.active = true;
+      this.armStartedAt = null;
+      this.nextAt = t;
     }
-    if (this.nextWomanAt !== null && t >= this.nextWomanAt) {
-      this.nextWomanAt = null;
-      this.pendingManAt = t + Math.max(0.5, durations.woman) + this.between(T.manGapMin, T.manGapMax);
-      return { kind: "woman" };
+
+    if (this.nextAt === null || t < this.nextAt) return null;
+
+    const earliest =
+      this.playingUntil !== null ? this.playingUntil + T.afterClipGap : Number.NEGATIVE_INFINITY;
+    if (t < earliest) {
+      this.nextAt = earliest;
+      return null;
     }
-    return null;
+
+    const kind = this.nextKind;
+    const dur = Math.max(0, durations[kind] ?? 0);
+    this.playingUntil = t + dur;
+    const interval = this.between(T.interval - T.jitter, T.interval + T.jitter);
+    this.nextAt = Math.max(t + interval, t + dur + T.afterClipGap);
+    this.nextKind = kind === "woman" ? "man" : "woman";
+    return { kind };
   }
 }
 
@@ -133,12 +184,15 @@ export class CaravanStreetCalls {
     );
   }
 
-  update(_state: DriveState, t: number) {
+  update(state: DriveState, t: number) {
     if (this.disposed) return;
     const woman = this.buffers.woman;
     const man = this.buffers.man;
     if (!woman || !man) return;
-    const ev = this.scheduler.step(t, { woman: woman.duration, man: man.duration });
+    const ev = this.scheduler.step(t, streetCallSpeedKmh(state), {
+      woman: woman.duration,
+      man: man.duration,
+    });
     const buf = ev ? this.buffers[ev.kind] : undefined;
     if (!ev || !buf) return;
     const src = this.ctx.createBufferSource();
