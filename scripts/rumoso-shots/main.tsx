@@ -4,7 +4,9 @@ import "@/styles.css";
 
 const raw = new URLSearchParams(window.location.search).get("demo");
 const demo: RumosoDemoView | undefined =
-  raw === "ready" || raw === "running" || raw === "summary" || raw === "diagnostics" ? raw : undefined;
+  raw === "ready" || raw === "running" || raw === "summary" || raw === "diagnostics" || raw === "pocket" || raw === "map"
+    ? raw
+    : undefined;
 
 document.documentElement.classList.add("dark");
 createRoot(document.getElementById("root")!).render(

@@ -30,8 +30,9 @@ try {
   const views = [
     ["ready", "rumoso-ready.png"],
     ["running", "rumoso-running.png"],
-    ["summary", "rumoso-summary.png"],
-    ["diagnostics", "rumoso-diagnostics.png"],
+    ["summary", "rumoso-summary-chart-mobile.png"],
+    ["pocket", "rumoso-pocket-mode-mobile.png"],
+    ["map", "rumoso-map-fullscreen-mobile.png"],
   ];
   for (const [demo, file] of views) {
     const page = await browser.newPage({
@@ -48,11 +49,18 @@ try {
     page.on("pageerror", (e) => errors.push(String(e)));
     await page.goto(url, { waitUntil: "domcontentloaded" });
     await page.waitForSelector("[data-testid='rumoso-app']", { timeout: 30_000 });
-    await page.waitForTimeout(4000);
-    if (demo === "diagnostics") {
-      await page.locator("[data-testid='rumoso-diagnostics']").scrollIntoViewIfNeeded().catch(() => {});
-      await page.waitForTimeout(500);
+    if (demo === "pocket") {
+      await page.waitForSelector("[data-testid='rumoso-pocket-mode']", { timeout: 15_000 });
     }
+    if (demo === "map") {
+      await page.waitForSelector("[data-testid='rumoso-map-expanded']", { timeout: 15_000 });
+    }
+    if (demo === "summary") {
+      await page.waitForSelector("[data-testid='rumoso-effort-chart']", { timeout: 15_000 });
+      await page.locator("[data-testid='rumoso-effort-chart']").scrollIntoViewIfNeeded();
+      await page.waitForTimeout(400);
+    }
+    await page.waitForTimeout(demo === "map" ? 6000 : 4000);
     const dest = path.join(outDir, file);
     await page.screenshot({ path: dest, fullPage: false });
     console.log("wrote", dest, errors.length ? `pageerrors=${errors.length}` : "ok");
