@@ -419,7 +419,7 @@ export const NOINDEX_ROUTE_POLICIES: SeoRoutePolicy[] = [
     path: "/rumoso",
     indexable: false,
     nofollow: true,
-    title: "RUMOSO - Running Motion Sound | ELCAMOSO",
+    title: "RUMOSO — Running Motion Sound",
     description: "Private RUMOSO running-mode test. Unlisted; same admin allowlist as the admin page.",
     image: "/rumoso/hero/rumoso-og-1200x630.jpg",
     imageAlt: "RUMOSO — Turn running into sound.",
