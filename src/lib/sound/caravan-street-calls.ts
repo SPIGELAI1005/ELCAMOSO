@@ -13,8 +13,9 @@
  * (dataset CC0, retrained from the rdh CC0 base; commercially listed). There
  * is no official commercially licensed female Romanian Piper voice (third-party
  * female voices such as Lili/Sanda/Raluca are CC BY-NC 4.0 and were not used).
- * The woman's call is the same Mihai take, pitch-shifted up with formants
- * shifted. TTS may sound robotic and has not been checked by ear.
+ * The woman's call is the same Mihai take, formant-shifted up. Vowels are held
+ * 0.65–1.45 s and a sung chant contour is imposed in post (Praat PSOLA), with
+ * outdoor shout processing. TTS may sound robotic and has not been checked by ear.
  */
 import { fetchBytesWithRetry } from "@/lib/sound/fetch-bytes";
 import type { DriveState } from "@/lib/drive/model";
@@ -163,6 +164,6 @@ export const STREET_CALL_CREDITS: RecordedCredit[] = [
     sourceUrl: "https://huggingface.co/rhasspy/piper-voices/tree/main/ro/ro_RO/mihai/medium",
     usedIn: "Caravan Carriage (street calls “Fiare vechi. Fiare vechi luăm” and “Fiare vechi, frigidere vechi, calorifere, electronice luăm”)",
     attribution:
-      "Speech synthesised locally with Piper 1.8 (OHF-Voice/piper1-gpl) and the official ro_RO-mihai-medium voice. Voice dataset and rdh training base are CC0 1.0; the current retrained medium checkpoint is listed for commercial use in OHF-Voice/piper1-gpl docs/COMMERCIAL_USE.md. Piper itself is not shipped with the app. The woman's call is the same Mihai voice, pitch-shifted upward with formants shifted, because no official commercially licensed female Romanian Piper voice was available (third-party female voices such as Lili/Sanda/Raluca/Liana are CC BY-NC 4.0 and were not used). Outdoor reverb and a slight chant contour were applied in post. TTS may sound robotic and has not been checked by ear.",
+      "Speech synthesised locally with Piper 1.8 (OHF-Voice/piper1-gpl) and the official ro_RO-mihai-medium voice. Voice dataset and rdh training base are CC0 1.0; the current retrained medium checkpoint is listed for commercial use in OHF-Voice/piper1-gpl docs/COMMERCIAL_USE.md. Piper itself is not shipped with the app. The woman's call is the same Mihai voice, formant-shifted upward, because no official commercially licensed female Romanian Piper voice was available (third-party female voices such as Lili/Sanda/Raluca/Liana are CC BY-NC 4.0 and were not used). Held vowels (0.65–1.45 s) and a sung chant contour were imposed with Praat PSOLA; outdoor shout EQ, saturation and slap echo were applied in post. TTS may sound robotic and has not been checked by ear.",
   },
 ];

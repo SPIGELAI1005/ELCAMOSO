@@ -14,4 +14,6 @@ Occasional Romanian scrap-collector cries, generated locally with Piper 1.8 and 
 - Woman: Fiare vechi. Fiare vechi luăm
 - Man: Fiare vechi, frigidere vechi, calorifere, electronice luăm
 
-The woman plays first, then the man a few seconds later. The pair starts after a short delay and then at most once every few minutes. The woman's call is the same Mihai voice pitch-shifted up; there was no commercially licensed official female Romanian Piper voice. TTS may sound robotic and has not been checked by ear.
+The woman plays first, then the man a few seconds later. The pair starts after a short delay and then at most once every few minutes.
+
+v2 is sung and shouted: held vowels last 0.65–1.45 s, with a chant contour (rise on *Fiaaa*, high hold on *re*, falling fourth on *vechiii*, long fall on *luaaam*). The woman is formant-shifted Mihai around D♯4; the man is lower and rougher around D♯3. There was no commercially licensed official female Romanian Piper voice. TTS may sound robotic, and the takes have not been checked by ear. The earlier shorter takes are kept as `assets/caravan-carriage/fiare-vechi-*-v1.*`.
