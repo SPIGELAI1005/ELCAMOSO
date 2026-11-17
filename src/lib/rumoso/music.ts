@@ -1,25 +1,39 @@
 /**
- * Light music adapter: maps RUMOSO effort 0–100 onto the existing Viral Epic
- * Party speed gates (as a synthetic km/h) and crossfades a small subset of
- * already-shipped loop stems. No worklets, no Drive/Symphony engine changes.
+ * Light music adapter: maps running pace onto the existing Viral Epic Party
+ * speed gates as a Drive-equivalent km/h, then crossfades the pack's loop
+ * stems. No worklets and no Drive/Symphony engine changes — we reuse the
+ * same section / instrument thresholds the car uses.
  */
 import { gainsFromSpeedGates } from "@/lib/symphony/speed-layers";
 import type { MovementState, StemGainTargets, StemId } from "@/lib/symphony/types";
 import { VIRAL_MIX_PACK } from "@/lib/symphony/packs/viral-mix";
 import type { SymphonyPack } from "@/lib/symphony/types";
+import {
+  MusicIntensitySmoother,
+  mapRunningToMusic,
+  movementFromDriveSpeed,
+} from "./music-intensity";
 
-/** Effort 0–100 maps onto the Viral Mix 0–130 km/h gate window. */
+/**
+ * @deprecated Legacy linear map (effort 0–100 → 0–130 km/h). RUMOSO now uses
+ * {@link mapRunningToMusic} so running pace, not a car speed, drives the gates.
+ */
 export const EFFORT_TO_KMH = 1.3;
 
+/** Every Viral Mix speed-gated stem, so instruments enter like they do in Drive. */
 export const RUMOSO_STEM_IDS: readonly StemId[] = [
   "drumsLow",
   "rhythm",
   "piano",
+  "cello",
   "atmosphere",
+  "strings",
   "bass",
+  "drumsHigh",
   "kit",
   "brass",
   "lead",
+  "fx",
 ];
 
 export interface RumosoMusicProfile {
@@ -59,14 +73,15 @@ export function movementFromEffort(effort: number, dEffortPerSec: number): Movem
   return "calm";
 }
 
-export function rumosoStemGains(effort: number, dEffortPerSec: number): StemGainTargets {
+export function rumosoStemGainsFromDriveSpeed(driveSpeedKmh: number, dDriveKmhPerSec = 0): StemGainTargets {
   const profile = RUMOSO_MUSIC_PROFILES[0]!;
-  return gainsFromSpeedGates(
-    profile.pack,
-    effortToSpeedKmh(effort),
-    movementFromEffort(effort, dEffortPerSec),
-    effort / 100,
-  );
+  const movement = movementFromDriveSpeed(driveSpeedKmh, dDriveKmhPerSec);
+  return gainsFromSpeedGates(profile.pack, driveSpeedKmh, movement, driveSpeedKmh / 160);
+}
+
+/** @deprecated Prefer rumosoStemGainsFromDriveSpeed with a running-pace mapping. */
+export function rumosoStemGains(effort: number, dEffortPerSec: number): StemGainTargets {
+  return rumosoStemGainsFromDriveSpeed(effortToSpeedKmh(effort), dEffortPerSec * EFFORT_TO_KMH);
 }
 
 const GAIN_TAU_S = 0.32;
@@ -78,6 +93,8 @@ export class RumosoMusicPlayer {
   private voices = new Map<StemId, { gain: GainNode; source: AudioBufferSourceNode }>();
   private started = false;
   private profileId = RUMOSO_MUSIC_PROFILES[0]!.id;
+  private intensity = new MusicIntensitySmoother();
+  private lastDriveKmh = 0;
 
   get isStarted(): boolean {
     return this.started;
@@ -130,8 +147,29 @@ export class RumosoMusicPlayer {
   }
 
   setEffort(effort: number, dEffortPerSec: number): void {
+    // Back-compat for callers that still pass visible effort 0–100.
+    this.applyGains(rumosoStemGains(effort, dEffortPerSec));
+  }
+
+  /**
+   * Drive the pack from running pace (m/s) plus optional cadence.
+   * Smoothing lives here so GPS jitter does not chatter the stems.
+   */
+  setRunningPace(speedMps: number | null, cadenceSpm: number | null, dtSec: number): void {
+    const mapped = mapRunningToMusic({ speedMps, cadenceSpm });
+    const drive = this.intensity.update(mapped.driveSpeedKmh, dtSec, mapped.runningKmh);
+    const dDrive = dtSec > 0 ? (drive - this.lastDriveKmh) / dtSec : 0;
+    this.lastDriveKmh = drive;
+    this.applyGains(rumosoStemGainsFromDriveSpeed(drive, dDrive));
+  }
+
+  resetIntensity(): void {
+    this.intensity.reset();
+    this.lastDriveKmh = 0;
+  }
+
+  private applyGains(gains: StemGainTargets): void {
     if (!this.ctx || !this.started) return;
-    const gains = rumosoStemGains(effort, dEffortPerSec);
     const t = this.ctx.currentTime;
     for (const [id, voice] of this.voices) {
       const target = Math.max(0, Math.min(1, gains[id] ?? 0));
@@ -177,6 +215,8 @@ export class RumosoMusicPlayer {
     this.duck = null;
     this.master = null;
     this.started = false;
+    this.intensity.reset();
+    this.lastDriveKmh = 0;
     // Do not close the context — the voice player may share it.
   }
 }

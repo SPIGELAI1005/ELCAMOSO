@@ -13,18 +13,24 @@ interface RumosoMapProps {
   className?: string;
   /** When true, fit the camera to the whole route (summary and mid-run). */
   fitRoute?: boolean;
+  /** When set, a double-tap / double-click toggles full-screen map mode (zoom is not triggered). */
+  onDoubleTap?: () => void;
+  /** Stretch the map after entering or leaving full-screen. */
+  expanded?: boolean;
 }
 
-export function RumosoMap({ points, follow = true, className, fitRoute }: RumosoMapProps) {
+export function RumosoMap({ points, follow = true, className, fitRoute, onDoubleTap, expanded }: RumosoMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<import("maplibre-gl").Map | null>(null);
   const readyRef = useRef(false);
   const pointsRef = useRef(points);
   const followRef = useRef(follow);
   const fitRef = useRef(fitRoute);
+  const onDoubleTapRef = useRef(onDoubleTap);
   pointsRef.current = points;
   followRef.current = follow;
   fitRef.current = fitRoute;
+  onDoubleTapRef.current = onDoubleTap;
 
   useEffect(() => {
     const el = containerRef.current;
@@ -56,8 +62,34 @@ export function RumosoMap({ points, follow = true, className, fitRoute }: Rumoso
           zoom: last ? 14 : 13,
           attributionControl: { compact: true },
           pitchWithRotate: false,
+          doubleClickZoom: false,
+          dragRotate: false,
         });
         mapRef.current = map;
+        const onDblClick = (ev: { originalEvent?: { preventDefault?: () => void } }) => {
+          ev.originalEvent?.preventDefault?.();
+          onDoubleTapRef.current?.();
+        };
+        map.on("dblclick", onDblClick);
+        // Touch: MapLibre may not emit dblclick reliably; detect a second tap ourselves.
+        // Ignore multi-touch so pinch-zoom and drag keep working.
+        let lastTapAt = 0;
+        const onTouchEnd = (ev: TouchEvent) => {
+          if (!onDoubleTapRef.current) return;
+          if (ev.touches.length > 0 || ev.changedTouches.length !== 1) {
+            lastTapAt = 0;
+            return;
+          }
+          const now = Date.now();
+          if (now - lastTapAt > 0 && now - lastTapAt < 320) {
+            ev.preventDefault();
+            lastTapAt = 0;
+            onDoubleTapRef.current();
+            return;
+          }
+          lastTapAt = now;
+        };
+        map.getCanvas().addEventListener("touchend", onTouchEnd, { passive: false });
         // Pinch-to-zoom is enough on a phone; keep +/- on wider screens, away from the legend.
         if (window.matchMedia("(min-width: 768px)").matches) {
           map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "bottom-right");
@@ -140,6 +172,16 @@ export function RumosoMap({ points, follow = true, className, fitRoute }: Rumoso
     if (!map || !readyRef.current) return;
     applyPoints(map, points, { follow, fitRoute, jump: false });
   }, [points, follow, fitRoute]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    const id = window.requestAnimationFrame(() => {
+      map.resize();
+      if (readyRef.current) applyPoints(map, pointsRef.current, { follow: followRef.current, fitRoute: fitRef.current, jump: false });
+    });
+    return () => window.cancelAnimationFrame(id);
+  }, [expanded]);
 
   return (
     <div

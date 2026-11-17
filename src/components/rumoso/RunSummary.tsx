@@ -1,4 +1,5 @@
 import { EFFORT_ZONES, colorForEffort } from "@/lib/rumoso/colors";
+import { effortChartAreaPath, effortChartPath, effortChartPoints, effortZoneGradientStops } from "@/lib/rumoso/effort-chart";
 import { formatDistanceKm, formatDuration, formatPace } from "@/lib/rumoso/gps-pace";
 import type { StoredRun } from "@/lib/rumoso/types";
 import { EffortLegend } from "./EffortLegend";
@@ -146,28 +147,55 @@ function EffortTimeChart({ run }: { run: StoredRun }) {
   if (pts.length < 2) return null;
   const w = 320;
   const h = 88;
-  const t0 = pts[0]!.atMs;
-  const span = Math.max(1, pts[pts.length - 1]!.atMs - t0);
-  const path = pts
-    .map((p, i) => {
-      const x = ((p.atMs - t0) / span) * w;
-      const y = h - (p.effort / 100) * (h - 8) - 4;
-      return `${i === 0 ? "M" : "L"}${x.toFixed(1)},${y.toFixed(1)}`;
-    })
-    .join(" ");
+  const padY = 4;
+  const chartPts = effortChartPoints(pts, w, h, padY);
+  const line = effortChartPath(chartPts);
+  const area = effortChartAreaPath(chartPts, w, h);
+  const stops = effortZoneGradientStops();
+  // userSpaceOnUse: effort 0 at the bottom of the line, 100 at the top.
+  const y0 = h - padY;
+  const y100 = padY;
   return (
-    <svg viewBox={`0 0 ${w} ${h}`} className="mt-4 h-24 w-full" aria-label="Effort over time">
+    <svg viewBox={`0 0 ${w} ${h}`} className="mt-4 h-24 w-full" aria-label="Effort over time, coloured by zone" data-testid="rumoso-effort-chart">
+      <defs>
+        <linearGradient id="rumoso-effort-stroke" gradientUnits="userSpaceOnUse" x1="0" x2="0" y1={y0} y2={y100}>
+          {stops.map((s, i) => (
+            <stop key={`${s.offset}-${i}`} offset={s.offset} stopColor={s.color} />
+          ))}
+        </linearGradient>
+        <linearGradient id="rumoso-effort-fill" gradientUnits="userSpaceOnUse" x1="0" x2="0" y1={y0} y2={y100}>
+          {stops.map((s, i) => (
+            <stop key={`f-${s.offset}-${i}`} offset={s.offset} stopColor={s.color} stopOpacity="0.22" />
+          ))}
+        </linearGradient>
+        <filter id="rumoso-effort-glow" x="-8%" y="-30%" width="116%" height="160%">
+          <feGaussianBlur stdDeviation="1.6" result="blur" />
+          <feMerge>
+            <feMergeNode in="blur" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
+      </defs>
       {[25, 45, 65, 80].map((mark) => (
         <line
           key={mark}
           x1="0"
           x2={w}
-          y1={h - (mark / 100) * (h - 8) - 4}
-          y2={h - (mark / 100) * (h - 8) - 4}
+          y1={h - (mark / 100) * (h - padY * 2) - padY}
+          y2={h - (mark / 100) * (h - padY * 2) - padY}
           stroke="rgba(255,255,255,0.06)"
         />
       ))}
-      <path d={path} fill="none" stroke="rgba(255,255,255,0.85)" strokeWidth="1.6" />
+      <path d={area} fill="url(#rumoso-effort-fill)" stroke="none" />
+      <path
+        d={line}
+        fill="none"
+        stroke="url(#rumoso-effort-stroke)"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        filter="url(#rumoso-effort-glow)"
+      />
     </svg>
   );
 }

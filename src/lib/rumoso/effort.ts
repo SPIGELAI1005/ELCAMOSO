@@ -21,9 +21,9 @@ export interface EffortCalibration {
 
 export const WARMUP_MS = 60_000;
 
-const CADENCE_WEIGHT = 0.45;
-const PACE_WEIGHT = 0.4;
-const ACCEL_WEIGHT = 0.15;
+const CADENCE_WEIGHT = 0.25;
+const PACE_WEIGHT = 0.65;
+const ACCEL_WEIGHT = 0.1;
 const SMOOTH_TAU_S = 1.6;
 
 function clamp(n: number, lo: number, hi: number): number {
@@ -48,37 +48,44 @@ function piecewise(x: number, points: Array<readonly [number, number]>): number 
   return points[points.length - 1]![1];
 }
 
-/** Default cadence curve: walk 110 ≈ 20, jog 150 ≈ 50, 180 ≈ 85, 200 ≈ 100. */
+/** Default cadence curve: walk 110 ≈ 20, jog 150 ≈ 50, 180 ≈ 70, 200 ≈ 88. Cadence alone cannot reach Hard. */
 export function cadenceScore(spm: number, calib?: EffortCalibration | null): number {
   if (!Number.isFinite(spm) || spm <= 0) return 0;
   if (calib && calib.baselineCadenceSpm > 40) {
     const base = calib.baselineCadenceSpm;
-    // Baseline walk sits near 22. +70 spm above baseline reaches 100.
-    return clamp(22 + ((spm - base) / 70) * 78, 0, 100);
+    // Baseline walk sits near 22. +90 spm above baseline reaches the Push/Hard edge.
+    return clamp(22 + ((spm - base) / 90) * 66, 0, 88);
   }
   return piecewise(spm, [
     [80, 0],
     [110, 20],
     [150, 50],
-    [180, 85],
-    [200, 100],
+    [180, 70],
+    [200, 88],
   ]);
 }
 
-/** Default speed curve: 5 km/h ≈ 20, 9 km/h ≈ 50, 12 km/h ≈ 75, 16 km/h ≈ 100. */
+/**
+ * Default speed curve, aligned with the music mapper:
+ * 5 km/h ≈ 18 (Walk), 6.5 ≈ 25 (Easy), 8.5 ≈ 45 (Steady),
+ * 12 ≈ 65 (Push), 16 ≈ 80 (Hard starts), 20 ≈ 100.
+ */
 export function speedScore(speedMps: number, calib?: EffortCalibration | null): number {
   if (!Number.isFinite(speedMps) || speedMps <= 0) return 0;
   if (calib && calib.baselineSpeedMps > 0.6) {
     const base = calib.baselineSpeedMps;
-    // From a walking baseline, +2.8 m/s (~+10 km/h) reaches 100.
-    return clamp(22 + ((speedMps - base) / 2.8) * 78, 0, 100);
+    // From a walking baseline, +4.0 m/s (~+14 km/h) reaches 100, so Hard stays rare.
+    return clamp(22 + ((speedMps - base) / 4.0) * 78, 0, 100);
   }
   return piecewise(speedMps, [
     [0, 0],
-    [1.4, 20],
-    [2.5, 50],
-    [3.33, 75],
-    [4.5, 100],
+    [5 / 3.6, 18],
+    [6.5 / 3.6, 25],
+    [8.5 / 3.6, 45],
+    [12 / 3.6, 65],
+    [16 / 3.6, 80],
+    [18 / 3.6, 92],
+    [20 / 3.6, 100],
   ]);
 }
 
