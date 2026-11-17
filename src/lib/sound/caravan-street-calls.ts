@@ -9,13 +9,18 @@
  *   woman: "Fiare vechi. Fiare vechi luăm"
  *   man:   "Fiare vechi, frigidere vechi, calorifere, electronice luăm"
  *
- * Generated locally with Piper 1.8 and the official ro_RO-mihai-medium voice
- * (dataset CC0, retrained from the rdh CC0 base; commercially listed). There
+ * TEST ONLY in this branch: the runtime m4a overlays are cut from George's
+ * Suno song “Fiare Vechi Luam” (https://suno.com/s/vVWzRwhQvHSreHOw), made on
+ * the free plan. Free-plan Output is not licensed for commercial use, and
+ * upgrading later does not grant retroactive rights (see Suno help
+ * https://help.suno.com/en/articles/2425729). These files must be replaced by
+ * a paid-plan regeneration or the Piper v2 fallback in
+ * assets/caravan-carriage/fiare-vechi-*-piper-v2.* before this is merged.
+ *
+ * Piper v2 fallback (kept in assets): official ro_RO-mihai-medium (CC0). There
  * is no official commercially licensed female Romanian Piper voice (third-party
  * female voices such as Lili/Sanda/Raluca are CC BY-NC 4.0 and were not used).
- * The woman's call is the same Mihai take, formant-shifted up. Vowels are held
- * 0.65–1.45 s and a sung chant contour is imposed in post (Praat PSOLA), with
- * outdoor shout processing. TTS may sound robotic and has not been checked by ear.
+ * The clips have not been checked by ear.
  */
 import { fetchBytesWithRetry } from "@/lib/sound/fetch-bytes";
 import type { DriveState } from "@/lib/drive/model";
@@ -164,6 +169,6 @@ export const STREET_CALL_CREDITS: RecordedCredit[] = [
     sourceUrl: "https://huggingface.co/rhasspy/piper-voices/tree/main/ro/ro_RO/mihai/medium",
     usedIn: "Caravan Carriage (street calls “Fiare vechi. Fiare vechi luăm” and “Fiare vechi, frigidere vechi, calorifere, electronice luăm”)",
     attribution:
-      "Speech synthesised locally with Piper 1.8 (OHF-Voice/piper1-gpl) and the official ro_RO-mihai-medium voice. Voice dataset and rdh training base are CC0 1.0; the current retrained medium checkpoint is listed for commercial use in OHF-Voice/piper1-gpl docs/COMMERCIAL_USE.md. Piper itself is not shipped with the app. The woman's call is the same Mihai voice, formant-shifted upward, because no official commercially licensed female Romanian Piper voice was available (third-party female voices such as Lili/Sanda/Raluca/Liana are CC BY-NC 4.0 and were not used). Held vowels (0.65–1.45 s) and a sung chant contour were imposed with Praat PSOLA; outdoor shout EQ, saturation and slap echo were applied in post. TTS may sound robotic and has not been checked by ear.",
+      "TEST ONLY: the runtime street-call overlays are currently cut from the Suno song “Fiare Vechi Luam” (https://suno.com/s/vVWzRwhQvHSreHOw), created on Suno’s free plan. Under Suno’s terms, free-tier Output may only be used for lawful, personal and non-commercial purposes, and starting a paid subscription later does not grant a retroactive commercial licence for songs made on the free plan (https://help.suno.com/en/articles/2425729, https://suno.com/terms). These files must be replaced by a paid-plan regeneration or the Piper v2 fallback (assets/caravan-carriage/fiare-vechi-*-piper-v2.*, official ro_RO-mihai-medium, CC0) before this profile is merged or shipped. The clips have not been checked by ear.",
   },
 ];

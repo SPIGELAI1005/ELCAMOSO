@@ -9,10 +9,13 @@ A new catalog identity with its own name, description and hero still. The carria
 
 ## Street calls
 
-Occasional Romanian scrap-collector cries, generated locally with Piper 1.8 and the official `ro_RO-mihai-medium` voice (dataset and rdh base CC0; commercially listed). Exact text:
+Occasional Romanian scrap-collector cries. Exact text:
 
 - Woman: Fiare vechi. Fiare vechi luăm
 - Man: Fiare vechi, frigidere vechi, calorifere, electronice luăm
+
+
+**TEST ONLY:** the runtime overlays are currently cuts from the Suno song “Fiare Vechi Luam” (https://suno.com/s/vVWzRwhQvHSreHOw), made on the free plan and **not licensed for commercial use**. They must be replaced by a paid-plan regeneration or the Piper v2 fallback in `assets/caravan-carriage/fiare-vechi-*-piper-v2.*` before this is merged. Playback timing is unchanged (woman first, then the man; first pair after a short delay, then at most once every few minutes).
 
 The woman plays first, then the man a few seconds later. The pair starts after a short delay and then at most once every few minutes.
 
