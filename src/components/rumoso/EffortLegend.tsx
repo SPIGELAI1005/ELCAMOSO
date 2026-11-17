@@ -12,10 +12,10 @@ export function EffortLegend({ compact = false }: { compact?: boolean }) {
       <p className="mb-1.5 text-[9px] tracking-[0.22em] text-muted-foreground uppercase">
         Effort
       </p>
-      <div className="flex flex-col gap-1">
+      <div className="flex flex-col gap-0.5">
         {EFFORT_ZONES.map((z) => (
           <div key={z.id} className="flex items-center gap-1.5">
-            <ZoneFigure zone={z.id} className="size-3.5" />
+            <ZoneFigure zone={z.id} className="size-5" />
             <span className="whitespace-nowrap text-[10px] text-foreground/80">{z.label}</span>
           </div>
         ))}

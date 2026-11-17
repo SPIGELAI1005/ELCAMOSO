@@ -1,7 +1,10 @@
 import type { EffortZoneId } from "@/lib/rumoso/types";
 
 export const RUMOSO_ASSET = {
+  /** Horizontal "RUMOSO by ELCAMOSO" for tight spots (header). */
   lockup: "/rumoso/logo/rumoso-lockup-white.svg",
+  /** George's stacked lockup with "Running Motion Sound" and "by ELCAMOSO". */
+  lockupTagline: "/rumoso/logo/rumoso-lockup-tagline-white.svg",
   mark: "/rumoso/logo/rumoso-mark-white.svg",
   heroMobile: "/rumoso/hero/rumoso-hero-mobile.webp",
   og: "/rumoso/hero/rumoso-og-1200x630.jpg",
@@ -77,9 +80,22 @@ export function RumosoLockup({ className }: { className?: string }) {
     <img
       src={RUMOSO_ASSET.lockup}
       alt="RUMOSO by ELCAMOSO"
-      width={165}
+      width={124}
       height={32}
       className={className ?? "h-8 w-auto"}
+    />
+  );
+}
+
+/** Stacked lockup with the tagline, for screens with room (ready view). */
+export function RumosoTaglineLockup({ className }: { className?: string }) {
+  return (
+    <img
+      src={RUMOSO_ASSET.lockupTagline}
+      alt="RUMOSO, Running Motion Sound, by ELCAMOSO"
+      width={150}
+      height={180}
+      className={className ?? "h-44 w-auto"}
     />
   );
 }

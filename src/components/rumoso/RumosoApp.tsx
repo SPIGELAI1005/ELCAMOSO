@@ -44,7 +44,13 @@ import { EffortGauge } from "./EffortGauge";
 import { EffortBar, EffortLegend } from "./EffortLegend";
 import { RumosoMap } from "./RumosoMap";
 import { RunSummary } from "./RunSummary";
-import { RUMOSO_ASSET, RumosoIcon, RumosoLockup, type RumosoUiIconName } from "./RumosoIcon";
+import {
+  RUMOSO_ASSET,
+  RumosoIcon,
+  RumosoLockup,
+  RumosoTaglineLockup,
+  type RumosoUiIconName,
+} from "./RumosoIcon";
 
 export type RumosoDemoView = "ready" | "running" | "summary" | "diagnostics";
 
@@ -539,7 +545,7 @@ export function RumosoApp({
     <div className="flex h-[100dvh] flex-col bg-background text-foreground" data-testid="rumoso-app">
       <header className="relative z-[2] flex items-center justify-between gap-3 px-5 pt-[max(0.75rem,env(safe-area-inset-top))] pb-2">
         <h1 className="m-0 min-w-0">
-          <RumosoLockup className="h-8 w-auto max-w-[min(100%,13.5rem)]" />
+          <RumosoLockup className="h-9 w-auto max-w-[min(100%,13.5rem)]" />
         </h1>
         <button
           type="button"
@@ -585,6 +591,9 @@ export function RumosoApp({
                   className="size-full object-cover object-[center_58%] opacity-40"
                 />
                 <div className="absolute inset-0 bg-gradient-to-b from-black/45 via-black/25 to-black/70" />
+                <div className="absolute inset-0 flex items-center justify-center pt-4">
+                  <RumosoTaglineLockup className="h-[min(11rem,30vh)] w-auto opacity-95 drop-shadow-[0_2px_12px_rgba(0,0,0,0.7)]" />
+                </div>
               </div>
             ) : null}
             <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex items-start justify-between p-3">
