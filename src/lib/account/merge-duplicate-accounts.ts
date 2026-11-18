@@ -5,7 +5,7 @@
  * unless --allow-production is set.
  */
 import { canonicalAccountEmail, emailLookupAliases } from "@/lib/account/canonical-email";
-import { smileLevel } from "@/lib/smiles/rewards";
+import { smileLevelWithFloor } from "@/lib/smiles/rewards";
 
 export interface SqlClient {
   query<T extends Record<string, unknown> = Record<string, unknown>>(
@@ -709,12 +709,34 @@ async function recomputeSmileTotals(db: SqlClient, userId: string): Promise<numb
   );
   const balance = Number(rows[0]?.bal ?? 0);
   const earned = Number(rows[0]?.earned ?? 0);
-  const level = smileLevel(earned).name;
-  await exec(
-    db,
-    `update users set smile_total = $2, smile_level = $3, updated_at = now() where id = $1::uuid`,
-    [userId, balance, level],
-  );
+  let floor: string | null = null;
+  try {
+    const cur = await db.query<{ level: string | null; peak: string | null }>(
+      `select smile_level as level, smile_level_peak as peak from users where id = $1::uuid`,
+      [userId],
+    );
+    floor = cur[0]?.peak ?? cur[0]?.level ?? null;
+  } catch {
+    const cur = await db.query<{ level: string | null }>(
+      `select smile_level as level from users where id = $1::uuid`,
+      [userId],
+    );
+    floor = cur[0]?.level ?? null;
+  }
+  const level = smileLevelWithFloor(earned, floor).name;
+  try {
+    await exec(
+      db,
+      `update users set smile_total = $2, smile_level = $3, smile_level_peak = $3, updated_at = now() where id = $1::uuid`,
+      [userId, balance, level],
+    );
+  } catch {
+    await exec(
+      db,
+      `update users set smile_total = $2, smile_level = $3, updated_at = now() where id = $1::uuid`,
+      [userId, balance, level],
+    );
+  }
   return balance;
 }
 

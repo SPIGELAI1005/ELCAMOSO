@@ -9,12 +9,14 @@ export const FOUNDER_MULTIPLIER = 1.5;
 
 export const SMILE_LEVELS = [
   { name: "Cruiser", min: 0 },
-  { name: "Smiler", min: 500 },
-  { name: "Grinner", min: 2000 },
-  { name: "Joyrider", min: 5000 },
-  { name: "Legend", min: 15000 },
+  { name: "Smiler", min: 400 },
+  { name: "Grinner", min: 1200 },
+  { name: "Joyrider", min: 3000 },
+  { name: "Legend", min: 8000 },
 ] as const;
 export type SmileLevelName = (typeof SMILE_LEVELS)[number]["name"];
+
+export const SMILE_LEVEL_NAMES = SMILE_LEVELS.map((l) => l.name);
 
 export interface SmileLevelInfo {
   name: SmileLevelName;
@@ -24,20 +26,98 @@ export interface SmileLevelInfo {
   progress: number;
 }
 
+export type LeaderboardBadge = "mark" | "crown" | null;
+
+/** Rank 0..4 so we can keep the higher of two level names. */
+export function smileLevelRank(name: string | null | undefined): number {
+  const i = SMILE_LEVELS.findIndex((l) => l.name === name);
+  return i < 0 ? 0 : i;
+}
+
+export function isSmileLevelName(name: string | null | undefined): name is SmileLevelName {
+  return SMILE_LEVELS.some((l) => l.name === name);
+}
+
+export function higherSmileLevel(
+  a: string | null | undefined,
+  b: string | null | undefined,
+): SmileLevelName {
+  return smileLevelRank(a) >= smileLevelRank(b)
+    ? isSmileLevelName(a)
+      ? a
+      : "Cruiser"
+    : isSmileLevelName(b)
+      ? b
+      : "Cruiser";
+}
+
+function levelInfoAt(index: number, earned: number): SmileLevelInfo {
+  const i = Math.max(0, Math.min(SMILE_LEVELS.length - 1, index));
+  const cur = SMILE_LEVELS[i]!;
+  const nxt = SMILE_LEVELS[i + 1];
+  if (!nxt) return { name: cur.name, next: null, nextAt: null, progress: 1 };
+  const e = Math.max(0, Math.floor(earned));
+  return {
+    name: cur.name,
+    next: nxt.name,
+    nextAt: nxt.min,
+    progress: Math.min(1, Math.max(0, (e - cur.min) / (nxt.min - cur.min))),
+  };
+}
+
 /** Level is based on lifetime earned smiles (shop spending never drops a level). */
 export function smileLevel(earned: number): SmileLevelInfo {
   const e = Math.max(0, Math.floor(earned));
   let i = 0;
   for (let k = 0; k < SMILE_LEVELS.length; k++) if (e >= SMILE_LEVELS[k]!.min) i = k;
-  const cur = SMILE_LEVELS[i]!;
-  const nxt = SMILE_LEVELS[i + 1];
-  if (!nxt) return { name: cur.name, next: null, nextAt: null, progress: 1 };
-  return {
-    name: cur.name,
-    next: nxt.name,
-    nextAt: nxt.min,
-    progress: Math.min(1, (e - cur.min) / (nxt.min - cur.min)),
-  };
+  return levelInfoAt(i, e);
+}
+
+/**
+ * Never drop below a previously stored peak (grandfathering when thresholds change).
+ * `floor` is smile_level_peak or the last written smile_level.
+ */
+export function smileLevelWithFloor(earned: number, floor?: string | null): SmileLevelInfo {
+  const computed = smileLevel(earned);
+  if (!floor || smileLevelRank(floor) <= smileLevelRank(computed.name)) return computed;
+  return levelInfoAt(smileLevelRank(floor), earned);
+}
+
+/** Themes granted for free once this level is reached (and every level below). */
+export const LEVEL_THEME_UNLOCKS: Record<SmileLevelName, string[]> = {
+  Cruiser: [],
+  Smiler: ["theme-midnight"],
+  Grinner: ["theme-ember"],
+  Joyrider: ["theme-chrome"],
+  Legend: ["theme-legend"],
+};
+
+export function themesUnlockedByLevel(name: SmileLevelName): string[] {
+  const rank = smileLevelRank(name);
+  return SMILE_LEVELS.flatMap((l, i) => (i <= rank ? LEVEL_THEME_UNLOCKS[l.name] : []));
+}
+
+export function challengeEligibleAt(name: SmileLevelName): boolean {
+  return smileLevelRank(name) >= smileLevelRank("Grinner");
+}
+
+export function leaderboardBadgeFor(name: SmileLevelName): LeaderboardBadge {
+  if (name === "Legend") return "crown";
+  if (smileLevelRank(name) >= smileLevelRank("Smiler")) return "mark";
+  return null;
+}
+
+/** One-line shop / Crew hint for what this level unlocks. */
+export const LEVEL_UNLOCK_LINES: Record<SmileLevelName, string> = {
+  Cruiser: "Classic card theme",
+  Smiler: "Midnight card and a leaderboard mark, free",
+  Grinner: "Ember card and monthly-challenge entry, free",
+  Joyrider: "Chrome card, free",
+  Legend: "Legend card, a reserved drop, and a board crown",
+};
+
+export function mergeOwnedItems(redeemed: string[], level: SmileLevelName): string[] {
+  return [...new Set([...redeemed, ...themesUnlockedByLevel(level)])];
 }
 
 /** Apply Founder multiplier then clamp to what is left of today's cap. */
@@ -99,12 +179,35 @@ export interface ShopItem {
   cost: number;
   /** Placeholder items are visible but not redeemable yet. */
   soon?: boolean;
+  /** If set, this item is included for free at this level (never charged). */
+  unlockLevel?: SmileLevelName;
 }
 
 export const SMILE_SHOP: ShopItem[] = [
-  { id: "theme-midnight", kind: "theme", name: "Midnight card", blurb: "Deep blue card theme.", cost: 300 },
-  { id: "theme-ember", kind: "theme", name: "Ember card", blurb: "Glowing red card theme.", cost: 500 },
-  { id: "theme-chrome", kind: "theme", name: "Chrome card", blurb: "Mirror-finish card theme.", cost: 800 },
+  {
+    id: "theme-midnight",
+    kind: "theme",
+    name: "Midnight card",
+    blurb: "Deep blue card theme. Included free at Smiler.",
+    cost: 300,
+    unlockLevel: "Smiler",
+  },
+  {
+    id: "theme-ember",
+    kind: "theme",
+    name: "Ember card",
+    blurb: "Glowing red card theme. Included free at Grinner.",
+    cost: 500,
+    unlockLevel: "Grinner",
+  },
+  {
+    id: "theme-chrome",
+    kind: "theme",
+    name: "Chrome card",
+    blurb: "Mirror-finish card theme. Included free at Joyrider.",
+    cost: 800,
+    unlockLevel: "Joyrider",
+  },
   {
     id: "drive-plus-3d",
     kind: "drive_plus_trial",
@@ -119,6 +222,23 @@ export const SMILE_SHOP: ShopItem[] = [
     blurb: "A limited sound, only for smiles. Coming soon.",
     cost: 1500,
     soon: true,
+  },
+  {
+    id: "theme-legend",
+    kind: "theme",
+    name: "Legend card",
+    blurb: "Gold-mark theme. Unlocked only at Legend, never sold.",
+    cost: 0,
+    unlockLevel: "Legend",
+  },
+  {
+    id: "legend-drop",
+    kind: "limited_sound",
+    name: "Legend drop",
+    blurb: "A reserved sound for Legends. Coming soon.",
+    cost: 0,
+    soon: true,
+    unlockLevel: "Legend",
   },
 ];
 
