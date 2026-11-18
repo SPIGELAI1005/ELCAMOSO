@@ -129,7 +129,7 @@ describe.skipIf(!Offline)("tuned engine graphs", () => {
     plain.dispose();
   });
 
-  it("builds Muscle V8 with a tuned primary and a lite Big Twin layer; GT V8 untouched", async () => {
+  it("builds Muscle V8 as a light loop bank (no worklet primary, no layers); GT V8 untouched", async () => {
     const engine = new SoundEngine();
     await engine.start(getProfile("american-muscle-v8"), {
       context: new Offline(2, 48000, 48000),
@@ -137,10 +137,9 @@ describe.skipIf(!Offline)("tuned engine graphs", () => {
       seed: 11,
     });
     const perf = engine.getEnginePerfDiagnostics();
-    expect(perf.primary?.kRateFilters).toBe(true);
-    expect(perf.primary?.layerLite).toBe(false);
-    expect(perf.layers).toHaveLength(1);
-    expect(perf.layers[0]?.layerLite).toBe(true);
+    expect(perf.primary).toBeNull();
+    expect(perf.layers).toHaveLength(0);
+    expect(engine.getActiveBackend()).toBe("coyote-loop-bank");
     await engine.stop();
 
     const gt = new SoundEngine();

@@ -264,6 +264,40 @@ export const LAB_FIXTURES: readonly LabFixture[] = [
       }),
   },
   {
+    id: "v8-demo-sequence",
+    label: "V8 demo sequence",
+    kind: "speed-driven",
+    durationSeconds: 40,
+    description:
+      "Warm idle, pull-away, cruise, sudden throttle, hard acceleration with upshifts, cruise, lift-off, overrun, braking with downshifts, idle.",
+    sampleAt: (t) => {
+      // [start s, end s, from km/h, to km/h, throttle, braking]
+      const segments: [number, number, number, number, number, number][] = [
+        [0, 5, 0, 0, 0.03, 0], // warm idle
+        [5, 10, 0, 35, 0.32, 0], // gentle pull-away
+        [10, 14, 35, 50, 0.24, 0], // settle into a 50 km/h cruise
+        [14, 15, 50, 50, 0.22, 0], // steady cruise
+        [15, 22, 50, 125, 0.96, 0], // sudden throttle -> hard acceleration (upshifts)
+        [22, 26, 125, 125, 0.26, 0], // high-speed cruise
+        [26, 31, 125, 90, 0, 0], // lift-off -> overrun (engine braking)
+        [31, 36, 90, 0, 0, 0.6], // braking, downshifts down the box
+        [36, 40, 0, 0, 0.03, 0], // idle
+      ];
+      for (const [a, b, v0, v1, throttle, braking] of segments) {
+        if (t < b || b === 40) {
+          const p = clamp01((t - a) / (b - a));
+          return baseSample(t, {
+            speedKmh: lerp(v0, v1, p),
+            accelerationMs2: (v1 - v0) / 3.6 / (b - a),
+            throttle,
+            braking,
+          });
+        }
+      }
+      return baseSample(t, { speedKmh: 0, accelerationMs2: 0, throttle: 0.03, braking: 0 });
+    },
+  },
+  {
     id: "rpm-sweep",
     label: "RPM sweep (diagnosis)",
     kind: "rpm-load-diagnostic",

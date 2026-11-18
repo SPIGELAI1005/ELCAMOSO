@@ -11,24 +11,14 @@ import {
 } from "@/lib/sound/engine-layers";
 
 describe("engine sound layers", () => {
-  it("layers Big Twin under American Muscle V8 at 60/40 with makeup", () => {
-    const stack = engineLayerStackFor("american-muscle-v8");
-    expect(stack).toBeTruthy();
-    expect(stack!.primaryGain).toBe(MUSCLE_V8_LAYER_PRIMARY_GAIN);
-    expect(stack!.primaryGain).toBe(0.6);
-    expect(stack!.makeupGain).toBe(MUSCLE_V8_LAYER_MAKEUP_GAIN);
-    expect(stack!.layers).toHaveLength(1);
-    expect(stack!.layers[0]!.profileId).toBe(MUSCLE_V8_LAYER_SECONDARY_PROFILE_ID);
-    expect(stack!.layers[0]!.profileId).toBe("big-twin");
-    expect(stack!.layers[0]!.gain).toBe(MUSCLE_V8_LAYER_SECONDARY_GAIN);
-    expect(stack!.layers[0]!.gain).toBe(0.4);
-    expect(stack!.layers[0]!.continuousOnly).toBe(true);
-    expect(effectiveLayerGain(stack!, stack!.primaryGain)).toBeCloseTo(
-      0.6 * MUSCLE_V8_LAYER_MAKEUP_GAIN,
-    );
-    expect(effectiveLayerGain(stack!, stack!.layers[0]!.gain)).toBeCloseTo(
-      0.4 * MUSCLE_V8_LAYER_MAKEUP_GAIN,
-    );
+  it("no longer layers Big Twin under American Muscle V8 (replaced by the Coyote loop bank)", () => {
+    expect(engineLayerStackFor("american-muscle-v8")).toBeNull();
+    // the 60/40 constants stay exported for reference / A-B tooling
+    expect(MUSCLE_V8_LAYER_PRIMARY_GAIN).toBe(0.6);
+    expect(MUSCLE_V8_LAYER_SECONDARY_GAIN).toBe(0.4);
+    expect(MUSCLE_V8_LAYER_SECONDARY_PROFILE_ID).toBe("big-twin");
+    expect(MUSCLE_V8_LAYER_MAKEUP_GAIN).toBeGreaterThan(0);
+    expect(typeof effectiveLayerGain).toBe("function");
   });
 
   it("does not change the standalone Big Twin profile or other catalog sounds", () => {

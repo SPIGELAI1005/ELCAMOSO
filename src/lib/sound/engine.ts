@@ -132,6 +132,7 @@ import { fetchSoundAssetManifest } from "@/lib/sound-assets/client-loader";
 import { getSharedSampleLoader } from "@/lib/sound/realism/samples";
 import { loadRecordedLoopBuffers } from "@/lib/sound/realism/v2/recorded-loops-loader";
 import { getRecordedBed, RecordedBed } from "@/lib/sound/recorded-beds";
+import { CoyoteV8Synth, isCoyoteV8ProfileId } from "@/lib/sound/coyote-v8/coyote-synth";
 import { HorseSnorts, isHorseSnortProfile } from "@/lib/sound/horse-snorts";
 import { HorseWhinnies } from "@/lib/sound/horse-whinnies";
 import { CaravanStreetCalls, isCaravanStreetCallProfile } from "@/lib/sound/caravan-street-calls";
@@ -327,6 +328,10 @@ export class SoundEngine {
   /** Dev A/B: current engine vs Realism V2. Default v2 for combustion when eligible. */
   private realismEngine: RealismEngineMode = "v2";
   private hybrid: HybridCombustionSynth | null = null;
+  /** American Muscle V8 (and Police Patrol): pre-rendered Coyote loop bank, no live synth. */
+  private coyote: CoyoteV8Synth | null = null;
+  /** Audio context that already got the V8 startup: rebuilds (settings, stops) never replay it. */
+  private coyoteStartupCtx: BaseAudioContext | null = null;
   /** Secondary engine synths mixed under the requested profile (e.g. Big Twin under Muscle V8). */
   private hybridLayers: HybridCombustionSynth[] = [];
   private layerGainNodes: GainNode[] = [];
@@ -386,6 +391,11 @@ export class SoundEngine {
     };
   }
 
+  /** American Muscle V8 loop bank state (null when another engine is active). */
+  getCoyoteDiagnostics() {
+    return this.coyote?.getDiagnostics() ?? null;
+  }
+
   getHybridCombustionDiagnostics(): HybridCombustionDiagnostics | null {
     return this.hybrid?.getDiagnostics() ?? null;
   }
@@ -408,6 +418,7 @@ export class SoundEngine {
     if (this.advancedTransientsEnabled === enabled) return;
     this.advancedTransientsEnabled = enabled;
     this.hybrid?.setAdvancedTransientsEnabled(enabled);
+    this.coyote?.setAdvancedTransientsEnabled(enabled);
   }
 
   getAdvancedTransientsEnabled() {
@@ -420,6 +431,7 @@ export class SoundEngine {
   setShiftIntensity(value: number) {
     this.shiftIntensity = Math.min(1, Math.max(0, value));
     this.hybrid?.setShiftIntensity(this.shiftIntensity);
+    this.coyote?.setShiftIntensity(this.shiftIntensity / 0.72);
   }
 
   getShiftIntensity() {
@@ -438,6 +450,7 @@ export class SoundEngine {
     if (this.symphony) return "symphony";
     if (this.world) return "world";
     if (this.retroArcade) return "retro-arcade";
+    if (this.coyote) return "coyote-loop-bank";
     if (this.hybrid) {
       const diag = this.hybrid.getDiagnostics();
       const prefix = diag.realismEngine === "v3" ? "realism-v3" : "realism-v2";
@@ -1524,6 +1537,24 @@ export class SoundEngine {
       this.world = null;
     }
 
+    // American Muscle V8 (Coyote v2, Nov 2026): one pre-rendered loop bank replaces the
+    // live V8 + Big Twin engines that overloaded the Tesla browser. Police Patrol reuses it.
+    if (isCoyoteV8ProfileId(profile.id) && strategyBuses) {
+      // Startup is a once-per-drive event (spec: never replay the flare when the car stops
+      // or the graph is rebuilt for a settings change); a new start() makes a new context.
+      const startup =
+        !(globalThis as { __ELC_COYOTE_NO_STARTUP?: boolean }).__ELC_COYOTE_NO_STARTUP &&
+        this.coyoteStartupCtx !== ctx;
+      this.coyoteStartupCtx = ctx;
+      const coyote = new CoyoteV8Synth({ startup });
+      coyote.build(ctx, strategyBuses);
+      coyote.setShiftIntensity(this.shiftIntensity / 0.72);
+      coyote.setAdvancedTransientsEnabled(this.advancedTransientsEnabled);
+      this.coyote = coyote;
+      this.samplesReady = coyote.ready;
+      return;
+    }
+
     // Prompt 04: raw mechanical combustion (opt-in flag + realismEngine "v3" + pilot IDs).
     // Current / V2 paths below stay unchanged when the flag is off or mode is not v3.
     if (
@@ -2139,6 +2170,7 @@ export class SoundEngine {
       this.improved ||
       this.dynamicDrive ||
       this.hybrid ||
+      this.coyote ||
       this.symphony ||
       this.fusion ||
       this.world ||
@@ -2149,6 +2181,7 @@ export class SoundEngine {
       if (this.world) this.world.update(state, t);
       if (this.retroArcade) this.retroArcade.update(state, t);
       if (this.hybrid) this.hybrid.update(state, t);
+      if (this.coyote) this.coyote.update(state, t);
       for (const layer of this.hybridLayers) layer.update(state, t);
       if (this.improved) this.improved.update(state, t);
       if (this.dynamicDrive) this.dynamicDrive.update(state, t);
@@ -2945,6 +2978,8 @@ export class SoundEngine {
     this.retroArcade = null;
     this.hybrid?.dispose();
     this.hybrid = null;
+    this.coyote?.dispose();
+    this.coyote = null;
     this.disposeEngineLayers();
     this.voices.forEach(({ osc }) => {
       try {
