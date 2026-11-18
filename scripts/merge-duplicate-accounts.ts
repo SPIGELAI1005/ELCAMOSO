@@ -8,7 +8,8 @@
  * Usage:
  *   npm run accounts:merge
  *   npm run accounts:merge -- --find-duplicates
- *   npm run accounts:merge -- --apply --allow-production
+ *   npm run accounts:merge -- --primary <id> --secondary <id>
+ *   npm run accounts:merge -- --primary <id> --secondary <id> --apply --allow-production
  *
  * --apply runs the merge in one transaction. --allow-production is required
  * when DATABASE_URL looks like the live database. Do not run --apply unless
@@ -31,10 +32,13 @@ function printUsage(): void {
   npm run accounts:merge
   npm run accounts:merge -- --find-duplicates
   npm run accounts:merge -- --primary-seat 1
+  npm run accounts:merge -- --primary <uuid> --secondary <uuid>
   npm run accounts:merge -- --apply --allow-production
 
 Default: dry-run merge of Founder seat #1 with every other account that
 shares the same canonical email (gmail.com and googlemail.com count as one).
+Use --primary and --secondary (repeatable) to name accounts explicitly,
+including a secondary that has no email.
 
 Requires DATABASE_URL. --apply writes in one transaction after you have
 reviewed the dry-run plan. A production-looking DATABASE_URL also needs
@@ -63,6 +67,22 @@ function createPostgresSqlClient(url: string): { db: SqlClient; close: () => Pro
   return { db, close: () => sql.end({ timeout: 5 }) };
 }
 
+function flagValue(args: string[], name: string): string | undefined {
+  const index = args.indexOf(name);
+  const value = index >= 0 ? args[index + 1] : undefined;
+  return value && !value.startsWith("--") ? value : undefined;
+}
+
+function flagValues(args: string[], name: string): string[] {
+  const values: string[] = [];
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === name && args[i + 1] && !args[i + 1]!.startsWith("--")) {
+      values.push(args[i + 1]!);
+    }
+  }
+  return values;
+}
+
 async function main(): Promise<void> {
   const args = process.argv.slice(2);
   if (args.includes("--help") || args.includes("-h")) {
@@ -75,8 +95,8 @@ async function main(): Promise<void> {
   const findDuplicates = args.includes("--find-duplicates");
   const seatFlag = args.indexOf("--primary-seat");
   const primarySeat = seatFlag >= 0 ? Number(args[seatFlag + 1]) : 1;
-  const idFlag = args.indexOf("--primary-id");
-  const primaryId = idFlag >= 0 ? args[idFlag + 1] : undefined;
+  const primaryId = flagValue(args, "--primary") ?? flagValue(args, "--primary-id");
+  const secondaryIds = flagValues(args, "--secondary").concat(flagValues(args, "--secondary-id"));
 
   const url = process.env["DATABASE_URL"];
   if (!url) {
@@ -101,6 +121,7 @@ async function main(): Promise<void> {
     const plan = await buildMergePlan(db, {
       primarySeat: Number.isFinite(primarySeat) ? primarySeat : 1,
       ...(primaryId ? { primaryId } : {}),
+      ...(secondaryIds.length ? { secondaryIds } : {}),
     });
     console.log(formatMergePlan(plan, "dry-run"));
     if (!apply) return;

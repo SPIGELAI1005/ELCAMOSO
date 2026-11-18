@@ -98,4 +98,48 @@ describe("merge duplicate accounts", () => {
     const totals = await db.query(`select smile_total from users where id = $1::uuid`, [PRIMARY]);
     expect(Number(totals[0]?.["smile_total"])).toBe(78);
   });
+
+  it("merges an email-less secondary when ids are passed explicitly", async () => {
+    const emailLess = "44444444-4444-4444-8444-444444444444";
+    await db.query(
+      `insert into users (id, email, founder_seat, founder_at, smile_total)
+       values ($1::uuid, null, 4, now(), 1226)`,
+      [emailLess],
+    );
+    await db.query(
+      `insert into smile_ledger (user_id, amount, reason, ref) values ($1, 1226, 'card', 'tesla-orphan')`,
+      [emailLess],
+    );
+    await db.query(
+      `insert into smiles_cards (user_id, journey_id, profile_id, profile_name, score, distance_km, result)
+       values ($1, 'tesla-orphan', 'v10', 'Racing V10', 51, 14.2, '{}'::jsonb)`,
+      [emailLess],
+    );
+
+    const implicit = await buildMergePlan(db, { primaryId: PRIMARY });
+    expect(implicit.secondaries.map((row) => row.id)).toEqual([SECONDARY]);
+
+    const plan = await buildMergePlan(db, { primaryId: PRIMARY, secondaryIds: [emailLess] });
+    expect(plan.secondaries).toHaveLength(1);
+    expect(plan.secondaries[0]?.id).toBe(emailLess);
+    expect(plan.secondaries[0]?.email).toBeNull();
+    expect(plan.smileTotalAfter).toBe(1253);
+
+    const applied = await applyMergePlan(db, plan);
+    expect(applied.smileTotalAfter).toBe(1253);
+    expect(applied.secondaries[0]?.founderSeat).toBeNull();
+    const primarySeat = await db.query(
+      `select founder_seat, smile_total from users where id = $1::uuid`,
+      [PRIMARY],
+    );
+    expect(Number(primarySeat[0]?.["founder_seat"])).toBe(1);
+    expect(Number(primarySeat[0]?.["smile_total"])).toBe(1253);
+    const leftover = await db.query(
+      `select count(*)::int as n from smile_ledger where user_id = $1`,
+      [emailLess],
+    );
+    expect(Number(leftover[0]?.n)).toBe(0);
+    const other = await db.query(`select founder_seat from users where id = $1::uuid`, [OTHER]);
+    expect(Number(other[0]?.["founder_seat"])).toBe(3);
+  });
 });

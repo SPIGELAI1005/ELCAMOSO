@@ -411,7 +411,13 @@ async function collectMoves(
 
 export async function buildMergePlan(
   db: SqlClient,
-  opts: { primarySeat?: number; primaryId?: string; email?: string } = {},
+  opts: {
+    primarySeat?: number;
+    primaryId?: string;
+    email?: string;
+    /** Explicit secondary ids, including accounts with no email. */
+    secondaryIds?: string[];
+  } = {},
 ): Promise<MergePlan> {
   const primary =
     (opts.primaryId ? await findUserById(db, opts.primaryId) : null) ??
@@ -419,12 +425,32 @@ export async function buildMergePlan(
   if (!primary) {
     throw new Error("Primary account (Founder seat #1 by default) was not found.");
   }
-  const email = opts.email ?? primary.email;
-  if (!email) {
-    throw new Error("Primary account has no email, so aliases cannot be matched.");
+
+  const explicitIds = [
+    ...new Set((opts.secondaryIds ?? []).map((id) => id.trim()).filter(Boolean)),
+  ];
+  let secondaries: UserRow[] = [];
+  if (explicitIds.length) {
+    for (const id of explicitIds) {
+      if (id === primary.id) {
+        throw new Error("Primary and secondary must be different accounts.");
+      }
+      const row = await findUserById(db, id);
+      if (!row) {
+        throw new Error(`Secondary account ${id} was not found.`);
+      }
+      secondaries.push(row);
+    }
+  } else {
+    const email = opts.email ?? primary.email;
+    if (!email) {
+      throw new Error(
+        "Primary account has no email, so aliases cannot be matched. Pass --secondary <id> for an email-less account.",
+      );
+    }
+    const samePerson = await findUsersByCanonicalEmail(db, email);
+    secondaries = samePerson.filter((user) => user.id !== primary.id);
   }
-  const samePerson = await findUsersByCanonicalEmail(db, email);
-  const secondaries = samePerson.filter((user) => user.id !== primary.id);
   if (!secondaries.length) {
     return {
       primary,
@@ -695,7 +721,10 @@ async function recomputeSmileTotals(db: SqlClient, userId: string): Promise<numb
 export async function applyMergePlan(db: SqlClient, plan: MergePlan): Promise<MergePlan> {
   if (!plan.secondaries.length) return plan;
   return db.withTransaction(async (tx) => {
-    const fresh = await buildMergePlan(tx, { primaryId: plan.primary.id });
+    const fresh = await buildMergePlan(tx, {
+      primaryId: plan.primary.id,
+      secondaryIds: plan.secondaries.map((row) => row.id),
+    });
     for (const secondary of fresh.secondaries) {
       await applyOne(tx, fresh.primary, secondary);
     }
