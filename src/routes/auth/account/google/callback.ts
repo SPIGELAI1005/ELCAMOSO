@@ -33,7 +33,9 @@ export const Route = createFileRoute("/auth/account/google/callback")({
       GET: async ({ request }) => {
         const url = new URL(request.url);
         const origin = url.origin;
-        const clearPending = serializeClearedCookieHeader(GOOGLE_OAUTH_PENDING_COOKIE_NAME);
+        const clearPending = serializeClearedCookieHeader(GOOGLE_OAUTH_PENDING_COOKIE_NAME, {
+          host: url.hostname,
+        });
 
         const oauthError = url.searchParams.get("error");
         if (oauthError) {
@@ -51,10 +53,11 @@ export const Route = createFileRoute("/auth/account/google/callback")({
           const { completeGoogleSignIn } = await import("@/lib/account/auth-service");
           const result = await completeGoogleSignIn(code, state, Date.now(), pendingCookie);
 
+          const host = url.hostname;
           const sessionCookie = serializeCookieHeader(
             ACCOUNT_SESSION_COOKIE_NAME,
             result.sessionToken,
-            buildAccountSessionCookieOptions(result.expiresAt),
+            buildAccountSessionCookieOptions(result.expiresAt, Date.now(), { host }),
           );
 
           try {

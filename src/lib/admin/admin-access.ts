@@ -1,19 +1,23 @@
+import { canonicalAccountEmail, normalizeAccountEmail } from "@/lib/account/canonical-email";
+
 /**
  * Admin role resolution. Pure / dependency-injected so it is unit-testable.
- * Admins = bootstrap allowlist (case-insensitive) ∪ ELCAMOSO_ADMIN_EMAILS env ∪ users.role = 'admin'.
+ * Admins = bootstrap allowlist (case-insensitive, gmail/googlemail aliases)
+ * ∪ ELCAMOSO_ADMIN_EMAILS env ∪ users.role = 'admin'.
  */
+
 export const BOOTSTRAP_ADMIN_EMAILS: readonly string[] = ["george.m.neacsu@googlemail.com"];
 
 export function normalizeEmail(email: string | null | undefined): string {
-  return (email ?? "").trim().toLowerCase();
+  return normalizeAccountEmail(email ?? "");
 }
 
 export function readAdminEmailAllowlist(
   envValue: string | undefined = process.env["ELCAMOSO_ADMIN_EMAILS"],
 ): Set<string> {
-  const set = new Set(BOOTSTRAP_ADMIN_EMAILS.map(normalizeEmail));
+  const set = new Set(BOOTSTRAP_ADMIN_EMAILS.map(canonicalAccountEmail).filter(Boolean));
   for (const part of (envValue ?? "").split(/[,;\s]+/)) {
-    const e = normalizeEmail(part);
+    const e = canonicalAccountEmail(part);
     if (e) set.add(e);
   }
   return set;
@@ -23,7 +27,7 @@ export function isAllowlistedAdminEmail(
   email: string | null | undefined,
   allowlist = readAdminEmailAllowlist(),
 ): boolean {
-  const e = normalizeEmail(email);
+  const e = canonicalAccountEmail(email ?? "");
   return e.length > 0 && allowlist.has(e);
 }
 

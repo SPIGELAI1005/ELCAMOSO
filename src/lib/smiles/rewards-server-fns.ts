@@ -3,10 +3,13 @@ import { createServerFn } from "@tanstack/react-start";
 import { emptySmileStatus, HANDLE_RE, REF_CODE_RE } from "@/lib/smiles/rewards";
 
 async function currentUserId(): Promise<string | null> {
-  const { getAccountSession } = await import("@/lib/account/auth-service");
+  const { getAccountSession, resolveSessionUserId } = await import("@/lib/account/auth-service");
   const { tryResolveRequestSessionToken } = await import("@/lib/account/session-cookies.server");
   const token = tryResolveRequestSessionToken(null);
-  return token ? (getAccountSession(token)?.userId ?? null) : null;
+  if (!token) return null;
+  const session = getAccountSession(token);
+  if (!session) return null;
+  return resolveSessionUserId(session);
 }
 
 export const getSmileStatusFn = createServerFn({ method: "POST" }).handler(async () => {
@@ -18,7 +21,8 @@ export const getSmileStatusFn = createServerFn({ method: "POST" }).handler(async
 
 export const shareSmilesBonusFn = createServerFn({ method: "POST" })
   .inputValidator((data: { journeyId: string }) => {
-    if (typeof data.journeyId !== "string" || data.journeyId.length > 120) throw new Error("Bad card");
+    if (typeof data.journeyId !== "string" || data.journeyId.length > 120)
+      throw new Error("Bad card");
     return { journeyId: data.journeyId };
   })
   .handler(async ({ data }) => {

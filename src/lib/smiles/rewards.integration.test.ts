@@ -7,22 +7,49 @@ import { getDb, setDbOverrideForTests } from "@/lib/db/client";
 import { createTestDb } from "@/lib/db/test-client";
 
 vi.mock("@/lib/founders/founders.server", () => ({
-  loadFounderRecord: async (id: string) => ({ founderAt: id.endsWith("f") ? 1 : null, seat: null, testCrewOptIn: false }),
+  loadFounderRecord: async (id: string) => ({
+    founderAt: id.endsWith("f") ? 1 : null,
+    seat: null,
+    testCrewOptIn: false,
+  }),
 }));
-vi.mock("@/lib/accounts/accounts.server", () => ({ grantSmileDrivePlus: vi.fn(async () => undefined) }));
+vi.mock("@/lib/accounts/accounts.server", () => ({
+  grantSmileDrivePlus: vi.fn(async () => undefined),
+}));
 
 import { saveCard } from "./cards.server";
-import { applyReferral, awardCard, qualifyReferral, awardShare, getLeaderboard, getSmileStatus, redeemItem } from "./rewards.server";
+import {
+  applyReferral,
+  awardCard,
+  qualifyReferral,
+  awardShare,
+  getLeaderboard,
+  getSmileStatus,
+  redeemItem,
+} from "./rewards.server";
 
 const A = "11111111-1111-4111-8111-111111111111";
 const F = "22222222-2222-4222-8222-22222222222f";
-const card = (j: string, score = 80) => ({ journeyId: j, score, distanceKm: 5, sound: "Racing V10", country: "DE" });
+const card = (j: string, score = 80) => ({
+  journeyId: j,
+  score,
+  distanceKm: 5,
+  sound: "Racing V10",
+  country: "DE",
+});
 
 describe("smile rewards ledger (PGlite)", () => {
   const prev = process.env["DATABASE_URL"];
+  async function seedUser(id: string, email = `${id}@example.test`) {
+    await getDb().execute(
+      sql`insert into users (id, email) values (${id}::uuid, ${email}) on conflict do nothing`,
+    );
+  }
   beforeEach(async () => {
     process.env["DATABASE_URL"] = "postgres://pglite-test/elcamoso";
     setDbOverrideForTests((await createTestDb()).db);
+    await seedUser(A, "driver-a@example.test");
+    await seedUser(F, "driver-f@example.test");
   });
   afterEach(() => {
     setDbOverrideForTests(null);
@@ -52,11 +79,21 @@ describe("smile rewards ledger (PGlite)", () => {
   });
 
   it("share bonus +25% once a day, theme redeem", async () => {
-    await saveCard(A, { journeyId: "s1", profileId: "v10", profileName: "Racing V10", score: 80, distanceKm: 5, result: {} as never });
+    await saveCard(A, {
+      journeyId: "s1",
+      profileId: "v10",
+      profileName: "Racing V10",
+      score: 80,
+      distanceKm: 5,
+      result: {} as never,
+    });
     await awardCard(A, card("s1"));
     expect((await awardShare(A, "s1")).awarded).toBe(20);
     expect((await awardShare(A, "s1")).awarded).toBe(0);
-    expect(await redeemItem(A, "theme-midnight")).toMatchObject({ ok: false, error: "Not enough smiles yet. Go drive!" });
+    expect(await redeemItem(A, "theme-midnight")).toMatchObject({
+      ok: false,
+      error: "Not enough smiles yet. Go drive!",
+    });
   });
 
   it("referral credits the referrer once", async () => {
@@ -76,6 +113,7 @@ describe("smile rewards ledger (PGlite)", () => {
     vi.mocked(accounts.grantSmileDrivePlus).mockClear();
     const code = (await getSmileStatus(A)).refCode!;
     const B = friend(1);
+    await seedUser(B, `${B}@example.test`);
     await getSmileStatus(B);
     expect(await applyReferral(B, code)).toBe(true);
     expect(grants()).toEqual([]); // no drive, no email yet
@@ -97,8 +135,11 @@ describe("smile rewards ledger (PGlite)", () => {
     const code = (await getSmileStatus(A)).refCode!;
     expect(await applyReferral(A, code)).toBe(false);
     const Old = friend(99);
+    await seedUser(Old);
     await getSmileStatus(Old);
-    await getDb().execute(sql`update users set created_at = now() - interval '4 days' where id = ${Old}::uuid`);
+    await getDb().execute(
+      sql`update users set created_at = now() - interval '4 days' where id = ${Old}::uuid`,
+    );
     expect(await applyReferral(Old, code)).toBe(false);
   });
 
@@ -107,6 +148,7 @@ describe("smile rewards ledger (PGlite)", () => {
     const code = (await getSmileStatus(A)).refCode!;
     for (let n = 1; n <= 7; n++) {
       const B = friend(n);
+      await seedUser(B);
       await getSmileStatus(B);
       await confirm(B);
       expect(await applyReferral(B, code)).toBe(true);
@@ -116,7 +158,11 @@ describe("smile rewards ledger (PGlite)", () => {
     expect(g.filter((id) => id === A)).toHaveLength(6);
     for (let n = 1; n <= 7; n++) expect(g).toContain(friend(n));
     const s = await getSmileStatus(A);
-    expect(s).toMatchObject({ balance: 700, inviteMonths: 6, inviteReward: { role: "inviter-capped" } });
+    expect(s).toMatchObject({
+      balance: 700,
+      inviteMonths: 6,
+      inviteReward: { role: "inviter-capped" },
+    });
   });
 
   it("fails soft without the database", async () => {

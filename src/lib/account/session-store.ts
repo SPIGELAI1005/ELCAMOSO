@@ -1,5 +1,7 @@
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 
+import { emailLookupAliases } from "@/lib/account/canonical-email";
+
 export interface AccountSession {
   token: string;
   userId: string;
@@ -38,19 +40,24 @@ export function resetAccountAuthStoreForTests(): void {
 }
 
 export function registerUserEmail(email: string, userId: string): void {
-  usersByEmail.set(email.toLowerCase(), userId);
+  for (const alias of emailLookupAliases(email)) {
+    usersByEmail.set(alias, userId);
+  }
 }
 
 export function resolveUserIdForEmail(email: string): string | null {
-  return usersByEmail.get(email.toLowerCase()) ?? null;
+  for (const alias of emailLookupAliases(email)) {
+    const existing = usersByEmail.get(alias);
+    if (existing) return existing;
+  }
+  return null;
 }
 
 export function createUserForEmail(email: string): string {
-  const normalized = email.toLowerCase();
-  const existing = usersByEmail.get(normalized);
+  const existing = resolveUserIdForEmail(email);
   if (existing) return existing;
   const userId = randomUUID();
-  usersByEmail.set(normalized, userId);
+  registerUserEmail(email, userId);
   return userId;
 }
 

@@ -5,10 +5,13 @@ import type { SmilesCardInput } from "@/lib/smiles/cards";
 const UUID_RE = /^[0-9a-f-]{36}$/i;
 
 async function currentUserId(): Promise<string | null> {
-  const { getAccountSession } = await import("@/lib/account/auth-service");
+  const { getAccountSession, resolveSessionUserId } = await import("@/lib/account/auth-service");
   const { tryResolveRequestSessionToken } = await import("@/lib/account/session-cookies.server");
   const token = tryResolveRequestSessionToken(null);
-  return token ? (getAccountSession(token)?.userId ?? null) : null;
+  if (!token) return null;
+  const session = getAccountSession(token);
+  if (!session) return null;
+  return resolveSessionUserId(session);
 }
 
 async function requestCountry(): Promise<string | null> {

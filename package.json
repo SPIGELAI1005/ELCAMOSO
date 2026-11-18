@@ -28,6 +28,7 @@
     "db:migrate:prod": "node scripts/migrate-prod.mjs",
     "db:studio": "drizzle-kit studio",
     "billing:diagnostics": "npx tsx scripts/billing-diagnostics.ts",
+    "accounts:merge": "npx tsx scripts/merge-duplicate-accounts.ts",
     "relay:dev": "npx tsx services/drive-relay/server.ts",
     "seo:check": "npx tsx scripts/seo-check.mjs",
     "native:sync": "cap sync",

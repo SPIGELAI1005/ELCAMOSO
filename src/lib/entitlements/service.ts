@@ -1,6 +1,6 @@
 import type { DynamicDriveTrialSnapshot } from "@/lib/dynamic-drive-trial/types";
 import { getDynamicDriveTrialService } from "@/lib/dynamic-drive-trial/service";
-import { getAccountSession } from "@/lib/account/auth-service";
+import { getAccountSession, resolveSessionUserId } from "@/lib/account/auth-service";
 import { hasDrivePlusSubscriptionAccess } from "@/lib/billing/subscription-access-policy";
 import { getSubscriptionForUser } from "@/lib/billing/subscription-store";
 import { activeGrantedEntitlements, activeGrantedProfileIds } from "@/lib/entitlements/grants";
@@ -69,21 +69,19 @@ export async function resolveEntitlementUser(input: {
   if (input.sessionToken) {
     const session = getAccountSession(input.sessionToken, now);
     if (session) {
-      accountId = session.userId;
+      const userId = await resolveSessionUserId(session);
+      accountId = userId;
       const { hydrateUserBillingState } = await import("@/lib/billing/durable-state.server");
-      await hydrateUserBillingState(session.userId, { now });
+      await hydrateUserBillingState(userId, { now });
 
-      const subscription = getSubscriptionForUser(session.userId);
+      const subscription = getSubscriptionForUser(userId);
       if (subscription && hasDrivePlusSubscriptionAccess(subscription, now)) {
         plan = subscription.plan;
         subscriptionStatus = mapBillingStatusToSubscription(subscription.status);
         revision += 1;
       }
 
-      const trialSnapshot = await getDynamicDriveTrialService().getStatus(
-        session.userId,
-        new Date(now),
-      );
+      const trialSnapshot = await getDynamicDriveTrialService().getStatus(userId, new Date(now));
       if (trialGrantsDrivePlusEntitlements(trialSnapshot)) {
         trialStatus = "active";
         trialEntitlements = [...TRIAL_DRIVE_PLUS_ENTITLEMENTS];
@@ -93,8 +91,8 @@ export async function resolveEntitlementUser(input: {
         trialStatus = "expired";
       }
 
-      grantedProfileIds = activeGrantedProfileIds(session.userId, now);
-      grantedEntitlements = activeGrantedEntitlements(session.userId, now);
+      grantedProfileIds = activeGrantedProfileIds(userId, now);
+      grantedEntitlements = activeGrantedEntitlements(userId, now);
       if (grantedProfileIds.length || grantedEntitlements.length) revision += 4;
 
       // Admin test unlock: allowlisted admins (bootstrap + ELCAMOSO_ADMIN_EMAILS) get every
@@ -112,15 +110,15 @@ export async function resolveEntitlementUser(input: {
         const { claimFounderSeat, foundersEnabled, foundersPackPurchasedAt } =
           await import("@/lib/founders/founders.server");
         const rec = foundersEnabled()
-          ? await claimFounderSeat(session.userId, session.email ?? null, now)
+          ? await claimFounderSeat(userId, session.email ?? null, now)
           : null;
-        const purchasedAt = foundersPackPurchasedAt(session.userId);
+        const purchasedAt = foundersPackPurchasedAt(userId);
         if (rec?.founderAt != null) {
           const { ensureLegacyFounderForeverSounds } =
             await import("@/lib/founders/sound-picks.server");
-          ensureLegacyFounderForeverSounds(session.userId, rec.founderAt);
+          ensureLegacyFounderForeverSounds(userId, rec.founderAt);
           grantedProfileIds = [
-            ...new Set([...grantedProfileIds, ...activeGrantedProfileIds(session.userId, now)]),
+            ...new Set([...grantedProfileIds, ...activeGrantedProfileIds(userId, now)]),
           ];
         }
         const status = rec ? founderStatusFrom(rec.founderAt, purchasedAt) : null;

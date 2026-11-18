@@ -33,7 +33,7 @@ describe("admin guard", () => {
       isAllowlistedAdminEmail(" george.m.neacsu@googlemail.com ", readAdminEmailAllowlist("")),
     ).toBe(true);
     expect(isAllowlistedAdminEmail("george.m.neacsu@gmail.com", readAdminEmailAllowlist(""))).toBe(
-      false,
+      true,
     );
   });
 
@@ -61,6 +61,11 @@ describe("admin guard", () => {
   it("allows the allowlisted admin (any case)", async () => {
     const id = await assertAdmin("good", deps("George.M.Neacsu@googlemail.com"));
     expect(id).toEqual({ userId: "u1", email: "george.m.neacsu@googlemail.com" });
+  });
+
+  it("allows George's gmail.com alias as an admin", async () => {
+    const id = await assertAdmin("good", deps("george.m.neacsu@gmail.com"));
+    expect(id).toEqual({ userId: "u1", email: "george.m.neacsu@gmail.com" });
   });
 
   it("allows users with role=admin in the DB", async () => {
