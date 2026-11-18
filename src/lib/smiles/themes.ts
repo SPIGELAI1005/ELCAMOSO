@@ -44,6 +44,14 @@ export const CARD_THEMES: CardTheme[] = [
     base: "#141518",
     glow: "rgba(220,225,235,0.20)",
   },
+  {
+    id: "theme-legend",
+    name: "Legend",
+    css: "radial-gradient(ellipse at 50% 0%,rgba(255,200,80,.40),transparent 60%),linear-gradient(160deg,#3a2a08,#120e06)",
+    border: "rgba(255,200,80,.48)",
+    base: "#1a1406",
+    glow: "rgba(255,200,80,0.34)",
+  },
 ];
 
 export const cardTheme = (id: string | null | undefined): CardTheme =>

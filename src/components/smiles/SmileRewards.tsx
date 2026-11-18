@@ -183,9 +183,13 @@ export function SmileLevelRing({
             <div className="text-[11px] tracking-[0.22em] text-[#e53935] uppercase">
               {status.level.name}
             </div>
+            <div className="text-xs text-muted-foreground tabular-nums">
+              Balance {status.balance.toLocaleString("en")} · Earned{" "}
+              {status.earned.toLocaleString("en")}
+            </div>
             <div className="text-xs text-muted-foreground">
               {status.level.nextAt != null
-                ? `${(status.level.nextAt - status.earned).toLocaleString("en")} to ${status.level.next}`
+                ? `${Math.max(0, status.level.nextAt - status.earned).toLocaleString("en")} to ${status.level.next}`
                 : "Top level. Pure grin."}
             </div>
           </>

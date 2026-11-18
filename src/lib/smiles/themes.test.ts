@@ -9,5 +9,6 @@ describe("card themes", () => {
   });
   it("uses an owned theme", () => {
     expect(resolveTheme("theme-ember", ["theme-ember"]).id).toBe("theme-ember");
+    expect(resolveTheme("theme-legend", ["theme-legend"]).id).toBe("theme-legend");
   });
 });

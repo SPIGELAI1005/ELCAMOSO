@@ -10,8 +10,10 @@ import { SmileLeaderboard } from "@/components/smiles/SmileLeaderboard";
 import { SmileSymbol } from "@/components/smiles/SmilesSymbols";
 import { useAccount } from "@/lib/account/AccountProvider";
 import {
+  challengeEligibleAt,
   DAILY_SMILE_CAP,
   INVITE_MAX_MONTHS,
+  LEVEL_UNLOCK_LINES,
   SMILE_LEVELS,
   SMILE_SHOP,
   type ShopItem,
@@ -140,9 +142,12 @@ function SmileShopPage() {
         <div className="text-xs leading-relaxed text-muted-foreground sm:text-right">
           <div>Drive: smiles from your card</div>
           <div>Share: +25% (once a day)</div>
-          <div>Bring a friend: they get 1 month Drive+, you earn up to 6</div>
+          <div>
+            Bring a friend: +100 smiles (150 for Founders); they get 1 month Drive+, you earn up to
+            6
+          </div>
           <div>7-day streak: +50</div>
-          <div>Up to {DAILY_SMILE_CAP} a day · Founders 1.5x</div>
+          <div>Up to {DAILY_SMILE_CAP} a day (Founders reach it faster with 1.5×)</div>
         </div>
       </section>
 
@@ -156,6 +161,9 @@ function SmileShopPage() {
         <div className="mt-1 text-lg font-light">Most smiles in V10 Race mode</div>
         <div className="text-xs text-muted-foreground">
           Top 10 win a month of Drive+. Starts soon.
+          {isAuthenticated && challengeEligibleAt(status.level.name)
+            ? " You're eligible."
+            : " Reach Grinner to enter."}
         </div>
       </section>
 
@@ -164,7 +172,8 @@ function SmileShopPage() {
       <section className="grid gap-3 sm:grid-cols-2">
         {SMILE_SHOP.map((item) => {
           const owned = status.owned.includes(item.id);
-          const short = status.balance < item.cost;
+          const short = item.cost > 0 && status.balance < item.cost;
+          const included = Boolean(item.unlockLevel && owned);
           return (
             <div
               key={item.id}
@@ -175,27 +184,50 @@ function SmileShopPage() {
                 <div>
                   <div className="text-base font-light">{item.name}</div>
                   <div className="text-xs text-muted-foreground">{item.blurb}</div>
+                  {item.unlockLevel ? (
+                    <div className="mt-1 text-[11px] tracking-[0.14em] text-[#e53935] uppercase">
+                      {owned ? `Unlocked at ${item.unlockLevel}` : `Unlocks at ${item.unlockLevel}`}
+                    </div>
+                  ) : null}
                 </div>
                 <div className="flex shrink-0 items-center gap-1.5 tabular-nums">
-                  <SmileSymbol className="h-4 w-auto text-white" />
-                  {item.cost.toLocaleString("en")}
+                  {included || item.cost <= 0 ? (
+                    <span className="text-[11px] tracking-[0.14em] text-muted-foreground uppercase">
+                      {included ? "Free" : "Level"}
+                    </span>
+                  ) : (
+                    <>
+                      <SmileSymbol className="h-4 w-auto text-white" />
+                      {item.cost.toLocaleString("en")}
+                    </>
+                  )}
                 </div>
               </div>
               <button
                 type="button"
-                disabled={!isAuthenticated || item.soon || owned || short || busy != null}
+                disabled={
+                  !isAuthenticated ||
+                  item.soon ||
+                  owned ||
+                  included ||
+                  short ||
+                  item.cost <= 0 ||
+                  busy != null
+                }
                 onClick={() => void redeem(item)}
                 className="mt-4 h-10 rounded-full border border-border text-[11px] tracking-[0.2em] uppercase transition-colors enabled:hover:border-[#e53935] disabled:opacity-45"
               >
                 {item.soon
                   ? "Coming soon"
-                  : owned
+                  : owned || included
                     ? "Yours"
-                    : busy === item.id
-                      ? "..."
-                      : short
-                        ? "Keep driving"
-                        : "Redeem"}
+                    : item.cost <= 0
+                      ? `Reach ${item.unlockLevel}`
+                      : busy === item.id
+                        ? "..."
+                        : short
+                          ? "Keep driving"
+                          : "Redeem"}
               </button>
             </div>
           );
@@ -207,7 +239,7 @@ function SmileShopPage() {
         <div className="text-xs text-muted-foreground">
           Your Smiles cards and share images wear it.
         </div>
-        <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-5">
           {CARD_THEMES.map((t) => {
             const owned = t.id === DEFAULT_THEME_ID || status.owned.includes(t.id);
             const on = active.id === t.id;
@@ -240,7 +272,7 @@ function SmileShopPage() {
             Bring a friend: they get 1 month Drive+ free, you earn up to 6 months.
           </div>
           <div className="text-xs text-muted-foreground">
-            After their first real drive. Plus +100 smiles for you, always.
+            After their first real drive. Plus +100 smiles for you (150 if you're a Founder).
           </div>
           <div className="mt-1 text-xs text-[#e53935]" data-testid="invite-months">
             {status.inviteMonths} of {INVITE_MAX_MONTHS} free months earned
@@ -310,10 +342,15 @@ function SmileShopPage() {
         <ul className="mt-2 grid grid-cols-2 gap-1 text-sm sm:grid-cols-5">
           {SMILE_LEVELS.map((l) => (
             <li key={l.name} className={cn(status.level.name === l.name && "text-[#e53935]")}>
-              {l.name}{" "}
-              <span className="text-muted-foreground tabular-nums">
-                {l.min.toLocaleString("en")}
-              </span>
+              <div>
+                {l.name}{" "}
+                <span className="text-muted-foreground tabular-nums">
+                  {l.min.toLocaleString("en")}
+                </span>
+              </div>
+              <div className="text-[11px] leading-snug text-muted-foreground">
+                {LEVEL_UNLOCK_LINES[l.name]}
+              </div>
             </li>
           ))}
         </ul>
