@@ -11,13 +11,19 @@ import {
   cappedAward,
   emptySmileStatus,
   hasStreak,
+  higherSmileLevel,
   INVITE_MAX_MONTHS,
+  leaderboardBadgeFor,
+  mergeOwnedItems,
   REFERRAL_BONUS,
   REF_CODE_RE,
   shareBonusBase,
   shopItem,
-  smileLevel,
+  smileLevelWithFloor,
   STREAK_BONUS,
+  themesUnlockedByLevel,
+  type LeaderboardBadge,
+  type SmileLevelName,
   type SmileStatus,
   weekStart,
 } from "@/lib/smiles/rewards";
@@ -42,12 +48,60 @@ function soft<T>(label: string, fallback: T) {
   };
 }
 
-async function isFounder(userId: string): Promise<boolean> {
+/**
+ * Founder 1.5× must be decided in the same database session as the award.
+ * A separate cached loadFounderRecord (dynamic import, 10s memory, errors → not a Founder)
+ * was missing the multiplier on live card awards.
+ */
+async function isFounderUser(db: Exec, userId: string): Promise<boolean> {
   try {
-    const { loadFounderRecord } = await import("@/lib/founders/founders.server");
-    return (await loadFounderRecord(userId)).founderAt != null;
+    const [r] = await rows<{ f: boolean }>(
+      db,
+      sql`select (founder_at is not null or founder_seat is not null) as f
+          from users where id = ${userId}::uuid`,
+    );
+    return Boolean(r?.f);
   } catch {
     return false;
+  }
+}
+
+async function readLevelFloor(db: Exec, userId: string): Promise<string | null> {
+  try {
+    const [r] = await rows<{ peak: string | null; level: string | null }>(
+      db,
+      sql`select smile_level_peak as peak, smile_level as level from users where id = ${userId}::uuid`,
+    );
+    return r?.peak ?? r?.level ?? null;
+  } catch {
+    try {
+      const [r] = await rows<{ level: string | null }>(
+        db,
+        sql`select smile_level as level from users where id = ${userId}::uuid`,
+      );
+      return r?.level ?? null;
+    } catch {
+      return null;
+    }
+  }
+}
+
+async function writeTotals(
+  db: Exec,
+  userId: string,
+  balance: number,
+  levelName: SmileLevelName,
+): Promise<void> {
+  try {
+    await db.execute(
+      sql`update users set smile_total = ${balance}, smile_level = ${levelName}, smile_level_peak = ${levelName}
+          where id = ${userId}::uuid`,
+    );
+  } catch {
+    await db.execute(
+      sql`update users set smile_total = ${balance}, smile_level = ${levelName}
+          where id = ${userId}::uuid`,
+    );
   }
 }
 
@@ -67,20 +121,26 @@ async function refreshTotals(db: Exec, userId: string): Promise<void> {
         coalesce(sum(amount) filter (where ${EARN}),0)::int as earned
         from smile_ledger where user_id = ${userId}`,
   );
-  await db.execute(
-    sql`update users set smile_total = ${Number(r?.bal ?? 0)}, smile_level = ${smileLevel(Number(r?.earned ?? 0)).name}
-        where id = ${userId}::uuid`,
-  );
+  const earned = Number(r?.earned ?? 0);
+  const level = smileLevelWithFloor(earned, await readLevelFloor(db, userId));
+  await writeTotals(db, userId, Number(r?.bal ?? 0), level.name);
 }
 
 async function lockUser(tx: Exec, userId: string) {
-  await tx.execute(sql`insert into users (id) values (${userId}::uuid) on conflict do nothing`);
+  // Never insert an email-less users row here — that can get a second Founder seat.
   await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${"smiles:" + userId}))`);
 }
 
 async function insertEntry(
   tx: Exec,
-  e: { userId: string; amount: number; reason: string; ref: string; sound?: string | null; country?: string | null },
+  e: {
+    userId: string;
+    amount: number;
+    reason: string;
+    ref: string;
+    sound?: string | null;
+    country?: string | null;
+  },
 ): Promise<boolean> {
   const r = await rows<{ id: string }>(
     tx,
@@ -94,27 +154,40 @@ async function insertEntry(
 /** Cards saved before a ledger award still count. Missing table must not wipe status. */
 async function backfillUnawardedCards(db: Exec, userId: string): Promise<void> {
   try {
+    const founder = await isFounderUser(db, userId);
     const missing = await rows<{
       journey_id: string;
       score: number;
       distance_km: number;
       profile_name: string;
+      created_at: string | Date;
     }>(
       db,
-      sql`select c.journey_id, c.score, c.distance_km, c.profile_name
+      sql`select c.journey_id, c.score, c.distance_km, c.profile_name, c.created_at
           from smiles_cards c
           where c.user_id = ${userId} and c.score > 0
             and not exists (
               select 1 from smile_ledger l
               where l.user_id = c.user_id and l.reason = 'card' and l.ref = c.journey_id
-            )`,
+            )
+          order by c.created_at`,
     );
     let wrote = false;
     for (const c of missing) {
       if (Number(c.distance_km) * 1000 < SMILES_MIN_DISTANCE_M) continue;
+      const created =
+        c.created_at instanceof Date ? c.created_at.getTime() : Date.parse(String(c.created_at));
+      const day = berlinDay(Number.isFinite(created) ? created : Date.now());
+      const [t] = await rows<{ n: number }>(
+        db,
+        sql`select coalesce(sum(amount),0)::int as n from smile_ledger
+            where user_id = ${userId} and ${EARN} and reason <> 'referral'
+              and (created_at at time zone 'Europe/Berlin')::date = ${day}::date`,
+      );
+      const amount = cappedAward(Number(c.score), Number(t?.n ?? 0), founder);
       const ok = await insertEntry(db, {
         userId,
-        amount: Math.max(0, Math.min(100, Math.round(Number(c.score)))),
+        amount,
         reason: "card",
         ref: c.journey_id,
         sound: c.profile_name,
@@ -138,7 +211,6 @@ export async function getSmileStatus(userId: string, now = Date.now()): Promise<
   if (!hasRewardsDb(userId)) return emptySmileStatus();
   try {
     const db = getDb();
-    await db.execute(sql`insert into users (id) values (${userId}::uuid) on conflict do nothing`);
     const [u] = await rows<{ handle: string | null; code: string | null }>(
       db,
       sql`select smile_handle as handle, smile_ref_code as code from users where id = ${userId}::uuid`,
@@ -147,7 +219,9 @@ export async function getSmileStatus(userId: string, now = Date.now()): Promise<
     if (u && !code) {
       code = randomCode();
       await db
-        .execute(sql`update users set smile_ref_code = ${code} where id = ${userId}::uuid and smile_ref_code is null`)
+        .execute(
+          sql`update users set smile_ref_code = ${code} where id = ${userId}::uuid and smile_ref_code is null`,
+        )
         .catch(() => (code = null));
     }
     await backfillUnawardedCards(db, userId);
@@ -191,23 +265,38 @@ export async function getSmileStatus(userId: string, now = Date.now()): Promise<
     }
     let activeTheme: string | null = null;
     try {
-      const [t] = await rows<{ t: string | null }>(db, sql`select smile_theme as t from users where id = ${userId}::uuid`);
+      const [t] = await rows<{ t: string | null }>(
+        db,
+        sql`select smile_theme as t from users where id = ${userId}::uuid`,
+      );
       activeTheme = t?.t ?? null;
     } catch {
       /* migration 0011 not applied yet: client falls back to localStorage */
     }
+    const level = smileLevelWithFloor(earned, await readLevelFloor(db, userId));
     return {
       available: true,
       balance,
       earned,
-      level: smileLevel(earned),
+      level,
       earnedToday: await earnedToday(db, userId, now),
       refCode: code,
       handle: u?.handle ?? null,
-      owned: owned.map((o) => o.ref),
+      owned: mergeOwnedItems(
+        owned.map((o) => o.ref),
+        level.name,
+      ),
       activeTheme,
       inviteReward: inv
-        ? { id: inv.id, role: inv.ref === userId ? "friend" : invites > INVITE_MAX_MONTHS ? "inviter-capped" : "inviter" }
+        ? {
+            id: inv.id,
+            role:
+              inv.ref === userId
+                ? "friend"
+                : invites > INVITE_MAX_MONTHS
+                  ? "inviter-capped"
+                  : "inviter",
+          }
         : null,
       inviteMonths: Math.min(invites, INVITE_MAX_MONTHS),
     };
@@ -239,7 +328,6 @@ export async function awardCard(
   if (!hasRewardsDb(userId)) return { awarded: 0, streak: 0, status: emptySmileStatus() };
   if (card.distanceKm * 1000 < SMILES_MIN_DISTANCE_M || card.score <= 0) return none();
   if (card.durationMs != null && card.durationMs < SMILES_MIN_DURATION_MS) return none();
-  const founder = await isFounder(userId);
   try {
     const out = await getDb().transaction(async (tx) => {
       await lockUser(tx, userId);
@@ -248,10 +336,19 @@ export async function awardCard(
         sql`select id from smile_ledger where user_id = ${userId} and reason = 'card' and ref = ${card.journeyId}`,
       );
       if (already.length) return { awarded: 0, streak: 0 };
+      const founder = await isFounderUser(tx, userId);
       let today = await earnedToday(tx, userId, now);
       const amount = cappedAward(card.score, today, founder);
       // Record the card even at 0 so streak days count and the journey is never paid twice.
-      await insertEntry(tx, { userId, amount, reason: "card", ref: card.journeyId, sound: card.sound, country: card.country });
+      const recorded = await insertEntry(tx, {
+        userId,
+        amount,
+        reason: "card",
+        ref: card.journeyId,
+        sound: card.sound,
+        country: card.country,
+      });
+      if (!recorded) return { awarded: 0, streak: 0 };
       today += amount;
       let streak = 0;
       const days = await rows<{ d: string }>(
@@ -260,13 +357,28 @@ export async function awardCard(
             from smile_ledger where user_id = ${userId} and reason = 'card' and created_at > now() - interval '8 days'`,
       );
       const todayKey = berlinDay(now);
-      if (hasStreak(days.map((d) => d.d), todayKey)) {
+      if (
+        hasStreak(
+          days.map((d) => d.d),
+          todayKey,
+        )
+      ) {
         const recent = await rows<{ id: string }>(
           tx,
           sql`select id from smile_ledger where user_id = ${userId} and reason = 'streak' and created_at > now() - interval '6 days'`,
         );
         const bonus = recent.length ? 0 : cappedAward(STREAK_BONUS, today, founder);
-        if (bonus > 0 && (await insertEntry(tx, { userId, amount: bonus, reason: "streak", ref: todayKey, sound: card.sound, country: card.country })))
+        if (
+          bonus > 0 &&
+          (await insertEntry(tx, {
+            userId,
+            amount: bonus,
+            reason: "streak",
+            ref: todayKey,
+            sound: card.sound,
+            country: card.country,
+          }))
+        )
           streak = bonus;
       }
       await refreshTotals(tx, userId);
@@ -280,9 +392,12 @@ export async function awardCard(
 }
 
 /** +25% of a saved card's smiles for sharing it, max once per Berlin day. */
-export async function awardShare(userId: string, journeyId: string, now = Date.now()): Promise<AwardResult> {
+export async function awardShare(
+  userId: string,
+  journeyId: string,
+  now = Date.now(),
+): Promise<AwardResult> {
   if (!hasRewardsDb(userId)) return { awarded: 0, streak: 0, status: emptySmileStatus() };
-  const founder = await isFounder(userId);
   try {
     const awarded = await getDb().transaction(async (tx) => {
       await lockUser(tx, userId);
@@ -295,9 +410,20 @@ export async function awardShare(userId: string, journeyId: string, now = Date.n
         sql`select score from smiles_cards where user_id = ${userId} and journey_id = ${journeyId}`,
       );
       if (!c || !card) return 0;
-      const amount = cappedAward(shareBonusBase(card.score), await earnedToday(tx, userId, now), founder);
+      const amount = cappedAward(
+        shareBonusBase(card.score),
+        await earnedToday(tx, userId, now),
+        await isFounderUser(tx, userId),
+      );
       if (amount <= 0) return 0;
-      const ok = await insertEntry(tx, { userId, amount, reason: "share", ref: berlinDay(now), sound: c.sound, country: c.country });
+      const ok = await insertEntry(tx, {
+        userId,
+        amount,
+        reason: "share",
+        ref: berlinDay(now),
+        sound: c.sound,
+        country: c.country,
+      });
       if (ok) await refreshTotals(tx, userId);
       return ok ? amount : 0;
     });
@@ -317,11 +443,16 @@ export async function applyReferral(userId: string, code: string): Promise<boole
         sql`select smile_referred_by as by, created_at > now() - interval '3 days' as fresh from users where id = ${userId}::uuid`,
       );
       if (!me || me.by || !me.fresh) return false;
-      const [ref] = await rows<{ id: string }>(tx, sql`select id::text as id from users where smile_ref_code = ${code}`);
+      const [ref] = await rows<{ id: string }>(
+        tx,
+        sql`select id::text as id from users where smile_ref_code = ${code}`,
+      );
       if (!ref || ref.id === userId) return false;
-      await tx.execute(sql`update users set smile_referred_by = ${ref.id} where id = ${userId}::uuid`);
+      await tx.execute(
+        sql`update users set smile_referred_by = ${ref.id} where id = ${userId}::uuid`,
+      );
       await lockUser(tx, ref.id);
-      const amount = cappedAward(REFERRAL_BONUS, 0, await isFounder(ref.id));
+      const amount = cappedAward(REFERRAL_BONUS, 0, await isFounderUser(tx, ref.id));
       const ok = await insertEntry(tx, { userId: ref.id, amount, reason: "referral", ref: userId });
       if (ok) await refreshTotals(tx, ref.id);
       return ok;
@@ -361,9 +492,19 @@ export async function qualifyReferral(
       );
       if (!drove.length) return null;
       await lockUser(tx, f.by);
-      const ok = await insertEntry(tx, { userId: f.by, amount: 0, reason: INVITE_REWARD_REASON, ref: friendId });
+      const ok = await insertEntry(tx, {
+        userId: f.by,
+        amount: 0,
+        reason: INVITE_REWARD_REASON,
+        ref: friendId,
+      });
       if (!ok) return null; // already rewarded for this friend
-      await insertEntry(tx, { userId: friendId, amount: 0, reason: INVITE_REWARD_REASON, ref: friendId });
+      await insertEntry(tx, {
+        userId: friendId,
+        amount: 0,
+        reason: INVITE_REWARD_REASON,
+        ref: friendId,
+      });
       const [c] = await rows<{ n: number }>(
         tx,
         sql`select count(*)::int as n from smile_ledger where user_id = ${f.by} and reason = ${INVITE_REWARD_REASON} and ref <> ${f.by}`,
@@ -385,20 +526,38 @@ export async function qualifyReferral(
 
 export type RedeemResult = { ok: true; status: SmileStatus } | { ok: false; error: string };
 
-export async function redeemItem(userId: string, itemId: string, now = Date.now()): Promise<RedeemResult> {
+export async function redeemItem(
+  userId: string,
+  itemId: string,
+  now = Date.now(),
+): Promise<RedeemResult> {
   const item = shopItem(itemId);
   if (!item || item.soon) return { ok: false, error: "Not in the shop yet." };
-  if (!hasRewardsDb(userId)) return { ok: false, error: "Smile Shop is warming up. Try again soon." };
+  if (!hasRewardsDb(userId))
+    return { ok: false, error: "Smile Shop is warming up. Try again soon." };
   try {
     const res = await getDb().transaction(async (tx) => {
       await lockUser(tx, userId);
-      const [b] = await rows<{ bal: number }>(
+      const [tot] = await rows<{ bal: number; earned: number }>(
         tx,
-        sql`select coalesce(sum(amount),0)::int as bal from smile_ledger where user_id = ${userId}`,
+        sql`select coalesce(sum(amount),0)::int as bal,
+            coalesce(sum(amount) filter (where ${EARN}),0)::int as earned
+            from smile_ledger where user_id = ${userId}`,
       );
-      if (Number(b?.bal ?? 0) < item.cost) return "Not enough smiles yet. Go drive!";
+      const level = smileLevelWithFloor(Number(tot?.earned ?? 0), await readLevelFloor(tx, userId));
+      const included = Boolean(
+        item.unlockLevel && themesUnlockedByLevel(level.name).includes(item.id),
+      );
+      if (
+        included ||
+        (item.kind === "theme" && themesUnlockedByLevel(level.name).includes(item.id))
+      )
+        return "Already yours.";
+      if (item.unlockLevel && item.cost <= 0) return `Reach ${item.unlockLevel} to unlock.`;
+      if (Number(tot?.bal ?? 0) < item.cost) return "Not enough smiles yet. Go drive!";
       const ref = item.kind === "theme" ? item.id : `${item.id}:${now}`;
-      if (!(await insertEntry(tx, { userId, amount: -item.cost, reason: "redeem", ref }))) return "Already yours.";
+      if (!(await insertEntry(tx, { userId, amount: -item.cost, reason: "redeem", ref })))
+        return "Already yours.";
       await refreshTotals(tx, userId);
       return null;
     });
@@ -418,7 +577,6 @@ export async function setSmileHandle(userId: string, handle: string | null): Pro
   if (!hasRewardsDb(userId)) return false;
   try {
     const db = getDb();
-    await db.execute(sql`insert into users (id) values (${userId}::uuid) on conflict do nothing`);
     const updated = await rows<{ h: string | null }>(
       db,
       sql`update users set smile_handle = ${handle} where id = ${userId}::uuid returning smile_handle as h`,
@@ -433,6 +591,8 @@ export interface BoardRow {
   name: string;
   smiles: number;
   me: boolean;
+  level: SmileLevelName;
+  badge: LeaderboardBadge;
 }
 export interface BoardGroup {
   key: string;
@@ -445,7 +605,10 @@ export interface Leaderboard {
 }
 
 /** Weekly (Monday, Berlin) leaderboard. Shows handles or anonymous names, never emails. */
-export async function getLeaderboard(viewerId: string | null, now = Date.now()): Promise<Leaderboard> {
+export async function getLeaderboard(
+  viewerId: string | null,
+  now = Date.now(),
+): Promise<Leaderboard> {
   const weekOf = weekStart(now);
   const empty = { weekOf, byCountry: [], bySound: [] };
   if (!hasRewardsDb()) return empty;
@@ -462,22 +625,44 @@ export async function getLeaderboard(viewerId: string | null, now = Date.now()):
     const mine = (uid: string) => viewerId != null && uid.toLowerCase() === viewerId.toLowerCase();
     const since = sql`(l.created_at at time zone 'Europe/Berlin')::date >= ${weekOf}::date`;
     const load = async (col: "country" | "sound") => {
-      const data = await rows<{ k: string; uid: string; handle: string | null; n: number }>(
-        db,
-        sql`select coalesce(l.${sql.raw(col)}, '—') as k, l.user_id as uid, u.smile_handle as handle, sum(l.amount)::int as n
-            from smile_ledger l left join users u on lower(u.id::text) = lower(l.user_id)
-            where ${EARN} and ${since}
-            group by 1, 2, 3 order by n desc limit 200`,
-      );
+      type Row = {
+        k: string;
+        uid: string;
+        handle: string | null;
+        n: number;
+        level: string | null;
+        peak: string | null;
+      };
+      const base = (withPeak: boolean) =>
+        withPeak
+          ? sql`select coalesce(l.${sql.raw(col)}, '—') as k, l.user_id as uid, u.smile_handle as handle,
+                u.smile_level as level, u.smile_level_peak as peak, sum(l.amount)::int as n
+                from smile_ledger l left join users u on lower(u.id::text) = lower(l.user_id)
+                where ${EARN} and ${since}
+                group by 1, 2, 3, 4, 5 order by n desc limit 200`
+          : sql`select coalesce(l.${sql.raw(col)}, '—') as k, l.user_id as uid, u.smile_handle as handle,
+                u.smile_level as level, null as peak, sum(l.amount)::int as n
+                from smile_ledger l left join users u on lower(u.id::text) = lower(l.user_id)
+                where ${EARN} and ${since}
+                group by 1, 2, 3, 4 order by n desc limit 200`;
+      let data: Row[];
+      try {
+        data = await rows<Row>(db, base(true));
+      } catch {
+        data = await rows<Row>(db, base(false));
+      }
       const groups = new Map<string, BoardRow[]>();
       for (const d of data) {
         const g = groups.get(d.k) ?? [];
         const isMe = mine(d.uid);
+        const level = higherSmileLevel(d.level, d.peak);
         if (g.length < 5)
           g.push({
             name: (isMe ? viewerHandle : null) || d.handle || anonName(d.uid),
             smiles: Number(d.n),
             me: isMe,
+            level,
+            badge: leaderboardBadgeFor(level),
           });
         groups.set(d.k, g);
       }
@@ -502,7 +687,14 @@ export async function setSmileTheme(userId: string, themeId: string): Promise<bo
         db,
         sql`select id from smile_ledger where user_id = ${userId} and reason = 'redeem' and ref = ${themeId}`,
       );
-      if (!own.length) return false;
+      const [tot] = await rows<{ earned: number }>(
+        db,
+        sql`select coalesce(sum(amount) filter (where ${EARN}),0)::int as earned
+            from smile_ledger where user_id = ${userId}`,
+      );
+      const level = smileLevelWithFloor(Number(tot?.earned ?? 0), await readLevelFloor(db, userId));
+      const included = themesUnlockedByLevel(level.name).includes(themeId);
+      if (!own.length && !included) return false;
     }
     await db.execute(sql`update users set smile_theme = ${themeId} where id = ${userId}::uuid`);
     return true;

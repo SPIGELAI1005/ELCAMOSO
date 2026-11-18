@@ -1,0 +1,11 @@
+RUMOSO coach voices
+===================
+
+Lines: "Push for it", "Go for it", "You can do it", "Nice pace, hold it",
+"Last minute, give it everything".
+
+Rendered offline with Piper TTS (MIT, rhasspy/piper 2023.11.14-2) and the
+free en_US-ryan-medium voice (v1.0.0 phoneme map). Not listened to by ear;
+levels were normalized with ffmpeg loudnorm (I=-16, TP=-1.5).
+
+If a clip fails to load, the lab falls back to the browser's speechSynthesis.

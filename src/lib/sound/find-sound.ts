@@ -1,4 +1,5 @@
 import { allProfiles, type SoundProfile } from "@/lib/sound/profiles";
+import { visibleProfileList } from "@/lib/sound/admin-only-profiles";
 
 export interface SoundMatch {
   profileId: string;
@@ -55,6 +56,15 @@ const ALIASES: Record<string, string[]> = {
   "thunder-beast": ["beast", "thunder", "dark pressure"],
   "steam-train": ["steam", "chuff", "locomotive"],
   tank: ["tank", "tracks", "armor"],
+  "caravan-carriage": [
+    "caravan",
+    "wagon",
+    "covered wagon",
+    "cart",
+    "fiare vechi",
+    "street cry",
+    "romanian carriage",
+  ],
 };
 
 function tokens(text: string): string[] {
@@ -145,8 +155,8 @@ function scoreProfile(prompt: string, profile: SoundProfile): { score: number; r
 }
 
 /** On-device catalog matcher. No motion or location data. */
-export function findSoundsFromPrompt(prompt: string, limit = 3): SoundMatch[] {
-  const ranked = allProfiles()
+export function findSoundsFromPrompt(prompt: string, limit = 3, isAdmin = false): SoundMatch[] {
+  const ranked = visibleProfileList(allProfiles(), isAdmin)
     .filter((p) => p.category !== "Garage")
     .map((profile) => {
       const { score, reason } = scoreProfile(prompt, profile);

@@ -11,6 +11,9 @@
  */
 import { eq } from "drizzle-orm";
 
+import { canonicalAccountEmail, emailLookupAliases } from "@/lib/account/canonical-email";
+import { sqlLowerEmailIn } from "@/lib/account/email-sql";
+
 import {
   clearLifetimeStateForUser,
   isLifetimeProviderId,
@@ -68,7 +71,10 @@ function freeRecord(userId: string): UserSubscriptionRecord {
   };
 }
 
-function recurringRecord(sub: Subscription, previous: UserSubscriptionRecord | null): UserSubscriptionRecord {
+function recurringRecord(
+  sub: Subscription,
+  previous: UserSubscriptionRecord | null,
+): UserSubscriptionRecord {
   return {
     userId: sub.userId,
     plan: sub.plan,
@@ -199,10 +205,7 @@ export async function hydrateUserBillingState(
 /** Ensure a users row exists (FK target for subscriptions / grants). */
 export async function ensureUserRow(userId: string, email: string | null = null): Promise<void> {
   if (!isDurableBillingEnabled() || !UUID_RE.test(userId)) return;
-  await getDb()
-    .insert(users)
-    .values({ id: userId, email })
-    .onConflictDoNothing();
+  await getDb().insert(users).values({ id: userId, email }).onConflictDoNothing();
 }
 
 /** Write-through every cached entitlement grant for an account to Postgres. Throws on DB error. */
@@ -254,33 +257,74 @@ export async function persistEntitlementGrantsForAccount(accountId: string): Pro
  * Stable account id per verified email across instances: reuse users.id when the email is
  * already known in Postgres, else store the freshly minted id. Returns null without a DB.
  */
+export function pickPreferredAccountRow<
+  T extends {
+    id: string;
+    email?: string | null;
+    founderSeat?: number | null;
+    createdAt?: Date | null;
+  },
+>(rows: T[]): T {
+  const withSeat = rows
+    .filter((row) => row.founderSeat != null)
+    .sort((a, b) => (a.founderSeat ?? 0) - (b.founderSeat ?? 0) || a.id.localeCompare(b.id));
+  if (withSeat[0]) return withSeat[0];
+  const withEmail = rows.filter((row) => Boolean(row.email));
+  const pool = withEmail.length ? withEmail : rows;
+  return [...pool].sort((a, b) => {
+    const ta = a.createdAt?.getTime() ?? Number.POSITIVE_INFINITY;
+    const tb = b.createdAt?.getTime() ?? Number.POSITIVE_INFINITY;
+    return ta - tb || a.id.localeCompare(b.id);
+  })[0]!;
+}
+
+/**
+ * Resolve the durable users.id for an email, matching gmail/googlemail aliases.
+ * When several rows match, prefer the lowest Founder seat (so #1 wins over #2).
+ * Lookup errors throw — callers must retry rather than mint a new account.
+ * A new row is created only after a successful empty lookup, and only if mintUserId is given.
+ */
 export async function resolveDurableUserIdForEmail(
   email: string,
-  mintUserId: () => string,
+  mintUserId?: () => string,
 ): Promise<string | null> {
   if (!isDurableBillingEnabled()) return null;
-  const normalized = email.trim().toLowerCase();
+  const canonical = canonicalAccountEmail(email);
+  const aliases = emailLookupAliases(canonical);
+  const { sql } = await import("drizzle-orm");
   try {
     const db = getDb();
-    const { sql } = await import("drizzle-orm");
     const find = async () =>
-      (
-        await db
-          .select({ id: users.id })
-          .from(users)
-          .where(sql`lower(${users.email}) = ${normalized}`)
-          .limit(1)
-      )[0]?.id ?? null;
+      db
+        .select({
+          id: users.id,
+          email: users.email,
+          founderSeat: users.founderSeat,
+          createdAt: users.createdAt,
+        })
+        .from(users)
+        .where(sqlLowerEmailIn(users.email, aliases));
     const existing = await find();
-    if (existing) return existing;
+    if (existing.length) return pickPreferredAccountRow(existing).id;
+    if (!mintUserId) return null;
     const id = mintUserId();
-    await db.insert(users).values({ id, email: normalized }).onConflictDoNothing();
-    return (await find()) ?? id;
+    await db.insert(users).values({ id, email: canonical }).onConflictDoNothing();
+    const again = await db
+      .select({
+        id: users.id,
+        email: users.email,
+        founderSeat: users.founderSeat,
+        createdAt: users.createdAt,
+      })
+      .from(users)
+      .where(sql`${sqlLowerEmailIn(users.email, aliases)} or ${users.id} = ${id}`);
+    if (again.length) return pickPreferredAccountRow(again).id;
+    throw new Error("Account lookup failed. Please try again.");
   } catch (error) {
     console.error(
       "[account] durable user lookup failed",
       error instanceof Error ? error.message : error,
     );
-    return null;
+    throw error instanceof Error ? error : new Error("Account lookup failed. Please try again.");
   }
 }

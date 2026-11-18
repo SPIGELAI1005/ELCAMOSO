@@ -8,6 +8,9 @@ import type { Entitlement } from "@/lib/entitlements/types";
 
 export type ExperienceKind = "engine" | "symphony" | "world" | "fusion";
 
+/** Marketing family cards, including RUMOSO which is not a Drive experience. */
+export type ExperienceFamilyKind = ExperienceKind | "rumoso";
+
 export type ExperienceEntitlement = "free" | "drive_plus" | "coming";
 
 export type ExperiencePreviewMode = "playable" | "architecture" | "coming";
@@ -37,10 +40,10 @@ export interface ExperienceDescriptor {
 }
 
 export interface ExperienceFamilyMeta {
-  kind: ExperienceKind;
+  kind: ExperienceFamilyKind;
   /** Plural nav label when needed. */
   label: string;
   headline: string;
   subcopy: string;
-  href: "/sounds" | "/symphony" | "/worlds" | "/fusion";
+  href: "/sounds" | "/symphony" | "/worlds" | "/fusion" | "/rumoso";
 }

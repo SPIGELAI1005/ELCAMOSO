@@ -987,4 +987,39 @@ export const EXPANSION_PROFILES: SoundProfile[] = [
       shiftSmoothing: 0.14,
     },
   },
+  {
+    id: "caravan-carriage",
+    name: "Caravan Carriage",
+    category: "Heritage",
+    traits: ["Caravan", "Village", "Street cry"],
+    description:
+      "A painted covered wagon and a single patient horse: the same cobble, creak and cadence as the Romanian '85 Carriage, plus the street cry of ‘Fiare vechi. Fiare vechi luăm’.",
+    drivetrainMode: "continuous",
+    motionModel: "cadence",
+    sourceMode: "procedural",
+    access: "drive_plus",
+    // Audio engine and samples are the Romanian '85 Carriage, unchanged.
+    // Unique layer: occasional Romanian scrap-collector street calls
+    // (see caravan-street-calls.ts). Do not change romanian-85-carriage audio.
+    voice: {
+      baseFrequency: 46,
+      harmonics: [1, 2.02, 2.98],
+      waveResponse: 0.7,
+      filterBase: 200,
+      filterRange: 1100,
+      noise: 0.07,
+      detune: 13,
+      wave: "triangle",
+      rhythm: { kind: "clack", baseRate: 1.4, rateScale: 4.2, level: 0.26, tone: 720 },
+      rhythmB: { kind: "creak", baseRate: 0.34, rateScale: 1.1, level: 0.16, tone: 150 },
+      textures: [
+        { kind: "gravel", level: 0.2, tone: 1500, speedScale: 0.9, surge: 1.6 },
+        { kind: "rumble", level: 0.14, tone: 95, speedScale: 0.7, surge: 0.7 },
+      ],
+      signals: [
+        { kind: "neigh", everySeconds: 20, jitter: 10, level: 0.13, tone: 380 },
+        { kind: "whistle", everySeconds: 30, jitter: 14, level: 0.05, tone: 1900 },
+      ],
+    },
+  },
 ];

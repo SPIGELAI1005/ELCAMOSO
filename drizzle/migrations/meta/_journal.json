@@ -120,6 +120,20 @@
       "when": 1802000000000,
       "tag": "0016_bf_welcome_seen",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1803000000000,
+      "tag": "0017_rls_usage_and_sound_picks",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1804000000000,
+      "tag": "0018_smile_level_peak",
+      "breakpoints": true
     }
   ]
 }

@@ -1,5 +1,6 @@
 import type { SoundProfile } from "@/lib/sound/profiles";
 import { allProfiles } from "@/lib/sound/profiles";
+import { visibleProfileList } from "@/lib/sound/admin-only-profiles";
 
 export type SoundMood =
   "all" | "powerful" | "futuristic" | "mechanical" | "calm" | "cinematic" | "playful";
@@ -136,8 +137,10 @@ export function sectionForProfile(profile: SoundProfile): SoundSection {
   return CATEGORY_SECTION[profile.category] ?? "Worlds";
 }
 
-export function profilesByMood(mood: SoundMood): SoundProfile[] {
-  return allProfiles().filter((p) => p.category !== "Garage" && profileMatchesMood(p, mood));
+export function profilesByMood(mood: SoundMood, isAdmin = false): SoundProfile[] {
+  return visibleProfileList(allProfiles(), isAdmin).filter(
+    (p) => p.category !== "Garage" && profileMatchesMood(p, mood),
+  );
 }
 
 export function groupProfilesBySection(profiles: SoundProfile[]): {
@@ -170,9 +173,9 @@ export function groupProfilesBySection(profiles: SoundProfile[]): {
     .filter((g) => g.items.length > 0);
 }
 
-export function searchProfiles(query: string, mood: SoundMood = "all"): SoundProfile[] {
+export function searchProfiles(query: string, mood: SoundMood = "all", isAdmin = false): SoundProfile[] {
   const q = query.trim().toLowerCase();
-  return profilesByMood(mood).filter((p) => {
+  return profilesByMood(mood, isAdmin).filter((p) => {
     if (!q) return true;
     const hay = [p.name, p.description, p.category, ...p.traits].join(" ").toLowerCase();
     return hay.includes(q);

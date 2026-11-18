@@ -3,6 +3,7 @@ import { getSession } from "@/lib/drive/session";
 import { findSoundFn } from "@/lib/cloud/server-fns";
 import { FIND_SOUND_EXAMPLES, findSoundsFromPrompt, type SoundMatch } from "@/lib/sound/find-sound";
 import { useSettings } from "@/lib/drive/useSettings";
+import { useAccount } from "@/lib/account/AccountProvider";
 
 interface Props {
   className?: string;
@@ -15,6 +16,7 @@ interface Props {
  */
 export function FindSoundPanel({ className = "", onSelect }: Props) {
   const { update } = useSettings();
+  const { isAdmin } = useAccount();
   const [prompt, setPrompt] = useState("");
   const [busy, setBusy] = useState(false);
   const [matches, setMatches] = useState<SoundMatch[]>([]);
@@ -26,7 +28,7 @@ export function FindSoundPanel({ className = "", onSelect }: Props) {
     setBusy(true);
     setNote(null);
     try {
-      let next = findSoundsFromPrompt(q, 3);
+      let next = findSoundsFromPrompt(q, 3, isAdmin);
       try {
         const remote = await findSoundFn({ data: { prompt: q } });
         if (remote?.matches?.length) next = remote.matches;

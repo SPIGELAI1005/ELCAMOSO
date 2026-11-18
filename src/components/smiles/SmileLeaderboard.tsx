@@ -78,89 +78,120 @@ export function SmileLeaderboard({ onNote }: { onNote?: ((note: string) => void)
   }
 
   return (
-      <section className={card} data-testid="smile-leaderboard">
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="text-lg font-light">Weekly leaderboard</div>
-            <div className="text-xs text-muted-foreground">Resets every Monday{board ? ` · week of ${board.weekOf}` : ""}</div>
-          </div>
-          <div className="flex rounded-full border border-border p-0.5 text-[11px] uppercase tracking-[0.15em]">
-            {(["country", "sound"] as const).map((k) => (
-              <button
-                key={k}
-                type="button"
-                onClick={() => setTab(k)}
-                className={cn("rounded-full px-3 py-1", tab === k ? "bg-white text-black" : "text-muted-foreground")}
-              >
-                {k === "country" ? "Country" : "Sound"}
-              </button>
-            ))}
+    <section className={card} data-testid="smile-leaderboard">
+      <div className="flex items-center justify-between">
+        <div>
+          <div className="text-lg font-light">Weekly leaderboard</div>
+          <div className="text-xs text-muted-foreground">
+            Resets every Monday{board ? ` · week of ${board.weekOf}` : ""}
           </div>
         </div>
-        {groups.length === 0 ? (
-          <p className="mt-4 text-sm text-muted-foreground">Empty podium. Your next drive could top it.</p>
-        ) : (
-          <div className="mt-4 grid gap-4 sm:grid-cols-2">
-            {groups.map((g) => (
-              <div key={g.key}>
-                <div className="mb-1 text-[11px] tracking-[0.2em] text-[#e53935] uppercase">{g.key}</div>
-                <ol className="space-y-1 text-sm">
-                  {g.rows.map((r, i) => (
-                    <li key={`${g.key}-${i}`} className={cn("flex justify-between", r.me && "text-[#e53935]")}>
+        <div className="flex rounded-full border border-border p-0.5 text-[11px] uppercase tracking-[0.15em]">
+          {(["country", "sound"] as const).map((k) => (
+            <button
+              key={k}
+              type="button"
+              onClick={() => setTab(k)}
+              className={cn(
+                "rounded-full px-3 py-1",
+                tab === k ? "bg-white text-black" : "text-muted-foreground",
+              )}
+            >
+              {k === "country" ? "Country" : "Sound"}
+            </button>
+          ))}
+        </div>
+      </div>
+      {groups.length === 0 ? (
+        <p className="mt-4 text-sm text-muted-foreground">
+          Empty podium. Your next drive could top it.
+        </p>
+      ) : (
+        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+          {groups.map((g) => (
+            <div key={g.key}>
+              <div className="mb-1 text-[11px] tracking-[0.2em] text-[#e53935] uppercase">
+                {g.key}
+              </div>
+              <ol className="space-y-1 text-sm">
+                {g.rows.map((r, i) => (
+                  <li
+                    key={`${g.key}-${i}`}
+                    className={cn("flex justify-between gap-2", r.me && "text-[#e53935]")}
+                  >
+                    <span className="flex min-w-0 items-center gap-1.5 truncate">
                       <span className="truncate">
                         {i + 1}. {r.name}
                       </span>
-                      <span className="tabular-nums">{r.smiles}</span>
-                    </li>
-                  ))}
-                </ol>
-              </div>
-            ))}
-          </div>
-        )}
-        {isAuthenticated ? (
-          <form
-            className="mt-5"
-            onSubmit={(e) => {
-              e.preventDefault();
-              void saveHandle();
-            }}
-          >
-            <div className="flex gap-2">
-              <input
-                value={handle}
-                onChange={(e) => {
-                  draft.current = true;
-                  setHandle(e.target.value);
-                }}
-                placeholder="Board name (empty = anonymous)"
-                maxLength={20}
-                aria-label="Board name"
-                className="h-10 min-w-0 flex-1 rounded-full border border-border bg-transparent px-4 text-sm"
-              />
-              <button
-                type="submit"
-                disabled={saving}
-                className="h-10 rounded-full border border-border px-4 text-[11px] tracking-[0.2em] uppercase disabled:opacity-50"
-              >
-                {saving ? "Saving" : "Save"}
-              </button>
+                      {r.badge === "crown" ? (
+                        <span
+                          title="Legend"
+                          aria-label="Legend crown"
+                          className="shrink-0 text-[11px]"
+                        >
+                          ♛
+                        </span>
+                      ) : r.badge === "mark" ? (
+                        <span
+                          title={r.level}
+                          aria-label={`${r.level} mark`}
+                          className="shrink-0 text-[9px] tracking-[0.12em] uppercase text-[#e53935]"
+                        >
+                          {r.level}
+                        </span>
+                      ) : null}
+                    </span>
+                    <span className="tabular-nums">{r.smiles}</span>
+                  </li>
+                ))}
+              </ol>
             </div>
-            {message ? (
-              <p role="status" className="mt-2 text-xs text-muted-foreground">
-                {message}
-              </p>
-            ) : status.handle && !listed ? (
-              <p className="mt-2 text-xs text-muted-foreground">
-                Saved as {status.handle}. A drive this week adds you to the board.
-              </p>
-            ) : (
-              <p className="mt-2 text-xs text-muted-foreground">
-                Names stay on your account. The list is smiles earned since Monday.
-              </p>
-            )}
-          </form>
-        ) : null}
-      </section>
+          ))}
+        </div>
+      )}
+      {isAuthenticated ? (
+        <form
+          className="mt-5"
+          onSubmit={(e) => {
+            e.preventDefault();
+            void saveHandle();
+          }}
+        >
+          <div className="flex gap-2">
+            <input
+              value={handle}
+              onChange={(e) => {
+                draft.current = true;
+                setHandle(e.target.value);
+              }}
+              placeholder="Board name (empty = anonymous)"
+              maxLength={20}
+              aria-label="Board name"
+              className="h-10 min-w-0 flex-1 rounded-full border border-border bg-transparent px-4 text-sm"
+            />
+            <button
+              type="submit"
+              disabled={saving}
+              className="h-10 rounded-full border border-border px-4 text-[11px] tracking-[0.2em] uppercase disabled:opacity-50"
+            >
+              {saving ? "Saving" : "Save"}
+            </button>
+          </div>
+          {message ? (
+            <p role="status" className="mt-2 text-xs text-muted-foreground">
+              {message}
+            </p>
+          ) : status.handle && !listed ? (
+            <p className="mt-2 text-xs text-muted-foreground">
+              Saved as {status.handle}. A drive this week adds you to the board.
+            </p>
+          ) : (
+            <p className="mt-2 text-xs text-muted-foreground">
+              Names stay on your account. The list is smiles earned since Monday.
+            </p>
+          )}
+        </form>
+      ) : null}
+    </section>
   );
 }

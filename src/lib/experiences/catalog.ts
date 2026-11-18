@@ -2,7 +2,7 @@ import { familyForProfile } from "@/lib/sound/realism/families";
 import { allProfiles, getProfile, type SoundProfile } from "@/lib/sound/profiles";
 import { listFusionPresets } from "@/lib/fusion";
 import { getExperienceFlags } from "./flags";
-import type { ExperienceDescriptor, ExperienceFamilyMeta, ExperienceKind } from "./types";
+import type { ExperienceDescriptor, ExperienceFamilyMeta, ExperienceFamilyKind, ExperienceKind } from "./types";
 
 export const EXPERIENCE_FAMILIES: readonly ExperienceFamilyMeta[] = [
   {
@@ -25,6 +25,13 @@ export const EXPERIENCE_FAMILIES: readonly ExperienceFamilyMeta[] = [
     headline: "Enter another world.",
     subcopy: "Impossible places shaped by motion.",
     href: "/worlds",
+  },
+  {
+    kind: "rumoso",
+    label: "RUMOSO",
+    headline: "Run the music.",
+    subcopy: "Your pace becomes the music.",
+    href: "/rumoso",
   },
   {
     kind: "fusion",
@@ -533,6 +540,6 @@ export function experienceForProfileId(profileId: string): ExperienceDescriptor 
   return engineFromProfile(profile);
 }
 
-export function familyMeta(kind: ExperienceKind): ExperienceFamilyMeta {
+export function familyMeta(kind: ExperienceFamilyKind): ExperienceFamilyMeta {
   return EXPERIENCE_FAMILIES.find((f) => f.kind === kind) ?? EXPERIENCE_FAMILIES[0]!;
 }

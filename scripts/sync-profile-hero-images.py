@@ -70,6 +70,7 @@ MAP: dict[str, str] = {
     "world-storm-run": "Storm Run.png",
     "symphony-cinematic-rock": "Cinematic Rock.png",
     "bollywood-rickshaw": "Emerald ELCAMOSO rickshaw with marigold canopy.png",
+    "caravan-carriage": "Caravan Carriage.png",
     "classic-vespa": "Restored black scooter studio portrait.png",
     "symphony-motion-orchestra": "Motion Orchestra.png",
     "symphony-neon-run": "Neon Drive.png",

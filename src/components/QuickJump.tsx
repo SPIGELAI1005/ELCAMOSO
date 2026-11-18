@@ -1,6 +1,8 @@
 import { useMemo, useState } from "react";
 import { allProfiles, getProfile } from "@/lib/sound/profiles";
 import type { ElcamosoSettings } from "@/lib/drive/settings";
+import { useAccount } from "@/lib/account/AccountProvider";
+import { resolveVisibleProfileId, visibleProfileList } from "@/lib/sound/admin-only-profiles";
 
 /**
  * Favourites and curated playlists as a single strip, so the most memorable
@@ -16,22 +18,23 @@ export function QuickJump({
   className?: string;
 }) {
   const [listId, setListId] = useState<string>("favourites");
+  const { isAdmin } = useAccount();
 
   const items = useMemo(() => {
-    const known = new Map(allProfiles().map((p) => [p.id, p]));
+    const known = new Map(visibleProfileList(allProfiles(), isAdmin).map((p) => [p.id, p]));
     const ids =
       listId === "favourites"
         ? settings.favourites
         : (settings.playlists.find((p) => p.id === listId)?.profileIds ?? []);
     return ids.map((id) => known.get(id)).filter((p): p is NonNullable<typeof p> => Boolean(p));
-  }, [listId, settings.favourites, settings.playlists]);
+  }, [listId, settings.favourites, settings.playlists, isAdmin]);
 
   const lists = [
     { id: "favourites", name: `Favourites (${settings.favourites.length})` },
     ...settings.playlists.map((p) => ({ id: p.id, name: `${p.name} (${p.profileIds.length})` })),
   ];
 
-  const current = getProfile(settings.profileId);
+  const current = getProfile(resolveVisibleProfileId(settings.profileId, isAdmin));
 
   return (
     <div className={className}>

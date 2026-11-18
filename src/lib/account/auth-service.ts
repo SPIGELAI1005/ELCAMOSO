@@ -1,3 +1,4 @@
+import { canonicalAccountEmail, normalizeAccountEmail } from "@/lib/account/canonical-email";
 import {
   ACCOUNT_SESSION_TTL_MS,
   MAGIC_LINK_TTL_MS,
@@ -8,6 +9,7 @@ import {
   deleteAccountSession,
   hashToken,
   readAccountSession,
+  resolveUserIdForEmail,
   saveAccountSession,
   saveMagicLink,
   type AccountSession,
@@ -24,7 +26,10 @@ import {
 import { mintAccountSessionTicket, verifyAccountSessionTicket } from "@/lib/account/session-ticket";
 import { sanitizeReturnTo } from "@/lib/account/return-to";
 import { isEmailOtpConfigured, readSupabaseAuthConfig } from "@/lib/account/supabase-config";
-import { buildSupabaseGoogleAuthorizeUrl, exchangeSupabasePkceCode } from "@/lib/account/supabase-google";
+import {
+  buildSupabaseGoogleAuthorizeUrl,
+  exchangeSupabasePkceCode,
+} from "@/lib/account/supabase-google";
 import {
   assertEmailOtpSendAllowed,
   assertEmailOtpVerifyAllowed,
@@ -42,13 +47,14 @@ import { EmailOtpProviderError, getEmailOtpProvider } from "@/lib/account/email-
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-export function normalizeAccountEmail(email: string): string {
-  return email.trim().toLowerCase();
-}
+export { normalizeAccountEmail, canonicalAccountEmail };
 
 export function isValidAccountEmail(email: string): boolean {
   return EMAIL_RE.test(normalizeAccountEmail(email));
 }
+
+/** Raised when the durable account lookup fails and we must not mint a new id. */
+export const ACCOUNT_LOOKUP_FAILED_MESSAGE = "Account lookup failed. Please try again.";
 
 export interface RequestSignInResult {
   ok: true;
@@ -121,12 +127,36 @@ async function revokeSessionDurably(rawToken: string): Promise<void> {
  */
 async function syncDurableUserIdForEmail(email: string): Promise<void> {
   if (!process.env["DATABASE_URL"]) return;
-  const normalized = normalizeAccountEmail(email);
+  const canonical = canonicalAccountEmail(email);
   const { resolveDurableUserIdForEmail } = await import("@/lib/billing/durable-state.server");
-  const durableId = await resolveDurableUserIdForEmail(normalized, () =>
-    createUserForEmail(normalized),
+  const durableId = await resolveDurableUserIdForEmail(canonical, () =>
+    createUserForEmail(canonical),
   );
-  if (durableId) registerUserEmail(normalized, durableId);
+  if (!durableId) throw new Error(ACCOUNT_LOOKUP_FAILED_MESSAGE);
+  registerUserEmail(canonical, durableId);
+}
+
+/**
+ * Point an existing session ticket at the durable user id for this email.
+ * Used so an old Founder #2 ticket starts reading Founder #1 after deploy/merge.
+ * On lookup failure, keep the ticket id (do not mint a new one).
+ */
+export async function resolveSessionUserId(session: {
+  userId: string;
+  email: string;
+}): Promise<string> {
+  if (!process.env["DATABASE_URL"]) return session.userId;
+  try {
+    const { resolveDurableUserIdForEmail } = await import("@/lib/billing/durable-state.server");
+    const durableId = await resolveDurableUserIdForEmail(session.email);
+    return durableId ?? session.userId;
+  } catch (error) {
+    console.error(
+      "[account] session user resolve failed",
+      error instanceof Error ? error.message : error,
+    );
+    return session.userId;
+  }
 }
 
 function createSessionToken(): string {
@@ -142,13 +172,19 @@ export function createSessionFromVerifiedEmail(
   email: string,
   now = Date.now(),
 ): VerifyMagicLinkResult {
-  const normalized = normalizeAccountEmail(email);
-  const userId = createUserForEmail(normalized);
+  const canonical = canonicalAccountEmail(email);
+  let userId = resolveUserIdForEmail(canonical);
+  if (!userId) {
+    if (process.env["DATABASE_URL"]) {
+      throw new Error(ACCOUNT_LOOKUP_FAILED_MESSAGE);
+    }
+    userId = createUserForEmail(canonical);
+  }
   const sessionToken = createSessionToken();
   const session: AccountSession = {
     token: sessionToken,
     userId,
-    email: normalized,
+    email: canonical,
     expiresAt: now + ACCOUNT_SESSION_TTL_MS,
     createdAt: now,
   };
@@ -157,7 +193,7 @@ export function createSessionFromVerifiedEmail(
   return {
     sessionToken: mintAccountSessionTicket(session),
     userId,
-    email: normalized,
+    email: canonical,
     expiresAt: session.expiresAt,
   };
 }

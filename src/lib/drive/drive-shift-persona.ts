@@ -359,6 +359,18 @@ const BY_PROFILE: Record<string, DriveShiftPersona> = {
       { id: "midnight-serenade", label: "Midnight Serenade" },
     ],
   }),
+  "caravan-carriage": persona({
+    ladderCount: 4,
+    ladderNoun: "Drum",
+    simulatedCaption: "Simulated village band",
+    stageNames: ["Pas", "Trap", "Hură", "Hai"],
+    modes: [
+      { id: "sunday-best", label: "Sunday Best" },
+      { id: "market-day", label: "Market Day" },
+      { id: "wedding-horn", label: "Wedding Horn" },
+      { id: "midnight-serenade", label: "Midnight Serenade" },
+    ],
+  }),
   "wiesn-tractor": persona({
     ladderCount: 4,
     ladderNoun: "Gang",

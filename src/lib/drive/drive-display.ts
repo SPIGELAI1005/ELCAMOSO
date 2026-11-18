@@ -22,6 +22,7 @@ const CADENCE_IDS = new Set([
   "wild-west-carriage",
   "dracula-carriage",
   "romanian-85-carriage",
+  "caravan-carriage",
   "steam-train",
   "laughing-machine",
   "farting-car",

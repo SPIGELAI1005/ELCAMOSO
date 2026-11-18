@@ -39,7 +39,8 @@ async function collectUnledgeredSmiles(): Promise<number> {
   for (const c of loadLocalCards()) {
     rememberScore(scores, c.journeyId, Number(c.score) || Number(c.result?.score) || 0);
   }
-  for (const [id, score] of Object.entries(readCachedSmileScores())) rememberScore(scores, id, score);
+  for (const [id, score] of Object.entries(readCachedSmileScores()))
+    rememberScore(scores, id, score);
   try {
     const saved = await listSmilesCardsFn();
     if (saved.cloud) {
@@ -84,14 +85,20 @@ function withCollectedSmiles(status: SmileStatus, collected: number): SmileStatu
   };
 }
 
-export function useSmileStatus(enabled = true): SmileStatus {
+export function useSmileStatusState(enabled = true): { status: SmileStatus; loading: boolean } {
   const { isAuthenticated } = useAccount();
   const [s, setS] = useState<SmileStatus>(emptySmileStatus);
+  const [loading, setLoading] = useState(Boolean(enabled));
   useEffect(() => {
-    if (!enabled) return;
+    if (!enabled) {
+      setLoading(false);
+      return;
+    }
     let live = true;
+    let first = true;
     const load = () => {
       void (async () => {
+        if (first) setLoading(true);
         let status = emptySmileStatus();
         try {
           status = await getSmileStatusFn();
@@ -102,7 +109,11 @@ export function useSmileStatus(enabled = true): SmileStatus {
         if (status.balance <= 0 && status.earned <= 0) {
           status = withCollectedSmiles(status, await collectUnledgeredSmiles());
         }
-        if (live) setS(status);
+        if (live) {
+          setS(status);
+          setLoading(false);
+          first = false;
+        }
       })();
     };
     load();
@@ -112,10 +123,22 @@ export function useSmileStatus(enabled = true): SmileStatus {
       window.removeEventListener(EVT, load);
     };
   }, [enabled, isAuthenticated]);
-  return s;
+  return { status: s, loading };
 }
 
-export function SmileLevelRing({ status, className }: { status: SmileStatus; className?: string }) {
+export function useSmileStatus(enabled = true): SmileStatus {
+  return useSmileStatusState(enabled).status;
+}
+
+export function SmileLevelRing({
+  status,
+  loading = false,
+  className,
+}: {
+  status: SmileStatus;
+  loading?: boolean;
+  className?: string;
+}) {
   const R = 30;
   const C = 2 * Math.PI * R;
   const p = status.level.progress;
@@ -123,7 +146,15 @@ export function SmileLevelRing({ status, className }: { status: SmileStatus; cla
     <div data-testid="smile-level-ring" className={cn("flex items-center gap-4", className)}>
       <div className="relative h-[76px] w-[76px] shrink-0">
         <svg viewBox="0 0 76 76" className="h-full w-full -rotate-90">
-          <circle cx="38" cy="38" r={R} fill="none" stroke="currentColor" strokeOpacity="0.12" strokeWidth="5" />
+          <circle
+            cx="38"
+            cy="38"
+            r={R}
+            fill="none"
+            stroke="currentColor"
+            strokeOpacity="0.12"
+            strokeWidth="5"
+          />
           <circle
             cx="38"
             cy="38"
@@ -138,13 +169,31 @@ export function SmileLevelRing({ status, className }: { status: SmileStatus; cla
         <SmileSymbol className="absolute inset-0 m-auto h-8 w-auto text-white" />
       </div>
       <div className="min-w-0 text-left">
-        <div className="text-2xl font-light tabular-nums">{status.balance.toLocaleString("en")} smiles</div>
-        <div className="text-[11px] tracking-[0.22em] text-[#e53935] uppercase">{status.level.name}</div>
-        <div className="text-xs text-muted-foreground">
-          {status.level.nextAt != null
-            ? `${(status.level.nextAt - status.earned).toLocaleString("en")} to ${status.level.next}`
-            : "Top level. Pure grin."}
-        </div>
+        {loading ? (
+          <>
+            <div className="text-2xl font-light">Loading…</div>
+            <div className="text-[11px] tracking-[0.22em] text-[#e53935] uppercase">Smile Shop</div>
+            <div className="text-xs text-muted-foreground">Fetching your smiles.</div>
+          </>
+        ) : (
+          <>
+            <div className="text-2xl font-light tabular-nums">
+              {status.balance.toLocaleString("en")} smiles
+            </div>
+            <div className="text-[11px] tracking-[0.22em] text-[#e53935] uppercase">
+              {status.level.name}
+            </div>
+            <div className="text-xs text-muted-foreground tabular-nums">
+              Balance {status.balance.toLocaleString("en")} · Earned{" "}
+              {status.earned.toLocaleString("en")}
+            </div>
+            <div className="text-xs text-muted-foreground">
+              {status.level.nextAt != null
+                ? `${Math.max(0, status.level.nextAt - status.earned).toLocaleString("en")} to ${status.level.next}`
+                : "Top level. Pure grin."}
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
@@ -239,8 +288,8 @@ export function SmileReferralBridge() {
 }
 
 /** Active Smiles card theme: server value, else localStorage; always an owned theme or default. */
-export function useActiveTheme(): { theme: CardTheme; status: SmileStatus } {
-  const status = useSmileStatus();
+export function useActiveTheme(): { theme: CardTheme; status: SmileStatus; loading: boolean } {
+  const { status, loading } = useSmileStatusState();
   const [local, setLocal] = useState<string | null>(null);
   useEffect(() => {
     const load = () => setLocal(loadLocalTheme());
@@ -248,5 +297,5 @@ export function useActiveTheme(): { theme: CardTheme; status: SmileStatus } {
     window.addEventListener(EVT, load);
     return () => window.removeEventListener(EVT, load);
   }, []);
-  return { theme: resolveTheme(status.activeTheme ?? local, status.owned), status };
+  return { theme: resolveTheme(status.activeTheme ?? local, status.owned), status, loading };
 }

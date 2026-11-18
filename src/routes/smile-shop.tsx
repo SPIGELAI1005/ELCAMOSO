@@ -1,15 +1,24 @@
 import { useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 
-import { notifySmilesChanged, SmileLevelRing, useActiveTheme } from "@/components/smiles/SmileRewards";
+import {
+  notifySmilesChanged,
+  SmileLevelRing,
+  useActiveTheme,
+} from "@/components/smiles/SmileRewards";
 import { SmileLeaderboard } from "@/components/smiles/SmileLeaderboard";
 import { SmileSymbol } from "@/components/smiles/SmilesSymbols";
 import { useAccount } from "@/lib/account/AccountProvider";
-import { DAILY_SMILE_CAP, INVITE_MAX_MONTHS, SMILE_LEVELS, SMILE_SHOP, type ShopItem } from "@/lib/smiles/rewards";
 import {
-  redeemSmileItemFn,
-  setSmileThemeFn,
-} from "@/lib/smiles/rewards-server-fns";
+  challengeEligibleAt,
+  DAILY_SMILE_CAP,
+  INVITE_MAX_MONTHS,
+  LEVEL_UNLOCK_LINES,
+  SMILE_LEVELS,
+  SMILE_SHOP,
+  type ShopItem,
+} from "@/lib/smiles/rewards";
+import { redeemSmileItemFn, setSmileThemeFn } from "@/lib/smiles/rewards-server-fns";
 import { inviteShareMessage, shareIntentLinks } from "@/lib/smiles/share";
 import { CARD_THEMES, DEFAULT_THEME_ID, saveLocalTheme } from "@/lib/smiles/themes";
 import { cn } from "@/lib/utils";
@@ -23,12 +32,11 @@ const card = "rounded-3xl border border-white/10 bg-white/[0.03] p-5";
 
 function SmileShopPage() {
   const { isAuthenticated } = useAccount();
-  const { theme: active, status } = useActiveTheme();
+  const { theme: active, status, loading } = useActiveTheme();
   const [note, setNote] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [copyError, setCopyError] = useState<string | null>(null);
-
 
   async function redeem(item: ShopItem) {
     setBusy(item.id);
@@ -56,7 +64,6 @@ function SmileShopPage() {
       /* local fallback already applied */
     }
   }
-
 
   const refLink = status.refCode ? `https://www.elcamoso.com/?ref=${status.refCode}` : null;
   const inviteText = refLink ? inviteShareMessage(refLink) : "";
@@ -122,18 +129,25 @@ function SmileShopPage() {
         <p className="mt-1 text-sm text-muted-foreground">Drive. Grin. Spend the grins.</p>
       </header>
 
-      <section className={cn(card, "flex flex-col items-center gap-3 sm:flex-row sm:justify-between")}>
+      <section
+        className={cn(card, "flex flex-col items-center gap-3 sm:flex-row sm:justify-between")}
+      >
         {isAuthenticated ? (
-          <SmileLevelRing status={status} />
+          <SmileLevelRing status={status} loading={loading} />
         ) : (
-          <p className="text-sm text-muted-foreground">Sign in to collect smiles from every drive.</p>
+          <p className="text-sm text-muted-foreground">
+            Sign in to collect smiles from every drive.
+          </p>
         )}
         <div className="text-xs leading-relaxed text-muted-foreground sm:text-right">
           <div>Drive: smiles from your card</div>
           <div>Share: +25% (once a day)</div>
-          <div>Bring a friend: they get 1 month Drive+, you earn up to 6</div>
+          <div>
+            Bring a friend: +100 smiles (150 for Founders); they get 1 month Drive+, you earn up to
+            6
+          </div>
           <div>7-day streak: +50</div>
-          <div>Up to {DAILY_SMILE_CAP} a day · Founders 1.5x</div>
+          <div>Up to {DAILY_SMILE_CAP} a day (Founders reach it faster with 1.5×)</div>
         </div>
       </section>
 
@@ -141,9 +155,16 @@ function SmileShopPage() {
         data-testid="monthly-challenge"
         className="rounded-3xl border border-[#e53935]/40 bg-[radial-gradient(ellipse_at_0%_0%,rgba(229,57,53,0.22),transparent_60%)] p-5"
       >
-        <div className="text-[10px] tracking-[0.28em] text-[#e53935] uppercase">Monthly challenge</div>
+        <div className="text-[10px] tracking-[0.28em] text-[#e53935] uppercase">
+          Monthly challenge
+        </div>
         <div className="mt-1 text-lg font-light">Most smiles in V10 Race mode</div>
-        <div className="text-xs text-muted-foreground">Top 10 win a month of Drive+. Starts soon.</div>
+        <div className="text-xs text-muted-foreground">
+          Top 10 win a month of Drive+. Starts soon.
+          {isAuthenticated && challengeEligibleAt(status.level.name)
+            ? " You're eligible."
+            : " Reach Grinner to enter."}
+        </div>
       </section>
 
       {note ? <p className="text-center text-sm text-foreground/90">{note}</p> : null}
@@ -151,26 +172,62 @@ function SmileShopPage() {
       <section className="grid gap-3 sm:grid-cols-2">
         {SMILE_SHOP.map((item) => {
           const owned = status.owned.includes(item.id);
-          const short = status.balance < item.cost;
+          const short = item.cost > 0 && status.balance < item.cost;
+          const included = Boolean(item.unlockLevel && owned);
           return (
-            <div key={item.id} data-testid={`shop-${item.id}`} className={cn(card, "flex flex-col")}>
+            <div
+              key={item.id}
+              data-testid={`shop-${item.id}`}
+              className={cn(card, "flex flex-col")}
+            >
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <div className="text-base font-light">{item.name}</div>
                   <div className="text-xs text-muted-foreground">{item.blurb}</div>
+                  {item.unlockLevel ? (
+                    <div className="mt-1 text-[11px] tracking-[0.14em] text-[#e53935] uppercase">
+                      {owned ? `Unlocked at ${item.unlockLevel}` : `Unlocks at ${item.unlockLevel}`}
+                    </div>
+                  ) : null}
                 </div>
                 <div className="flex shrink-0 items-center gap-1.5 tabular-nums">
-                  <SmileSymbol className="h-4 w-auto text-white" />
-                  {item.cost.toLocaleString("en")}
+                  {included || item.cost <= 0 ? (
+                    <span className="text-[11px] tracking-[0.14em] text-muted-foreground uppercase">
+                      {included ? "Free" : "Level"}
+                    </span>
+                  ) : (
+                    <>
+                      <SmileSymbol className="h-4 w-auto text-white" />
+                      {item.cost.toLocaleString("en")}
+                    </>
+                  )}
                 </div>
               </div>
               <button
                 type="button"
-                disabled={!isAuthenticated || item.soon || owned || short || busy != null}
+                disabled={
+                  !isAuthenticated ||
+                  item.soon ||
+                  owned ||
+                  included ||
+                  short ||
+                  item.cost <= 0 ||
+                  busy != null
+                }
                 onClick={() => void redeem(item)}
                 className="mt-4 h-10 rounded-full border border-border text-[11px] tracking-[0.2em] uppercase transition-colors enabled:hover:border-[#e53935] disabled:opacity-45"
               >
-                {item.soon ? "Coming soon" : owned ? "Yours" : busy === item.id ? "..." : short ? "Keep driving" : "Redeem"}
+                {item.soon
+                  ? "Coming soon"
+                  : owned || included
+                    ? "Yours"
+                    : item.cost <= 0
+                      ? `Reach ${item.unlockLevel}`
+                      : busy === item.id
+                        ? "..."
+                        : short
+                          ? "Keep driving"
+                          : "Redeem"}
               </button>
             </div>
           );
@@ -179,8 +236,10 @@ function SmileShopPage() {
 
       <section className={card} data-testid="theme-picker">
         <div className="text-lg font-light">Card theme</div>
-        <div className="text-xs text-muted-foreground">Your Smiles cards and share images wear it.</div>
-        <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div className="text-xs text-muted-foreground">
+          Your Smiles cards and share images wear it.
+        </div>
+        <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-5">
           {CARD_THEMES.map((t) => {
             const owned = t.id === DEFAULT_THEME_ID || status.owned.includes(t.id);
             const on = active.id === t.id;
@@ -191,7 +250,9 @@ function SmileShopPage() {
                 disabled={!owned}
                 onClick={() => void pickTheme(t.id)}
                 style={{ background: t.css, borderColor: on ? "#e53935" : t.border }}
-                className={cn("flex h-20 flex-col justify-end rounded-2xl border-2 p-3 text-left disabled:opacity-40")}
+                className={cn(
+                  "flex h-20 flex-col justify-end rounded-2xl border-2 p-3 text-left disabled:opacity-40",
+                )}
               >
                 <span className="text-sm text-white">{t.name}</span>
                 <span className="text-[10px] tracking-[0.18em] text-white/70 uppercase">
@@ -207,9 +268,15 @@ function SmileShopPage() {
 
       {refLink ? (
         <section className={card}>
-          <div className="text-lg font-light">Bring a friend: they get 1 month Drive+ free, you earn up to 6 months.</div>
-          <div className="text-xs text-muted-foreground">After their first real drive. Plus +100 smiles for you, always.</div>
-          <div className="mt-1 text-xs text-[#e53935]" data-testid="invite-months">{status.inviteMonths} of {INVITE_MAX_MONTHS} free months earned</div>
+          <div className="text-lg font-light">
+            Bring a friend: they get 1 month Drive+ free, you earn up to 6 months.
+          </div>
+          <div className="text-xs text-muted-foreground">
+            After their first real drive. Plus +100 smiles for you (150 if you're a Founder).
+          </div>
+          <div className="mt-1 text-xs text-[#e53935]" data-testid="invite-months">
+            {status.inviteMonths} of {INVITE_MAX_MONTHS} free months earned
+          </div>
           <div className="mt-1 break-all text-xs text-muted-foreground">{refLink}</div>
           <div className="mt-3 flex flex-wrap gap-2">
             <button
@@ -263,7 +330,9 @@ function SmileShopPage() {
           ) : null}
           {copyError ? <p className="mt-2 text-xs text-[#e53935]">{copyError}</p> : null}
           <div className="mt-2 text-[11px] text-muted-foreground">
-            <Link to="/legal/rewards" className="underline-offset-2 hover:underline">Terms apply</Link>
+            <Link to="/legal/rewards" className="underline-offset-2 hover:underline">
+              Terms apply
+            </Link>
           </div>
         </section>
       ) : null}
@@ -273,7 +342,15 @@ function SmileShopPage() {
         <ul className="mt-2 grid grid-cols-2 gap-1 text-sm sm:grid-cols-5">
           {SMILE_LEVELS.map((l) => (
             <li key={l.name} className={cn(status.level.name === l.name && "text-[#e53935]")}>
-              {l.name} <span className="text-muted-foreground tabular-nums">{l.min.toLocaleString("en")}</span>
+              <div>
+                {l.name}{" "}
+                <span className="text-muted-foreground tabular-nums">
+                  {l.min.toLocaleString("en")}
+                </span>
+              </div>
+              <div className="text-[11px] leading-snug text-muted-foreground">
+                {LEVEL_UNLOCK_LINES[l.name]}
+              </div>
             </li>
           ))}
         </ul>
@@ -281,7 +358,11 @@ function SmileShopPage() {
 
       <p className="text-center text-[11px] text-muted-foreground">
         Smiles have no cash value.{" "}
-        <Link to="/legal/rewards" data-testid="shop-terms" className="underline-offset-2 hover:underline">
+        <Link
+          to="/legal/rewards"
+          data-testid="shop-terms"
+          className="underline-offset-2 hover:underline"
+        >
           Founders, Crew &amp; Rewards Terms
         </Link>
       </p>

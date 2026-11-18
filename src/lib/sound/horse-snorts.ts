@@ -12,6 +12,7 @@ export const HORSE_SNORT_PROFILES = new Set([
   "wild-west-carriage",
   "dracula-carriage",
   "romanian-85-carriage",
+  "caravan-carriage",
   "horse-gallop",
 ]);
 
@@ -30,7 +31,7 @@ export const CARRIAGE_SNORT_URLS = {
   accel: `${BASE_V2}/brrr_a.m4a`,
   idle: `${BASE_V2}/brrr_b.m4a`,
 } as const;
-export const CARRIAGE_SNORT_PROFILES = new Set(["wild-west-carriage", "dracula-carriage", "romanian-85-carriage"]);
+export const CARRIAGE_SNORT_PROFILES = new Set(["wild-west-carriage", "dracula-carriage", "romanian-85-carriage", "caravan-carriage"]);
 
 export interface SnortTiming {
   idleMin: number;

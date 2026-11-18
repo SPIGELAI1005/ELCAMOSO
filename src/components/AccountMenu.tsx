@@ -6,7 +6,7 @@ import { useState } from "react";
 import { AccountSignInDialog } from "@/components/AccountSignInDialog";
 import { AccountUserIcon } from "@/components/AccountUserIcon";
 import { ElcamosoMark } from "@/components/ElcamosoLogo";
-import { SmileLevelRing, useSmileStatus } from "@/components/smiles/SmileRewards";
+import { SmileLevelRing, useSmileStatusState } from "@/components/smiles/SmileRewards";
 import {
   Dialog,
   DialogContent,
@@ -90,7 +90,7 @@ export function AccountMenu({ className, variant = "icon", onNavigate }: Account
           onOpenChange={setProfileOpen}
           email={session?.email ?? ""}
           founderSeat={isFounder ? (founder?.seat ?? null) : undefined}
-        signingOut={signingOut}
+          signingOut={signingOut}
           onSignOut={() => void handleSignOut()}
           onNavigate={() => {
             setProfileOpen(false);
@@ -250,10 +250,10 @@ function AccountProfileDialog({
 }
 
 function ProfileSmiles({ open, onNavigate }: { open: boolean; onNavigate: () => void }) {
-  const status = useSmileStatus(open);
+  const { status, loading } = useSmileStatusState(open);
   return (
     <div className="border-b border-border/60 px-6 py-5">
-      <SmileLevelRing status={status} />
+      <SmileLevelRing status={status} loading={loading} />
       <Link
         to="/smile-shop"
         onClick={onNavigate}

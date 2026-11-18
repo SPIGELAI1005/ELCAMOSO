@@ -10,6 +10,8 @@ import { materializeCustom, type CustomSound, type Playlist } from "@/lib/drive/
 import { describeProfileRule } from "@/lib/drive/profile-rules";
 import { getRewardsPublicFlagFn } from "@/lib/rewards/server-fns";
 import { SOUND_PROFILES, allProfiles, getProfile } from "@/lib/sound/profiles";
+import { visibleProfileList } from "@/lib/sound/admin-only-profiles";
+import { useAccount } from "@/lib/account/AccountProvider";
 import { copyShareLink } from "@/lib/sound/share";
 import { trackEvent } from "@/lib/telemetry/analytics";
 import {
@@ -26,6 +28,7 @@ export const Route = createFileRoute("/garage")({
 function Garage() {
   const navigate = useNavigate();
   const { settings, update } = useSettings();
+  const { isAdmin } = useAccount();
   const reducedMotion = useReducedMotion();
   const [renaming, setRenaming] = useState<string | null>(null);
   const [draftName, setDraftName] = useState("");
@@ -259,7 +262,7 @@ function Garage() {
                 <div className="mt-4 flex flex-wrap gap-3">
                   {settings.experienceFavourites.map((id) => {
                     const saved = settings.savedFusionPresets.find((s) => s.id === id);
-                    const profile = allProfiles().find((p) => p.id === id);
+                    const profile = visibleProfileList(allProfiles(), isAdmin).find((p) => p.id === id);
                     const label = saved?.name ?? profile?.name ?? id;
                     const profileId = saved?.id ?? (profile ? id : null);
                     return (
@@ -719,7 +722,7 @@ function Garage() {
                           className="mt-3 block h-11 w-full border-b border-border bg-transparent text-sm tracking-normal text-foreground normal-case outline-none focus:border-foreground"
                         >
                           <option value="">Choose a sound</option>
-                          {allProfiles()
+                          {visibleProfileList(allProfiles(), isAdmin)
                             .filter((p) => !list.profileIds.includes(p.id))
                             .map((p) => (
                               <option key={p.id} value={p.id}>

@@ -33,14 +33,19 @@ describe("experiences catalog", () => {
     expect(fusion.every((item) => canAccessExperience(item, accessFor("DRIVE_MUSIC")))).toBe(true);
   });
 
-  it("defines four product families with routes", () => {
+  it("defines the product families with routes, and places Run the music after Worlds", () => {
     expect(EXPERIENCE_FAMILIES.map((f) => f.kind)).toEqual([
       "engine",
       "symphony",
       "world",
+      "rumoso",
       "fusion",
     ]);
     expect(EXPERIENCE_FAMILIES.find((f) => f.kind === "engine")?.href).toBe("/sounds");
+    const rumoso = EXPERIENCE_FAMILIES.find((f) => f.kind === "rumoso");
+    expect(rumoso?.headline).toBe("Run the music.");
+    expect(rumoso?.href).toBe("/rumoso");
+    expect(rumoso?.subcopy).toBe("Your pace becomes the music.");
   });
 
   it("curates worlds onto World engine or SoundProfiles", () => {

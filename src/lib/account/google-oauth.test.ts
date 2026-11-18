@@ -15,6 +15,7 @@ import { buildTestIdToken } from "@/lib/account/google-id-token";
 import { resetGoogleOAuthStateForTests } from "@/lib/account/google-oauth";
 import {
   buildAccountSessionCookieOptions,
+  sessionCookieDomainForHost,
   serializeCookieHeader,
 } from "@/lib/account/session-cookie";
 import { resetAccountAuthStoreForTests } from "@/lib/account/session-store";
@@ -133,7 +134,12 @@ describe("Google account OAuth", () => {
       nonce,
     });
 
-    const session = await completeGoogleSignIn("auth-code", state, Date.now(), started.pendingCookie);
+    const session = await completeGoogleSignIn(
+      "auth-code",
+      state,
+      Date.now(),
+      started.pendingCookie,
+    );
     expect(session.email).toBe("string-exp@gmail.com");
   });
 
@@ -273,5 +279,38 @@ describe("Google account OAuth", () => {
     expect(opts.httpOnly).toBe(true);
     expect(opts.secure).toBe(false);
     expect(opts.sameSite).toBe("lax");
+  });
+});
+
+describe("account session cookie domain", () => {
+  it("shares the live login cookie between www and apex", () => {
+    expect(sessionCookieDomainForHost("www.elcamoso.com")).toBe(".elcamoso.com");
+    expect(sessionCookieDomainForHost("elcamoso.com")).toBe(".elcamoso.com");
+    expect(sessionCookieDomainForHost("www.elcamoso.com:443")).toBe(".elcamoso.com");
+    const header = serializeCookieHeader(
+      "elcamoso_account_session",
+      "ticket.value",
+      buildAccountSessionCookieOptions(Date.now() + 60_000, Date.now(), {
+        production: true,
+        host: "www.elcamoso.com",
+      }),
+    );
+    expect(header).toContain("Domain=.elcamoso.com");
+  });
+
+  it("does not set Domain on localhost or Vercel previews", () => {
+    expect(sessionCookieDomainForHost("localhost")).toBeUndefined();
+    expect(sessionCookieDomainForHost("localhost:5173")).toBeUndefined();
+    expect(sessionCookieDomainForHost("127.0.0.1")).toBeUndefined();
+    expect(sessionCookieDomainForHost("elcamoso-git-feat-x-user.vercel.app")).toBeUndefined();
+    const header = serializeCookieHeader(
+      "elcamoso_account_session",
+      "ticket.value",
+      buildAccountSessionCookieOptions(Date.now() + 60_000, Date.now(), {
+        production: false,
+        host: "localhost:5173",
+      }),
+    );
+    expect(header).not.toContain("Domain=");
   });
 });

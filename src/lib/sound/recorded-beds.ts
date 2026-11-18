@@ -95,6 +95,7 @@ export const RECORDED_BEDS: Record<string, RecordedBedConfig> = {
   "wild-west-carriage": carriageBed("wild-west-carriage", HORSE_LEVEL),
   "dracula-carriage": carriageBed("dracula-carriage", HORSE_LEVEL),
   "romanian-85-carriage": carriageBed("romanian-85-carriage", HORSE_LEVEL),
+  "caravan-carriage": carriageBed("caravan-carriage", HORSE_LEVEL),
   "horse-gallop": {
     profileId: "horse-gallop",
     url: `${BASE}/horse.m4a`,

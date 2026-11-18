@@ -24,7 +24,7 @@ function ExplorePage() {
           <h1 className="mt-4 text-4xl font-light tracking-tight sm:text-5xl">
             Choose what motion becomes.
           </h1>
-          <p className="mt-4 text-lg text-muted-foreground">Machine. Music. Another world.</p>
+          <p className="mt-4 text-lg text-muted-foreground">Machine. Music. Another world. The run.</p>
         </header>
 
         <section className="mt-14" aria-label="Experience families">

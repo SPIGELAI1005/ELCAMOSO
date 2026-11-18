@@ -83,6 +83,7 @@ const AMBIENT_IDS = new Set([
   "wild-west-carriage",
   "dracula-carriage",
   "romanian-85-carriage",
+  "caravan-carriage",
 ]);
 
 const FORCED_INDUCTION_IDS = new Set(["turbo-inline-6", "rally-car"]);

@@ -135,6 +135,7 @@ import { getRecordedBed, RecordedBed } from "@/lib/sound/recorded-beds";
 import { CoyoteV8Synth, isCoyoteV8ProfileId } from "@/lib/sound/coyote-v8/coyote-synth";
 import { HorseSnorts, isHorseSnortProfile } from "@/lib/sound/horse-snorts";
 import { HorseWhinnies } from "@/lib/sound/horse-whinnies";
+import { CaravanStreetCalls, isCaravanStreetCallProfile } from "@/lib/sound/caravan-street-calls";
 import { DEFAULT_TIMELINE_GAP_FLUSH_MS } from "@/lib/sound/realism/shift-events";
 import { resolvePersonalityId } from "@/lib/drive/drivetrain-resolve";
 
@@ -2089,6 +2090,11 @@ export class SoundEngine {
       this.whinnies = whinnies;
       whinnies.load().catch((error) => console.warn("[elcamoso] whinnies unavailable", error));
     }
+    if (isCaravanStreetCallProfile(profile.id) && this.ctx && this.cabinIn) {
+      const calls = new CaravanStreetCalls(this.ctx, this.cabinIn);
+      this.streetCalls = calls;
+      calls.load().catch((error) => console.warn("[elcamoso] street calls unavailable", error));
+    }
     const cfg = getRecordedBed(profile.id);
     const ctx = this.ctx;
     if (!cfg || !ctx || !this.cabinIn) return;
@@ -2101,12 +2107,15 @@ export class SoundEngine {
 
   private snorts: HorseSnorts | null = null;
   private whinnies: HorseWhinnies | null = null;
+  private streetCalls: CaravanStreetCalls | null = null;
 
   private disposeRecordedBed() {
     this.snorts?.dispose();
     this.snorts = null;
     this.whinnies?.dispose();
     this.whinnies = null;
+    this.streetCalls?.dispose();
+    this.streetCalls = null;
     this.bed?.dispose();
     this.bed = null;
     this.bedReady = Promise.resolve();
@@ -2138,6 +2147,7 @@ export class SoundEngine {
     this.updateRecordedBed(state, t);
     if (this.snorts && isHorseSnortProfile(profile.id)) this.snorts.update(state, t);
     if (this.whinnies && isHorseSnortProfile(profile.id)) this.whinnies.update(state, t);
+    if (this.streetCalls && isCaravanStreetCallProfile(profile.id)) this.streetCalls.update(state, t);
     if (this.backgroundMusic) {
       this.backgroundMusic.update(state, t);
       const boost = BACKGROUND_MUSIC_SPEED_BOOST[profile.id];

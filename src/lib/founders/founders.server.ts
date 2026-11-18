@@ -5,6 +5,9 @@
  */
 import { eq, isNotNull, sql } from "drizzle-orm";
 
+import { emailLookupAliases } from "@/lib/account/canonical-email";
+import { sqlLowerEmailIn } from "@/lib/account/email-sql";
+
 import { getDb } from "@/lib/db/client";
 import { users } from "@/lib/db/schema";
 import { entitlementsForPlan } from "@/lib/entitlements/plans";
@@ -149,6 +152,28 @@ async function mintFounderSeat(
         .limit(1);
       if (existing[0]?.founderAt) {
         return { founderAt: existing[0].founderAt.getTime(), seat: existing[0].seat ?? null };
+      }
+      if (email) {
+        const aliases = emailLookupAliases(email);
+        const samePerson = await tx
+          .select({
+            id: users.id,
+            founderAt: users.founderAt,
+            seat: users.founderSeat,
+          })
+          .from(users)
+          .where(sql`${sqlLowerEmailIn(users.email, aliases)} and ${users.founderAt} is not null`);
+        const already = samePerson
+          .filter((row) => row.founderAt != null)
+          .sort((a, b) => (a.seat ?? 0) - (b.seat ?? 0) || a.id.localeCompare(b.id));
+        const mine = already.find((row) => row.id === userId);
+        if (mine?.founderAt) {
+          return { founderAt: mine.founderAt.getTime(), seat: mine.seat ?? null };
+        }
+        if (already[0] && already[0].id !== userId) {
+          // Same person already has a seat on another user id — never grant a second one.
+          return null;
+        }
       }
       const counts = await tx
         .select({
