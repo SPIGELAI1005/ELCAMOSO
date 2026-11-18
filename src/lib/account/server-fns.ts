@@ -3,12 +3,13 @@ import { createServerFn } from "@tanstack/react-start";
 export const getAccountSessionFn = createServerFn({ method: "POST" })
   .inputValidator((data: { sessionToken?: string | null } = {}) => data)
   .handler(async ({ data }) => {
-    const { getAccountSession } = await import("@/lib/account/auth-service");
+    const { getAccountSession, resolveSessionUserId } = await import("@/lib/account/auth-service");
     const { tryResolveRequestSessionToken } = await import("@/lib/account/session-cookies.server");
     const token = tryResolveRequestSessionToken(data.sessionToken);
     if (!token) return { authenticated: false as const, isAdmin: false as const };
     const session = getAccountSession(token);
     if (!session) return { authenticated: false as const, isAdmin: false as const };
+    const userId = await resolveSessionUserId(session);
     let isAdmin = false;
     try {
       const { requireAdmin } = await import("@/lib/admin/admin-store.server");
@@ -19,7 +20,7 @@ export const getAccountSessionFn = createServerFn({ method: "POST" })
     }
     return {
       authenticated: true as const,
-      userId: session.userId,
+      userId,
       email: session.email,
       expiresAt: session.expiresAt,
       isAdmin,

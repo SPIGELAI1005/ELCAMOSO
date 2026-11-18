@@ -1,12 +1,18 @@
 import { beforeEach, describe, expect, it } from "vitest";
 
 import {
+  ACCOUNT_LOOKUP_FAILED_MESSAGE,
+  createSessionFromVerifiedEmail,
   getAccountSession,
   requestAccountSignIn,
   requireAccountSession,
   verifyAccountMagicLink,
 } from "@/lib/account/auth-service";
-import { resetAccountAuthStoreForTests, saveAccountSession } from "@/lib/account/session-store";
+import {
+  resetAccountAuthStoreForTests,
+  resolveUserIdForEmail,
+  saveAccountSession,
+} from "@/lib/account/session-store";
 
 describe("account auth service", () => {
   beforeEach(() => {
@@ -53,5 +59,33 @@ describe("account auth service", () => {
       createdAt: Date.now(),
     });
     expect(requireAccountSession("session-1").email).toBe("driver@example.com");
+  });
+
+  it("treats gmail and googlemail as the same in-memory account", async () => {
+    const issued = requestAccountSignIn(
+      "george.m.neacsu@googlemail.com",
+      "/drive",
+      "http://localhost:5173",
+    );
+    const token = new URL(issued.verifyUrl!).searchParams.get("token")!;
+    const verified = await verifyAccountMagicLink(token);
+    expect(verified.email).toBe("george.m.neacsu@gmail.com");
+    const again = createSessionFromVerifiedEmail("george.m.neacsu@gmail.com");
+    expect(again.userId).toBe(verified.userId);
+    expect(resolveUserIdForEmail("george.m.neacsu@googlemail.com")).toBe(verified.userId);
+  });
+
+  it("does not mint a new id when a durable lookup is required and missing", () => {
+    const previous = process.env["DATABASE_URL"];
+    process.env["DATABASE_URL"] = "postgres://pglite-test/elcamoso";
+    try {
+      expect(() => createSessionFromVerifiedEmail("driver@example.com")).toThrow(
+        ACCOUNT_LOOKUP_FAILED_MESSAGE,
+      );
+      expect(resolveUserIdForEmail("driver@example.com")).toBeNull();
+    } finally {
+      if (previous === undefined) delete process.env["DATABASE_URL"];
+      else process.env["DATABASE_URL"] = previous;
+    }
   });
 });

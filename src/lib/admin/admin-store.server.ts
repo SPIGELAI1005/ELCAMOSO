@@ -1,6 +1,8 @@
 /** Server-only DB helpers for admin foundations. All are no-ops without DATABASE_URL. */
 import { and, desc, eq, isNotNull, sql } from "drizzle-orm";
 
+import { emailLookupAliases } from "@/lib/account/canonical-email";
+import { sqlLowerEmailIn } from "@/lib/account/email-sql";
 import { hashToken } from "@/lib/account/session-store";
 import { getDb } from "@/lib/db/client";
 import { accountSessions, adminAuditLog, subscriptions, users } from "@/lib/db/schema";
@@ -54,10 +56,11 @@ export async function isAccountSessionRevoked(rawToken: string): Promise<boolean
 
 export async function getUserRoleByEmail(email: string): Promise<"user" | "admin" | null> {
   if (!hasDb()) return null;
+  const aliases = emailLookupAliases(email);
   const rows = await getDb()
     .select({ role: users.role })
     .from(users)
-    .where(sql`lower(${users.email}) = ${email.toLowerCase()}`)
+    .where(sqlLowerEmailIn(users.email, aliases))
     .limit(1);
   return rows[0]?.role ?? null;
 }

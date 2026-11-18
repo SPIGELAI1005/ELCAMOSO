@@ -74,13 +74,20 @@ async function refreshTotals(db: Exec, userId: string): Promise<void> {
 }
 
 async function lockUser(tx: Exec, userId: string) {
-  await tx.execute(sql`insert into users (id) values (${userId}::uuid) on conflict do nothing`);
+  // Never insert an email-less users row here — that can get a second Founder seat.
   await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${"smiles:" + userId}))`);
 }
 
 async function insertEntry(
   tx: Exec,
-  e: { userId: string; amount: number; reason: string; ref: string; sound?: string | null; country?: string | null },
+  e: {
+    userId: string;
+    amount: number;
+    reason: string;
+    ref: string;
+    sound?: string | null;
+    country?: string | null;
+  },
 ): Promise<boolean> {
   const r = await rows<{ id: string }>(
     tx,
@@ -138,7 +145,6 @@ export async function getSmileStatus(userId: string, now = Date.now()): Promise<
   if (!hasRewardsDb(userId)) return emptySmileStatus();
   try {
     const db = getDb();
-    await db.execute(sql`insert into users (id) values (${userId}::uuid) on conflict do nothing`);
     const [u] = await rows<{ handle: string | null; code: string | null }>(
       db,
       sql`select smile_handle as handle, smile_ref_code as code from users where id = ${userId}::uuid`,
@@ -147,7 +153,9 @@ export async function getSmileStatus(userId: string, now = Date.now()): Promise<
     if (u && !code) {
       code = randomCode();
       await db
-        .execute(sql`update users set smile_ref_code = ${code} where id = ${userId}::uuid and smile_ref_code is null`)
+        .execute(
+          sql`update users set smile_ref_code = ${code} where id = ${userId}::uuid and smile_ref_code is null`,
+        )
         .catch(() => (code = null));
     }
     await backfillUnawardedCards(db, userId);
@@ -191,7 +199,10 @@ export async function getSmileStatus(userId: string, now = Date.now()): Promise<
     }
     let activeTheme: string | null = null;
     try {
-      const [t] = await rows<{ t: string | null }>(db, sql`select smile_theme as t from users where id = ${userId}::uuid`);
+      const [t] = await rows<{ t: string | null }>(
+        db,
+        sql`select smile_theme as t from users where id = ${userId}::uuid`,
+      );
       activeTheme = t?.t ?? null;
     } catch {
       /* migration 0011 not applied yet: client falls back to localStorage */
@@ -207,7 +218,15 @@ export async function getSmileStatus(userId: string, now = Date.now()): Promise<
       owned: owned.map((o) => o.ref),
       activeTheme,
       inviteReward: inv
-        ? { id: inv.id, role: inv.ref === userId ? "friend" : invites > INVITE_MAX_MONTHS ? "inviter-capped" : "inviter" }
+        ? {
+            id: inv.id,
+            role:
+              inv.ref === userId
+                ? "friend"
+                : invites > INVITE_MAX_MONTHS
+                  ? "inviter-capped"
+                  : "inviter",
+          }
         : null,
       inviteMonths: Math.min(invites, INVITE_MAX_MONTHS),
     };
@@ -251,7 +270,15 @@ export async function awardCard(
       let today = await earnedToday(tx, userId, now);
       const amount = cappedAward(card.score, today, founder);
       // Record the card even at 0 so streak days count and the journey is never paid twice.
-      await insertEntry(tx, { userId, amount, reason: "card", ref: card.journeyId, sound: card.sound, country: card.country });
+      const recorded = await insertEntry(tx, {
+        userId,
+        amount,
+        reason: "card",
+        ref: card.journeyId,
+        sound: card.sound,
+        country: card.country,
+      });
+      if (!recorded) return { awarded: 0, streak: 0 };
       today += amount;
       let streak = 0;
       const days = await rows<{ d: string }>(
@@ -260,13 +287,28 @@ export async function awardCard(
             from smile_ledger where user_id = ${userId} and reason = 'card' and created_at > now() - interval '8 days'`,
       );
       const todayKey = berlinDay(now);
-      if (hasStreak(days.map((d) => d.d), todayKey)) {
+      if (
+        hasStreak(
+          days.map((d) => d.d),
+          todayKey,
+        )
+      ) {
         const recent = await rows<{ id: string }>(
           tx,
           sql`select id from smile_ledger where user_id = ${userId} and reason = 'streak' and created_at > now() - interval '6 days'`,
         );
         const bonus = recent.length ? 0 : cappedAward(STREAK_BONUS, today, founder);
-        if (bonus > 0 && (await insertEntry(tx, { userId, amount: bonus, reason: "streak", ref: todayKey, sound: card.sound, country: card.country })))
+        if (
+          bonus > 0 &&
+          (await insertEntry(tx, {
+            userId,
+            amount: bonus,
+            reason: "streak",
+            ref: todayKey,
+            sound: card.sound,
+            country: card.country,
+          }))
+        )
           streak = bonus;
       }
       await refreshTotals(tx, userId);
@@ -280,7 +322,11 @@ export async function awardCard(
 }
 
 /** +25% of a saved card's smiles for sharing it, max once per Berlin day. */
-export async function awardShare(userId: string, journeyId: string, now = Date.now()): Promise<AwardResult> {
+export async function awardShare(
+  userId: string,
+  journeyId: string,
+  now = Date.now(),
+): Promise<AwardResult> {
   if (!hasRewardsDb(userId)) return { awarded: 0, streak: 0, status: emptySmileStatus() };
   const founder = await isFounder(userId);
   try {
@@ -295,9 +341,20 @@ export async function awardShare(userId: string, journeyId: string, now = Date.n
         sql`select score from smiles_cards where user_id = ${userId} and journey_id = ${journeyId}`,
       );
       if (!c || !card) return 0;
-      const amount = cappedAward(shareBonusBase(card.score), await earnedToday(tx, userId, now), founder);
+      const amount = cappedAward(
+        shareBonusBase(card.score),
+        await earnedToday(tx, userId, now),
+        founder,
+      );
       if (amount <= 0) return 0;
-      const ok = await insertEntry(tx, { userId, amount, reason: "share", ref: berlinDay(now), sound: c.sound, country: c.country });
+      const ok = await insertEntry(tx, {
+        userId,
+        amount,
+        reason: "share",
+        ref: berlinDay(now),
+        sound: c.sound,
+        country: c.country,
+      });
       if (ok) await refreshTotals(tx, userId);
       return ok ? amount : 0;
     });
@@ -317,9 +374,14 @@ export async function applyReferral(userId: string, code: string): Promise<boole
         sql`select smile_referred_by as by, created_at > now() - interval '3 days' as fresh from users where id = ${userId}::uuid`,
       );
       if (!me || me.by || !me.fresh) return false;
-      const [ref] = await rows<{ id: string }>(tx, sql`select id::text as id from users where smile_ref_code = ${code}`);
+      const [ref] = await rows<{ id: string }>(
+        tx,
+        sql`select id::text as id from users where smile_ref_code = ${code}`,
+      );
       if (!ref || ref.id === userId) return false;
-      await tx.execute(sql`update users set smile_referred_by = ${ref.id} where id = ${userId}::uuid`);
+      await tx.execute(
+        sql`update users set smile_referred_by = ${ref.id} where id = ${userId}::uuid`,
+      );
       await lockUser(tx, ref.id);
       const amount = cappedAward(REFERRAL_BONUS, 0, await isFounder(ref.id));
       const ok = await insertEntry(tx, { userId: ref.id, amount, reason: "referral", ref: userId });
@@ -361,9 +423,19 @@ export async function qualifyReferral(
       );
       if (!drove.length) return null;
       await lockUser(tx, f.by);
-      const ok = await insertEntry(tx, { userId: f.by, amount: 0, reason: INVITE_REWARD_REASON, ref: friendId });
+      const ok = await insertEntry(tx, {
+        userId: f.by,
+        amount: 0,
+        reason: INVITE_REWARD_REASON,
+        ref: friendId,
+      });
       if (!ok) return null; // already rewarded for this friend
-      await insertEntry(tx, { userId: friendId, amount: 0, reason: INVITE_REWARD_REASON, ref: friendId });
+      await insertEntry(tx, {
+        userId: friendId,
+        amount: 0,
+        reason: INVITE_REWARD_REASON,
+        ref: friendId,
+      });
       const [c] = await rows<{ n: number }>(
         tx,
         sql`select count(*)::int as n from smile_ledger where user_id = ${f.by} and reason = ${INVITE_REWARD_REASON} and ref <> ${f.by}`,
@@ -385,10 +457,15 @@ export async function qualifyReferral(
 
 export type RedeemResult = { ok: true; status: SmileStatus } | { ok: false; error: string };
 
-export async function redeemItem(userId: string, itemId: string, now = Date.now()): Promise<RedeemResult> {
+export async function redeemItem(
+  userId: string,
+  itemId: string,
+  now = Date.now(),
+): Promise<RedeemResult> {
   const item = shopItem(itemId);
   if (!item || item.soon) return { ok: false, error: "Not in the shop yet." };
-  if (!hasRewardsDb(userId)) return { ok: false, error: "Smile Shop is warming up. Try again soon." };
+  if (!hasRewardsDb(userId))
+    return { ok: false, error: "Smile Shop is warming up. Try again soon." };
   try {
     const res = await getDb().transaction(async (tx) => {
       await lockUser(tx, userId);
@@ -398,7 +475,8 @@ export async function redeemItem(userId: string, itemId: string, now = Date.now(
       );
       if (Number(b?.bal ?? 0) < item.cost) return "Not enough smiles yet. Go drive!";
       const ref = item.kind === "theme" ? item.id : `${item.id}:${now}`;
-      if (!(await insertEntry(tx, { userId, amount: -item.cost, reason: "redeem", ref }))) return "Already yours.";
+      if (!(await insertEntry(tx, { userId, amount: -item.cost, reason: "redeem", ref })))
+        return "Already yours.";
       await refreshTotals(tx, userId);
       return null;
     });
@@ -418,7 +496,6 @@ export async function setSmileHandle(userId: string, handle: string | null): Pro
   if (!hasRewardsDb(userId)) return false;
   try {
     const db = getDb();
-    await db.execute(sql`insert into users (id) values (${userId}::uuid) on conflict do nothing`);
     const updated = await rows<{ h: string | null }>(
       db,
       sql`update users set smile_handle = ${handle} where id = ${userId}::uuid returning smile_handle as h`,
@@ -445,7 +522,10 @@ export interface Leaderboard {
 }
 
 /** Weekly (Monday, Berlin) leaderboard. Shows handles or anonymous names, never emails. */
-export async function getLeaderboard(viewerId: string | null, now = Date.now()): Promise<Leaderboard> {
+export async function getLeaderboard(
+  viewerId: string | null,
+  now = Date.now(),
+): Promise<Leaderboard> {
   const weekOf = weekStart(now);
   const empty = { weekOf, byCountry: [], bySound: [] };
   if (!hasRewardsDb()) return empty;

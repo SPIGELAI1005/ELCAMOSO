@@ -11,8 +11,14 @@ import {
 import { hasActiveLifetimeGrant, resetLifetimeStoreForTests } from "@/lib/billing/lifetime-store";
 import { resolveLocalSubscriptionAccess } from "@/lib/billing/resilience/local-access";
 import { resetSubscriptionRepositoryStoreForTests } from "@/lib/billing/subscription-repository-memory";
-import { getSubscriptionForUser, resetSubscriptionStoreForTests } from "@/lib/billing/subscription-store";
-import { dispatchStripeWebhookEvent, resetWebhookEventStoreStateForTests } from "@/lib/billing/stripe/webhook";
+import {
+  getSubscriptionForUser,
+  resetSubscriptionStoreForTests,
+} from "@/lib/billing/subscription-store";
+import {
+  dispatchStripeWebhookEvent,
+  resetWebhookEventStoreStateForTests,
+} from "@/lib/billing/stripe/webhook";
 import {
   resetUserBillingStoreForTests,
   setUserBillingRepository,
@@ -71,7 +77,11 @@ function lifetimeSession(): Stripe.Checkout.Session {
     payment_intent: "pi_durable_1",
     client_reference_id: USER_ID,
     created: 1_790_000_000,
-    metadata: { userId: USER_ID, commercialPlanId: "drive_plus_lifetime", elcamosoPlan: "DRIVE_PLUS" },
+    metadata: {
+      userId: USER_ID,
+      commercialPlanId: "drive_plus_lifetime",
+      elcamosoPlan: "DRIVE_PLUS",
+    },
   } as unknown as Stripe.Checkout.Session;
 }
 
@@ -147,12 +157,16 @@ describe("durable billing state (Postgres)", () => {
   });
 
   it("lifetime survives restarts and outranks a later subscription cancellation", async () => {
-    await dispatchStripeWebhookEvent(event("evt_lt_1", "checkout.session.completed", lifetimeSession()));
+    await dispatchStripeWebhookEvent(
+      event("evt_lt_1", "checkout.session.completed", lifetimeSession()),
+    );
     restartInstance();
     await hydrateUserBillingState(USER_ID);
     expect(hasActiveLifetimeGrant(USER_ID)).toBe(true);
     expect(getSubscriptionForUser(USER_ID)?.lifetime).toBe(true);
-    expect(resolveLocalSubscriptionAccess(USER_ID, Date.UTC(2099, 0, 1)).hasDrivePlusAccess).toBe(true);
+    expect(resolveLocalSubscriptionAccess(USER_ID, Date.UTC(2099, 0, 1)).hasDrivePlusAccess).toBe(
+      true,
+    );
 
     // Webhook replayed on a fresh instance is deduplicated by the Postgres event ledger.
     restartInstance();
@@ -171,7 +185,9 @@ describe("durable billing state (Postgres)", () => {
   });
 
   it("refund on another instance revokes lifetime everywhere", async () => {
-    await dispatchStripeWebhookEvent(event("evt_lt_2", "checkout.session.completed", lifetimeSession()));
+    await dispatchStripeWebhookEvent(
+      event("evt_lt_2", "checkout.session.completed", lifetimeSession()),
+    );
     restartInstance();
     await dispatchStripeWebhookEvent(
       event("evt_refund", "charge.refunded", {
@@ -220,5 +236,55 @@ describe("durable billing state (Postgres)", () => {
     delete process.env["DATABASE_URL"];
     expect(await hydrateUserBillingState(USER_ID)).toBe(false);
     expect(await resolveDurableUserIdForEmail("x@example.com", () => USER_ID)).toBeNull();
+  });
+
+  it("matches gmail and googlemail as the same durable account", async () => {
+    const first = await resolveDurableUserIdForEmail(
+      "george.m.neacsu@googlemail.com",
+      () => USER_ID,
+    );
+    const second = await resolveDurableUserIdForEmail(
+      "george.m.neacsu@gmail.com",
+      () => "77777777-7777-4777-8777-777777777777",
+    );
+    expect(first).toBe(USER_ID);
+    expect(second).toBe(USER_ID);
+    const minted = await db.select().from(users);
+    expect(minted).toHaveLength(1);
+    expect(minted[0]?.email).toBe("george.m.neacsu@gmail.com");
+  });
+
+  it("prefers Founder seat #1 when alias rows already exist", async () => {
+    const secondary = "77777777-7777-4777-8777-777777777777";
+    await db.insert(users).values([
+      {
+        id: secondary,
+        email: "george.m.neacsu@gmail.com",
+        founderSeat: 2,
+        founderAt: new Date(),
+      },
+      {
+        id: USER_ID,
+        email: "george.m.neacsu@googlemail.com",
+        founderSeat: 1,
+        founderAt: new Date(),
+      },
+    ]);
+    const resolved = await resolveDurableUserIdForEmail("george.m.neacsu@gmail.com");
+    expect(resolved).toBe(USER_ID);
+  });
+
+  it("does not mint a new id when the durable lookup fails", async () => {
+    setDbOverrideForTests({
+      select: () => {
+        throw new Error("Account lookup failed. Please try again.");
+      },
+    } as unknown as TestDb);
+    const before = await db.select().from(users);
+    await expect(resolveDurableUserIdForEmail("driver@example.com", () => USER_ID)).rejects.toThrow(
+      /try again|failed/i,
+    );
+    const after = await db.select().from(users);
+    expect(after).toHaveLength(before.length);
   });
 });
