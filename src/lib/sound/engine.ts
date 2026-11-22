@@ -1542,11 +1542,17 @@ export class SoundEngine {
     if (isCoyoteV8ProfileId(profile.id) && strategyBuses) {
       // Startup is a once-per-drive event (spec: never replay the flare when the car stops
       // or the graph is rebuilt for a settings change); a new start() makes a new context.
+      // Mark the context only once the flare really plays: drive start often builds the
+      // profile twice, and the first synth is disposed before its bank has decoded.
       const startup =
         !(globalThis as { __ELC_COYOTE_NO_STARTUP?: boolean }).__ELC_COYOTE_NO_STARTUP &&
         this.coyoteStartupCtx !== ctx;
-      this.coyoteStartupCtx = ctx;
-      const coyote = new CoyoteV8Synth({ startup });
+      const coyote = new CoyoteV8Synth({
+        startup,
+        onStartup: () => {
+          this.coyoteStartupCtx = ctx;
+        },
+      });
       coyote.build(ctx, strategyBuses);
       coyote.setShiftIntensity(this.shiftIntensity / 0.72);
       coyote.setAdvancedTransientsEnabled(this.advancedTransientsEnabled);

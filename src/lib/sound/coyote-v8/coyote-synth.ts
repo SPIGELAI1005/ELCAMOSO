@@ -139,8 +139,12 @@ export class CoyoteV8Synth {
   readonly ready: Promise<void>;
   private resolveReady: () => void = () => undefined;
 
-  constructor(options?: { startup?: boolean }) {
+  /** Called once the startup flare is actually scheduled (the engine marks the drive). */
+  private readonly onStartup: (() => void) | null;
+
+  constructor(options?: { startup?: boolean; onStartup?: () => void }) {
     this.startupAllowed = options?.startup !== false;
+    this.onStartup = options?.onStartup ?? null;
     this.ready = new Promise((resolve) => {
       this.resolveReady = resolve;
     });
@@ -223,6 +227,10 @@ export class CoyoteV8Synth {
     } else if (this.startupAllowed && stationary && now - this.builtAt < STARTUP_WINDOW_S) {
       this.playStartup(now);
     }
+    // The loops only start from update(). Before the first drive tick (e.g. Drive is still
+    // waiting for motion / GPS while parked) start the idle loop now, so the V8 never sits
+    // silent on a running context. update() takes over the same voices on its first tick.
+    if (!this.lastState) this.updateLoops(this.rpm, now);
   }
 
   private playStartup(now: number) {
@@ -230,6 +238,7 @@ export class CoyoteV8Synth {
     if (!shot || !this.loopBus) return;
     const at = now + 0.05;
     this.fireOneShot("startup", at, 1, 1, this.shotBus);
+    this.onStartup?.();
     // Hand over from the startup's settling idle to the idle loop near its end.
     const handover = at + shot.duration - 0.9;
     this.holdLoopsUntil = handover + 0.7;

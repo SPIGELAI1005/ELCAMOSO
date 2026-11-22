@@ -179,12 +179,22 @@ describe("Coyote V8 startup is once per drive", () => {
       signature: false,
       seed: 1,
     });
-    const first = (engine as unknown as { coyote: { startupAllowed: boolean } }).coyote;
+    type Peek = { coyote: { startupAllowed: boolean; attachBuffer: (b: AudioBuffer) => void } };
+    const peek = () => (engine as unknown as Peek).coyote;
+    const first = peek();
     expect(first.startupAllowed).toBe(true);
+    // Rebuilt before the bank decoded (drive start builds twice): the flare never played,
+    // so the new synth may still play it.
     engine.setEngineLayersEnabled(false); // forces a rebuild
-    const second = (engine as unknown as { coyote: { startupAllowed: boolean } }).coyote;
+    const second = peek();
     expect(second).not.toBe(first);
-    expect(second.startupAllowed).toBe(false);
+    expect(second.startupAllowed).toBe(true);
+    // Once the flare has played, later rebuilds in the same drive never replay it.
+    second.attachBuffer(ctx.createBuffer(1, 48000 * 61, 48000));
+    engine.setEngineLayersEnabled(true);
+    const third = peek();
+    expect(third).not.toBe(second);
+    expect(third.startupAllowed).toBe(false);
     await engine.stop();
   }, 30_000);
 });
