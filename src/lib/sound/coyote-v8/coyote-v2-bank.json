@@ -1,5 +1,5 @@
 {
- "version": "coyote-v2.3",
+ "version": "coyote-v2.4",
  "sampleRate": 48000,
  "fileGainDb": -3.95,
  "alignedFromRpm": 1250,
@@ -450,25 +450,9 @@
    "peakDb": -1.56
   },
   {
-   "id": "upshift1",
-   "rpm": 4000,
-   "start": 53.623666666666665,
-   "duration": 0.55,
-   "gainDb": 0.0,
-   "peakDb": -0.99
-  },
-  {
-   "id": "upshift2",
-   "rpm": 4000,
-   "start": 54.373666666666665,
-   "duration": 0.55,
-   "gainDb": 0.0,
-   "peakDb": -0.57
-  },
-  {
    "id": "blip1",
    "rpm": 2000,
-   "start": 55.123666666666665,
+   "start": 53.623666666666665,
    "duration": 0.7,
    "gainDb": 0.0,
    "peakDb": -1.04
@@ -476,7 +460,7 @@
   {
    "id": "blip2",
    "rpm": 2000,
-   "start": 56.023666666666664,
+   "start": 54.523666666666664,
    "duration": 0.7,
    "gainDb": 0.0,
    "peakDb": -0.58
@@ -484,7 +468,7 @@
   {
    "id": "pop1",
    "rpm": 0,
-   "start": 56.92366666666667,
+   "start": 55.42366666666667,
    "duration": 0.26,
    "gainDb": 0.0,
    "peakDb": -9.0
@@ -492,7 +476,7 @@
   {
    "id": "pop2",
    "rpm": 0,
-   "start": 57.38366666666667,
+   "start": 55.88366666666667,
    "duration": 0.26,
    "gainDb": 0.0,
    "peakDb": -9.0
@@ -500,35 +484,35 @@
   {
    "id": "pop3",
    "rpm": 0,
-   "start": 57.843666666666664,
+   "start": 56.343666666666664,
    "duration": 0.26,
    "gainDb": 0.0,
    "peakDb": -9.0
   },
   {
-   "id": "gear_out",
+   "id": "crackle1",
    "rpm": 0,
-   "start": 58.303666666666665,
+   "start": 56.803666666666665,
    "duration": 0.16,
    "gainDb": 0.0,
    "peakDb": -9.0
   },
   {
-   "id": "gear_in1",
+   "id": "crackle2",
    "rpm": 0,
-   "start": 58.663666666666664,
-   "duration": 0.34,
+   "start": 57.163666666666664,
+   "duration": 0.16,
    "gainDb": 0.0,
    "peakDb": -9.0
   },
   {
-   "id": "gear_in2",
+   "id": "crackle3",
    "rpm": 0,
-   "start": 59.20366666666666,
-   "duration": 0.34,
+   "start": 57.523666666666664,
+   "duration": 0.16,
    "gainDb": 0.0,
    "peakDb": -9.0
   }
  ],
- "bytes": 551243
+ "bytes": 535572
 }

@@ -19,10 +19,17 @@ function rig(startup = false) {
   synth.attachBuffer(ctx.createBuffer(1, 48000 * 61, 48000));
   let t = 0;
   let seq = 0;
-  const step = (s: Partial<DriveState> & { shift?: Shift; preset?: string }, frames = 1) => {
+  const step = (
+    s: Partial<DriveState> & {
+      shift?: Shift;
+      preset?: string;
+      pt?: Record<string, unknown>;
+    },
+    frames = 1,
+  ) => {
     for (let i = 0; i < frames; i += 1) {
       t += 1 / 30;
-      const { shift, preset, ...rest } = s;
+      const { shift, preset, pt, ...rest } = s;
       const state = {
         speed: 20,
         acceleration: 0,
@@ -50,17 +57,21 @@ function rig(startup = false) {
           shiftLoadMultiplier: 1,
           revMatchActive: false,
           diagnostics: { shiftMapPreset: preset ?? "legacy" },
+          ...pt,
         },
       } as unknown as DriveState;
       synth.update(state, t);
     }
   };
-  const shots = () => synth.getDiagnostics().recentOneShots.map((s) => s.split("@")[0]!);
-  return { synth, step, shots, nextSeq: () => (seq += 1) };
+  const all = () => synth.getDiagnostics().recentOneShots.map((s) => s.split("@")[0]!);
+  /** Bank one-shots only (the V10 shift transients are logged as v10_shift / v10_thump). */
+  const shots = () => all().filter((s) => !s.startsWith("v10_"));
+  const pulses = () => all().filter((s) => s.startsWith("v10_"));
+  return { synth, step, shots, pulses, all, nextSeq: () => (seq += 1), now: () => t };
 }
 
-describe("Coyote V8 race mode: manual gearbox, heel-and-toe downshifts (like Racing V10)", () => {
-  it("braking downshift: lever out, throttle blip on the loops, lever into the lower gear", () => {
+describe("Coyote V8 race mode: Racing V10 gear shift, heel-and-toe downshifts", () => {
+  it("braking downshift: V10 engagement + thump, throttle blip on the loops", () => {
     seedAudioRandom(11);
     const r = rig();
     const race = { preset: "race", throttle: 0, load: 0, gear: 4, speed: 22, regen: 0.4 };
@@ -84,17 +95,14 @@ describe("Coyote V8 race mode: manual gearbox, heel-and-toe downshifts (like Rac
     expect(after.mixLoads.on).toBeLessThan(0.05);
     expect(after.heelToes).toBe(1);
     const shots = r.shots();
-    expect(shots).toContain("gear_out");
-    expect(shots.filter((s) => s.startsWith("gear_in"))).toHaveLength(1);
+    // no struck-metal gearbox one-shots any more: the V10's filtered-noise transients
+    expect(shots.filter((s) => s.startsWith("gear") || s.startsWith("upshift"))).toHaveLength(0);
+    expect(r.pulses()).toEqual(["v10_shift", "v10_thump"]);
     // the blip is the loops themselves, not a second engine one-shot on top
     expect(shots.filter((s) => s.startsWith("blip"))).toHaveLength(0);
-    // gear in lands after the lever went out (near the top of the blip)
-    const log = after.recentOneShots;
-    const at = (id: string) => Number(log.find((s) => s.startsWith(id))!.split("@")[1]);
-    expect(at("gear_in") - at("gear_out")).toBeGreaterThan(0.08);
   });
 
-  it("race kickdown: gearbox sound but no heel-toe blip; upshift: lever into the next gear", () => {
+  it("race kickdown: V10 shift but no heel-toe blip; upshift: V10 shift as well", () => {
     seedAudioRandom(12);
     const r = rig();
     const race = { preset: "race", gear: 4, speed: 22 };
@@ -109,7 +117,7 @@ describe("Coyote V8 race mode: manual gearbox, heel-and-toe downshifts (like Rac
     });
     r.step({ ...race, throttle: 0.95, load: 0.9, rpm: 3500, gear: 3 }, 20);
     expect(r.synth.getDiagnostics().heelToes).toBe(0);
-    expect(r.shots()).toContain("gear_out");
+    expect(r.pulses()).toEqual(["v10_shift", "v10_thump"]);
     r.step({
       ...race,
       throttle: 0.95,
@@ -119,10 +127,13 @@ describe("Coyote V8 race mode: manual gearbox, heel-and-toe downshifts (like Rac
       shift: { seq: r.nextSeq(), from: 3, to: 4, dir: "up", reason: "upshift-schedule" },
     });
     r.step({ ...race, throttle: 0.95, load: 0.9, rpm: 3500, gear: 4 }, 20);
-    expect(r.shots().filter((s) => s.startsWith("gear_in"))).toHaveLength(2);
+    expect(r.pulses()).toEqual(["v10_shift", "v10_thump", "v10_shift", "v10_thump"]);
+    expect(r.shots().filter((s) => s.startsWith("gear") || s.startsWith("upshift"))).toHaveLength(
+      0,
+    );
   });
 
-  it("shift sounds off (intensity 0) mutes the gearbox and the blip", () => {
+  it("shift sounds off (intensity 0) mutes the gear transients, keeps the rpm blip (as V10)", () => {
     seedAudioRandom(13);
     const r = rig();
     r.synth.setShiftIntensity(0);
@@ -135,11 +146,13 @@ describe("Coyote V8 race mode: manual gearbox, heel-and-toe downshifts (like Rac
       shift: { seq: r.nextSeq(), from: 4, to: 3, dir: "down", reason: "downshift-schedule" },
     });
     r.step({ ...race, rpm: 3000, gear: 3 }, 20);
-    expect(r.shots().filter((s) => s.startsWith("gear"))).toHaveLength(0);
-    expect(r.synth.getDiagnostics().heelToes).toBe(0);
+    expect(r.pulses()).toHaveLength(0);
+    expect(r.synth.getDiagnostics().shiftPulses).toBe(0);
+    // V10: zero mutes clacks / thumps, the torque cut and rpm continuity stay
+    expect(r.synth.getDiagnostics().heelToes).toBe(1);
   });
 
-  it("other modes keep their downshift (no gearbox one-shots)", () => {
+  it("other modes: the same V10 shift, no heel-toe", () => {
     seedAudioRandom(14);
     const r = rig();
     r.step({ throttle: 0, load: 0, rpm: 1600, gear: 4, speed: 12, regen: 0.4 }, 10);
@@ -153,7 +166,133 @@ describe("Coyote V8 race mode: manual gearbox, heel-and-toe downshifts (like Rac
     });
     r.step({ throttle: 0, rpm: 1900, gear: 3, speed: 11, regen: 0.4 }, 20);
     expect(r.shots().filter((s) => s.startsWith("gear"))).toHaveLength(0);
+    expect(r.pulses()).toEqual(["v10_shift", "v10_thump"]);
     expect(r.synth.getDiagnostics().heelToes).toBe(0);
+  });
+
+  it("every mode plays the V10 shift on an upshift (legacy, city, touring, sport, race)", () => {
+    for (const preset of ["legacy", "city", "touring", "sport", "race"]) {
+      seedAudioRandom(21);
+      const r = rig();
+      r.step({ preset, throttle: 0.5, load: 0.5, rpm: 3000, gear: 2 }, 10);
+      r.step({
+        preset,
+        throttle: 0.5,
+        load: 0.5,
+        rpm: 2200,
+        gear: 3,
+        shift: { seq: r.nextSeq(), from: 2, to: 3, dir: "up", reason: "upshift-schedule" },
+      });
+      r.step({ preset, throttle: 0.5, load: 0.5, rpm: 2250, gear: 3 }, 10);
+      expect(r.pulses(), preset).toEqual(["v10_shift", "v10_thump"]);
+    }
+  });
+
+  it("the V10 recovery bark lifts the note after the engagement, then lets go", () => {
+    seedAudioRandom(22);
+    const r = rig();
+    r.step({ throttle: 0.3, load: 0.3, rpm: 3000, gear: 2 }, 20);
+    const before = r.synth.getDiagnostics().mixLoads.on;
+    r.step({
+      throttle: 0.3,
+      load: 0.3,
+      rpm: 2200,
+      gear: 3,
+      shift: { seq: r.nextSeq(), from: 2, to: 3, dir: "up", reason: "upshift-schedule" },
+    });
+    r.step({ throttle: 0.3, load: 0.3, rpm: 2200, gear: 3 }, 2);
+    expect(r.synth.getDiagnostics().mixLoads.on).toBeGreaterThan(before + 0.02);
+    r.step({ throttle: 0.3, load: 0.3, rpm: 2200, gear: 3 }, 20);
+    expect(Math.abs(r.synth.getDiagnostics().mixLoads.on - before)).toBeLessThan(0.02);
+  });
+});
+
+describe("Coyote V8 race mode: Racing V10 rev overrun", () => {
+  it("limiter: the ignition-cut gate runs on the limiter in race mode only", () => {
+    for (const preset of ["race", "sport"]) {
+      seedAudioRandom(31);
+      const r = rig();
+      const on = { preset, throttle: 1, load: 1, rpm: 6100, gear: 2, speed: 25 };
+      r.step({ ...on, pt: { limiterActive: true, limiterCut: false, driverDemand: 1 } }, 6);
+      expect(r.synth.getDiagnostics().limiterGate, preset).toBe(preset === "race");
+      r.step({ ...on, pt: { limiterActive: false, driverDemand: 1 } }, 4);
+      expect(r.synth.getDiagnostics().limiterGate).toBe(false);
+    }
+  });
+
+  it("lift-off at speed: V10 overrun pops with a crackle tail, without the Drive+ extras", () => {
+    let fired: ReturnType<typeof rig> | null = null;
+    for (const seed of [41, 42, 43, 44, 45, 46]) {
+      seedAudioRandom(seed);
+      const r = rig();
+      r.synth.setAdvancedTransientsEnabled(false);
+      const race = { preset: "race", gear: 3, speed: 30 };
+      r.step({ ...race, throttle: 0.9, load: 0.9, rpm: 5200, pt: { driverDemand: 0.9 } }, 15);
+      r.step({ ...race, throttle: 0, load: 0, rpm: 5000, pt: { driverDemand: 0 } }, 15);
+      if (r.synth.getDiagnostics().racePopSequences > 0) {
+        fired = r;
+        break;
+      }
+    }
+    expect(fired, "a seed with a lift-off pop (60 %)").not.toBeNull();
+    const shots = fired!.shots();
+    const bangs = shots.filter((s) => s.startsWith("pop")).length;
+    const crackles = shots.filter((s) => s.startsWith("crackle")).length;
+    expect(bangs).toBeGreaterThanOrEqual(1);
+    expect(bangs).toBeLessThanOrEqual(3);
+    expect(crackles).toBeGreaterThanOrEqual(3);
+    expect(crackles).toBeLessThanOrEqual(7);
+  });
+
+  it("race downshifts under braking can pop (V10 rev-match pops); road modes never", () => {
+    const run = (preset: string, seed: number) => {
+      seedAudioRandom(seed);
+      const r = rig();
+      const brk = { preset, throttle: 0, load: 0, gear: 4, speed: 22, regen: 0.5 };
+      r.step({ ...brk, rpm: 2600, pt: { driverDemand: 0 } }, 15);
+      r.step({
+        ...brk,
+        rpm: 3200,
+        gear: 3,
+        shift: { seq: r.nextSeq(), from: 4, to: 3, dir: "down", reason: "downshift-schedule" },
+        pt: { shifting: true, shiftDirection: "down", shiftPhase: "torque_cut", driverDemand: 0 },
+      });
+      r.step(
+        {
+          ...brk,
+          rpm: 3200,
+          gear: 3,
+          pt: { shifting: true, shiftDirection: "down", driverDemand: 0 },
+        },
+        3,
+      );
+      r.step({ ...brk, rpm: 3000, gear: 3, pt: { driverDemand: 0 } }, 20);
+      return r.synth.getDiagnostics().racePopSequences;
+    };
+    const race = [51, 52, 53, 54, 55, 56].map((seed) => run("race", seed));
+    expect(race.some((n) => n > 0)).toBe(true);
+    expect([51, 52, 53].map((seed) => run("legacy", seed))).toEqual([0, 0, 0]);
+  });
+
+  it("hard race upshift near the limiter can crack (50 %), never at low rpm", () => {
+    const run = (rpm: number, seed: number) => {
+      seedAudioRandom(seed);
+      const r = rig();
+      const race = { preset: "race", throttle: 1, load: 1, gear: 2, speed: 25 };
+      r.step({ ...race, rpm, pt: { driverDemand: 1 } }, 10);
+      r.step({
+        ...race,
+        rpm,
+        gear: 3,
+        shift: { seq: r.nextSeq(), from: 2, to: 3, dir: "up", reason: "upshift-schedule" },
+        pt: { shifting: true, shiftDirection: "up", shiftPhase: "torque_cut", driverDemand: 1 },
+      });
+      r.step({ ...race, rpm: rpm * 0.7, gear: 3, pt: { driverDemand: 1 } }, 10);
+      return r.synth.getDiagnostics().racePopSequences;
+    };
+    const seeds = [61, 62, 63, 64, 65, 66, 67, 68];
+    expect(seeds.some((seed) => run(5900, seed) > 0)).toBe(true);
+    expect(seeds.map((seed) => run(3500, seed))).toEqual(seeds.map(() => 0));
   });
 });
 
@@ -201,7 +340,7 @@ describe("Coyote V8 transient rules (George's spec 4, 5, 8-12)", () => {
     expect(r.shots().filter((s) => s.startsWith("blip"))).toHaveLength(1);
   });
 
-  it("light-throttle upshifts are understated: no one-shot", () => {
+  it("light-throttle upshifts are understated: no bank one-shot (only the V10 shift)", () => {
     seedAudioRandom(5);
     const r = rig();
     for (let g = 1; g < 5; g += 1) {

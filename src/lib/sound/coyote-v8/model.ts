@@ -36,7 +36,7 @@ export interface CoyoteOneShotDef {
   gainDb: number;
 }
 
-export const COYOTE_BANK_URL = "/sample-packs/recorded/coyote-v2/coyote_v2_3_bank.m4a";
+export const COYOTE_BANK_URL = "/sample-packs/recorded/coyote-v2/coyote_v2_4_bank.m4a";
 export const COYOTE_BANK_VERSION: string = bankData.version;
 export const COYOTE_LOOPS: readonly CoyoteLoopDef[] = bankData.loops.map((l) => ({
   id: l.id,
@@ -204,14 +204,10 @@ export function coyoteLoadTargets(input: CoyoteLoadInput): CoyoteLoadWeights {
 
 /** Race-mode heel-and-toe downshift: throttle blip timing (seconds). */
 export const COYOTE_HEEL_TOE = {
-  /** Gear lever out (clutch in) right at the shift request. */
-  gearOutDelayS: 0.0,
-  /** Blip starts just after the lever leaves the gear. */
+  /** Blip starts just after the shift request (clutch in, out of gear). */
   blipDelayS: 0.015,
   blipRiseS: 0.05,
   blipFallTauS: 0.15,
-  /** Lever into the lower gear near the top of the blip; the clutch takes up drive. */
-  gearInDelayS: 0.115,
   /** Sound-side extra rpm flare on top of the powertrain rev-match (fraction). */
   rpmFlare: 0.05,
 } as const;
