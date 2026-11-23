@@ -21,6 +21,16 @@ holds a whole number of engine cycles and is exactly periodic (seamless loop). L
 written with copies of their own tail/head as margins so the loop window stays seamless
 even if a decoder shifts the audio by the AAC priming delay.
 
+coyote-v2.3 (cruise growl / continuity / race gearbox):
+  * cruise character above idle: unequal-primary pulse offsets, a fixed cylinder spread and
+    a softer X-pipe keep the cross-plane burble at steady part throttle (it used to fade
+    to an even, bland hum above ~1,500 rpm); the 700 / 950 idle points are unchanged
+  * points from 1,250 rpm share one variation sequence and crank-synchronous noise and hold
+    whole multiples of 16 cycles, so the runtime can crank-align neighbours: a cruise or
+    pull between two grid points is one engine, not two out-of-phase engines
+  * on-load band balance rises smoothly with rpm (no 3-8 kHz jump around 3,100 rpm)
+  * manual-gearbox one-shots for race-mode shifts (gear_out, gear_in1/2)
+
 Output: one mono AAC (.m4a) file with every loop and one-shot, plus a JSON map.
 Usage: python3 scripts/sound/coyote_v8_bank.py <out_dir> [--json PATH] [--wav-dir DIR]
   (repo: public/sample-packs/recorded/coyote-v2 --json src/lib/sound/coyote-v8/coyote-v2-bank.json)
@@ -42,7 +52,12 @@ BANK_OF = {c: (0 if c <= 4 else 1) for c in range(1, 9)}
 RPM_POINTS = [700, 950, 1250, 1650, 2150, 2750, 3450, 4250, 5150, 6100, 7000]
 LOADS = ["light", "on", "over"]
 MARGIN_S = 0.1  # > AAC priming (2112 samples) + transform spread (2048 samples)
-VERSION = "coyote-v2.2"
+VERSION = "coyote-v2.3"
+# New file name per bank version: a cached older bank can never pair with this map.
+BANK_FILE = "coyote_v2_3_bank.m4a"
+# unequal-primary arrival spread (s, 1 sigma) and how it narrows above 2,000 rpm
+MAN_SKEW_S = float(os.environ.get("COYOTE_MAN_SKEW", "0.00025"))
+MAN_SKEW_EXP = float(os.environ.get("COYOTE_MAN_EXP", "1.0"))
 
 
 # ----------------------------------------------------------------------------- helpers
@@ -130,6 +145,23 @@ class Exhaust:
         self.n = n
 
 
+CRANK_NOISE_RES_DEG = 0.1
+
+
+def crank_noise(crank: np.ndarray, var_period: int, variant: int) -> np.ndarray:
+    """White noise defined on crank angle (0.1 degree grid), periodic over var_period cycles."""
+    m = int(round(var_period * 720 / CRANK_NOISE_RES_DEG))
+    table = np.random.default_rng(9400 + variant).standard_normal(m)
+    pos = (crank - crank[0]) / CRANK_NOISE_RES_DEG
+    i = np.floor(pos).astype(np.int64)
+    fr = pos - i
+    a = table[i % m]
+    b = table[(i + 1) % m]
+    y = a + (b - a) * fr
+    # linear interpolation lowers the level between grid points: restore unit variance
+    return y / (np.std(y) + 1e-12)
+
+
 def engine_render(
     rpm: np.ndarray,
     load: np.ndarray,
@@ -143,11 +175,30 @@ def engine_render(
     crank: np.ndarray | None = None,
     extra_rasp: np.ndarray | None = None,
     phase0: float = 0.0,
+    cruise: float = 0.0,
+    var_period: int | None = None,
 ):
     """
     Render engine audio for per-sample rpm / load (0..1) / overrun (0..1, fuel cut).
     circular=True requires the crank phase to wrap exactly at n (constant rpm loops).
     Returns the mono mix (float64, not normalised) and the event times (samples).
+
+    cruise (0..1) keeps the cross-plane character off idle (bank loops above ~1,000 rpm).
+    Without it the per-cylinder variation fades with idle_lope and a steady cruise sums to
+    an almost even 90-degree pulse train: smooth, but a bland hum. With it:
+      * unequal-length primaries: each cylinder's pulse reaches the collector with its own
+        fixed *time* offset (a few tenths of a ms), so the uneven R/L pattern survives at
+        every rpm instead of shrinking with the firing interval
+      * a fixed cylinder-to-cylinder strength spread and a softer X-pipe crossover, so each
+        bank's own uneven pulse train stays audible
+      * a bit more growl drive at part load (the burble, not the rasp)
+    cruise=0 renders exactly as before (idle loop, startup and one-shots unchanged).
+
+    var_period (engine cycles): draw the cycle-to-cycle variation from one shared sequence
+    that repeats every var_period cycles, indexed by firing slot. Loops rendered this way
+    (with a whole multiple of var_period cycles) are the same engine performance at every
+    rpm point and load, so the runtime can crank-align neighbouring points and crossfade
+    them coherently (a timbre morph instead of two engines playing at once).
     """
     rng = np.random.default_rng(seed)
     jrng = np.random.default_rng(seed if jitter_seed is None else jitter_seed)
@@ -171,10 +222,19 @@ def engine_render(
     cyl_trim = 1 + (0.05 + 0.08 * idle_lope) * trim_rng.standard_normal(9)
     # fixed per-cylinder timing offsets (fraction of a firing interval): lumpier at idle
     cyl_skew = (0.006 + 0.03 * idle_lope) * trim_rng.standard_normal(9)
+    # unequal primaries (cruise character): fixed per-cylinder arrival offsets in seconds
+    man_rng = np.random.default_rng(2024)
+    man_skew_s = MAN_SKEW_S * man_rng.standard_normal(9)
+    man_trim = 1 + 0.10 * man_rng.standard_normal(9)
     exh = [np.zeros(n), np.zeros(n)]
     gate = np.zeros(n)  # rasp gate (turbulent blowdown)
     ing = np.zeros(n)  # intake suction envelope
     events = []
+    shared = None
+    if var_period:
+        m = var_period * 8
+        vr = np.random.default_rng(9300)
+        shared = (vr.standard_normal(m), vr.standard_normal(m))
     for j, s in enumerate(slots):
         pos = idx[j]
         i0 = int(pos)
@@ -187,13 +247,25 @@ def engine_render(
         # cycle-to-cycle variation: larger at idle and in fuel cut
         sig_a = 0.05 + 0.06 * idle_lope + 0.30 * ov + 0.03 * (1 - ld)
         sig_t = (0.004 + 0.008 * idle_lope + 0.02 * ov) * interval
-        jt = sig_t * jrng.standard_normal() + cyl_skew[cyl] * interval
+        if shared is not None:
+            si = int(s) % len(shared[0])
+            z_t, z_a = shared[0][si], shared[1][si]
+        else:
+            z_t = jrng.standard_normal()
+            z_a = None
+        jt = sig_t * z_t + cyl_skew[cyl] * interval
+        if cruise > 0:
+            jt += cruise * man_skew_s[cyl] * SR * (2000.0 / max(r, 2000.0)) ** MAN_SKEW_EXP
         pos_j = pos + jt
         if circular:
             pos_j %= n
         # combustion strength: load sets fuel; overrun has none (pumping only)
         strength = (0.32 + 0.68 * ld) * (1 - 0.86 * ov)
-        amp = strength * cyl_trim[cyl] * max(0.15, 1 + sig_a * rng.standard_normal())
+        if z_a is None:
+            z_a = rng.standard_normal()
+        amp = strength * cyl_trim[cyl] * max(0.15, 1 + sig_a * z_a)
+        if cruise > 0:
+            amp *= 1 + cruise * (man_trim[cyl] - 1)
         # exhaust gas pressure rises a little with rpm (more mass flow)
         amp *= (r / 2000.0) ** 0.22
         # blowdown pulse width: crank-angle based, clamped to physical time limits
@@ -244,7 +316,7 @@ def engine_render(
     ex = Exhaust(n)
     f = ex.f
     # X-pipe crossover right after the collectors: each tailpipe carries both banks
-    xp = 0.36
+    xp = 0.36 - 0.14 * cruise
     r_in = (1 - xp) * exh[0] + xp * exh[1]
     l_in = (1 - xp) * exh[1] + xp * exh[0]
     right = apply(r_in, ex.bank[0])
@@ -252,7 +324,7 @@ def engine_render(
     # the two tailpipes reach the listener with slightly different path lengths and levels
     d = int(0.0002 * SR)
     left = np.roll(left, d) if circular else np.concatenate([np.zeros(d), left[:-d]])
-    exhaust = right + 0.9 * left
+    exhaust = right + (0.9 - 0.12 * cruise) * left
     exhaust = apply(exhaust, ex.radiation)
 
     rpm_mean = float(np.mean(rpm))
@@ -264,15 +336,20 @@ def engine_render(
     # growl: mid band through soft saturation (drive with load)
     growl_in = apply(exhaust, bp_resp(f, 160, 1100, 1))
     s0 = np.sqrt(np.mean(growl_in ** 2)) + 1e-9
-    drive = (1.2 + 2.8 * load) * (1 - 0.6 * overrun)
+    drive = (1.2 + 2.8 * load + 1.3 * cruise * (1 - load)) * (1 - 0.6 * overrun)
     growl = np.tanh(drive * growl_in / (2.2 * s0)) * s0 * 2.2 / np.maximum(drive, 1e-3)
     growl = apply(growl, bp_resp(f, 120, 2400, 1))
     # rasp: turbulent noise gated by each blowdown pulse
-    noise = rng.standard_normal(n)
+    if var_period:
+        # crank-synchronous turbulence: the same noise waveform per crank angle at every rpm
+        # point and load, so neighbouring aligned loops stay coherent up into the rasp band
+        noise = crank_noise(crank, var_period, 1)
+    else:
+        noise = rng.standard_normal(n)
     rasp = apply(noise * gate, bp_resp(f, 900, 4200, 2) * peak_resp(f, 1900, 1.2, 4))
     rasp *= 1 + 0.6 * extra_rasp
     # intake: induction roar + intake runner resonance (open throttle only)
-    noise2 = rng.standard_normal(n)
+    noise2 = crank_noise(crank, var_period, 2) if var_period else rng.standard_normal(n)
     intake = apply(noise2 * ing, peak_resp(f, 420, 2.5, 8) * peak_resp(f, 1250, 3, 5) * bp_resp(f, 150, 3000, 2))
     # light mechanical tick (valvetrain / injectors) at 2x event rate, high band
     tick = apply(noise * (gate > 0) * 0.3, bp_resp(f, 3500, 8000, 2))
@@ -284,7 +361,7 @@ def engine_render(
 
     hi = min(1.0, rpm_mean / 6000.0)
     g_body = 1.0
-    g_growl = 0.55 + 0.35 * ld_mean
+    g_growl = 0.55 + 0.35 * ld_mean + 0.3 * cruise * (1 - ld_mean) * (1 - ov_mean)
     g_rasp = (0.06 + 0.20 * ld_mean * (0.4 + 0.6 * hi)) * (1 - 0.85 * ov_mean)
     g_intake = (0.03 + 0.14 * ld_mean * hi) * (1 - 0.8 * ov_mean)
     g_tick = 0.012
@@ -316,9 +393,12 @@ def engine_render(
 # used in or shipped with the bank. Points above ~3,100 rpm are extrapolated guidance.
 CAL_BANDS = [(20, 100), (100, 300), (300, 1000), (1000, 3000), (3000, 8000)]
 CAL_TARGETS = {
+    # on-load: the upper bands rise smoothly with rpm (coyote-v2.2 had a knot at 3,100 rpm
+    # that lifted 3-8 kHz by 8 dB within 600 rpm: the pull turned raspy right in the
+    # 3,000-4,000 rpm range and stopped sounding like the same engine)
     "on": [(700, [-6, -3, -6, -18, -30]), (2500, [-17, -4.5, -2.4, -12, -26]),
-           (3100, [-16, -4, -3, -9.5, -18]), (5000, [-18, -6, -3, -7.5, -15]),
-           (7000, [-20, -8, -3, -6.5, -13])],
+           (4000, [-17, -5, -2.8, -9.8, -20]), (5500, [-18.5, -6.5, -3, -8, -16.5]),
+           (7000, [-20, -8, -3, -6.8, -13.5])],
     "light": [(700, [-1.4, -6, -16, -33, -40]), (1200, [-4, -3, -9, -25, -37]),
               (2500, [-13, -3, -4, -20, -33]), (4000, [-15, -4, -3, -16, -28]),
               (7000, [-18, -6, -3, -12, -22])],
@@ -376,7 +456,22 @@ def target_rms_db(rpm: float, kind: str) -> float:
 def loop_cycles(rpm: float) -> int:
     t_cycle = 120.0 / rpm
     dur = 2.2 if rpm < 800 else 1.5 if rpm < 2000 else 1.25
+    if rpm >= ALIGNED_FROM_RPM:
+        return max(VAR_PERIOD, VAR_PERIOD * round(dur / t_cycle / VAR_PERIOD))
     return max(8, round(dur / t_cycle))
+
+
+# Points from here up are crank-alignable at runtime (shared variation, whole multiples of
+# VAR_PERIOD cycles). The 700 / 950 points (idle) are rendered exactly as in coyote-v2.2.
+ALIGNED_FROM_RPM = 1250
+VAR_PERIOD = 16
+
+
+def cruise_char(rpm_nom: float) -> float:
+    """Cross-plane cruise character: 0 at idle (700 / 950 unchanged), full from ~1,650 rpm."""
+    if rpm_nom < ALIGNED_FROM_RPM:
+        return 0.0
+    return float(os.environ.get("COYOTE_CRUISE", "1")) * min(1.0, max(0.0, (rpm_nom - 950) / 700))
 
 
 def render_loop(pi: int, rpm_nom: float, kind: str):
@@ -402,7 +497,8 @@ def render_loop(pi: int, rpm_nom: float, kind: str):
     # same jitter seed for all loads at one rpm point -> load variants stay phase-aligned
     sig, _ = engine_render(
         rpm, load, n, True, seed=7000 + pi * 10 + LOADS.index(kind), overrun=over,
-        idle_lope=lope, jitter_seed=9100 + pi, crank=crank,
+        idle_lope=lope, jitter_seed=9100 + pi, crank=crank, cruise=cruise_char(rpm_nom),
+        var_period=VAR_PERIOD if rpm_nom >= ALIGNED_FROM_RPM else None,
     )
     sig = calibrate(sig, rpm_nom, kind, True)
     sig *= 10 ** (target_rms_db(rpm_nom, kind) / 20) / rms(sig)
@@ -512,10 +608,71 @@ def oneshot(name: str):
         sig *= smoothstep(t / 0.0015) * (1 - smoothstep((t - 0.12) / 0.14))
         sig = sig / np.max(np.abs(sig)) * 10 ** (-9 / 20)
         return sig, 0
+    if name.startswith("gear"):
+        return gearbox_oneshot(name), 0
     raise ValueError(name)
 
 
-ONESHOTS = ["startup", "bark", "upshift1", "upshift2", "blip1", "blip2", "pop1", "pop2", "pop3"]
+def _modal(t: np.ndarray, modes, exc: np.ndarray) -> np.ndarray:
+    """Struck-metal ring: excitation through decaying modes (f Hz, decay s, gain)."""
+    out = np.zeros_like(t)
+    n = len(t)
+    for f0, dec, g in modes:
+        ir = np.sin(2 * np.pi * f0 * t) * np.exp(-t / dec)
+        out += g * np.fft.irfft(np.fft.rfft(exc, 2 * n) * np.fft.rfft(ir, 2 * n), 2 * n)[:n]
+    return out
+
+
+def gearbox_oneshot(name: str) -> np.ndarray:
+    """
+    Manual gearbox sounds heard from the cabin (race-mode shifts):
+      gear_out  lever pulls the sleeve out of gear: small detent click + light knock
+      gear_in1/2  lever into the next gear: brief synchro whirr, dog-ring clack (struck
+                steel), then the driveline taking up drive (low thunk through the floor)
+    Peak-normalised to -9 dBFS; the runtime sets the level against the engine.
+    """
+    rng = np.random.default_rng({"gear_out": 81, "gear_in1": 82, "gear_in2": 83}[name])
+    dur = 0.16 if name == "gear_out" else 0.34
+    n = int(dur * SR)
+    t = np.arange(n) / SR
+    f = freqs(n)
+    nz = rng.standard_normal(n)
+    if name == "gear_out":
+        exc = nz * np.exp(-t / 0.0012) * smoothstep(t / 0.0003)
+        click = _modal(t, [(2350, 0.012, 1.0), (3720, 0.009, 0.7), (5150, 0.006, 0.45)], exc)
+        knock = np.sin(2 * np.pi * 150 * t) * np.exp(-t / 0.018) * smoothstep(t / 0.002)
+        sig = click / (np.max(np.abs(click)) + 1e-9) * 0.75 + knock * 0.35
+    else:
+        v = int(name[-1])
+        t0 = 0.028 + 0.006 * v  # synchro whirr, then the dog clack
+        whirr = apply(nz, bp_resp(f, 2600 + 400 * v, 4200 + 300 * v, 2)) * smoothstep(t / 0.008) * (
+            1 - smoothstep((t - t0 + 0.004) / 0.008))
+        whirr *= 1 + 0.5 * np.sin(2 * np.pi * (180 + 40 * v) * t)
+        te = np.maximum(t - t0, 0)
+        exc = nz * np.exp(-te / 0.0009) * (t >= t0)
+        clack = _modal(t, [(1580 + 60 * v, 0.030, 1.0), (2870 + 90 * v, 0.022, 0.8), (4430, 0.015, 0.55),
+                           (6150, 0.009, 0.35), (910 + 40 * v, 0.045, 0.45)], exc)
+        td = np.maximum(t - t0 - 0.012, 0)
+        on_d = smoothstep((t - t0 - 0.012) / 0.004)
+        thunk = np.sin(2 * np.pi * (92 + 10 * v) * td) * np.exp(-td / 0.075) * on_d
+        thud = apply(nz * np.exp(-td / 0.03) * on_d, lp_resp(f, 320, 2))
+        sig = (
+            whirr / (rms(whirr[: int(t0 * SR)]) + 1e-9) * 0.05
+            + clack / (np.max(np.abs(clack)) + 1e-9) * 0.8
+            + thunk * 0.6
+            + thud / (np.max(np.abs(thud)) + 1e-9) * 0.3
+        )
+    # through the floor / cabin: a little low-pass, no DC
+    sig = apply(sig, hp_resp(f, 45, 2) * lp_resp(f, 7000, 2))
+    sig *= smoothstep(t / 0.0005) * (1 - smoothstep((t - (dur - 0.06)) / 0.06))
+    return sig / np.max(np.abs(sig)) * 10 ** (-9 / 20)
+
+
+ONESHOTS = ["startup", "bark", "upshift1", "upshift2", "blip1", "blip2", "pop1", "pop2", "pop3",
+            "gear_out", "gear_in1", "gear_in2"]
+# Keep the file gain of coyote-v2.2 so the unchanged idle loop plays at exactly the same
+# level (the gain only moves if the new bank would otherwise clip).
+FILE_GAIN_DB = -3.95
 
 
 def main():
@@ -530,11 +687,13 @@ def main():
     cursor = 0
     loops = []
     oneshots = []
+    raw = {}
     for pi, rpm_nom in enumerate(RPM_POINTS):
         for kind in LOADS:
             if rpm_nom < 800 and kind == "over":
                 continue
             sig, rpm_eff, ncyc = render_loop(pi, rpm_nom, kind)
+            raw[(rpm_nom, kind)] = (sig, rpm_eff, ncyc)
             n = len(sig)
             block = np.concatenate([sig[-margin:], sig, sig[:margin]])
             loops.append({
@@ -554,6 +713,7 @@ def main():
             if wav_dir:
                 write_wav(os.path.join(wav_dir, f"loop_{kind}_{rpm_nom}.wav"), np.tile(sig, 3))
             print(f"loop {kind:5s} {rpm_nom:5d} rpm_eff={rpm_eff:8.2f} n={n} cyc={ncyc} rms={db(rms(sig)):6.2f}")
+    gap_corr = gap_correlations(raw)
     loop_peak = max(float(np.max(np.abs(c[margin:-margin]))) for c in chunks)
     for name in ONESHOTS:
         sig, base = oneshot(name)
@@ -581,11 +741,11 @@ def main():
     full = np.concatenate(chunks)
     peak = float(np.max(np.abs(full)))
     # one global gain for the whole file: relative loop levels are preserved
-    file_gain = 10 ** (-1.5 / 20) / peak
+    file_gain = min(10 ** (FILE_GAIN_DB / 20), 10 ** (-0.5 / 20) / peak)
     full *= file_gain
-    wav_path = os.path.join(out_dir, "coyote_v2_bank.wav")
+    wav_path = os.path.join(out_dir, BANK_FILE.replace(".m4a", ".wav"))
     write_wav(wav_path, full)
-    m4a = os.path.join(out_dir, "coyote_v2_bank.m4a")
+    m4a = os.path.join(out_dir, BANK_FILE)
     subprocess.run([
         "ffmpeg", "-y", "-loglevel", "error", "-i", wav_path, "-c:a", "aac", "-aac_coder", "twoloop", "-b:a", os.environ.get("COYOTE_BITRATE", "72k"),
         "-ac", "1", "-ar", str(SR), "-movflags", "+faststart", m4a,
@@ -595,6 +755,14 @@ def main():
         "version": VERSION,
         "sampleRate": SR,
         "fileGainDb": round(db(file_gain), 3),
+        # loops from this rpm up are crank-alignable (shared variation, whole multiples of
+        # varPeriod cycles); the runtime aligns and crossfades them coherently
+        "alignedFromRpm": ALIGNED_FROM_RPM,
+        "varPeriod": VAR_PERIOD,
+        # broadband correlation of two crank-aligned neighbours at the gap's middle rpm
+        # (key: lower point). The runtime normalises its crossfade with it, so the level
+        # stays constant across the gap whether the pair is fully or partly coherent.
+        "gapCorrelation": gap_corr,
         "loops": loops,
         "oneshots": oneshots,
         "bytes": os.path.getsize(m4a),
@@ -606,6 +774,31 @@ def main():
         json.dump(meta, fh, indent=1)
         fh.write("\n")
     print("file gain dB", round(db(file_gain), 2), "duration", round(len(full) / SR, 2), "s", "bytes", meta["bytes"])
+
+
+def _at_crank(sig: np.ndarray, ncyc: int, cyc: np.ndarray) -> np.ndarray:
+    n = len(sig)
+    pos = np.mod(cyc, ncyc) / ncyc * n
+    i = np.floor(pos).astype(np.int64)
+    fr = pos - i
+    return sig[i % n] * (1 - fr) + sig[(i + 1) % n] * fr
+
+
+def gap_correlations(raw) -> dict:
+    out = {}
+    pts = [r for r in RPM_POINTS if r >= ALIGNED_FROM_RPM]
+    for a, b in zip(pts, pts[1:]):
+        mid = math.sqrt(a * b)
+        cyc = np.arange(SR) / SR * mid / 120.0 + 0.137
+        entry = {}
+        for kind in LOADS:
+            sa, _, na = raw[(a, kind)]
+            sb, _, nb = raw[(b, kind)]
+            xa = _at_crank(sa, na, cyc)
+            xb = _at_crank(sb, nb, cyc)
+            entry[kind] = round(float(np.sum(xa * xb) / math.sqrt(np.sum(xa * xa) * np.sum(xb * xb))), 3)
+        out[str(a)] = entry
+    return out
 
 
 def write_wav(path: str, x: np.ndarray):

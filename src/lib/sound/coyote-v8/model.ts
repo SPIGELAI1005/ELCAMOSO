@@ -7,12 +7,20 @@ import bankData from "./coyote-v2-bank.json";
 
 export type CoyoteLoad = "light" | "on" | "over";
 
+export interface CoyoteLoadWeights {
+  light: number;
+  on: number;
+  over: number;
+}
+
 export interface CoyoteLoopDef {
   id: string;
   load: CoyoteLoad;
   /** Exact RPM the loop was rendered at (whole engine cycles per loop). */
   rpm: number;
   rpmNominal: number;
+  /** Whole engine cycles in the loop (crank angle 0 at loopStart). */
+  cycles: number;
   /** Loop window inside the bank file, seconds. */
   start: number;
   end: number;
@@ -28,13 +36,14 @@ export interface CoyoteOneShotDef {
   gainDb: number;
 }
 
-export const COYOTE_BANK_URL = "/sample-packs/recorded/coyote-v2/coyote_v2_bank.m4a";
+export const COYOTE_BANK_URL = "/sample-packs/recorded/coyote-v2/coyote_v2_3_bank.m4a";
 export const COYOTE_BANK_VERSION: string = bankData.version;
 export const COYOTE_LOOPS: readonly CoyoteLoopDef[] = bankData.loops.map((l) => ({
   id: l.id,
   load: l.load as CoyoteLoad,
   rpm: l.rpm,
   rpmNominal: l.rpmNominal,
+  cycles: l.cycles,
   start: l.start,
   end: l.end,
 }));
@@ -52,6 +61,54 @@ export const COYOTE_RPM_POINTS: readonly number[] = [
 ].sort((a, b) => a - b);
 
 export const COYOTE_IDLE_RPM = COYOTE_RPM_POINTS[0] ?? 700;
+/**
+ * Points from this rpm up share one cycle-to-cycle variation sequence and hold whole
+ * multiples of it, so the runtime can start them crank-aligned: two neighbours then play
+ * the same engine cycle at the same crank angle and their crossfade is a coherent timbre
+ * morph. (Below it, the idle points keep their own lope and an unaligned equal-power blend,
+ * exactly as before.)
+ */
+export const COYOTE_ALIGNED_FROM_RPM: number =
+  (bankData as { alignedFromRpm?: number }).alignedFromRpm ?? Number.POSITIVE_INFINITY;
+
+const GAP_CORRELATION: Record<string, Record<string, number>> = (
+  bankData as { gapCorrelation?: Record<string, Record<string, number>> }
+).gapCorrelation ?? {};
+
+/**
+ * Correlation of two crank-aligned neighbours (gap starting at point index i) for a load
+ * mix. Aligned loops are strongly but not perfectly coherent (pipe resonances are fixed in
+ * Hz, so pitching two loops to one rpm moves them apart a little).
+ */
+export function coyoteGapCorrelation(
+  index: number,
+  loads: CoyoteLoadWeights = { light: 1, on: 0, over: 0 },
+): number {
+  const rpm = COYOTE_RPM_POINTS[index];
+  const g = rpm === undefined ? undefined : GAP_CORRELATION[String(rpm)];
+  if (!g) return 1;
+  const sum = loads.light + loads.on + loads.over || 1;
+  const rho =
+    ((g["light"] ?? 1) * loads.light + (g["on"] ?? 1) * loads.on + (g["over"] ?? 1) * loads.over) /
+    sum;
+  return clamp(rho, 0, 1);
+}
+
+/** True when a point is crank-aligned at runtime. */
+export function coyotePointAligned(pointIndex: number): boolean {
+  const rpm = COYOTE_RPM_POINTS[pointIndex];
+  return rpm !== undefined && rpm >= COYOTE_ALIGNED_FROM_RPM;
+}
+
+/**
+ * Loop offset (seconds from loopStart) for a shared crank clock in engine cycles:
+ * every aligned loop then sits on the same cycle and crank angle.
+ */
+export function coyoteAlignedOffset(loop: CoyoteLoopDef, crankCycles: number): number {
+  const cyc = Math.max(1, loop.cycles);
+  const within = ((crankCycles % cyc) + cyc) % cyc;
+  return (within / cyc) * (loop.end - loop.start);
+}
 export const COYOTE_MAX_RPM = COYOTE_RPM_POINTS[COYOTE_RPM_POINTS.length - 1] ?? 7000;
 
 /** Loop for an RPM point and load; the idle point has no overrun loop, so light stands in. */
@@ -75,15 +132,20 @@ const smoothstep = (v: number) => {
 
 export interface CoyotePointWeight {
   index: number;
-  /** Equal-power weight (neighbouring RPM loops are not phase-aligned). */
+  /**
+   * Amplitude weight. Between two crank-aligned points: a raised-cosine morph normalised to
+   * the pair's measured correlation rho (w1^2 + w2^2 + 2 rho w1 w2 = 1, constant level);
+   * in the idle range, where loops are not aligned, equal-power (squares sum to 1).
+   */
   weight: number;
 }
 
 /**
- * The two neighbouring RPM points around rpm with equal-power weights on a log-RPM axis.
- * Each loop then only needs a small playback-rate correction (grid ratio <= 1.36).
+ * The two neighbouring RPM points around rpm on a log-RPM axis. Each loop then only needs a
+ * small playback-rate correction (grid ratio <= 1.36). The crossfade spans the whole gap
+ * between two points, with zero slope at both ends (no corner at a grid point).
  */
-export function coyoteRpmWeights(rpm: number): CoyotePointWeight[] {
+export function coyoteRpmWeights(rpm: number, loads?: CoyoteLoadWeights): CoyotePointWeight[] {
   const pts = COYOTE_RPM_POINTS;
   const r = clamp(rpm, pts[0]!, pts[pts.length - 1]!);
   for (let i = 0; i < pts.length - 1; i += 1) {
@@ -93,6 +155,16 @@ export function coyoteRpmWeights(rpm: number): CoyotePointWeight[] {
       const x = Math.log(r / lo) / Math.log(hi / lo);
       if (x <= 0.0005) return [{ index: i, weight: 1 }];
       if (x >= 0.9995) return [{ index: i + 1, weight: 1 }];
+      if (coyotePointAligned(i) && coyotePointAligned(i + 1)) {
+        const b = Math.sin((x * Math.PI) / 2) ** 2;
+        const a = 1 - b;
+        const rho = coyoteGapCorrelation(i, loads);
+        const norm = Math.sqrt(a * a + b * b + 2 * rho * a * b);
+        return [
+          { index: i, weight: a / norm },
+          { index: i + 1, weight: b / norm },
+        ];
+      }
       return [
         { index: i, weight: Math.cos((x * Math.PI) / 2) },
         { index: i + 1, weight: Math.sin((x * Math.PI) / 2) },
@@ -100,12 +172,6 @@ export function coyoteRpmWeights(rpm: number): CoyotePointWeight[] {
     }
   }
   return [{ index: pts.length - 1, weight: 1 }];
-}
-
-export interface CoyoteLoadWeights {
-  light: number;
-  on: number;
-  over: number;
 }
 
 export interface CoyoteLoadInput {
@@ -125,13 +191,37 @@ export interface CoyoteLoadInput {
  */
 export function coyoteLoadTargets(input: CoyoteLoadInput): CoyoteLoadWeights {
   const demand = clamp(Math.max(input.throttle, input.load * 0.92));
-  const on = smoothstep((demand - 0.26) / 0.5);
+  // A wide ramp (0.24 -> 0.84): part throttle stays a blend of cruise and pull, so opening
+  // the throttle morphs the note instead of switching to a different-sounding loop.
+  const on = smoothstep((demand - 0.24) / 0.6);
   const rolling = smoothstep((input.speedMs - 1.2) / 2);
   const aboveIdle = smoothstep((input.rpm - 1050) / 500);
   const closed = smoothstep((0.14 - input.throttle) / 0.1);
   const braking = smoothstep(input.regen / 0.35);
   const over = clamp(rolling * aboveIdle * Math.max(closed, braking * 0.8) * (1 - on));
   return { light: (1 - over) * (1 - on), on: (1 - over) * on, over };
+}
+
+/** Race-mode heel-and-toe downshift: throttle blip timing (seconds). */
+export const COYOTE_HEEL_TOE = {
+  /** Gear lever out (clutch in) right at the shift request. */
+  gearOutDelayS: 0.0,
+  /** Blip starts just after the lever leaves the gear. */
+  blipDelayS: 0.015,
+  blipRiseS: 0.05,
+  blipFallTauS: 0.15,
+  /** Lever into the lower gear near the top of the blip; the clutch takes up drive. */
+  gearInDelayS: 0.115,
+  /** Sound-side extra rpm flare on top of the powertrain rev-match (fraction). */
+  rpmFlare: 0.05,
+} as const;
+
+/** Throttle-blip envelope 0..1, ts seconds after the blip starts (0 before / long after). */
+export function coyoteHeelToeEnvelope(ts: number): number {
+  const h = COYOTE_HEEL_TOE;
+  if (ts <= 0 || ts > 1.2) return 0;
+  if (ts < h.blipRiseS) return smoothstep(ts / h.blipRiseS);
+  return Math.exp(-(ts - h.blipRiseS) / h.blipFallTauS);
 }
 
 /** Playback rate for a loop rendered at loopRpm, clamped to keep pitch correction small. */

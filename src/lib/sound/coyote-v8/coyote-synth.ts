@@ -6,6 +6,9 @@
  * in a single AAC file. At runtime this only crossfades a few looping
  * AudioBufferSourceNodes: the two RPM points around the current RPM, each with its three
  * phase-aligned load variants, and nudges their playback rate by at most ~±18 %.
+ * Above the idle range the neighbouring points are started crank-aligned on one shared
+ * crank clock (all voices follow the same rpm automation), so a cruise between two grid
+ * points is one engine morphing in timbre, not two engines playing at once.
  * Looping sources keep playing through main-thread stalls, and one-shots are scheduled
  * with start(when), so a busy car browser does not starve the audio.
  */
@@ -18,11 +21,15 @@ import {
   COYOTE_IDLE_RPM,
   COYOTE_MAX_RPM,
   COYOTE_RPM_POINTS,
+  COYOTE_HEEL_TOE,
   blendCoyoteLoopSeams,
+  coyoteAlignedOffset,
+  coyoteHeelToeEnvelope,
   coyoteLoadTargets,
   coyoteLoopFor,
   coyoteLoopRate,
   coyoteOneShot,
+  coyotePointAligned,
   coyotePopCount,
   coyoteRpmWeights,
   type CoyoteLoad,
@@ -46,10 +53,86 @@ const POP_BRAKE_HOLD_S = 0.5;
 /** Startup only plays when the bank is ready this soon after the profile was built. */
 const STARTUP_WINDOW_S = 4;
 const LOADS: readonly CoyoteLoad[] = ["light", "on", "over"];
+/** Playback-rate glide (s): every loop voice gets the same rpm automation. */
+const RATE_TAU_S = 0.025;
+/** On-load smoothing (s): opening / closing. Long enough to morph, short enough to follow. */
+const ON_TAU_OPEN_S = 0.11;
+const ON_TAU_CLOSE_S = 0.22;
+
+/**
+ * Model of the rpm automation every loop voice follows, integrated to a crank position in
+ * engine cycles. A new aligned voice starts at the loop offset of this crank position, so
+ * it lands on the same cycle and crank angle as the voices already playing (they all
+ * advance at rpm / 120 cycles per second).
+ *
+ * playbackRate is a k-rate param: the browser holds one value per 128-frame render
+ * quantum, taken at the quantum's first frame. Glides and voice starts are therefore put
+ * on quantum boundaries, and the clock sums the same per-quantum staircase of the
+ * setTargetAtTime curve (a geometric series), so it matches what the sources really play.
+ */
+export class CoyoteCrankClock {
+  private t0: number;
+  private v0: number;
+  private target: number;
+  private tau: number;
+  private acc = 0;
+  readonly quantum: number;
+
+  constructor(rpm: number, t = 0, sampleRate = 48000) {
+    this.quantum = 128 / sampleRate;
+    this.t0 = this.snap(t);
+    this.v0 = rpm;
+    this.target = rpm;
+    this.tau = RATE_TAU_S;
+  }
+
+  /** First render-quantum boundary at or after t. */
+  snap(t: number): number {
+    return Math.ceil(t / this.quantum - 1e-6) * this.quantum;
+  }
+
+  private quanta(t: number): number {
+    return Math.max(0, Math.round((this.snap(t) - this.t0) / this.quantum));
+  }
+
+  /** Automated rpm held during the quantum that starts at (snapped) t. */
+  value(t: number): number {
+    const r = Math.exp(-this.quantum / this.tau);
+    return this.target + (this.v0 - this.target) * r ** this.quanta(t);
+  }
+
+  get targetRpm(): number {
+    return this.target;
+  }
+
+  /** Sum of rpm x quantum over the quanta from t0 up to (snapped) t. */
+  private integral(t: number): number {
+    const k = this.quanta(t);
+    const r = Math.exp(-this.quantum / this.tau);
+    const geo = r < 1 ? (1 - r ** k) / (1 - r) : k;
+    return this.quantum * (this.target * k + (this.v0 - this.target) * geo);
+  }
+
+  /** Crank position in engine cycles (720 degrees each) at the (snapped) time t. */
+  cycles(t: number): number {
+    return (this.acc + this.integral(t)) / 120;
+  }
+
+  /** A new glide towards rpm from the (snapped) time t: mirrors setTargetAtTime there. */
+  glide(t: number, rpm: number, tau = RATE_TAU_S) {
+    const at = Math.max(this.snap(t), this.t0);
+    this.acc += this.integral(at);
+    this.v0 = this.value(at);
+    this.t0 = at;
+    this.target = rpm;
+    this.tau = tau;
+  }
+}
 
 interface PointVoice {
   index: number;
   rpm: number;
+  aligned: boolean;
   sources: Record<CoyoteLoad, AudioBufferSourceNode>;
   loadGains: Record<CoyoteLoad, GainNode>;
   out: GainNode;
@@ -88,6 +171,12 @@ export interface CoyoteDiagnostics {
   recentOneShots: string[];
   rpm: number;
   loads: CoyoteLoadWeights;
+  /** Loads sent to the loops right now (smoothed loads + any heel-toe blip). */
+  mixLoads: CoyoteLoadWeights;
+  /** Race-mode heel-and-toe downshifts played. */
+  heelToes: number;
+  /** Active points that are crank-aligned. */
+  alignedPoints: number[];
 }
 
 function setParam(
@@ -136,6 +225,14 @@ export class CoyoteV8Synth {
   private startupAllowed = true;
   private live = new Set<AudioScheduledSourceNode>();
   private lastShiftSeq = -1;
+  private clock = new CoyoteCrankClock(COYOTE_IDLE_RPM);
+  private clockReady = false;
+  /** Race-mode heel-and-toe blip: audio time the shift began, and its strength. */
+  private heelToeAt: number | null = null;
+  private heelToeAmt = 0;
+  private heelToes = 0;
+  /** Loads actually sent to the loops (smoothed loads + heel-toe blip). */
+  private mixLoads: CoyoteLoadWeights = { light: 1, on: 0, over: 0 };
   readonly ready: Promise<void>;
   private resolveReady: () => void = () => undefined;
 
@@ -203,6 +300,11 @@ export class CoyoteV8Synth {
       recentOneShots: [...this.shotLog],
       rpm: this.rpm,
       loads: { ...this.loads },
+      mixLoads: { ...this.mixLoads },
+      heelToes: this.heelToes,
+      alignedPoints: [...this.points.values()]
+        .filter((v) => v.aligned)
+        .map((v) => COYOTE_RPM_POINTS[v.index] ?? 0),
     };
   }
 
@@ -253,8 +355,7 @@ export class CoyoteV8Synth {
     const ctx = this.ctx;
     if (!ctx || this.disposed) return;
     const rawRpm = state.rpm > 0 ? state.rpm : COYOTE_IDLE_RPM;
-    const rpm = Math.min(COYOTE_MAX_RPM * 1.04, Math.max(COYOTE_IDLE_RPM * 0.9, rawRpm));
-    this.rpm = rpm;
+    let rpm = Math.min(COYOTE_MAX_RPM * 1.04, Math.max(COYOTE_IDLE_RPM * 0.9, rawRpm));
     const shiftScale = state.powertrain?.shiftLoadMultiplier ?? 1;
     const target = coyoteLoadTargets({
       rpm,
@@ -263,18 +364,37 @@ export class CoyoteV8Synth {
       speedMs: state.speed,
       regen: state.regen,
     });
-    // Asymmetric smoothing: throttle opens fast, closes a little slower.
+    // Asymmetric smoothing: throttle opens a little faster than it closes. Both are long
+    // enough that a change of pedal morphs the note (no switch to "another engine").
     const dt = this.lastState
       ? Math.min(0.25, Math.max(0, (state.timestamp - this.lastState.timestamp) / 1000))
       : 0.016;
     const k = (tau: number) => 1 - Math.exp(-dt / tau);
     const on =
-      this.loads.on + (target.on - this.loads.on) * k(target.on > this.loads.on ? 0.05 : 0.14);
+      this.loads.on +
+      (target.on - this.loads.on) * k(target.on > this.loads.on ? ON_TAU_OPEN_S : ON_TAU_CLOSE_S);
     const over =
       this.loads.over +
       (target.over - this.loads.over) * k(target.over > this.loads.over ? 0.12 : 0.08);
     const sum = Math.max(1e-6, on + over + Math.max(0, 1 - on - over));
     this.loads = { on: on / sum, over: over / sum, light: Math.max(0, 1 - on - over) / sum };
+
+    // Race-mode heel-and-toe: the blip opens the throttle (overrun -> on-load morph on the
+    // same phase-aligned loops) and flares the rpm a little past the powertrain's rev-match.
+    const blip =
+      this.heelToeAt === null
+        ? 0
+        : this.heelToeAmt * coyoteHeelToeEnvelope(t - this.heelToeAt - COYOTE_HEEL_TOE.blipDelayS);
+    if (this.heelToeAt !== null && t - this.heelToeAt > 1.3) this.heelToeAt = null;
+    if (blip > 0.001) {
+      rpm = Math.min(COYOTE_MAX_RPM * 1.04, rpm * (1 + COYOTE_HEEL_TOE.rpmFlare * blip));
+      const onMix = Math.max(this.loads.on, blip);
+      const overMix = this.loads.over * (1 - blip);
+      this.mixLoads = { on: onMix, over: overMix, light: Math.max(0, 1 - onMix - overMix) };
+    } else {
+      this.mixLoads = this.loads;
+    }
+    this.rpm = rpm;
 
     if (this.buffer) this.updateLoops(rpm, t);
     else if (this.fallback) this.updateFallback(rpm, t);
@@ -282,23 +402,40 @@ export class CoyoteV8Synth {
     this.lastState = state;
   }
 
+  /** Playback rate of a voice for an automated rpm (aligned voices are never clamped). */
+  private rateFor(voice: { rpm: number; aligned: boolean }, rpm: number) {
+    return voice.aligned ? rpm / voice.rpm : coyoteLoopRate(rpm, voice.rpm);
+  }
+
   private updateLoops(rpm: number, t: number) {
-    const weights = coyoteRpmWeights(rpm);
+    const ctx = this.ctx!;
+    if (!this.clockReady) {
+      this.clock = new CoyoteCrankClock(this.clock.targetRpm, ctx.currentTime, ctx.sampleRate);
+      this.clockReady = true;
+    }
+    const at = this.clock.snap(Math.max(t, ctx.currentTime));
+    // One rpm automation for every voice (and the crank clock that mirrors it), so aligned
+    // voices advance in lockstep. Retarget only on a real change.
+    const retarget = Math.abs(rpm - this.clock.targetRpm) > this.clock.targetRpm * 0.0008;
+    if (retarget) this.clock.glide(at, rpm, RATE_TAU_S);
+    const weights = coyoteRpmWeights(rpm, this.mixLoads);
     const wanted = new Map(weights.map((w) => [w.index, w.weight]));
     for (const w of weights) {
-      if (!this.points.has(w.index) && w.weight > 0.002) this.startPoint(w.index, t);
+      if (!this.points.has(w.index) && w.weight > 0.002) this.startPoint(w.index, at);
     }
     for (const [index, voice] of this.points) {
       const weight = wanted.get(index) ?? 0;
       voice.lastWeight = setParam(voice.out.gain, weight, t, 0.04, voice.lastWeight, 0.004);
-      const rate = coyoteLoopRate(rpm, voice.rpm);
-      if (Math.abs(rate - voice.lastRate) > 0.0015) {
-        for (const load of LOADS) voice.sources[load].playbackRate.setTargetAtTime(rate, t, 0.025);
+      if (retarget) {
+        const rate = this.rateFor(voice, rpm);
+        for (const load of LOADS) {
+          voice.sources[load].playbackRate.setTargetAtTime(rate, at, RATE_TAU_S);
+        }
         voice.lastRate = rate;
       }
       for (const load of LOADS) {
         const g = voice.loadGains[load];
-        const v = this.loads[load];
+        const v = this.mixLoads[load];
         const last = (g as GainNode & { __last?: number }).__last ?? -1;
         (g as GainNode & { __last?: number }).__last = setParam(g.gain, v, t, 0.03, last, 0.004);
       }
@@ -322,11 +459,18 @@ export class CoyoteV8Synth {
     const sources = {} as Record<CoyoteLoad, AudioBufferSourceNode>;
     const loadGains = {} as Record<CoyoteLoad, GainNode>;
     const ref = coyoteLoopFor(index, "light")!;
+    const aligned = coyotePointAligned(index);
+    const at = Math.max(t, ctx.currentTime);
     // Same loop length and timing for all three loads of a point: start them on one
     // offset so they stay sample-aligned (a load change is a timbre morph, not a doubling).
-    const phase = audioRandom() * (ref.end - ref.start);
-    const rate = coyoteLoopRate(this.rpm, ref.rpm);
-    const at = Math.max(t, ctx.currentTime);
+    // Aligned points start on the shared crank clock; idle points keep a random phase.
+    const phase = aligned
+      ? coyoteAlignedOffset(ref, this.clock.cycles(at))
+      : audioRandom() * (ref.end - ref.start);
+    const voiceRef = { rpm: ref.rpm, aligned };
+    // Join the glide already running on the other voices: same value now, same target.
+    const rateNow = this.rateFor(voiceRef, this.clock.value(at));
+    const rate = this.rateFor(voiceRef, this.clock.targetRpm);
     for (const load of LOADS) {
       const def = coyoteLoopFor(index, load)!;
       const src = ctx.createBufferSource();
@@ -334,10 +478,11 @@ export class CoyoteV8Synth {
       src.loop = true;
       src.loopStart = def.start;
       src.loopEnd = def.end;
-      src.playbackRate.value = rate;
+      src.playbackRate.value = rateNow;
+      if (Math.abs(rate - rateNow) > 1e-6) src.playbackRate.setTargetAtTime(rate, at, RATE_TAU_S);
       const g = ctx.createGain();
-      g.gain.value = this.loads[load];
-      (g as GainNode & { __last?: number }).__last = this.loads[load];
+      g.gain.value = this.mixLoads[load];
+      (g as GainNode & { __last?: number }).__last = this.mixLoads[load];
       src.connect(g);
       g.connect(out);
       src.start(at, def.start + phase * ((def.end - def.start) / (ref.end - ref.start)));
@@ -347,6 +492,7 @@ export class CoyoteV8Synth {
     this.points.set(index, {
       index,
       rpm: ref.rpm,
+      aligned,
       sources,
       loadGains,
       out,
@@ -417,7 +563,11 @@ export class CoyoteV8Synth {
     }
     this.lastGear = state.gear;
     if (dir) this.lastShiftAt = t;
-    if (dir && t >= this.shiftCooldownUntil && this.shiftIntensity > 0) {
+    const race = state.powertrain?.diagnostics?.shiftMapPreset === "race";
+    if (dir && t >= this.shiftCooldownUntil && this.shiftIntensity > 0 && race) {
+      this.raceShift(dir, state, fromGear, reason, rpm, t);
+      this.shiftCooldownUntil = t + 0.3;
+    } else if (dir && t >= this.shiftCooldownUntil && this.shiftIntensity > 0) {
       const intensity = this.shiftIntensity;
       const onLoad = this.loads.on;
       if (dir === "up") {
@@ -502,6 +652,42 @@ export class CoyoteV8Synth {
     } else if (state.throttle >= 0.1) {
       this.liftAt = null;
     }
+  }
+
+  /**
+   * Race mode, like the Racing V10: a manual gearbox with heel-and-toe downshifts.
+   * Down: lever out (click), throttle blip on the loops (rpm flares on top of the
+   * powertrain's rev-match), lever into the lower gear near the top of the blip (dog clack
+   * + driveline thunk). A kickdown (pedal already open) needs no blip, only the gearbox.
+   * Up: the ignition-cut dip as in every mode, plus the lever going into the next gear.
+   * Gearbox sounds follow the shift-sound setting (0 mutes), not the Drive+ extras switch.
+   */
+  private raceShift(
+    dir: "up" | "down",
+    state: DriveState,
+    fromGear: number,
+    reason: string,
+    rpm: number,
+    t: number,
+  ) {
+    const intensity = Math.min(1.2, this.shiftIntensity);
+    const onLoad = this.loads.on;
+    const gearIn = audioRandom() < 0.5 ? "gear_in1" : "gear_in2";
+    if (dir === "up") {
+      this.dipLoops(t, (0.14 + 0.36 * onLoad) * Math.min(1, intensity), 0.06 + 0.05 * onLoad);
+      this.fireOneShot(gearIn, t + 0.055, 1, 0.42 * intensity, this.shotBus);
+      return;
+    }
+    if (fromGear < 2 || state.speed < 1) return;
+    const h = COYOTE_HEEL_TOE;
+    this.fireOneShot("gear_out", t + h.gearOutDelayS, 1, 0.36 * intensity, this.shotBus);
+    const kickdown = reason === "kickdown" || state.throttle > 0.3 || onLoad > 0.35;
+    if (!kickdown && rpm > 900) {
+      this.heelToeAt = t;
+      this.heelToeAmt = Math.min(0.95, 0.85 * Math.max(0.6, intensity));
+      this.heelToes += 1;
+    }
+    this.fireOneShot(gearIn, t + h.gearInDelayS, 1, 0.68 * intensity, this.shotBus);
   }
 
   /** Stop scheduled / still-playing overrun pops and drop unplayed ones from the log. */

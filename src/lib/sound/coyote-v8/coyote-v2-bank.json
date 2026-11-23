@@ -1,7 +1,51 @@
 {
- "version": "coyote-v2.2",
+ "version": "coyote-v2.3",
  "sampleRate": 48000,
  "fileGainDb": -3.95,
+ "alignedFromRpm": 1250,
+ "varPeriod": 16,
+ "gapCorrelation": {
+  "1250": {
+   "light": 0.756,
+   "on": 0.478,
+   "over": 0.629
+  },
+  "1650": {
+   "light": 0.786,
+   "on": 0.647,
+   "over": 0.869
+  },
+  "2150": {
+   "light": 0.621,
+   "on": 0.327,
+   "over": 0.822
+  },
+  "2750": {
+   "light": 0.874,
+   "on": 0.755,
+   "over": 0.89
+  },
+  "3450": {
+   "light": 0.799,
+   "on": 0.652,
+   "over": 0.88
+  },
+  "4250": {
+   "light": 0.768,
+   "on": 0.615,
+   "over": 0.792
+  },
+  "5150": {
+   "light": 0.88,
+   "on": 0.751,
+   "over": 0.913
+  },
+  "6100": {
+   "light": 0.926,
+   "on": 0.753,
+   "over": 0.92
+  }
+ },
  "loops": [
   {
    "id": "light_700",
@@ -73,7 +117,7 @@
    "end": 11.640541666666667,
    "frames": 73728,
    "rmsDb": -16.99,
-   "peakDb": -8.92
+   "peakDb": -9.65
   },
   {
    "id": "on_1250",
@@ -85,7 +129,7 @@
    "end": 13.376541666666666,
    "frames": 73728,
    "rmsDb": -13.36,
-   "peakDb": -3.52
+   "peakDb": -3.17
   },
   {
    "id": "over_1250",
@@ -97,223 +141,223 @@
    "end": 15.112541666666667,
    "frames": 73728,
    "rmsDb": -23.74,
-   "peakDb": -10.31
+   "peakDb": -11.18
   },
   {
    "id": "light_1650",
    "load": "light",
-   "rpm": 1649.98,
+   "rpm": 1649.957,
    "rpmNominal": 1650,
-   "cycles": 21,
+   "cycles": 16,
    "start": 15.312541666666666,
-   "end": 16.839833333333335,
-   "frames": 73310,
+   "end": 16.476208333333332,
+   "frames": 55856,
    "rmsDb": -16.51,
-   "peakDb": -7.1
+   "peakDb": -7.33
   },
   {
    "id": "on_1650",
    "load": "on",
-   "rpm": 1649.98,
+   "rpm": 1649.957,
    "rpmNominal": 1650,
-   "cycles": 21,
-   "start": 17.039833333333334,
-   "end": 18.567125,
-   "frames": 73310,
+   "cycles": 16,
+   "start": 16.676208333333335,
+   "end": 17.839875,
+   "frames": 55856,
    "rmsDb": -12.58,
-   "peakDb": -2.52
+   "peakDb": -3.0
   },
   {
    "id": "over_1650",
    "load": "over",
-   "rpm": 1649.98,
+   "rpm": 1649.957,
    "rpmNominal": 1650,
-   "cycles": 21,
-   "start": 18.767125,
-   "end": 20.294416666666667,
-   "frames": 73310,
+   "cycles": 16,
+   "start": 18.039875,
+   "end": 19.203541666666666,
+   "frames": 55856,
    "rmsDb": -23.14,
-   "peakDb": -13.14
+   "peakDb": -13.13
   },
   {
    "id": "light_2150",
    "load": "light",
-   "rpm": 2149.983,
+   "rpm": 2149.956,
    "rpmNominal": 2150,
-   "cycles": 22,
-   "start": 20.494416666666666,
-   "end": 21.722333333333335,
-   "frames": 58940,
+   "cycles": 16,
+   "start": 19.403541666666666,
+   "end": 20.296583333333334,
+   "frames": 42866,
    "rmsDb": -16.05,
-   "peakDb": -6.14
+   "peakDb": -7.78
   },
   {
    "id": "on_2150",
    "load": "on",
-   "rpm": 2149.983,
+   "rpm": 2149.956,
    "rpmNominal": 2150,
-   "cycles": 22,
-   "start": 21.922333333333334,
-   "end": 23.15025,
-   "frames": 58940,
+   "cycles": 16,
+   "start": 20.496583333333334,
+   "end": 21.389625,
+   "frames": 42866,
    "rmsDb": -11.83,
-   "peakDb": -2.5
+   "peakDb": -2.39
   },
   {
    "id": "over_2150",
    "load": "over",
-   "rpm": 2149.983,
+   "rpm": 2149.956,
    "rpmNominal": 2150,
-   "cycles": 22,
-   "start": 23.35025,
-   "end": 24.578166666666668,
-   "frames": 58940,
+   "cycles": 16,
+   "start": 21.589625,
+   "end": 22.482666666666667,
+   "frames": 42866,
    "rmsDb": -22.56,
-   "peakDb": -12.15
+   "peakDb": -12.41
   },
   {
    "id": "light_2750",
    "load": "light",
-   "rpm": 2749.992,
+   "rpm": 2749.978,
    "rpmNominal": 2750,
-   "cycles": 29,
-   "start": 24.778166666666667,
-   "end": 26.043625,
-   "frames": 60742,
+   "cycles": 32,
+   "start": 22.682666666666666,
+   "end": 24.079041666666665,
+   "frames": 67026,
    "rmsDb": -15.62,
-   "peakDb": -6.46
+   "peakDb": -7.16
   },
   {
    "id": "on_2750",
    "load": "on",
-   "rpm": 2749.992,
+   "rpm": 2749.978,
    "rpmNominal": 2750,
-   "cycles": 29,
-   "start": 26.243625,
-   "end": 27.509083333333333,
-   "frames": 60742,
+   "cycles": 32,
+   "start": 24.279041666666668,
+   "end": 25.675416666666667,
+   "frames": 67026,
    "rmsDb": -11.14,
-   "peakDb": -2.3
+   "peakDb": -1.49
   },
   {
    "id": "over_2750",
    "load": "over",
-   "rpm": 2749.992,
+   "rpm": 2749.978,
    "rpmNominal": 2750,
-   "cycles": 29,
-   "start": 27.709083333333332,
-   "end": 28.974541666666667,
-   "frames": 60742,
+   "cycles": 32,
+   "start": 25.875416666666666,
+   "end": 27.271791666666665,
+   "frames": 67026,
    "rmsDb": -22.03,
-   "peakDb": -11.31
+   "peakDb": -11.66
   },
   {
    "id": "light_3450",
    "load": "light",
-   "rpm": 3450.02,
+   "rpm": 3450.006,
    "rpmNominal": 3450,
-   "cycles": 36,
-   "start": 29.174541666666666,
-   "end": 30.426708333333334,
-   "frames": 60104,
+   "cycles": 32,
+   "start": 27.471791666666668,
+   "end": 28.584833333333332,
+   "frames": 53426,
    "rmsDb": -15.23,
-   "peakDb": -5.22
+   "peakDb": -6.85
   },
   {
    "id": "on_3450",
    "load": "on",
-   "rpm": 3450.02,
+   "rpm": 3450.006,
    "rpmNominal": 3450,
-   "cycles": 36,
-   "start": 30.626708333333333,
-   "end": 31.878875,
-   "frames": 60104,
+   "cycles": 32,
+   "start": 28.784833333333335,
+   "end": 29.897875,
+   "frames": 53426,
    "rmsDb": -10.5,
-   "peakDb": -0.05
+   "peakDb": -1.05
   },
   {
    "id": "over_3450",
    "load": "over",
-   "rpm": 3450.02,
+   "rpm": 3450.006,
    "rpmNominal": 3450,
-   "cycles": 36,
-   "start": 32.078875,
-   "end": 33.331041666666664,
-   "frames": 60104,
+   "cycles": 32,
+   "start": 30.097875,
+   "end": 31.210916666666666,
+   "frames": 53426,
    "rmsDb": -21.54,
-   "peakDb": -11.76
+   "peakDb": -11.82
   },
   {
    "id": "light_4250",
    "load": "light",
-   "rpm": 4249.925,
+   "rpm": 4250.008,
    "rpmNominal": 4250,
-   "cycles": 44,
-   "start": 33.53104166666667,
-   "end": 34.77341666666667,
-   "frames": 59634,
+   "cycles": 48,
+   "start": 31.410916666666665,
+   "end": 32.76620833333333,
+   "frames": 65054,
    "rmsDb": -14.87,
-   "peakDb": -3.05
+   "peakDb": -5.9
   },
   {
    "id": "on_4250",
    "load": "on",
-   "rpm": 4249.925,
+   "rpm": 4250.008,
    "rpmNominal": 4250,
-   "cycles": 44,
-   "start": 34.973416666666665,
-   "end": 36.21579166666667,
-   "frames": 59634,
+   "cycles": 48,
+   "start": 32.966208333333334,
+   "end": 34.3215,
+   "frames": 65054,
    "rmsDb": -9.91,
-   "peakDb": 0.42
+   "peakDb": 1.56
   },
   {
    "id": "over_4250",
    "load": "over",
-   "rpm": 4249.925,
+   "rpm": 4250.008,
    "rpmNominal": 4250,
-   "cycles": 44,
-   "start": 36.415791666666664,
-   "end": 37.658166666666666,
-   "frames": 59634,
+   "cycles": 48,
+   "start": 34.5215,
+   "end": 35.87679166666667,
+   "frames": 65054,
    "rmsDb": -21.08,
-   "peakDb": -11.94
+   "peakDb": -12.02
   },
   {
    "id": "light_5150",
    "load": "light",
-   "rpm": 5150.01,
+   "rpm": 5149.946,
    "rpmNominal": 5150,
-   "cycles": 54,
-   "start": 37.85816666666667,
-   "end": 39.116416666666666,
-   "frames": 60396,
+   "cycles": 48,
+   "start": 36.076791666666665,
+   "end": 37.19525,
+   "frames": 53686,
    "rmsDb": -14.53,
-   "peakDb": -2.33
+   "peakDb": -6.59
   },
   {
    "id": "on_5150",
    "load": "on",
-   "rpm": 5150.01,
+   "rpm": 5149.946,
    "rpmNominal": 5150,
-   "cycles": 54,
-   "start": 39.31641666666667,
-   "end": 40.574666666666666,
-   "frames": 60396,
+   "cycles": 48,
+   "start": 37.39525,
+   "end": 38.513708333333334,
+   "frames": 53686,
    "rmsDb": -9.37,
-   "peakDb": 2.45
+   "peakDb": 0.44
   },
   {
    "id": "over_5150",
    "load": "over",
-   "rpm": 5150.01,
+   "rpm": 5149.946,
    "rpmNominal": 5150,
-   "cycles": 54,
-   "start": 40.77466666666667,
-   "end": 42.032916666666665,
-   "frames": 60396,
+   "cycles": 48,
+   "start": 38.71370833333334,
+   "end": 39.832166666666666,
+   "frames": 53686,
    "rmsDb": -20.67,
-   "peakDb": -9.48
+   "peakDb": -11.07
   },
   {
    "id": "light_6100",
@@ -321,11 +365,11 @@
    "rpm": 6099.878,
    "rpmNominal": 6100,
    "cycles": 64,
-   "start": 42.23291666666667,
-   "end": 43.491958333333336,
+   "start": 40.03216666666667,
+   "end": 41.29120833333333,
    "frames": 60434,
    "rmsDb": -14.24,
-   "peakDb": -4.93
+   "peakDb": -6.28
   },
   {
    "id": "on_6100",
@@ -333,11 +377,11 @@
    "rpm": 6099.878,
    "rpmNominal": 6100,
    "cycles": 64,
-   "start": 43.69195833333333,
-   "end": 44.951,
+   "start": 41.49120833333333,
+   "end": 42.75025,
    "frames": 60434,
    "rmsDb": -8.89,
-   "peakDb": 1.52
+   "peakDb": 1.47
   },
   {
    "id": "over_6100",
@@ -345,54 +389,54 @@
    "rpm": 6099.878,
    "rpmNominal": 6100,
    "cycles": 64,
-   "start": 45.151,
-   "end": 46.410041666666665,
+   "start": 42.95025,
+   "end": 44.209291666666665,
    "frames": 60434,
    "rmsDb": -20.3,
-   "peakDb": -10.12
+   "peakDb": -11.11
   },
   {
    "id": "light_7000",
    "load": "light",
-   "rpm": 6999.834,
+   "rpm": 6999.848,
    "rpmNominal": 7000,
-   "cycles": 73,
-   "start": 46.61004166666667,
-   "end": 47.8615,
-   "frames": 60070,
+   "cycles": 80,
+   "start": 44.40929166666667,
+   "end": 45.78075,
+   "frames": 65830,
    "rmsDb": -14.0,
-   "peakDb": -4.01
+   "peakDb": -4.9
   },
   {
    "id": "on_7000",
    "load": "on",
-   "rpm": 6999.834,
+   "rpm": 6999.848,
    "rpmNominal": 7000,
-   "cycles": 73,
-   "start": 48.0615,
-   "end": 49.312958333333334,
-   "frames": 60070,
+   "cycles": 80,
+   "start": 45.98075,
+   "end": 47.35220833333333,
+   "frames": 65830,
    "rmsDb": -8.5,
-   "peakDb": 2.33
+   "peakDb": 2.5
   },
   {
    "id": "over_7000",
    "load": "over",
-   "rpm": 6999.834,
+   "rpm": 6999.848,
    "rpmNominal": 7000,
-   "cycles": 73,
-   "start": 49.51295833333333,
-   "end": 50.76441666666667,
-   "frames": 60070,
+   "cycles": 80,
+   "start": 47.55220833333333,
+   "end": 48.92366666666667,
+   "frames": 65830,
    "rmsDb": -20.0,
-   "peakDb": -9.86
+   "peakDb": -11.1
   }
  ],
  "oneshots": [
   {
    "id": "startup",
    "rpm": 700,
-   "start": 50.964416666666665,
+   "start": 49.123666666666665,
    "duration": 3.2,
    "gainDb": 0.0,
    "peakDb": -6.24
@@ -400,7 +444,7 @@
   {
    "id": "bark",
    "rpm": 2000,
-   "start": 54.36441666666666,
+   "start": 52.523666666666664,
    "duration": 0.9,
    "gainDb": 0.0,
    "peakDb": -1.56
@@ -408,39 +452,39 @@
   {
    "id": "upshift1",
    "rpm": 4000,
-   "start": 55.464416666666665,
+   "start": 53.623666666666665,
    "duration": 0.55,
    "gainDb": 0.0,
-   "peakDb": 0.7
+   "peakDb": -0.99
   },
   {
    "id": "upshift2",
    "rpm": 4000,
-   "start": 56.214416666666665,
+   "start": 54.373666666666665,
    "duration": 0.55,
    "gainDb": 0.0,
-   "peakDb": 0.06
+   "peakDb": -0.57
   },
   {
    "id": "blip1",
    "rpm": 2000,
-   "start": 56.964416666666665,
+   "start": 55.123666666666665,
+   "duration": 0.7,
+   "gainDb": 0.0,
+   "peakDb": -1.04
+  },
+  {
+   "id": "blip2",
+   "rpm": 2000,
+   "start": 56.023666666666664,
    "duration": 0.7,
    "gainDb": 0.0,
    "peakDb": -0.58
   },
   {
-   "id": "blip2",
-   "rpm": 2000,
-   "start": 57.86441666666666,
-   "duration": 0.7,
-   "gainDb": 0.0,
-   "peakDb": 0.13
-  },
-  {
    "id": "pop1",
    "rpm": 0,
-   "start": 58.76441666666667,
+   "start": 56.92366666666667,
    "duration": 0.26,
    "gainDb": 0.0,
    "peakDb": -9.0
@@ -448,7 +492,7 @@
   {
    "id": "pop2",
    "rpm": 0,
-   "start": 59.22441666666667,
+   "start": 57.38366666666667,
    "duration": 0.26,
    "gainDb": 0.0,
    "peakDb": -9.0
@@ -456,11 +500,35 @@
   {
    "id": "pop3",
    "rpm": 0,
-   "start": 59.684416666666664,
+   "start": 57.843666666666664,
    "duration": 0.26,
+   "gainDb": 0.0,
+   "peakDb": -9.0
+  },
+  {
+   "id": "gear_out",
+   "rpm": 0,
+   "start": 58.303666666666665,
+   "duration": 0.16,
+   "gainDb": 0.0,
+   "peakDb": -9.0
+  },
+  {
+   "id": "gear_in1",
+   "rpm": 0,
+   "start": 58.663666666666664,
+   "duration": 0.34,
+   "gainDb": 0.0,
+   "peakDb": -9.0
+  },
+  {
+   "id": "gear_in2",
+   "rpm": 0,
+   "start": 59.20366666666666,
+   "duration": 0.34,
    "gainDb": 0.0,
    "peakDb": -9.0
   }
  ],
- "bytes": 557721
+ "bytes": 551243
 }
