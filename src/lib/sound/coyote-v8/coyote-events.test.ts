@@ -19,10 +19,10 @@ function rig(startup = false) {
   synth.attachBuffer(ctx.createBuffer(1, 48000 * 61, 48000));
   let t = 0;
   let seq = 0;
-  const step = (s: Partial<DriveState> & { shift?: Shift }, frames = 1) => {
+  const step = (s: Partial<DriveState> & { shift?: Shift; preset?: string }, frames = 1) => {
     for (let i = 0; i < frames; i += 1) {
       t += 1 / 30;
-      const { shift, ...rest } = s;
+      const { shift, preset, ...rest } = s;
       const state = {
         speed: 20,
         acceleration: 0,
@@ -49,6 +49,7 @@ function rig(startup = false) {
               : null,
           shiftLoadMultiplier: 1,
           revMatchActive: false,
+          diagnostics: { shiftMapPreset: preset ?? "legacy" },
         },
       } as unknown as DriveState;
       synth.update(state, t);
@@ -57,6 +58,104 @@ function rig(startup = false) {
   const shots = () => synth.getDiagnostics().recentOneShots.map((s) => s.split("@")[0]!);
   return { synth, step, shots, nextSeq: () => (seq += 1) };
 }
+
+describe("Coyote V8 race mode: manual gearbox, heel-and-toe downshifts (like Racing V10)", () => {
+  it("braking downshift: lever out, throttle blip on the loops, lever into the lower gear", () => {
+    seedAudioRandom(11);
+    const r = rig();
+    const race = { preset: "race", throttle: 0, load: 0, gear: 4, speed: 22, regen: 0.4 };
+    r.step({ ...race, rpm: 2600 }, 15);
+    const before = r.synth.getDiagnostics().mixLoads;
+    expect(before.over).toBeGreaterThan(0.6);
+    r.step({
+      ...race,
+      rpm: 3200,
+      gear: 3,
+      shift: { seq: r.nextSeq(), from: 4, to: 3, dir: "down", reason: "downshift-schedule" },
+    });
+    r.step({ ...race, rpm: 3300, gear: 3 }, 2);
+    const blip = r.synth.getDiagnostics();
+    // the blip opens the throttle: overrun -> on-load morph on the same loops
+    expect(blip.mixLoads.on).toBeGreaterThan(0.6);
+    expect(blip.mixLoads.over).toBeLessThan(0.3);
+    expect(blip.rpm).toBeGreaterThan(3300);
+    r.step({ ...race, rpm: 3000, gear: 3 }, 30);
+    const after = r.synth.getDiagnostics();
+    expect(after.mixLoads.on).toBeLessThan(0.05);
+    expect(after.heelToes).toBe(1);
+    const shots = r.shots();
+    expect(shots).toContain("gear_out");
+    expect(shots.filter((s) => s.startsWith("gear_in"))).toHaveLength(1);
+    // the blip is the loops themselves, not a second engine one-shot on top
+    expect(shots.filter((s) => s.startsWith("blip"))).toHaveLength(0);
+    // gear in lands after the lever went out (near the top of the blip)
+    const log = after.recentOneShots;
+    const at = (id: string) => Number(log.find((s) => s.startsWith(id))!.split("@")[1]);
+    expect(at("gear_in") - at("gear_out")).toBeGreaterThan(0.08);
+  });
+
+  it("race kickdown: gearbox sound but no heel-toe blip; upshift: lever into the next gear", () => {
+    seedAudioRandom(12);
+    const r = rig();
+    const race = { preset: "race", gear: 4, speed: 22 };
+    r.step({ ...race, throttle: 0.95, load: 0.9, rpm: 2600 }, 15);
+    r.step({
+      ...race,
+      throttle: 0.95,
+      load: 0.9,
+      rpm: 3400,
+      gear: 3,
+      shift: { seq: r.nextSeq(), from: 4, to: 3, dir: "down", reason: "kickdown" },
+    });
+    r.step({ ...race, throttle: 0.95, load: 0.9, rpm: 3500, gear: 3 }, 20);
+    expect(r.synth.getDiagnostics().heelToes).toBe(0);
+    expect(r.shots()).toContain("gear_out");
+    r.step({
+      ...race,
+      throttle: 0.95,
+      load: 0.9,
+      rpm: 4200,
+      gear: 4,
+      shift: { seq: r.nextSeq(), from: 3, to: 4, dir: "up", reason: "upshift-schedule" },
+    });
+    r.step({ ...race, throttle: 0.95, load: 0.9, rpm: 3500, gear: 4 }, 20);
+    expect(r.shots().filter((s) => s.startsWith("gear_in"))).toHaveLength(2);
+  });
+
+  it("shift sounds off (intensity 0) mutes the gearbox and the blip", () => {
+    seedAudioRandom(13);
+    const r = rig();
+    r.synth.setShiftIntensity(0);
+    const race = { preset: "race", throttle: 0, load: 0, gear: 4, speed: 22, regen: 0.4 };
+    r.step({ ...race, rpm: 2600 }, 15);
+    r.step({
+      ...race,
+      rpm: 3200,
+      gear: 3,
+      shift: { seq: r.nextSeq(), from: 4, to: 3, dir: "down", reason: "downshift-schedule" },
+    });
+    r.step({ ...race, rpm: 3000, gear: 3 }, 20);
+    expect(r.shots().filter((s) => s.startsWith("gear"))).toHaveLength(0);
+    expect(r.synth.getDiagnostics().heelToes).toBe(0);
+  });
+
+  it("other modes keep their downshift (no gearbox one-shots)", () => {
+    seedAudioRandom(14);
+    const r = rig();
+    r.step({ throttle: 0, load: 0, rpm: 1600, gear: 4, speed: 12, regen: 0.4 }, 10);
+    r.step({
+      throttle: 0,
+      rpm: 2000,
+      gear: 3,
+      speed: 12,
+      regen: 0.4,
+      shift: { seq: r.nextSeq(), from: 4, to: 3, dir: "down", reason: "downshift-schedule" },
+    });
+    r.step({ throttle: 0, rpm: 1900, gear: 3, speed: 11, regen: 0.4 }, 20);
+    expect(r.shots().filter((s) => s.startsWith("gear"))).toHaveLength(0);
+    expect(r.synth.getDiagnostics().heelToes).toBe(0);
+  });
+});
 
 describe("Coyote V8 transient rules (George's spec 4, 5, 8-12)", () => {
   it("kickdown on throttle gives a bark but no rev-match blip", () => {
