@@ -2,6 +2,10 @@ import type { DriveState } from "@/lib/drive/model";
 import { fireSpooky, isSpookyKind } from "@/lib/sound/dsp/spooky";
 import { createSirenOverlay, type SirenOverlay } from "@/lib/sound/dsp/siren-overlay";
 import {
+  createSleighBellsOverlay,
+  type SleighBellsOverlay,
+} from "@/lib/sound/dsp/sleigh-bells-overlay";
+import {
   PRIVATE_JET_AIRFIELD,
   createJetAirfield,
   type AirfieldConfig,
@@ -103,9 +107,9 @@ const ADAPTIVE_MUSIC_PROFILE_IDS: ReadonlySet<string> = new Set(["deep-bass-puls
 /**
  * Profiles that reuse another profile's sound unchanged and add an overlay
  * (Police Patrol = American Muscle V8 + siren; Private Jet Oberpfaffenhofen =
- * Ge-Squared O))) + airfield frame).
+ * Ge-Squared O))) + airfield frame; Santa V8 Sleigh = American Muscle V8 + Christmas bells).
  */
-export type SoundAliasOverlay = "siren" | "jet-airfield";
+export type SoundAliasOverlay = "siren" | "jet-airfield" | "sleigh-bells";
 export const SOUND_ALIASES: Readonly<
   Record<string, { base: string; overlay: SoundAliasOverlay; engineGainDb?: number }>
 > = {
@@ -115,6 +119,9 @@ export const SOUND_ALIASES: Readonly<
   // Ge-Squared graph + samples unchanged for acceleration and cruise. Parked: the old
   // Private Jet wind bed + wing checks instead of the V8-based idle; take-off turbo whistle.
   "private-jet": { base: "ge-squared", overlay: "jet-airfield" },
+  // Santa V8 Sleigh: the American Muscle V8 unchanged in every phase (idle included, same
+  // level), with Christmas bells now and then on top.
+  "santa-sleigh": { base: "american-muscle-v8", overlay: "sleigh-bells" },
   // Fighter Jet (Turbine Jet): Rocket Car graph unchanged while moving, a bit louder;
   // parked = its own turbofan idle + control-surface checks; take-off afterburner + whistle.
   "turbine-jet": {
@@ -356,6 +363,7 @@ export class SoundEngine {
   /** Profile as the user picked it (keeps aliases like police-patrol so rebuilds keep the overlay). */
   private requestedProfile: SoundProfile | null = null;
   private siren: SirenOverlay | null = null;
+  private sleighBells: SleighBellsOverlay | null = null;
   private jetAirfield: JetAirfield | null = null;
   private fusion: FusionSynth | null = null;
   private world: WorldSynth | null = null;
@@ -1338,6 +1346,11 @@ export class SoundEngine {
     };
   }
 
+  /** Diagnostics/tests: Santa V8 Sleigh bells (null for other sounds). */
+  sleighBellsDiagnostics(): ReturnType<SleighBellsOverlay["diagnostics"]> | null {
+    return this.sleighBells?.diagnostics() ?? null;
+  }
+
   /** Diagnostics/tests: Private Jet Oberpfaffenhofen airfield frame (null for other sounds). */
   jetAirfieldDiagnostics(): ReturnType<JetAirfield["diagnostics"]> | null {
     return this.jetAirfield?.diagnostics() ?? null;
@@ -1516,6 +1529,10 @@ export class SoundEngine {
     if (this.overlayKind === "siren" && this.accents) {
       // Straight into the cabin bus (stable level, not tied to throttle or the user accents mix).
       this.siren = createSirenOverlay(ctx, this.cabinIn ?? this.accents);
+    }
+    // Santa V8 Sleigh: bells into the cabin bus, like the siren (own random stream).
+    if (this.overlayKind === "sleigh-bells" && this.accents) {
+      this.sleighBells = createSleighBellsOverlay(ctx, this.cabinIn ?? this.accents);
     }
 
     // Background music bed under the profile's own sound (e.g. Dracula Carriage).
@@ -2235,6 +2252,7 @@ export class SoundEngine {
       }
     }
     if (this.siren) this.siren.update(state, t);
+    if (this.sleighBells) this.sleighBells.update(state, t);
     if (this.jetAirfield) this.jetAirfield.update(state, t);
 
     if (
@@ -3041,6 +3059,8 @@ export class SoundEngine {
     this.backgroundMusic = null;
     this.siren?.dispose();
     this.siren = null;
+    this.sleighBells?.dispose();
+    this.sleighBells = null;
     this.jetAirfield?.dispose();
     this.jetAirfield = null;
     this.fusion?.dispose();

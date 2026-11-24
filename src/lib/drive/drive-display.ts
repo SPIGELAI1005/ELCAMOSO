@@ -27,7 +27,6 @@ const CADENCE_IDS = new Set([
   "laughing-machine",
   "farting-car",
   "kazoo-kart",
-  "santa-sleigh",
 ]);
 
 export function driveDisplayKind(profile: SoundProfile): DriveDisplayKind {

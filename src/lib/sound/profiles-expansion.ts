@@ -7,7 +7,8 @@ const SPORT_BOX = {
   shiftSmoothing: 0.11,
 };
 
-const MUSCLE_BOX = {
+/** American Muscle V8 gearbox (shared by reference with Police Patrol and Santa V8 Sleigh). */
+export const MUSCLE_BOX = {
   gearRatios: [12.5, 7.8, 5.2, 3.9, 3.1],
   idleRpm: 680,
   redlineRpm: 6000,
