@@ -25,6 +25,13 @@ import {
 } from "@/lib/sound/realism/v2/combustion-topology";
 import { buildOrderBandSpec } from "@/lib/sound/realism/v2/profile-order-bands";
 import {
+  TURBO_WHISTLE_DETUNE,
+  followTurboSpool,
+  turboBoostWant,
+  turboWhistleGain,
+  turboWhistleHz,
+} from "@/lib/sound/realism/v2/turbo-whistle";
+import {
   EMPTY_COMBUSTION_SAMPLE_BANKS,
   loadRegionFromDemand,
   reportAmericanV8SampleCoverage,
@@ -1062,7 +1069,7 @@ export class HybridCombustionSynth {
       // Compressor whistle: narrow tonal pair (slightly detuned blades) that rises with spool.
       const wg = ctx.createGain();
       wg.gain.value = 0.0001;
-      const oscs = [1, 1.013].map((ratio) => {
+      const oscs = [1, TURBO_WHISTLE_DETUNE].map((ratio) => {
         const o = ctx.createOscillator();
         o.type = "sine";
         o.frequency.value = 2600 * ratio;
@@ -1851,17 +1858,16 @@ export class HybridCombustionSynth {
     if (this.turbo) {
       // Powertrain boost barely builds from GPS-estimated load (~0.3 max in the car), so the
       // acoustic spool also follows load × rpm directly - the whistle must react to real driving.
-      const rpmSpool = Math.min(1, Math.max(0, (rpm - 1400) / 2600));
-      const loadSpool = Math.min(1, Math.max(0, (Math.max(load, demand) - 0.08) / 0.3));
-      const boostWant = Math.max(pt?.boost ?? 0, rpmSpool * loadSpool * 0.9);
+      const boostWant = turboBoostWant(rpm, load, demand, pt?.boost ?? 0);
       // Follow deterministic powertrain boost with profile-specific acoustic lag.
       const dynamics = this.experience?.aspirationDynamics;
-      const tau =
-        boostWant >= this.turbo.spool
-          ? dynamics?.attackSeconds || 0.5
-          : dynamics?.decaySeconds || 0.38;
-      this.turbo.spool +=
-        (boostWant - this.turbo.spool) * (1 - Math.exp(-dt / Math.max(0.04, tau)));
+      this.turbo.spool = followTurboSpool(
+        this.turbo.spool,
+        boostWant,
+        dt,
+        dynamics?.attackSeconds || 0.5,
+        dynamics?.decaySeconds || 0.38,
+      );
       const spool = this.turbo.spool;
       targetParam(
         this.turbo.gain.gain,
@@ -1941,8 +1947,7 @@ export class HybridCombustionSynth {
       }
       if (this.turboWhistle) {
         // Whistle: only audible once boost builds; follows spool² and load, never a constant tone.
-        let w =
-          spool > 0.08 ? Math.pow(spool, 1.5) * (0.5 + Math.min(1, load * 2) * 0.5) * 0.05 : 0.0001;
+        let w = turboWhistleGain(spool, load);
         const ws = cfg.whistleSettle;
         if (ws) {
           // Swell then settle: full whistle for holdS after boost arrives, then it sinks under
@@ -1961,10 +1966,9 @@ export class HybridCombustionSynth {
           audioTime,
           0.12,
         );
-        const wr = cfg.whistleRange;
-        const hz = (wr ? wr.baseHz + spool * wr.spanHz : 2200 + spool * 3400) + rpmNorm * 700;
+        const hz = turboWhistleHz(spool, rpmNorm, cfg.whistleRange);
         this.turboWhistle.oscs.forEach((o, i) =>
-          targetParam(o.frequency, hz * (i === 0 ? 1 : 1.013), audioTime, 0.15),
+          targetParam(o.frequency, hz * (i === 0 ? 1 : TURBO_WHISTLE_DETUNE), audioTime, 0.15),
         );
       }
       if (

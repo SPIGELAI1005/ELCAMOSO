@@ -39,6 +39,28 @@ const TWIN_BOX = {
 };
 
 /** Expansion built-in Sound Profiles (engines, worlds characters, Future, Musical). */
+/**
+ * Ge-Squared O))) drivetrain (gears, rpm, personality). Shared by reference with
+ * Private Jet Oberpfaffenhofen, whose sound is the Ge-Squared sound (SOUND_ALIASES).
+ */
+export const GE_SQUARED_DRIVETRAIN: Required<
+  Pick<
+    SoundProfile,
+    "drivetrainMode" | "motionModel" | "sourceMode" | "drivetrainPersonalityId" | "transmission"
+  >
+> = {
+  drivetrainMode: "virtual-transmission",
+  motionModel: "virtual-transmission",
+  sourceMode: "procedural",
+  drivetrainPersonalityId: "v-twin-cruiser",
+  transmission: {
+    gearRatios: [13.8, 8.6, 6.2, 4.8, 3.9, 3.3, 2.9],
+    idleRpm: 700,
+    redlineRpm: 5000,
+    shiftSmoothing: 0.18,
+  },
+};
+
 export const EXPANSION_PROFILES: SoundProfile[] = [
   {
     id: "flat-six-sport",
@@ -821,10 +843,7 @@ export const EXPANSION_PROFILES: SoundProfile[] = [
     traits: ["Double Big Twin", "Modern", "Brutal"],
     description:
       "The modern boxy 4x4, voiced like two big twins bolted together: a deep uneven lope at idle, hard thumping hits under load, a fast aggressive build and a raw crackle when you lift.",
-    drivetrainMode: "virtual-transmission",
-    motionModel: "virtual-transmission",
-    sourceMode: "procedural",
-    drivetrainPersonalityId: "v-twin-cruiser",
+    ...GE_SQUARED_DRIVETRAIN,
     voice: {
       baseFrequency: 23,
       // cross-plane V8: uneven pulse pattern gives the burble
@@ -848,13 +867,8 @@ export const EXPANSION_PROFILES: SoundProfile[] = [
         { kind: "whistle", everySeconds: 9, jitter: 4, level: 0.07, tone: 3200, speedLinked: true },
       ],
     },
-    transmission: {
-      gearRatios: [13.8, 8.6, 6.2, 4.8, 3.9, 3.3, 2.9],
-      idleRpm: 700,
-      redlineRpm: 5000,
-      shiftSmoothing: 0.18,
-    },
-  },  {
+  },
+  {
     id: "ge-squared-90",
     name: "Ge-Squared '90",
     category: "Classic",

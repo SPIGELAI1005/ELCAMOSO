@@ -1,5 +1,5 @@
 import type { LayerMix } from "@/lib/sound/environments";
-import { EXPANSION_PROFILES } from "@/lib/sound/profiles-expansion";
+import { EXPANSION_PROFILES, GE_SQUARED_DRIVETRAIN } from "@/lib/sound/profiles-expansion";
 import { SYMPHONY_SOUND_PROFILES } from "@/lib/symphony/symphony-profiles";
 import { FUSION_SOUND_PROFILES } from "@/lib/fusion/fusion-profiles";
 import { WORLD_SOUND_PROFILES } from "@/lib/worlds/world-profiles";
@@ -204,6 +204,52 @@ const RALLY_BOX = {
   idleRpm: 950,
   redlineRpm: 6800,
   shiftSmoothing: 0.1,
+};
+
+/**
+ * The original Private Jet turbofan profile (continuous, no gears). No longer in the
+ * catalog by itself: Private Jet Oberpfaffenhofen plays it as the parked wind bed
+ * (src/lib/sound/private-jet/airfield.ts) under the Ge-Squared O))) sound.
+ */
+export const PRIVATE_JET_TURBOFAN_PROFILE: SoundProfile = {
+  id: "private-jet",
+  name: "Private Jet Oberpfaffenhofen",
+  category: "Aviation",
+  traits: ["Refined", "Spooling", "Effortless"],
+  description:
+    "Twin turbofans behind a calm cabin: smooth pink roar, a clean whistle on spool-up, long sigh on lift.",
+  drivetrainMode: "continuous",
+  voice: {
+    baseFrequency: 1100,
+    harmonics: [1, 1.005],
+    waveResponse: 1.05,
+    filterBase: 1100,
+    filterRange: 8200,
+    noise: 0.35,
+    noiseColor: "pink",
+    detune: 2,
+    wave: "sine",
+    coreLevel: 0.18,
+    filterQ: 0.65,
+    textures: [
+      { kind: "wind", level: 0.24, tone: 2600, speedScale: 1, surge: 0.15 },
+      { kind: "sizzle", level: 0.09, tone: 7800, speedScale: 0.95 },
+      { kind: "rumble", level: 0.2, tone: 58, speedScale: 0.65 },
+    ],
+  },
+};
+
+/**
+ * Private Jet Oberpfaffenhofen (id kept as "private-jet" so links, favourites and saved
+ * data keep working). Drives with Ge-Squared's gears and sound; the turbofan voice stays
+ * as the profile voice for the parked bed and the switch-loudness estimate.
+ */
+export const PRIVATE_JET_OBERPFAFFENHOFEN: SoundProfile = {
+  ...PRIVATE_JET_TURBOFAN_PROFILE,
+  traits: ["Ge-Squared Power", "Take-off Whistle", "Wing Check"],
+  description:
+    "Parked on the Oberpfaffenhofen apron: a slow turbofan wind and the wing flaps being checked before departure. Roll out and the Ge-Squared O))) sound takes over for acceleration and cruise, with a turbo whistle that climbs through every take-off.",
+  ...GE_SQUARED_DRIVETRAIN,
 };
 
 const BUILT_IN_SOUND_PROFILES: SoundProfile[] = [
@@ -706,33 +752,9 @@ const BUILT_IN_SOUND_PROFILES: SoundProfile[] = [
       ],
     },
   },
-  {
-    id: "private-jet",
-    name: "Private Jet",
-    category: "Aviation",
-    traits: ["Refined", "Spooling", "Effortless"],
-    description:
-      "Twin turbofans behind a calm cabin: smooth pink roar, a clean whistle on spool-up, long sigh on lift.",
-    drivetrainMode: "continuous",
-    voice: {
-      baseFrequency: 1100,
-      harmonics: [1, 1.005],
-      waveResponse: 1.05,
-      filterBase: 1100,
-      filterRange: 8200,
-      noise: 0.35,
-      noiseColor: "pink",
-      detune: 2,
-      wave: "sine",
-      coreLevel: 0.18,
-      filterQ: 0.65,
-      textures: [
-        { kind: "wind", level: 0.24, tone: 2600, speedScale: 1, surge: 0.15 },
-        { kind: "sizzle", level: 0.09, tone: 7800, speedScale: 0.95 },
-        { kind: "rumble", level: 0.2, tone: 58, speedScale: 0.65 },
-      ],
-    },
-  },
+  // Sound = Ge-Squared O))) unchanged (SOUND_ALIASES in engine.ts) with an airfield frame:
+  // parked = the old turbofan wind bed + wing checks, take-off = turbo whistle.
+  PRIVATE_JET_OBERPFAFFENHOFEN,
   {
     id: "wiesn-tractor",
     name: "Oide Wiesn Tractor",
