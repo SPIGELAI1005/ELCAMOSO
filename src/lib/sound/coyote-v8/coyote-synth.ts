@@ -2,8 +2,9 @@
  * American Muscle V8 "Coyote v2": one pre-rendered sound instead of two live engines.
  *
  * The bank (scripts/sound/coyote_v8_bank.py) holds seamless loops on an RPM x load grid
- * (light / on-load / overrun) plus one-shots (startup, bark, shifts, rev-match blip, pops)
- * in a single AAC file. At runtime this only crossfades a few looping
+ * (light / on-load / overrun) plus one-shots (startup, bark, rev-match blip, pops, crackle)
+ * in a single AAC file. Gear shifts and the race-mode overrun are the Racing V10's
+ * (./v10-shift.ts): short filtered-noise transients made per shift, no live filter chain. At runtime this only crossfades a few looping
  * AudioBufferSourceNodes: the two RPM points around the current RPM, each with its three
  * phase-aligned load variants, and nudges their playback rate by at most ~±18 %.
  * Above the idle range the neighbouring points are started crank-aligned on one shared
@@ -15,6 +16,9 @@
 import type { DriveState } from "@/lib/drive/model";
 import type { StrategyBuses } from "@/lib/sound/realism/types";
 import { fetchBytesWithRetry } from "@/lib/sound/fetch-bytes";
+import { getDrivetrainPersonality } from "@/lib/drive/drivetrain-personalities";
+import type { DrivetrainShiftEvent } from "@/lib/powertrain/types";
+import { getNoiseBuffer } from "@/lib/sound/dsp/noise";
 import { audioRandom } from "@/lib/sound/rng";
 import {
   COYOTE_BANK_URL,
@@ -35,6 +39,19 @@ import {
   type CoyoteLoad,
   type CoyoteLoadWeights,
 } from "./model";
+import {
+  V10_FILTER_WARMUP_S,
+  V10_RACE,
+  V10_REENGAGE_THUMP,
+  V10_SHIFT_VOICES,
+  coyoteV10ShiftPlan,
+  v10BarkLevel,
+  v10LimiterGateCycles,
+  v10PopSequence,
+  v10PulsePeak,
+  v10ShiftIntensity,
+  type V10VoiceId,
+} from "./v10-shift";
 
 /** Output trim so the bank sits at the old V8's loudness through the shared master chain. */
 export const COYOTE_OUTPUT_GAIN = 1.48;
@@ -58,6 +75,18 @@ const RATE_TAU_S = 0.025;
 /** On-load smoothing (s): opening / closing. Long enough to morph, short enough to follow. */
 const ON_TAU_OPEN_S = 0.11;
 const ON_TAU_CLOSE_S = 0.22;
+/** Redline of the american-v8 drivetrain (race-mode rpm / redline thresholds). */
+const COYOTE_REDLINE_RPM = getDrivetrainPersonality("american-v8").engine.redlineRpm;
+/**
+ * V10 shift transients on the Coyote: same voices, -1.4 dB. Measured offline through the full
+ * engine chain, the V10's master chain compresses its (louder) bed and the pulses with it;
+ * this trim gives the same pulse level as the V10 at the same bed level (downshifts).
+ */
+const COYOTE_SHIFT_TRIM = 0.85;
+/** Race-mode pops: V10 pop strength -> Coyote pop one-shot level (offline-calibrated). */
+const RACE_POP_GAIN = 4.5;
+/** Race-mode crackle tail: V10 crackle strength -> crackle one-shot level. */
+const RACE_CRACKLE_GAIN = 4.5;
 
 /**
  * Model of the rpm automation every loop voice follows, integrated to a crank position in
@@ -175,6 +204,12 @@ export interface CoyoteDiagnostics {
   mixLoads: CoyoteLoadWeights;
   /** Race-mode heel-and-toe downshifts played. */
   heelToes: number;
+  /** Racing V10 shift transients (gear engagement + driveline thump) scheduled. */
+  shiftPulses: number;
+  /** Race-mode overrun pop sequences (lift-off, downshift, upshift crack, limiter). */
+  racePopSequences: number;
+  /** Race-mode limiter ignition-cut gate is running. */
+  limiterGate: boolean;
   /** Active points that are crank-aligned. */
   alignedPoints: number[];
 }
@@ -197,6 +232,11 @@ export class CoyoteV8Synth {
   private loopBus: GainNode | null = null;
   private shotBus: GainNode | null = null;
   private popBus: GainNode | null = null;
+  /** Racing V10 shift transients go to the accents bus, as on the V10. */
+  private accentBus: AudioNode | null = null;
+  /** Race-mode ignition-cut gate on the loops (upshift cut, limiter bounce). */
+  private raceGate: GainNode | null = null;
+  private raceGateScheduledTo = 0;
   private buffer: AudioBuffer | null = null;
   private points = new Map<number, PointVoice>();
   private loads: CoyoteLoadWeights = { light: 1, on: 0, over: 0 };
@@ -231,7 +271,20 @@ export class CoyoteV8Synth {
   private heelToeAt: number | null = null;
   private heelToeAmt = 0;
   private heelToes = 0;
-  /** Loads actually sent to the loops (smoothed loads + heel-toe blip). */
+  /** V10 recovery bark: the engine note snaps back after the engagement. */
+  private barkAt = -10;
+  private barkAmt = 0;
+  private shiftPulses = 0;
+  private pulseSeed = 0x5eed1;
+  private lastShiftPhase = "";
+  /** Race overrun (V10 updateRacePops / liftPops). */
+  private racePopSequences = 0;
+  private popPrevDemand = 0;
+  private popPrevDownshift = false;
+  private racePopLastAt = -10;
+  private raceLastLimiterCut = false;
+  private raceLastLimiterPopAt = -10;
+  /** Loads actually sent to the loops (smoothed loads + heel-toe blip + bark). */
   private mixLoads: CoyoteLoadWeights = { light: 1, on: 0, over: 0 };
   readonly ready: Promise<void>;
   private resolveReady: () => void = () => undefined;
@@ -252,7 +305,15 @@ export class CoyoteV8Synth {
     this.builtAt = ctx.currentTime;
     const loopBus = ctx.createGain();
     loopBus.gain.value = COYOTE_OUTPUT_GAIN;
-    loopBus.connect(buses.body);
+    const raceGate = ctx.createGain();
+    raceGate.gain.value = 1;
+    loopBus.connect(raceGate);
+    raceGate.connect(buses.body);
+    this.raceGate = raceGate;
+    this.accentBus = buses.accents;
+    // The V10 transients' noise, made now (not on the first shift, on a busy car browser).
+    getNoiseBuffer(ctx, "pink");
+    getNoiseBuffer(ctx, "brown");
     const shotBus = ctx.createGain();
     shotBus.gain.value = COYOTE_OUTPUT_GAIN;
     shotBus.connect(buses.body);
@@ -302,6 +363,9 @@ export class CoyoteV8Synth {
       loads: { ...this.loads },
       mixLoads: { ...this.mixLoads },
       heelToes: this.heelToes,
+      shiftPulses: this.shiftPulses,
+      racePopSequences: this.racePopSequences,
+      limiterGate: this.raceGateScheduledTo > 0,
       alignedPoints: [...this.points.values()]
         .filter((v) => v.aligned)
         .map((v) => COYOTE_RPM_POINTS[v.index] ?? 0),
@@ -386,10 +450,14 @@ export class CoyoteV8Synth {
         ? 0
         : this.heelToeAmt * coyoteHeelToeEnvelope(t - this.heelToeAt - COYOTE_HEEL_TOE.blipDelayS);
     if (this.heelToeAt !== null && t - this.heelToeAt > 1.3) this.heelToeAt = null;
-    if (blip > 0.001) {
+    // Racing V10 recovery bark after a gear engagement: the note snaps back (on-load morph).
+    const bark = v10BarkLevel(this.barkAmt, t - this.barkAt);
+    if (blip > 0.001 || bark > 0.001) {
       rpm = Math.min(COYOTE_MAX_RPM * 1.04, rpm * (1 + COYOTE_HEEL_TOE.rpmFlare * blip));
-      const onMix = Math.max(this.loads.on, blip);
-      const overMix = this.loads.over * (1 - blip);
+      const lift = Math.max(blip, bark);
+      const base = Math.max(this.loads.on, blip);
+      const onMix = Math.min(1, base + bark * (1 - base));
+      const overMix = this.loads.over * (1 - lift);
       this.mixLoads = { on: onMix, over: overMix, light: Math.max(0, 1 - onMix - overMix) };
     } else {
       this.mixLoads = this.loads;
@@ -550,60 +618,63 @@ export class CoyoteV8Synth {
     let dir: "up" | "down" | null = null;
     let fromGear = this.lastGear;
     let reason = "";
-    const ev = state.powertrain?.shiftEvent ?? null;
-    if (state.powertrain) {
+    let shiftEv: DrivetrainShiftEvent | null = null;
+    const pt = state.powertrain;
+    const ev = pt?.shiftEvent ?? null;
+    if (pt) {
       if (ev && ev.sequenceId !== this.lastShiftSeq) {
         this.lastShiftSeq = ev.sequenceId;
         fromGear = ev.fromGear;
         reason = ev.reason ?? "";
-        if (ev.fromGear >= 1 && ev.toGear >= 1) dir = ev.direction;
+        if (ev.fromGear >= 1 && ev.toGear >= 1) {
+          dir = ev.direction;
+          shiftEv = ev;
+        }
       }
     } else if (state.gear !== this.lastGear && this.lastGear >= 1 && state.gear >= 1) {
       dir = state.gear > this.lastGear ? "up" : "down";
+      shiftEv = {
+        sequenceId: -1,
+        atMs: t * 1000,
+        fromGear: this.lastGear,
+        toGear: state.gear,
+        direction: dir,
+        reason: "gear-change",
+      };
     }
     this.lastGear = state.gear;
     if (dir) this.lastShiftAt = t;
-    const race = state.powertrain?.diagnostics?.shiftMapPreset === "race";
-    if (dir && t >= this.shiftCooldownUntil && this.shiftIntensity > 0 && race) {
-      this.raceShift(dir, state, fromGear, reason, rpm, t);
-      this.shiftCooldownUntil = t + 0.3;
-    } else if (dir && t >= this.shiftCooldownUntil && this.shiftIntensity > 0) {
-      const intensity = this.shiftIntensity;
-      const onLoad = this.loads.on;
-      if (dir === "up") {
-        // Throttle unloads -> note softens -> RPM drops (powertrain) -> power returns.
-        // Light throttle: a soft, short dip only. Hard throttle: a deeper cut and, only
-        // sometimes, the short re-engage "brup" one-shot. Never an explosion.
-        this.dipLoops(t, (0.12 + 0.36 * onLoad) * Math.min(1, intensity), 0.07 + 0.06 * onLoad);
-        if (onLoad > 0.75 && audioRandom() < 0.65) {
-          const rate = Math.min(1.5, Math.max(0.55, rpm / 4000));
-          this.fireOneShot(
-            audioRandom() < 0.5 ? "upshift1" : "upshift2",
-            t + 0.005,
-            rate,
-            (0.35 + 0.5 * onLoad) * intensity,
-            this.shotBus,
-          );
-        }
-      } else {
-        // Rev-matched downshift while slowing: a short tonal blip. A kickdown (throttle
-        // open) gets no blip: the RPM jump comes from the loops and the bark covers the
-        // attack. Never near idle (the car is about to stop).
-        const kickdown = reason === "kickdown" || state.throttle > 0.3 || onLoad > 0.35;
-        if (this.popsEnabled && !kickdown && state.speed > 3 && fromGear >= 2 && rpm > 1000) {
-          const rate = Math.min(1.6, Math.max(0.6, rpm / 2000));
-          this.dipLoops(t, 0.35, 0.22);
-          this.fireOneShot(
-            audioRandom() < 0.5 ? "blip1" : "blip2",
-            t + 0.005,
-            rate,
-            0.55 * intensity,
-            this.shotBus,
+    const race = pt?.diagnostics?.shiftMapPreset === "race";
+    if (dir && shiftEv && t >= this.shiftCooldownUntil) {
+      // Every mode: the Racing V10's gear shift (engagement + driveline thump + recovery).
+      this.playV10Shift(shiftEv, t);
+      if (race) this.raceShift(dir, state, fromGear, reason, rpm, t);
+      else this.roadShift(dir, state, fromGear, reason, rpm, t);
+      this.shiftCooldownUntil = t + (race ? 0.3 : 0.35);
+    }
+    // Upshift reengage: the clutch takes up drive (V10 scheduler thump + reengage bark).
+    const phase = pt?.shifting ? (pt.shiftPhase ?? "") : "";
+    if (phase === "reengage" && this.lastShiftPhase !== "reengage") {
+      const down = pt?.shiftDirection === "down";
+      const demand = pt?.driverDemand ?? state.throttle;
+      this.armBark(t, ((down ? 0.2 : 0.12) + demand * 0.16) * 0.16);
+      if (!down && state.speed * 3.6 > 4 && audioRandom() < 0.55) {
+        const strength = v10ShiftIntensity(this.shiftIntensity);
+        const intensity = V10_REENGAGE_THUMP.intensity * 0.96 * 0.55 * strength;
+        if (strength > 0.001) {
+          this.firePulse(
+            "thump",
+            intensity,
+            V10_REENGAGE_THUMP.filterHz,
+            V10_REENGAGE_THUMP.decayMs,
+            t,
           );
         }
       }
-      this.shiftCooldownUntil = t + 0.35;
     }
+    this.lastShiftPhase = phase;
+    if (race) this.updateRace(state, rpm, t);
+    else this.updateRaceGate(false, t, false);
 
     // Brake / regen: no new overrun pops, and silence any that were already scheduled.
     // Coasting lift-off (regen/brake at or below the threshold) can still pop.
@@ -627,6 +698,7 @@ export class CoyoteV8Synth {
         const nearShift = t - this.lastShiftAt < POP_SHIFT_GUARD_S;
         if (
           this.popsEnabled &&
+          !race &&
           !nearShift &&
           !brakeGate &&
           t >= this.popCooldownUntil &&
@@ -655,12 +727,49 @@ export class CoyoteV8Synth {
   }
 
   /**
-   * Race mode, like the Racing V10: a manual gearbox with heel-and-toe downshifts.
-   * Down: lever out (click), throttle blip on the loops (rpm flares on top of the
-   * powertrain's rev-match), lever into the lower gear near the top of the blip (dog clack
-   * + driveline thunk). A kickdown (pedal already open) needs no blip, only the gearbox.
-   * Up: the ignition-cut dip as in every mode, plus the lever going into the next gear.
-   * Gearbox sounds follow the shift-sound setting (0 mutes), not the Drive+ extras switch.
+   * Road modes: the torque cut on the loops as before. Upshift: a soft, short dip at light
+   * throttle, a deeper cut under load (the V10 recovery bark then brings the note back).
+   * Downshift while slowing: the Drive+ rev-match blip, never on a kickdown or near idle.
+   */
+  private roadShift(
+    dir: "up" | "down",
+    state: DriveState,
+    fromGear: number,
+    reason: string,
+    rpm: number,
+    t: number,
+  ) {
+    const intensity = Math.max(0.35, Math.min(1, this.shiftIntensity));
+    const onLoad = this.loads.on;
+    if (dir === "up") {
+      this.dipLoops(t, (0.12 + 0.36 * onLoad) * intensity, 0.07 + 0.06 * onLoad);
+      return;
+    }
+    const kickdown = reason === "kickdown" || state.throttle > 0.3 || onLoad > 0.35;
+    if (
+      this.popsEnabled &&
+      this.shiftIntensity > 0 &&
+      !kickdown &&
+      state.speed > 3 &&
+      fromGear >= 2 &&
+      rpm > 1000
+    ) {
+      const rate = Math.min(1.6, Math.max(0.6, rpm / 2000));
+      this.dipLoops(t, 0.35, 0.22);
+      this.fireOneShot(
+        audioRandom() < 0.5 ? "blip1" : "blip2",
+        t + 0.005,
+        rate,
+        0.55 * this.shiftIntensity,
+        this.shotBus,
+      );
+    }
+  }
+
+  /**
+   * Race mode, like the Racing V10. Up: torque-cut dip plus the ignition cut on the gate
+   * (updateRace). Down: heel-and-toe, the throttle blip on the loops flares the rpm a little
+   * past the powertrain's rev-match (a kickdown with the pedal open needs no blip).
    */
   private raceShift(
     dir: "up" | "down",
@@ -670,24 +779,213 @@ export class CoyoteV8Synth {
     rpm: number,
     t: number,
   ) {
-    const intensity = Math.min(1.2, this.shiftIntensity);
     const onLoad = this.loads.on;
-    const gearIn = audioRandom() < 0.5 ? "gear_in1" : "gear_in2";
     if (dir === "up") {
-      this.dipLoops(t, (0.14 + 0.36 * onLoad) * Math.min(1, intensity), 0.06 + 0.05 * onLoad);
-      this.fireOneShot(gearIn, t + 0.055, 1, 0.42 * intensity, this.shotBus);
+      this.dipLoops(
+        t,
+        (0.14 + 0.36 * onLoad) * Math.max(0.35, Math.min(1, this.shiftIntensity)),
+        0.06 + 0.05 * onLoad,
+      );
       return;
     }
     if (fromGear < 2 || state.speed < 1) return;
-    const h = COYOTE_HEEL_TOE;
-    this.fireOneShot("gear_out", t + h.gearOutDelayS, 1, 0.36 * intensity, this.shotBus);
     const kickdown = reason === "kickdown" || state.throttle > 0.3 || onLoad > 0.35;
     if (!kickdown && rpm > 900) {
       this.heelToeAt = t;
-      this.heelToeAmt = Math.min(0.95, 0.85 * Math.max(0.6, intensity));
+      this.heelToeAmt = Math.min(0.95, 0.85 * Math.max(0.6, Math.min(1.2, this.shiftIntensity)));
       this.heelToes += 1;
     }
-    this.fireOneShot(gearIn, t + h.gearInDelayS, 1, 0.68 * intensity, this.shotBus);
+  }
+
+  /* ------------------------------------------------------- Racing V10 shift */
+
+  /** The V10 choreography: gear engagement, driveline thump 12 ms later, recovery bark. */
+  private playV10Shift(event: DrivetrainShiftEvent, t: number) {
+    const plan = coyoteV10ShiftPlan(event, this.shiftIntensity, t);
+    for (const step of plan.steps) {
+      if (step.kind && step.intensity > 0.001) {
+        const voice: V10VoiceId = step.kind === "drivetrain-thump" ? "thump" : "shift";
+        this.firePulse(voice, step.intensity, step.filterHz, step.decayMs, step.audioTime);
+      }
+      if (step.phase === "recovery" && step.envelopeScale > 0.001) {
+        this.armBark(step.audioTime, step.envelopeScale);
+      }
+    }
+  }
+
+  private armBark(at: number, amount: number) {
+    const active = at - this.barkAt >= 0 && at - this.barkAt < 0.16;
+    this.barkAmt = Math.max(active ? this.barkAmt * 0.5 : 0, amount);
+    this.barkAt = at;
+  }
+
+  /**
+   * One V10 transient (firePulse): noise -> wide filter -> gain, 8 ms filter warm-up, a soft
+   * ~25 ms attack (exponential then linear) and an exponential decay. Nodes live only for
+   * the pulse (nothing runs between shifts).
+   */
+  private firePulse(
+    voiceId: V10VoiceId,
+    intensity: number,
+    filterHz: number,
+    decayMs: number,
+    at: number,
+  ) {
+    const ctx = this.ctx;
+    const bus = this.accentBus;
+    if (!ctx || !bus || !this.buffer) return;
+    const v = V10_SHIFT_VOICES[voiceId];
+    const peak = v10PulsePeak(voiceId, intensity) * COYOTE_SHIFT_TRIM;
+    if (peak <= 0.001) return;
+    const t = Math.max(at, ctx.currentTime) + 0.002;
+    const decayTau = Math.max(0.03, decayMs / 1000 / 3);
+    const noise = getNoiseBuffer(ctx, v.color);
+    const src = ctx.createBufferSource();
+    src.buffer = noise;
+    src.loop = true;
+    const filter = ctx.createBiquadFilter();
+    filter.type = v.type;
+    filter.frequency.value = filterHz;
+    filter.Q.value = v.q;
+    const g = ctx.createGain();
+    g.gain.value = 0.0001;
+    src.connect(filter);
+    filter.connect(g);
+    g.connect(bus);
+    const on = t + V10_FILTER_WARMUP_S;
+    g.gain.setValueAtTime(0.0001, on);
+    g.gain.exponentialRampToValueAtTime(Math.max(0.001, peak * 0.5), on + v.attackS * 0.4);
+    g.gain.linearRampToValueAtTime(peak, on + v.attackS);
+    g.gain.setTargetAtTime(0.0001, on + v.attackS, decayTau);
+    // Own sequence for the noise offset: the shift setting must not move the pop dice.
+    this.pulseSeed = (this.pulseSeed * 1664525 + 1013904223) >>> 0;
+    src.start(t, (this.pulseSeed / 2 ** 32) * Math.max(0, noise.duration - 1));
+    src.stop(on + v.attackS + decayTau * 9);
+    this.live.add(src);
+    this.shiftPulses += 1;
+    const log = `${voiceId === "thump" ? "v10_thump" : "v10_shift"}@${t.toFixed(2)}`;
+    this.shotLog.push(log);
+    if (this.shotLog.length > 40) this.shotLog.shift();
+    src.onended = () => {
+      this.live.delete(src);
+      src.disconnect();
+      filter.disconnect();
+      g.disconnect();
+    };
+  }
+
+  /* -------------------------------------------------------- race overrun */
+
+  /**
+   * Race mode, as the Racing V10: ignition cut through each upshift, the limiter bounce as an
+   * 11 Hz ignition-cut gate, a crack on hard upshifts, pops on limiter cuts and overrun pops
+   * with a crackle tail on lift-off and downshifts (not tied to the Drive+ extras switch).
+   */
+  private updateRace(state: DriveState, rpm: number, t: number) {
+    const pt = state.powertrain;
+    const demand = pt?.driverDemand ?? state.throttle;
+    const shifting = Boolean(pt?.shifting || state.isShifting);
+    const rpmNorm = Math.min(1, rpm / COYOTE_REDLINE_RPM);
+    const raceCut =
+      shifting &&
+      pt?.shiftDirection === "up" &&
+      pt.shiftPhase !== "reengage" &&
+      pt.shiftPhase !== "settle";
+    this.updateRaceGate(Boolean(pt?.limiterActive), t, raceCut);
+    const moving = state.speed * 3.6 > 4 || demand > 0.12;
+
+    // Upshift crack at the top of the rev range.
+    const ev = pt?.shiftEvent;
+    if (
+      ev &&
+      ev.sequenceId === this.lastShiftSeq &&
+      ev.direction === "up" &&
+      ev.fromGear >= 1 &&
+      this.lastShiftAt === t &&
+      rpmNorm > V10_RACE.shiftCrackRpmNorm &&
+      audioRandom() < V10_RACE.shiftCrackProbability
+    ) {
+      this.playPopSequence("rev-match", V10_RACE.shiftCrackLevel * (0.7 + rpmNorm * 0.3), t + 0.02);
+    }
+    // Limiter: a pop on some ignition cuts.
+    const cut = Boolean(pt?.limiterCut);
+    if (
+      cut &&
+      !this.raceLastLimiterCut &&
+      rpm > 2000 &&
+      t - this.raceLastLimiterPopAt > V10_RACE.limiterPopGapS
+    ) {
+      if (audioRandom() < V10_RACE.limiterPopProbability) {
+        this.raceLastLimiterPopAt = t;
+        this.playPopSequence("rev-match", V10_RACE.limiterPopLevel, t);
+      }
+    }
+    this.raceLastLimiterCut = cut;
+
+    // Lift-off / downshift overrun pops (a lift is a drop from a recent peak demand).
+    const lift =
+      this.popPrevDemand > 0.18 &&
+      this.popPrevDemand - demand > 0.15 &&
+      demand < 0.06 &&
+      rpm > 1500;
+    const down = shifting && pt?.shiftDirection === "down";
+    const downshift = down && !this.popPrevDownshift && rpm > 2000;
+    if ((lift || downshift) && moving && t - this.racePopLastAt > V10_RACE.liftPopGapS) {
+      if (audioRandom() < V10_RACE.liftPops.probability) {
+        this.racePopLastAt = t;
+        const strength = V10_RACE.liftPops.level * (0.6 + rpmNorm * 0.6);
+        this.playPopSequence(downshift ? "rev-match" : "overrun", strength, t + 0.05);
+      }
+      if (lift) this.popPrevDemand = 0;
+    }
+    this.popPrevDownshift = down;
+    const dt = this.lastState
+      ? Math.min(0.25, Math.max(0, (state.timestamp - this.lastState.timestamp) / 1000))
+      : 0.016;
+    this.popPrevDemand = Math.max(demand, this.popPrevDemand - dt * 0.05);
+  }
+
+  /** V10 updateRaceGate: limiter bounce at audio rate, ignition cut through an upshift. */
+  private updateRaceGate(limiter: boolean, t: number, shiftCut: boolean) {
+    const g = this.raceGate?.gain;
+    const ctx = this.ctx;
+    if (!g || !ctx) return;
+    const now = Math.max(t, ctx.currentTime);
+    if (!limiter) {
+      if (shiftCut) {
+        if (this.raceGateScheduledTo !== -1) {
+          g.cancelScheduledValues(now);
+          g.setTargetAtTime(V10_RACE.shiftGateFloor, now, 0.008);
+          this.raceGateScheduledTo = -1;
+        }
+        return;
+      }
+      if (this.raceGateScheduledTo !== 0) {
+        g.cancelScheduledValues(now);
+        g.setTargetAtTime(1, now, 0.012);
+        this.raceGateScheduledTo = 0;
+      }
+      return;
+    }
+    const from = Math.max(this.raceGateScheduledTo, now + 0.005);
+    let next = from;
+    for (const [cutAt, refireAt] of v10LimiterGateCycles(from, now + 0.12)) {
+      g.setTargetAtTime(V10_RACE.limiterGateFloor, cutAt, 0.003);
+      g.setTargetAtTime(1, refireAt, 0.005);
+      next = cutAt + 1 / V10_RACE.limiterGateHz;
+    }
+    this.raceGateScheduledTo = next;
+  }
+
+  /** V10 firePopSequence on the bank: one to three pops, then a crackle tail. */
+  private playPopSequence(kind: "rev-match" | "overrun", peak: number, at: number) {
+    if (!this.buffer || !this.popBus) return;
+    this.racePopSequences += 1;
+    for (const step of v10PopSequence(kind, peak, audioRandom)) {
+      const crackle = step.id.startsWith("crackle");
+      const level = step.level * (crackle ? RACE_CRACKLE_GAIN : RACE_POP_GAIN);
+      this.fireOneShot(step.id, at + step.at, step.rate, level, this.popBus, false);
+    }
   }
 
   /** Stop scheduled / still-playing overrun pops and drop unplayed ones from the log. */
@@ -722,7 +1020,14 @@ export class CoyoteV8Synth {
     g.setTargetAtTime(base, t + hold, 0.06);
   }
 
-  private fireOneShot(id: string, at: number, rate: number, level: number, bus: GainNode | null) {
+  private fireOneShot(
+    id: string,
+    at: number,
+    rate: number,
+    level: number,
+    bus: GainNode | null,
+    cancellable = true,
+  ) {
     const ctx = this.ctx;
     const shot = coyoteOneShot(id);
     if (!ctx || !this.buffer || !shot || !bus) return;
@@ -740,7 +1045,7 @@ export class CoyoteV8Synth {
     const log = `${id}@${when.toFixed(2)}`;
     this.shotLog.push(log);
     if (this.shotLog.length > 40) this.shotLog.shift();
-    if (id.startsWith("pop")) this.pendingPops.push({ src, gain: g, when, log });
+    if (cancellable && id.startsWith("pop")) this.pendingPops.push({ src, gain: g, when, log });
     src.onended = () => {
       this.live.delete(src);
       this.pendingPops = this.pendingPops.filter((p) => p.src !== src);

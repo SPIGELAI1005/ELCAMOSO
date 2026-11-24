@@ -29,7 +29,15 @@ coyote-v2.3 (cruise growl / continuity / race gearbox):
     whole multiples of 16 cycles, so the runtime can crank-align neighbours: a cruise or
     pull between two grid points is one engine, not two out-of-phase engines
   * on-load band balance rises smoothly with rpm (no 3-8 kHz jump around 3,100 rpm)
-  * manual-gearbox one-shots for race-mode shifts (gear_out, gear_in1/2)
+
+coyote-v2.4 (Racing V10 shifts and race overrun):
+  * the loops are unchanged (byte-for-byte the same render as v2.3)
+  * the modal "struck steel" gearbox one-shots (gear_out, gear_in1/2) and the engine-render
+    upshift one-shots (upshift1/2) are gone: shifts now use the Racing V10's procedural
+    choreography at runtime (filtered-noise gear engagement + driveline thump + recovery)
+  * crackle1-3: the Racing V10's race-mode overrun crackle (a short pressure impulse through
+    the V10 pop chain: body low-pass + three pipe modes + soft saturation + high cut), voiced
+    with this V8's exhaust modes, for the race-mode lift-off / downshift crackle tail
 
 Output: one mono AAC (.m4a) file with every loop and one-shot, plus a JSON map.
 Usage: python3 scripts/sound/coyote_v8_bank.py <out_dir> [--json PATH] [--wav-dir DIR]
@@ -52,9 +60,9 @@ BANK_OF = {c: (0 if c <= 4 else 1) for c in range(1, 9)}
 RPM_POINTS = [700, 950, 1250, 1650, 2150, 2750, 3450, 4250, 5150, 6100, 7000]
 LOADS = ["light", "on", "over"]
 MARGIN_S = 0.1  # > AAC priming (2112 samples) + transform spread (2048 samples)
-VERSION = "coyote-v2.3"
+VERSION = "coyote-v2.4"
 # New file name per bank version: a cached older bank can never pair with this map.
-BANK_FILE = "coyote_v2_3_bank.m4a"
+BANK_FILE = "coyote_v2_4_bank.m4a"
 # unequal-primary arrival spread (s, 1 sigma) and how it narrows above 2,000 rpm
 MAN_SKEW_S = float(os.environ.get("COYOTE_MAN_SKEW", "0.00025"))
 MAN_SKEW_EXP = float(os.environ.get("COYOTE_MAN_EXP", "1.0"))
@@ -559,22 +567,6 @@ def oneshot(name: str):
         sig += whomp * 10 ** (-17 / 20)
         env = smoothstep(t / 0.004) * (1 - smoothstep((t - 0.55) / 0.35))
         return sig * env, 2000
-    if name.startswith("upshift"):
-        v = int(name[-1])
-        dur = 0.55
-        n = int(dur * SR)
-        r0 = 4000
-        rpm = rpm_curve(n, [(0, r0), (0.06, r0 * 0.99), (0.28, r0 * 0.70), (0.55, r0 * 0.69)])
-        load = env_curve(n, [(0, 1.0), (0.04, 0.15), (0.2, 0.2), (0.3, 1.0), (0.55, 1.0)])
-        over = env_curve(n, [(0, 0), (0.05, 0.7 + 0.1 * v), (0.22, 0.5), (0.3, 0), (0.55, 0)])
-        sig, _ = engine_render(rpm, load, n, False, seed=50 + v, overrun=over)
-        sig = calibrate(sig, r0 * 0.85, "on", False)
-        t = np.arange(n) / SR
-        thump = np.sin(2 * np.pi * (48 + 6 * v) * t) * np.exp(-np.maximum(t - 0.27, 0) / 0.05) * smoothstep((t - 0.27) / 0.008)
-        sig = sig / rms(sig) * 10 ** (target_rms_db(r0, "on") / 20 - 3 / 20)
-        sig += thump * 10 ** (-22 / 20)
-        env = smoothstep(t / 0.01) * (1 - smoothstep((t - 0.4) / 0.15))
-        return sig * env, r0
     if name.startswith("blip"):
         v = int(name[-1])
         dur = 0.7
@@ -608,68 +600,96 @@ def oneshot(name: str):
         sig *= smoothstep(t / 0.0015) * (1 - smoothstep((t - 0.12) / 0.14))
         sig = sig / np.max(np.abs(sig)) * 10 ** (-9 / 20)
         return sig, 0
-    if name.startswith("gear"):
-        return gearbox_oneshot(name), 0
+    if name.startswith("crackle"):
+        return crackle_oneshot(int(name[-1])), 0
     raise ValueError(name)
 
 
-def _modal(t: np.ndarray, modes, exc: np.ndarray) -> np.ndarray:
-    """Struck-metal ring: excitation through decaying modes (f Hz, decay s, gain)."""
-    out = np.zeros_like(t)
-    n = len(t)
-    for f0, dec, g in modes:
-        ir = np.sin(2 * np.pi * f0 * t) * np.exp(-t / dec)
-        out += g * np.fft.irfft(np.fft.rfft(exc, 2 * n) * np.fft.rfft(ir, 2 * n), 2 * n)[:n]
-    return out
-
-
-def gearbox_oneshot(name: str) -> np.ndarray:
-    """
-    Manual gearbox sounds heard from the cabin (race-mode shifts):
-      gear_out  lever pulls the sleeve out of gear: small detent click + light knock
-      gear_in1/2  lever into the next gear: brief synchro whirr, dog-ring clack (struck
-                steel), then the driveline taking up drive (low thunk through the floor)
-    Peak-normalised to -9 dBFS; the runtime sets the level against the engine.
-    """
-    rng = np.random.default_rng({"gear_out": 81, "gear_in1": 82, "gear_in2": 83}[name])
-    dur = 0.16 if name == "gear_out" else 0.34
-    n = int(dur * SR)
-    t = np.arange(n) / SR
-    f = freqs(n)
-    nz = rng.standard_normal(n)
-    if name == "gear_out":
-        exc = nz * np.exp(-t / 0.0012) * smoothstep(t / 0.0003)
-        click = _modal(t, [(2350, 0.012, 1.0), (3720, 0.009, 0.7), (5150, 0.006, 0.45)], exc)
-        knock = np.sin(2 * np.pi * 150 * t) * np.exp(-t / 0.018) * smoothstep(t / 0.002)
-        sig = click / (np.max(np.abs(click)) + 1e-9) * 0.75 + knock * 0.35
+def _biquad(x: np.ndarray, kind: str, f0: float, q: float, gain_db: float = 0.0) -> np.ndarray:
+    """RBJ biquad (the same responses as the Web Audio BiquadFilterNode), direct form I."""
+    w0 = 2 * math.pi * f0 / SR
+    cw, sw = math.cos(w0), math.sin(w0)
+    alpha = sw / (2 * q)
+    if kind == "lowpass":
+        b = [(1 - cw) / 2, 1 - cw, (1 - cw) / 2]
+        a = [1 + alpha, -2 * cw, 1 - alpha]
+    elif kind == "highpass":
+        b = [(1 + cw) / 2, -(1 + cw), (1 + cw) / 2]
+        a = [1 + alpha, -2 * cw, 1 - alpha]
+    elif kind == "bandpass":  # constant 0 dB peak gain (Web Audio "bandpass")
+        b = [alpha, 0.0, -alpha]
+        a = [1 + alpha, -2 * cw, 1 - alpha]
+    elif kind == "highshelf":  # Web Audio highshelf (S = 1)
+        A = 10 ** (gain_db / 40)
+        al = sw / 2 * math.sqrt(2)
+        sa = 2 * math.sqrt(A) * al
+        b = [A * ((A + 1) + (A - 1) * cw + sa), -2 * A * ((A - 1) + (A + 1) * cw), A * ((A + 1) + (A - 1) * cw - sa)]
+        a = [(A + 1) - (A - 1) * cw + sa, 2 * ((A - 1) - (A + 1) * cw), (A + 1) - (A - 1) * cw - sa]
     else:
-        v = int(name[-1])
-        t0 = 0.028 + 0.006 * v  # synchro whirr, then the dog clack
-        whirr = apply(nz, bp_resp(f, 2600 + 400 * v, 4200 + 300 * v, 2)) * smoothstep(t / 0.008) * (
-            1 - smoothstep((t - t0 + 0.004) / 0.008))
-        whirr *= 1 + 0.5 * np.sin(2 * np.pi * (180 + 40 * v) * t)
-        te = np.maximum(t - t0, 0)
-        exc = nz * np.exp(-te / 0.0009) * (t >= t0)
-        clack = _modal(t, [(1580 + 60 * v, 0.030, 1.0), (2870 + 90 * v, 0.022, 0.8), (4430, 0.015, 0.55),
-                           (6150, 0.009, 0.35), (910 + 40 * v, 0.045, 0.45)], exc)
-        td = np.maximum(t - t0 - 0.012, 0)
-        on_d = smoothstep((t - t0 - 0.012) / 0.004)
-        thunk = np.sin(2 * np.pi * (92 + 10 * v) * td) * np.exp(-td / 0.075) * on_d
-        thud = apply(nz * np.exp(-td / 0.03) * on_d, lp_resp(f, 320, 2))
-        sig = (
-            whirr / (rms(whirr[: int(t0 * SR)]) + 1e-9) * 0.05
-            + clack / (np.max(np.abs(clack)) + 1e-9) * 0.8
-            + thunk * 0.6
-            + thud / (np.max(np.abs(thud)) + 1e-9) * 0.3
-        )
-    # through the floor / cabin: a little low-pass, no DC
-    sig = apply(sig, hp_resp(f, 45, 2) * lp_resp(f, 7000, 2))
-    sig *= smoothstep(t / 0.0005) * (1 - smoothstep((t - (dur - 0.06)) / 0.06))
-    return sig / np.max(np.abs(sig)) * 10 ** (-9 / 20)
+        raise ValueError(kind)
+    b = [v / a[0] for v in b]
+    a1, a2 = a[1] / a[0], a[2] / a[0]
+    y = np.zeros_like(x)
+    x1 = x2 = y1 = y2 = 0.0
+    for i, xv in enumerate(x):
+        yv = b[0] * xv + b[1] * x1 + b[2] * x2 - a1 * y1 - a2 * y2
+        x2, x1, y2, y1 = x1, xv, y1, yv
+        y[i] = yv
+    return y
 
 
-ONESHOTS = ["startup", "bark", "upshift1", "upshift2", "blip1", "blip2", "pop1", "pop2", "pop3",
-            "gear_out", "gear_in1", "gear_in2"]
+# Racing V10 pop chain (hybrid-combustion-synth.ts), voiced with the american-muscle-v8
+# exhaust formants [78, 156, 312]: modes at max(70, f * (0.85 first)), Q 6 / 4.8 / 3.6.
+V10_CHAIN_MODES = [(70.0, 6.0, 1.6), (156.0, 4.8, 1.6 / 1.6), (312.0, 3.6, 1.6 / 2.2)]
+
+
+def _v10_pop_impulse(seconds: float, rise: float, decay: float, noise_amt: float, seed: int) -> np.ndarray:
+    """buildPopImpulse() of the Racing V10 (same LCG noise, envelope and rebound)."""
+    n = max(32, round(seconds * SR))
+    d = np.zeros(n)
+    r = seed & 0xFFFFFFFF or 1
+    lp = 0.0
+    lpc = 1 - math.exp(-2 * math.pi * 1200 / SR)
+    for i in range(n):
+        t = i / SR
+        r = (r * 1664525 + 1013904223) & 0xFFFFFFFF
+        lp += ((r / 0xFFFFFFFF) * 2 - 1 - lp) * lpc
+        env = (1 - math.exp(-t / rise)) * math.exp(-t / decay)
+        rebound = -0.22 * math.exp(-(((t - decay * 2.2) / (decay * 1.1)) ** 2))
+        fade = (n - i) / 64 if i > n - 64 else 1
+        d[i] = (env * (1 - noise_amt + noise_amt * lp * 3) + rebound) * fade
+    d[0] = 0
+    return d
+
+
+def crackle_oneshot(v: int) -> np.ndarray:
+    """
+    One overrun crackle exactly as the Racing V10 makes it: its 25 ms crackle impulse into
+    the pop chain (body low-pass 190 Hz + pipe modes, growl saturation, 40 Hz high-pass,
+    -10 dB high shelf at 800 Hz, 3.2 kHz low-pass). Variants re-tune the pipe modes like
+    the V10 does per event (pipe temperature / gas speed). Peak-normalised to -9 dBFS.
+    """
+    detune = [0.94, 1.0, 1.07][v - 1]
+    imp = _v10_pop_impulse(0.025, 0.0004, 0.0028, 0.6, 0x7C3)
+    n = int(0.16 * SR)
+    x = np.zeros(n)
+    x[: len(imp)] = imp * 0.25  # V10 crackle level into the chain: peak * 1.2 * 0.32 * ~0.65
+    s = _biquad(x, "lowpass", 190, 0.9)
+    for f0, q, g in V10_CHAIN_MODES:
+        s += g * _biquad(x, "bandpass", f0 * detune, q)
+    k = 1.5 + 0.55 * 3.5  # growlCurve(0.55)
+    s = np.tanh(k * (np.clip(s, -1, 1) + 0.18 * np.clip(s, -1, 1) ** 2)) / math.tanh(k)
+    s = _biquad(s, "highpass", 40, 0.7)
+    s = _biquad(s, "highshelf", 800, 0.7, -10)
+    s = _biquad(s, "lowpass", 3200, 0.6)
+    s -= np.mean(s)
+    t = np.arange(n) / SR
+    s *= 1 - smoothstep((t - (0.16 - 0.04)) / 0.04)
+    return s / np.max(np.abs(s)) * 10 ** (-9 / 20)
+
+
+ONESHOTS = ["startup", "bark", "blip1", "blip2", "pop1", "pop2", "pop3",
+            "crackle1", "crackle2", "crackle3"]
 # Keep the file gain of coyote-v2.2 so the unchanged idle loop plays at exactly the same
 # level (the gain only moves if the new bank would otherwise clip).
 FILE_GAIN_DB = -3.95

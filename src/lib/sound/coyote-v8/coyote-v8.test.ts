@@ -70,18 +70,21 @@ describe("Coyote V8 loop bank (American Muscle V8 v2)", () => {
     for (const id of [
       "startup",
       "bark",
-      "upshift1",
-      "upshift2",
       "blip1",
       "blip2",
       "pop1",
       "pop2",
       "pop3",
-      "gear_out",
-      "gear_in1",
-      "gear_in2",
+      "crackle1",
+      "crackle2",
+      "crackle3",
     ]) {
       expect(ids).toContain(id);
+    }
+    // v2.4: the struck-metal gearbox shots and the engine-render upshifts are gone (the
+    // shift is the Racing V10's runtime choreography now)
+    for (const id of ["gear_out", "gear_in1", "gear_in2", "upshift1", "upshift2"]) {
+      expect(ids).not.toContain(id);
     }
     const loudestLoop = Math.max(...bank.loops.map((l) => l.peakDb));
     for (const o of bank.oneshots) expect(o.peakDb).toBeLessThanOrEqual(loudestLoop + 0.01);
