@@ -1371,7 +1371,20 @@ Measure control independence, spectral centroid, tonal stability, transient coun
 
 ---
 
-# Turbine Jet
+# Turbine Jet (Fighter Jet)
+
+> **Nov 2026 (George): Fighter Jet.** Name and id unchanged (`turbine-jet`, "Turbine Jet").
+> Sound = Rocket Car while moving, unchanged and +1.5 dB (`SOUND_ALIASES` in
+> `src/lib/sound/engine.ts`), in the same airfield frame as Private Jet Oberpfaffenhofen
+> (`src/lib/sound/private-jet/fighter-jet.ts`):
+> - parked: this profile's own turbofan idle (the spec below, same level as before) plus snappy
+>   control-surface checks (short aileron twitches, some flap runs) every 7-12 s; no Rocket Car idle;
+> - moving: equal-power crossfade to Rocket Car (full from 12 km/h or on a launch);
+> - take-off (strong launch from below 30 km/h): afterburner light (deep thump + burst) and a
+>   flickering reheat roar, plus a 2.6-5.5 kHz turbine scream that climbs with speed; both fade
+>   on lift-off or once the pull settles into cruise.
+> The parked idle runs on its own random stream so Rocket Car plays exactly as on its own.
+> The specification below now describes the parked idle only.
 
 **Profile ID:** `turbine-jet`  
 **Portfolio category:** Aviation  

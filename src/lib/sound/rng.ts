@@ -10,3 +10,8 @@ export function audioRandom() {
   state = (Math.imul(1664525, state) + 1013904223) >>> 0;
   return state / 0x100000000;
 }
+
+/** Current stream position, so a side voice can run on its own stream and hand this one back. */
+export function audioRandomState(): number {
+  return state;
+}

@@ -14,9 +14,21 @@ import type { DriveState } from "@/lib/drive/model";
 import { scaleStrategyBuses, disposeGainNodes } from "@/lib/sound/engine-layers";
 import type { SoundProfile } from "@/lib/sound/profiles";
 import { ImprovedSynth } from "@/lib/sound/realism/improved-synth";
+import { audioRandomState, seedAudioRandom } from "@/lib/sound/rng";
 import type { StrategyBuses } from "@/lib/sound/realism/types";
-import { createTakeoffWhistleVoice, type TakeoffWhistleVoice } from "./takeoff-whistle";
-import { createWingCheckVoice, type WingCheckVoice } from "./wing-check";
+import { createAfterburnerVoice, type AfterburnerVoice } from "./afterburner";
+import {
+  PRIVATE_JET_WHISTLE,
+  createTakeoffWhistleVoice,
+  type TakeoffWhistleParams,
+  type TakeoffWhistleVoice,
+} from "./takeoff-whistle";
+import {
+  PRIVATE_JET_WING_CHECK,
+  createWingCheckVoice,
+  type WingCheckStyle,
+  type WingCheckVoice,
+} from "./wing-check";
 
 /** Speeds up to this (km/h) count as parked (GPS jitter). */
 export const JET_PARKED_JITTER_KMH = 2;
@@ -33,6 +45,34 @@ export const JET_ENGINE_RELEASE_S = 0.5;
  * the difference itself (calibrated with the offline drive harness against main).
  */
 export const JET_IDLE_BED_TRIM = 10 ** (12.2 / 20) * 0.98;
+
+/**
+ * Per-aircraft airfield frame. The moving sound is the alias base (SOUND_ALIASES in
+ * engine.ts); the parked bed is the aircraft's own ImprovedSynth strategy.
+ */
+export interface AirfieldConfig {
+  /** Parked bed level, carrying the old profile's loudness/makeup vs the base profile. */
+  bedTrim: number;
+  /**
+   * When set, the parked bed draws from its own audioRandom stream (this seed), so the base
+   * profile's random draws (crackle, bursts, noise buffers) are exactly those of the base
+   * sound on its own. Unset = shared stream (Private Jet, unchanged since PR #37).
+   */
+  bedRandomSeed?: number;
+  whistle: TakeoffWhistleParams;
+  wingCheck: WingCheckStyle;
+  wingSeed: number;
+  /** Fighter Jet: afterburner light + reheat roar on take-off. */
+  afterburner: boolean;
+}
+
+export const PRIVATE_JET_AIRFIELD: AirfieldConfig = {
+  bedTrim: JET_IDLE_BED_TRIM,
+  whistle: PRIVATE_JET_WHISTLE,
+  wingCheck: PRIVATE_JET_WING_CHECK,
+  wingSeed: 20261124,
+  afterburner: false,
+};
 
 /** Seconds a branch must be fully silent before it is disconnected. */
 const BRANCH_PARK_S = 0.5;
@@ -86,6 +126,7 @@ export interface JetAirfield {
     bedLayers: number;
     whistle: ReturnType<TakeoffWhistleVoice["diagnostics"]>;
     wingChecks: ReturnType<WingCheckVoice["diagnostics"]>;
+    afterburner: ReturnType<AfterburnerVoice["diagnostics"]> | null;
   };
 }
 
@@ -94,16 +135,40 @@ export function createJetAirfield(
   buses: StrategyBuses,
   turbofanProfile: SoundProfile,
   overlayDestination: AudioNode,
-  options?: { experienceTuning?: boolean },
+  options?: { experienceTuning?: boolean; config?: AirfieldConfig },
 ): JetAirfield {
+  const cfg = options?.config ?? PRIVATE_JET_AIRFIELD;
   const engine = scaleStrategyBuses(ctx, buses, 0);
-  const bed = scaleStrategyBuses(ctx, buses, JET_IDLE_BED_TRIM);
+  const bed = scaleStrategyBuses(ctx, buses, cfg.bedTrim);
   const nodes: GainNode[] = [...engine.nodes, ...bed.nodes];
+  let bedRandom = cfg.bedRandomSeed;
+  const onBedRandom = <T>(fn: () => T): T => {
+    if (bedRandom === undefined) return fn();
+    const outer = audioRandomState();
+    seedAudioRandom(bedRandom);
+    try {
+      return fn();
+    } finally {
+      bedRandom = audioRandomState();
+      seedAudioRandom(outer);
+    }
+  };
   const turbofan = new ImprovedSynth();
   turbofan.setExperienceEnabled(options?.experienceTuning ?? true);
-  const bedOk = turbofan.build(ctx, turbofanProfile, bed.buses);
-  const whistle = createTakeoffWhistleVoice(ctx, overlayDestination);
-  const wings = createWingCheckVoice(ctx, overlayDestination);
+  // With its own stream the bed is also built on the first update, after the base profile's
+  // strategy, so the base sound creates (and draws) its shared noise buffers itself.
+  let bedOk = false;
+  let bedBuilt = false;
+  const buildBed = () => {
+    bedBuilt = true;
+    bedOk = onBedRandom(() => turbofan.build(ctx, turbofanProfile, bed.buses));
+  };
+  if (bedRandom === undefined) buildBed();
+  const whistle = createTakeoffWhistleVoice(ctx, overlayDestination, cfg.whistle);
+  const wings = createWingCheckVoice(ctx, overlayDestination, cfg.wingSeed, cfg.wingCheck);
+  const afterburner: AfterburnerVoice | null = cfg.afterburner
+    ? createAfterburnerVoice(ctx, overlayDestination)
+    : null;
   let gate = 0;
   let lastT: number | null = null;
   let disposed = false;
@@ -152,7 +217,7 @@ export function createJetAirfield(
       bedBranch.set(bedSilentFor < BRANCH_PARK_S);
     }
     for (const n of engine.nodes) n.gain.setTargetAtTime(e, t, 0.03);
-    for (const n of bed.nodes) n.gain.setTargetAtTime(b * JET_IDLE_BED_TRIM, t, 0.03);
+    for (const n of bed.nodes) n.gain.setTargetAtTime(b * cfg.bedTrim, t, 0.03);
   };
 
   return {
@@ -168,18 +233,21 @@ export function createJetAirfield(
       if (target <= 0 && gate < 0.01) gate = 0;
       setGains(t, target, dt);
       // The bed only matters while it is audible.
-      if (bedOk && gate < 0.999) turbofan.update(turbofanBedState(state), t);
+      if (!bedBuilt && !disposed) buildBed();
+      if (bedOk && gate < 0.999) onBedRandom(() => turbofan.update(turbofanBedState(state), t));
       whistle.update(state, t);
       wings.update(state, t);
+      afterburner?.update(whistle.diagnostics().gate, Math.max(0, state.speed || 0) * 3.6, t);
     },
     diagnostics: () => ({
       engineGate: gate,
       engineConnected: engineBranch.connected,
       bedConnected: bedBranch.connected,
-      bedGain: Math.cos((gate * Math.PI) / 2) * JET_IDLE_BED_TRIM,
+      bedGain: Math.cos((gate * Math.PI) / 2) * cfg.bedTrim,
       bedLayers: bedOk ? turbofan.listLayers().length : 0,
       whistle: whistle.diagnostics(),
       wingChecks: wings.diagnostics(),
+      afterburner: afterburner?.diagnostics() ?? null,
     }),
     dispose() {
       if (disposed) return;
@@ -187,6 +255,7 @@ export function createJetAirfield(
       turbofan.dispose();
       whistle.dispose();
       wings.dispose();
+      afterburner?.dispose();
       disposeGainNodes(nodes);
     },
   };

@@ -1,7 +1,16 @@
 import type { DriveState } from "@/lib/drive/model";
 import { fireSpooky, isSpookyKind } from "@/lib/sound/dsp/spooky";
 import { createSirenOverlay, type SirenOverlay } from "@/lib/sound/dsp/siren-overlay";
-import { createJetAirfield, type JetAirfield } from "@/lib/sound/private-jet/airfield";
+import {
+  PRIVATE_JET_AIRFIELD,
+  createJetAirfield,
+  type AirfieldConfig,
+  type JetAirfield,
+} from "@/lib/sound/private-jet/airfield";
+import {
+  FIGHTER_JET_AIRFIELD,
+  FIGHTER_JET_ENGINE_GAIN_DB,
+} from "@/lib/sound/private-jet/fighter-jet";
 import { PRIVATE_JET_TURBOFAN_PROFILE } from "@/lib/sound/profiles";
 import { DEFAULT_CABIN_EQ, type CabinEq } from "@/lib/drive/types-extra";
 import type { RhythmSpec, SignalSpec, SoundProfile, TextureSpec } from "@/lib/sound/profiles";
@@ -106,7 +115,23 @@ export const SOUND_ALIASES: Readonly<
   // Ge-Squared graph + samples unchanged for acceleration and cruise. Parked: the old
   // Private Jet wind bed + wing checks instead of the V8-based idle; take-off turbo whistle.
   "private-jet": { base: "ge-squared", overlay: "jet-airfield" },
+  // Fighter Jet (Turbine Jet): Rocket Car graph unchanged while moving, a bit louder;
+  // parked = its own turbofan idle + control-surface checks; take-off afterburner + whistle.
+  "turbine-jet": {
+    base: "rocket-car",
+    overlay: "jet-airfield",
+    engineGainDb: FIGHTER_JET_ENGINE_GAIN_DB,
+  },
 };
+
+/** Airfield frame per aliased aircraft: parked bed profile + take-off / parked layers. */
+export function airfieldFor(requested: SoundProfile): {
+  bed: SoundProfile;
+  config: AirfieldConfig;
+} {
+  if (requested.id === "turbine-jet") return { bed: requested, config: FIGHTER_JET_AIRFIELD };
+  return { bed: PRIVATE_JET_TURBOFAN_PROFILE, config: PRIVATE_JET_AIRFIELD };
+}
 
 /**
  * Profiles whose own atmosphere (wind beds + random voice events) must play on
@@ -1468,12 +1493,13 @@ export class SoundEngine {
 
     // Private Jet Oberpfaffenhofen: Ge-Squared runs on gated buses; parked = jet wind bed.
     if (this.overlayKind === "jet-airfield" && engineBuses && this.accents) {
+      const airfield = airfieldFor(this.requestedProfile ?? profile);
       this.jetAirfield = createJetAirfield(
         ctx,
         engineBuses,
-        PRIVATE_JET_TURBOFAN_PROFILE,
+        airfield.bed,
         this.cabinIn ?? this.accents,
-        { experienceTuning: this.experienceTuningEnabled },
+        { experienceTuning: this.experienceTuningEnabled, config: airfield.config },
       );
       engineBuses = this.jetAirfield.engineBuses;
     }
