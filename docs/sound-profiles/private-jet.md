@@ -1,9 +1,20 @@
-# Private Jet
+# Private Jet Oberpfaffenhofen
+
+> **Nov 2026 (George):** renamed from "Private Jet" to "Private Jet Oberpfaffenhofen" (id unchanged).
+> Sound = Ge-Squared O))) unchanged for pull-away, acceleration and cruise (`SOUND_ALIASES` in
+> `src/lib/sound/engine.ts`), framed by `src/lib/sound/private-jet/`:
+> - parked: the original turbofan wind bed below (no Ge-Squared / V8 idle) plus pre-flight
+>   wing checks (flap actuator runs with end-stop clunks, aileron twitches) every 10-18 s;
+> - moving: equal-power crossfade to Ge-Squared (full from 12 km/h or on a launch);
+> - take-off (strong launch from below 30 km/h): turbo whistle that climbs with spool and speed,
+>   fading on lift-off or once the pull settles into cruise.
+> Drives with Ge-Squared's gears (`virtual-transmission`, personality `v-twin-cruiser`).
+> The specification below now describes the parked wind bed only.
 
 **Profile ID:** `private-jet`  
 **Portfolio category:** Aviation  
 **Technical family:** physical  
-**Drivetrain mode:** `continuous`  
+**Drivetrain mode:** `virtual-transmission` (Ge-Squared gears; the wind bed runs `continuous`)  
 **Status:** Target specification for ELCAMOSO calibration; preserve the public ID for settings and saved Garage compatibility.
 
 ## Product promise

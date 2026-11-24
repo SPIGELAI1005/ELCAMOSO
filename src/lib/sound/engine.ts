@@ -1,6 +1,8 @@
 import type { DriveState } from "@/lib/drive/model";
 import { fireSpooky, isSpookyKind } from "@/lib/sound/dsp/spooky";
 import { createSirenOverlay, type SirenOverlay } from "@/lib/sound/dsp/siren-overlay";
+import { createJetAirfield, type JetAirfield } from "@/lib/sound/private-jet/airfield";
+import { PRIVATE_JET_TURBOFAN_PROFILE } from "@/lib/sound/profiles";
 import { DEFAULT_CABIN_EQ, type CabinEq } from "@/lib/drive/types-extra";
 import type { RhythmSpec, SignalSpec, SoundProfile, TextureSpec } from "@/lib/sound/profiles";
 import { getProfile } from "@/lib/sound/profiles";
@@ -91,14 +93,19 @@ const ADAPTIVE_MUSIC_PROFILE_IDS: ReadonlySet<string> = new Set(["deep-bass-puls
 /** Profiles that keep their own sound and add an adaptive music bed underneath (level = bus gain). */
 /**
  * Profiles that reuse another profile's sound unchanged and add an overlay
- * (Police Patrol = American Muscle V8 + siren).
+ * (Police Patrol = American Muscle V8 + siren; Private Jet Oberpfaffenhofen =
+ * Ge-Squared O))) + airfield frame).
  */
+export type SoundAliasOverlay = "siren" | "jet-airfield";
 export const SOUND_ALIASES: Readonly<
-  Record<string, { base: string; overlay: "siren"; engineGainDb?: number }>
+  Record<string, { base: string; overlay: SoundAliasOverlay; engineGainDb?: number }>
 > = {
   // Same American Muscle V8 graph + samples (bit-identical with the siren removed),
   // just played louder; the siren sits ~5-10 % of the mix power on top.
   "police-patrol": { base: "american-muscle-v8", overlay: "siren", engineGainDb: 2.5 },
+  // Ge-Squared graph + samples unchanged for acceleration and cruise. Parked: the old
+  // Private Jet wind bed + wing checks instead of the V8-based idle; take-off turbo whistle.
+  "private-jet": { base: "ge-squared", overlay: "jet-airfield" },
 };
 
 /**
@@ -318,10 +325,11 @@ export class SoundEngine {
   private dynamicDrive: DynamicDriveSynth | null = null;
   private symphony: AdaptiveMusicSynth | SymphonySynth | null = null;
   private backgroundMusic: AdaptiveMusicSynth | null = null;
-  private overlayKind: "siren" | null = null;
+  private overlayKind: SoundAliasOverlay | null = null;
   /** Profile as the user picked it (keeps aliases like police-patrol so rebuilds keep the overlay). */
   private requestedProfile: SoundProfile | null = null;
   private siren: SirenOverlay | null = null;
+  private jetAirfield: JetAirfield | null = null;
   private fusion: FusionSynth | null = null;
   private world: WorldSynth | null = null;
   private retroArcade: RetroArcadeSynth | null = null;
@@ -1303,6 +1311,11 @@ export class SoundEngine {
     };
   }
 
+  /** Diagnostics/tests: Private Jet Oberpfaffenhofen airfield frame (null for other sounds). */
+  jetAirfieldDiagnostics(): ReturnType<JetAirfield["diagnostics"]> | null {
+    return this.jetAirfield?.diagnostics() ?? null;
+  }
+
   /* -------------------------------------------------------- profile switch */
 
   /**
@@ -1451,6 +1464,18 @@ export class SoundEngine {
       );
       this.layerGainNodes.push(...scaled.nodes);
       engineBuses = scaled.buses;
+    }
+
+    // Private Jet Oberpfaffenhofen: Ge-Squared runs on gated buses; parked = jet wind bed.
+    if (this.overlayKind === "jet-airfield" && engineBuses && this.accents) {
+      this.jetAirfield = createJetAirfield(
+        ctx,
+        engineBuses,
+        PRIVATE_JET_TURBOFAN_PROFILE,
+        this.cabinIn ?? this.accents,
+        { experienceTuning: this.experienceTuningEnabled },
+      );
+      engineBuses = this.jetAirfield.engineBuses;
     }
 
     // Overlay on an aliased sound (Police Patrol siren over the V8).
@@ -2171,6 +2196,7 @@ export class SoundEngine {
       }
     }
     if (this.siren) this.siren.update(state, t);
+    if (this.jetAirfield) this.jetAirfield.update(state, t);
 
     if (
       this.improved ||
@@ -2976,6 +3002,8 @@ export class SoundEngine {
     this.backgroundMusic = null;
     this.siren?.dispose();
     this.siren = null;
+    this.jetAirfield?.dispose();
+    this.jetAirfield = null;
     this.fusion?.dispose();
     this.fusion = null;
     this.world?.dispose();

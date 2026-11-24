@@ -36,7 +36,7 @@ This package was derived from the current GitHub portfolio and preserves all 57 
 | `kazoo-kart` | Kazoo Kart | Playful | designed | `virtual-transmission` |
 | `turbine-jet` | Turbine Jet | Aviation | physical | `continuous` |
 | `helicopter` | Helicopter | Aviation | physical | `continuous` |
-| `private-jet` | Private Jet | Aviation | physical | `continuous` |
+| `private-jet` | Private Jet Oberpfaffenhofen | Aviation | physical | `virtual-transmission` (Ge-Squared sound + jet airfield frame) |
 | `wiesn-tractor` | Oide Wiesn Tractor | Heritage | physical | `virtual-transmission` |
 | `open-wind` | Open Wind | Nature | environmental | `continuous` |
 | `storm-glider` | Storm Glider | Nature | environmental | `continuous` |
