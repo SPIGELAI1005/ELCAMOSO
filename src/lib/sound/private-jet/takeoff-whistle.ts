@@ -41,6 +41,32 @@ const SPOOL_DECAY_S = 0.45;
 /** Ge-Squared acoustic redline (BITURBO_V8_4X4). */
 const REDLINE_RPM = 6200;
 
+/** Per-aircraft tuning; every field defaults to the Private Jet values above. */
+export interface TakeoffWhistleParams {
+  armKmh: number;
+  endKmh: number;
+  launchAccel: number;
+  launchThrottle: number;
+  level: number;
+  range: TurboWhistleRange;
+  speedHz: number;
+  /**
+   * Gearless bases (rpm 0, e.g. Rocket Car): derive the spool rpm from speed instead,
+   * idle → full rpm over 0 → fullKmh.
+   */
+  rpmFromSpeed?: { idleRpm: number; fullRpm: number; fullKmh: number };
+}
+
+export const PRIVATE_JET_WHISTLE: TakeoffWhistleParams = {
+  armKmh: TAKEOFF_ARM_KMH,
+  endKmh: TAKEOFF_END_KMH,
+  launchAccel: TAKEOFF_LAUNCH_ACCEL,
+  launchThrottle: TAKEOFF_LAUNCH_THROTTLE,
+  level: TAKEOFF_WHISTLE_LEVEL,
+  range: TAKEOFF_WHISTLE_RANGE,
+  speedHz: TAKEOFF_WHISTLE_SPEED_HZ,
+};
+
 export interface TakeoffWhistleFrame {
   active: boolean;
   gate: number;
@@ -57,7 +83,10 @@ export interface TakeoffWhistleModel {
 const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
 
 /** Pure control model (no audio): testable frame by frame. */
-export function createTakeoffWhistleModel(): TakeoffWhistleModel {
+export function createTakeoffWhistleModel(
+  params: TakeoffWhistleParams = PRIVATE_JET_WHISTLE,
+): TakeoffWhistleModel {
+  const P = params;
   let armed = true;
   let active = false;
   let sag = 0;
@@ -74,10 +103,13 @@ export function createTakeoffWhistleModel(): TakeoffWhistleModel {
       const acc = state.accelerationEstimated ?? state.acceleration ?? 0;
       const throttle = pt?.driverDemand ?? state.throttle ?? 0;
       const load = pt?.engineLoad ?? state.load ?? 0;
-      const rpm = pt?.rpm ?? state.rpm ?? 0;
-      if (!active && kmh < TAKEOFF_ARM_KMH && throttle < TAKEOFF_HOLD_THROTTLE) armed = true;
-      const launch = acc >= TAKEOFF_LAUNCH_ACCEL && throttle >= TAKEOFF_LAUNCH_THROTTLE;
-      if (!active && armed && launch && kmh < TAKEOFF_ARM_KMH + 20) {
+      const rs = P.rpmFromSpeed;
+      const rpm = rs
+        ? rs.idleRpm + (rs.fullRpm - rs.idleRpm) * clamp01(kmh / rs.fullKmh)
+        : (pt?.rpm ?? state.rpm ?? 0);
+      if (!active && kmh < P.armKmh && throttle < TAKEOFF_HOLD_THROTTLE) armed = true;
+      const launch = acc >= P.launchAccel && throttle >= P.launchThrottle;
+      if (!active && armed && launch && kmh < P.armKmh + 20) {
         active = true;
         armed = false;
         sag = 0;
@@ -86,7 +118,7 @@ export function createTakeoffWhistleModel(): TakeoffWhistleModel {
       if (active) {
         const holding = acc >= TAKEOFF_HOLD_ACCEL && throttle >= TAKEOFF_HOLD_THROTTLE;
         sag = holding ? 0 : sag + dt;
-        if (sag > TAKEOFF_GRACE_S || kmh > TAKEOFF_END_KMH || state.regen > 0.35) active = false;
+        if (sag > TAKEOFF_GRACE_S || kmh > P.endKmh || state.regen > 0.35) active = false;
       }
       const gateTau = active ? 0.35 : 0.7;
       gate += ((active ? 1 : 0) - gate) * (1 - Math.exp(-dt / gateTau));
@@ -100,14 +132,9 @@ export function createTakeoffWhistleModel(): TakeoffWhistleModel {
       const speedNorm = clamp01(kmh / 140);
       const gain =
         gate > 0.002
-          ? TAKEOFF_WHISTLE_LEVEL *
-            gate *
-            (0.35 + 0.65 * Math.pow(spool, 1.2)) *
-            (0.75 + 0.25 * speedNorm)
+          ? P.level * gate * (0.35 + 0.65 * Math.pow(spool, 1.2)) * (0.75 + 0.25 * speedNorm)
           : 0;
-      const hz =
-        turboWhistleHz(spool, clamp01(rpm / REDLINE_RPM), TAKEOFF_WHISTLE_RANGE) +
-        speedNorm * TAKEOFF_WHISTLE_SPEED_HZ;
+      const hz = turboWhistleHz(spool, clamp01(rpm / REDLINE_RPM), P.range) + speedNorm * P.speedHz;
       return { active, gate, spool, gain, hz };
     },
   };
@@ -122,14 +149,15 @@ export interface TakeoffWhistleVoice {
 export function createTakeoffWhistleVoice(
   ctx: BaseAudioContext,
   destination: AudioNode,
+  params: TakeoffWhistleParams = PRIVATE_JET_WHISTLE,
 ): TakeoffWhistleVoice {
-  const model = createTakeoffWhistleModel();
+  const model = createTakeoffWhistleModel(params);
   const out = ctx.createGain();
   out.gain.value = 0;
   const oscs = [1, TURBO_WHISTLE_DETUNE].map((ratio) => {
     const o = ctx.createOscillator();
     o.type = "sine";
-    o.frequency.value = TAKEOFF_WHISTLE_RANGE.baseHz * ratio;
+    o.frequency.value = params.range.baseHz * ratio;
     o.connect(out);
     o.start();
     return o;

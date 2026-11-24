@@ -20,6 +20,50 @@ export const WING_CHECK_LEVEL = 0.16;
 
 export type WingCheckKind = "flaps" | "ailerons";
 
+/** Per-aircraft character; defaults are the Private Jet values. */
+export interface WingCheckStyle {
+  firstS: number;
+  everyS: readonly [number, number];
+  level: number;
+  /** share of checks that are full flap runs (rest: aileron twitches) */
+  flapsShare: number;
+  /** stroke duration × (smaller = snappier actuators) */
+  durScale: number;
+  /** actuator pitch × */
+  pitchScale: number;
+  /** end-stop clunk × */
+  clunkScale: number;
+  /** cabin band-limit (Hz) */
+  lowpassHz: number;
+}
+
+export const PRIVATE_JET_WING_CHECK: WingCheckStyle = {
+  firstS: WING_CHECK_FIRST_S,
+  everyS: WING_CHECK_EVERY_S,
+  level: WING_CHECK_LEVEL,
+  flapsShare: 0.7,
+  durScale: 1,
+  pitchScale: 1,
+  clunkScale: 1,
+  lowpassHz: 2800,
+};
+
+/** Scale a plan for a style (identity for the Private Jet style). */
+export function styleWingCheckPlan(
+  plan: WingCheckStroke[],
+  style: WingCheckStyle,
+): WingCheckStroke[] {
+  if (style.durScale === 1 && style.pitchScale === 1 && style.clunkScale === 1) return plan;
+  return plan.map((s) => ({
+    ...s,
+    at: s.at * style.durScale,
+    dur: s.dur * style.durScale,
+    fromHz: s.fromHz * style.pitchScale,
+    toHz: s.toHz * style.pitchScale,
+    clunk: Math.min(1.6, s.clunk * style.clunkScale),
+  }));
+}
+
 export interface WingCheckStroke {
   /** start offset (s) from the check start */
   at: number;
@@ -71,6 +115,7 @@ export function createWingCheckVoice(
   ctx: BaseAudioContext,
   destination: AudioNode,
   seed = 20261124,
+  style: WingCheckStyle = PRIVATE_JET_WING_CHECK,
 ): WingCheckVoice {
   const rand = lcg(seed);
   // Cabin perspective: band-limit the actuators.
@@ -79,10 +124,10 @@ export function createWingCheckVoice(
   hp.frequency.value = 70;
   const lp = ctx.createBiquadFilter();
   lp.type = "lowpass";
-  lp.frequency.value = 2800;
+  lp.frequency.value = style.lowpassHz;
   lp.Q.value = 0.6;
   const out = ctx.createGain();
-  out.gain.value = WING_CHECK_LEVEL;
+  out.gain.value = style.level;
   hp.connect(lp);
   lp.connect(out);
   out.connect(destination);
@@ -120,8 +165,8 @@ export function createWingCheckVoice(
   };
 
   const playCheck = (t: number) => {
-    const kind: WingCheckKind = rand() < 0.7 ? "flaps" : "ailerons";
-    const plan = wingCheckPlan(kind, rand);
+    const kind: WingCheckKind = rand() < style.flapsShare ? "flaps" : "ailerons";
+    const plan = styleWingCheckPlan(wingCheckPlan(kind, rand), style);
     const bus = ctx.createGain();
     bus.gain.value = 1;
     bus.connect(hp);
@@ -194,7 +239,7 @@ export function createWingCheckVoice(
     active = { nodes, bus };
     playingUntil = end;
     checks += 1;
-    const [lo, hi] = WING_CHECK_EVERY_S;
+    const [lo, hi] = style.everyS;
     nextAt = end + lo + rand() * (hi - lo);
     const mine = active;
     nodes[nodes.length - 1]!.onended = () => {
@@ -217,7 +262,7 @@ export function createWingCheckVoice(
         return;
       }
       parkedFor += dt;
-      if (nextAt === null && parkedFor >= WING_CHECK_FIRST_S) nextAt = t;
+      if (nextAt === null && parkedFor >= style.firstS) nextAt = t;
       if (nextAt !== null && t >= nextAt && t >= playingUntil) playCheck(t);
     },
     diagnostics: () => ({ checks, playing: lastT !== null && lastT < playingUntil, nextAt }),

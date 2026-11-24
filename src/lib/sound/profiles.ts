@@ -702,9 +702,11 @@ const BUILT_IN_SOUND_PROFILES: SoundProfile[] = [
     id: "turbine-jet",
     name: "Turbine Jet",
     category: "Aviation",
-    traits: ["Spooling", "Roaring", "Immense"],
+    // Fighter Jet: sound = Rocket Car while moving (SOUND_ALIASES in engine.ts); this
+    // turbofan voice stays the parked idle bed (src/lib/sound/private-jet/fighter-jet.ts).
+    traits: ["Fighter Jet", "Afterburner", "Brutal"],
     description:
-      "A turbofan spooling up: pink roar and a rising turbine whistle that sighs when you lift off.",
+      "A fighter on the line: turbofan idle and snappy control-surface checks while parked, then a brutal rocket-thrust roar with an afterburner light and a screaming turbine whistle on every take-off.",
     drivetrainMode: "continuous",
     voice: {
       baseFrequency: 920,
