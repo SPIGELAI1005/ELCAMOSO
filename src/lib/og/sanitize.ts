@@ -2,13 +2,28 @@
 
 const CONTROL = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g; // eslint-disable-line no-control-regex
 
+/**
+ * Emoji and other pictographs. The OG renderer (satori) only has the Outfit font, so these
+ * would draw as a missing-glyph box on share cards. Covers pictographs, flags (regional
+ * indicators), skin-tone modifiers, keycaps, tag sequences, ZWJ and variation selectors.
+ * Keeps © ® ™, which Outfit has.
+ */
+const EMOJI =
+  /(?![\u00A9\u00AE\u2122])\p{Extended_Pictographic}|\p{Emoji_Modifier}|[\u{1F1E6}-\u{1F1FF}\u{E0020}-\u{E007F}]|\u20E3|\u200D|\uFE0E|\uFE0F/gu;
+
+/** Remove emoji from text bound for an OG card (the app UI keeps them). */
+export function stripOgEmoji(text: string): string {
+  return text.replace(EMOJI, "");
+}
+
 export function sanitizeOgText(
   raw: unknown,
   maxLen: number,
-  opts?: { preserveNewlines?: boolean },
+  opts?: { preserveNewlines?: boolean; keepEmoji?: boolean },
 ): string {
   if (typeof raw !== "string") return "";
   let s = raw.replace(CONTROL, "");
+  if (!opts?.keepEmoji) s = stripOgEmoji(s);
   if (opts?.preserveNewlines) {
     s = s
       .replace(/\r\n/g, "\n")
