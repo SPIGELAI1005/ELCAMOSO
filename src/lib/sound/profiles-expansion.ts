@@ -840,9 +840,11 @@ export const EXPANSION_PROFILES: SoundProfile[] = [
     id: "ge-squared",
     name: "Ge-Squared O)))",
     category: "Classic",
-    traits: ["Double Big Twin", "Modern", "Brutal"],
+    // Sound: the Coyote V8 with the brutal O))) voicing (coyote-v8/voicing.ts). The voice
+    // below is the previous engine, still played by Private Jet Oberpfaffenhofen.
+    traits: ["Raw V8", "Explosive", "Brutal"],
     description:
-      "The modern boxy 4x4, voiced like two big twins bolted together: a deep uneven lope at idle, hard thumping hits under load, a fast aggressive build and a raw crackle when you lift.",
+      "The modern boxy 4x4 on a raw, brutal V8: a heavy gritty lope at idle, hard thumping pulls with race-car gear shifts, and deep explosive bangs with crackle when you lift.",
     ...GE_SQUARED_DRIVETRAIN,
     voice: {
       baseFrequency: 23,
@@ -872,9 +874,10 @@ export const EXPANSION_PROFILES: SoundProfile[] = [
     id: "ge-squared-90",
     name: "Ge-Squared '90",
     category: "Classic",
-    traits: ["Double Big Twin", "Off-Road", "Relaxed"],
+    // Sound: the Coyote V8 with the classic mechanical '90 voicing (coyote-v8/voicing.ts).
+    traits: ["Classic V8", "Mechanical", "Relaxed"],
     description:
-      "The classic 1990s boxy 4x4, voiced like two big twins side by side: a slow, soft potato-potato lope, relaxed torque and unhurried, mechanical acceleration.",
+      "The classic 1990s boxy 4x4 on an old-school V8: a smooth, muffled lope with the lifters ticking, an intake growl under load and only a mild burble when you lift.",
     drivetrainMode: "virtual-transmission",
     motionModel: "virtual-transmission",
     sourceMode: "procedural",

@@ -52,6 +52,7 @@ import {
   v10ShiftIntensity,
   type V10VoiceId,
 } from "./v10-shift";
+import { COYOTE_V8_VOICING, afterfireStrength, gritCurve, type CoyoteVoicing } from "./voicing";
 
 /** Output trim so the bank sits at the old V8's loudness through the shared master chain. */
 export const COYOTE_OUTPUT_GAIN = 1.48;
@@ -212,6 +213,10 @@ export interface CoyoteDiagnostics {
   limiterGate: boolean;
   /** Active points that are crank-aligned. */
   alignedPoints: number[];
+  /** Voicing id (american-muscle-v8 = the plain Coyote). */
+  voicing: string;
+  /** Ge-Squared O))) afterfire bangs played. */
+  afterfireShots: number;
 }
 
 function setParam(
@@ -291,10 +296,26 @@ export class CoyoteV8Synth {
 
   /** Called once the startup flare is actually scheduled (the engine marks the drive). */
   private readonly onStartup: (() => void) | null;
+  /** Per-profile voicing (Ge-Squared O))) / '90); the V8's own is the identity. */
+  private readonly voicing: CoyoteVoicing;
+  /** Redline of the drivetrain that drives this sound (race-mode rpm thresholds). */
+  private readonly redlineRpm: number;
+  private toneNodes: AudioNode[] = [];
+  private afterfireBuffer: AudioBuffer | null = null;
+  private afterfireLastAt = -10;
+  private afterfireShots = 0;
+  private valvetrain: { src: AudioBufferSourceNode; gain: GainNode; refRpm: number } | null = null;
 
-  constructor(options?: { startup?: boolean; onStartup?: () => void }) {
+  constructor(options?: {
+    startup?: boolean;
+    onStartup?: () => void;
+    voicing?: CoyoteVoicing;
+    redlineRpm?: number;
+  }) {
     this.startupAllowed = options?.startup !== false;
     this.onStartup = options?.onStartup ?? null;
+    this.voicing = options?.voicing ?? COYOTE_V8_VOICING;
+    this.redlineRpm = options?.redlineRpm ?? COYOTE_REDLINE_RPM;
     this.ready = new Promise((resolve) => {
       this.resolveReady = resolve;
     });
@@ -308,7 +329,9 @@ export class CoyoteV8Synth {
     const raceGate = ctx.createGain();
     raceGate.gain.value = 1;
     loopBus.connect(raceGate);
-    raceGate.connect(buses.body);
+    // Voiced profiles: loops and one-shots through the profile's fixed tone chain.
+    const engineOut = this.buildTone(ctx, buses.body);
+    raceGate.connect(engineOut);
     this.raceGate = raceGate;
     this.accentBus = buses.accents;
     // The V10 transients' noise, made now (not on the first shift, on a busy car browser).
@@ -316,13 +339,15 @@ export class CoyoteV8Synth {
     getNoiseBuffer(ctx, "brown");
     const shotBus = ctx.createGain();
     shotBus.gain.value = COYOTE_OUTPUT_GAIN;
-    shotBus.connect(buses.body);
+    shotBus.connect(engineOut);
     const popBus = ctx.createGain();
     popBus.gain.value = COYOTE_OUTPUT_GAIN;
     popBus.connect(buses.accents);
     this.loopBus = loopBus;
     this.shotBus = shotBus;
     this.popBus = popBus;
+    if (this.voicing.valvetrain) this.buildValvetrain(ctx, loopBus);
+    if (this.voicing.afterfire) this.loadAfterfire(ctx, this.voicing.afterfire.url);
 
     const load = loadCoyoteBank(ctx).then(
       (buffer) => {
@@ -369,6 +394,8 @@ export class CoyoteV8Synth {
       alignedPoints: [...this.points.values()]
         .filter((v) => v.aligned)
         .map((v) => COYOTE_RPM_POINTS[v.index] ?? 0),
+      voicing: this.voicing.id,
+      afterfireShots: this.afterfireShots,
     };
   }
 
@@ -485,7 +512,15 @@ export class CoyoteV8Synth {
     // One rpm automation for every voice (and the crank clock that mirrors it), so aligned
     // voices advance in lockstep. Retarget only on a real change.
     const retarget = Math.abs(rpm - this.clock.targetRpm) > this.clock.targetRpm * 0.0008;
-    if (retarget) this.clock.glide(at, rpm, RATE_TAU_S);
+    if (retarget) {
+      this.clock.glide(at, rpm, RATE_TAU_S);
+      const vt = this.valvetrain;
+      if (vt) {
+        vt.src.playbackRate.setTargetAtTime(rpm / vt.refRpm, at, RATE_TAU_S);
+        const norm = Math.min(1, rpm / this.redlineRpm);
+        vt.gain.gain.setTargetAtTime(this.voicing.valvetrain!.level * (0.7 + 0.5 * norm), at, 0.05);
+      }
+    }
     const weights = coyoteRpmWeights(rpm, this.mixLoads);
     const wanted = new Map(weights.map((w) => [w.index, w.weight]));
     for (const w of weights) {
@@ -705,15 +740,18 @@ export class CoyoteV8Synth {
           rpm > 2100 &&
           state.speed > 3
         ) {
-          const count = coyotePopCount(audioRandom());
+          const pv = this.voicing.pops;
+          const drawn = coyotePopCount(audioRandom());
+          const count = drawn > 0 ? Math.max(0, Math.min(4, drawn + pv.extraPops)) : 0;
           let at = t + 0.05 + audioRandom() * 0.25;
+          if (count > 0) at = this.playAfterfire(rpm, at);
           for (let i = 0; i < count; i += 1) {
             const variant = 1 + Math.floor(audioRandom() * 3);
             this.fireOneShot(
               `pop${variant}`,
               at,
-              0.92 + audioRandom() * 0.16,
-              0.35 + audioRandom() * 0.4,
+              (0.92 + audioRandom() * 0.16) * pv.rate,
+              (0.35 + audioRandom() * 0.4) * pv.level,
               this.popBus,
             );
             at += 0.12 + audioRandom() * 0.5;
@@ -885,7 +923,7 @@ export class CoyoteV8Synth {
     const pt = state.powertrain;
     const demand = pt?.driverDemand ?? state.throttle;
     const shifting = Boolean(pt?.shifting || state.isShifting);
-    const rpmNorm = Math.min(1, rpm / COYOTE_REDLINE_RPM);
+    const rpmNorm = Math.min(1, rpm / this.redlineRpm);
     const raceCut =
       shifting &&
       pt?.shiftDirection === "up" &&
@@ -903,7 +941,7 @@ export class CoyoteV8Synth {
       ev.fromGear >= 1 &&
       this.lastShiftAt === t &&
       rpmNorm > V10_RACE.shiftCrackRpmNorm &&
-      audioRandom() < V10_RACE.shiftCrackProbability
+      audioRandom() < this.voicing.pops.raceCrackProbability
     ) {
       this.playPopSequence("rev-match", V10_RACE.shiftCrackLevel * (0.7 + rpmNorm * 0.3), t + 0.02);
     }
@@ -915,7 +953,7 @@ export class CoyoteV8Synth {
       rpm > 2000 &&
       t - this.raceLastLimiterPopAt > V10_RACE.limiterPopGapS
     ) {
-      if (audioRandom() < V10_RACE.limiterPopProbability) {
+      if (audioRandom() < this.voicing.pops.limiterPopProbability) {
         this.raceLastLimiterPopAt = t;
         this.playPopSequence("rev-match", V10_RACE.limiterPopLevel, t);
       }
@@ -931,10 +969,11 @@ export class CoyoteV8Synth {
     const down = shifting && pt?.shiftDirection === "down";
     const downshift = down && !this.popPrevDownshift && rpm > 2000;
     if ((lift || downshift) && moving && t - this.racePopLastAt > V10_RACE.liftPopGapS) {
-      if (audioRandom() < V10_RACE.liftPops.probability) {
+      if (audioRandom() < this.voicing.pops.raceLiftProbability) {
         this.racePopLastAt = t;
         const strength = V10_RACE.liftPops.level * (0.6 + rpmNorm * 0.6);
-        this.playPopSequence(downshift ? "rev-match" : "overrun", strength, t + 0.05);
+        const at = lift ? this.playAfterfire(rpm, t + 0.05) : t + 0.05;
+        this.playPopSequence(downshift ? "rev-match" : "overrun", strength, at);
       }
       if (lift) this.popPrevDemand = 0;
     }
@@ -955,7 +994,7 @@ export class CoyoteV8Synth {
       if (shiftCut) {
         if (this.raceGateScheduledTo !== -1) {
           g.cancelScheduledValues(now);
-          g.setTargetAtTime(V10_RACE.shiftGateFloor, now, 0.008);
+          g.setTargetAtTime(this.voicing.pops.shiftGateFloor, now, 0.008);
           this.raceGateScheduledTo = -1;
         }
         return;
@@ -970,7 +1009,7 @@ export class CoyoteV8Synth {
     const from = Math.max(this.raceGateScheduledTo, now + 0.005);
     let next = from;
     for (const [cutAt, refireAt] of v10LimiterGateCycles(from, now + 0.12)) {
-      g.setTargetAtTime(V10_RACE.limiterGateFloor, cutAt, 0.003);
+      g.setTargetAtTime(this.voicing.pops.limiterGateFloor, cutAt, 0.003);
       g.setTargetAtTime(1, refireAt, 0.005);
       next = cutAt + 1 / V10_RACE.limiterGateHz;
     }
@@ -981,10 +1020,12 @@ export class CoyoteV8Synth {
   private playPopSequence(kind: "rev-match" | "overrun", peak: number, at: number) {
     if (!this.buffer || !this.popBus) return;
     this.racePopSequences += 1;
+    const pv = this.voicing.pops;
     for (const step of v10PopSequence(kind, peak, audioRandom)) {
       const crackle = step.id.startsWith("crackle");
-      const level = step.level * (crackle ? RACE_CRACKLE_GAIN : RACE_POP_GAIN);
-      this.fireOneShot(step.id, at + step.at, step.rate, level, this.popBus, false);
+      const level =
+        step.level * (crackle ? RACE_CRACKLE_GAIN * pv.crackle : RACE_POP_GAIN * pv.level);
+      this.fireOneShot(step.id, at + step.at, step.rate * pv.rate, level, this.popBus, false);
     }
   }
 
@@ -1052,6 +1093,166 @@ export class CoyoteV8Synth {
       src.disconnect();
       g.disconnect();
     };
+  }
+
+  /* ----------------------------------------------------------------- voicing */
+
+  /** The voicing's fixed tone chain into dest; returns its input (dest itself for the V8). */
+  private buildTone(ctx: BaseAudioContext, dest: AudioNode): AudioNode {
+    const tone = this.voicing.tone;
+    if (!tone) return dest;
+    const input = ctx.createGain();
+    const sum = ctx.createGain();
+    input.connect(sum);
+    const nodes: AudioNode[] = [input, sum];
+    if (tone.grit) {
+      // Parallel grit: the clipped copy is band-limited before it is mixed in (no fizz).
+      const drive = ctx.createGain();
+      drive.gain.value = 1;
+      const shaper = ctx.createWaveShaper();
+      shaper.curve = gritCurve(tone.grit.drive, tone.grit.asym) as Float32Array<ArrayBuffer>;
+      const lp = ctx.createBiquadFilter();
+      lp.type = "lowpass";
+      lp.frequency.value = tone.grit.lowpassHz;
+      lp.Q.value = 0.6;
+      const wet = ctx.createGain();
+      wet.gain.value = tone.grit.mix;
+      input.connect(drive);
+      drive.connect(shaper);
+      shaper.connect(lp);
+      lp.connect(wet);
+      wet.connect(sum);
+      nodes.push(drive, shaper, lp, wet);
+    }
+    const low = ctx.createBiquadFilter();
+    low.type = "lowshelf";
+    low.frequency.value = tone.lowShelf.hz;
+    low.gain.value = tone.lowShelf.db;
+    const peak = ctx.createBiquadFilter();
+    peak.type = "peaking";
+    peak.frequency.value = tone.peak.hz;
+    peak.gain.value = tone.peak.db;
+    peak.Q.value = tone.peak.q;
+    const high = ctx.createBiquadFilter();
+    high.type = "highshelf";
+    high.frequency.value = tone.highShelf.hz;
+    high.gain.value = tone.highShelf.db;
+    const lp = ctx.createBiquadFilter();
+    lp.type = "lowpass";
+    lp.frequency.value = tone.lowpassHz;
+    lp.Q.value = 0.5;
+    const trim = ctx.createGain();
+    trim.gain.value = tone.trim;
+    sum.connect(low);
+    low.connect(peak);
+    peak.connect(high);
+    high.connect(lp);
+    lp.connect(trim);
+    trim.connect(dest);
+    nodes.push(low, peak, high, lp, trim);
+    this.toneNodes = nodes;
+    return input;
+  }
+
+  /**
+   * '90 lifters: one looped buffer of short clicks (fixed number per engine cycle, uneven
+   * strength), rate-locked to the rpm automation, band-passed so it stays a mechanical tick.
+   * Locally seeded: does not move the shared random stream.
+   */
+  private buildValvetrain(ctx: BaseAudioContext, loopBus: GainNode) {
+    const vt = this.voicing.valvetrain!;
+    const refRpm = 1000;
+    const cycles = 16;
+    const sr = ctx.sampleRate;
+    const n = Math.round((cycles * 120 * sr) / refRpm);
+    const buf = ctx.createBuffer(1, n, sr);
+    const d = buf.getChannelData(0);
+    let seed = 0x90c1a5;
+    const r = () => {
+      seed = (seed * 1664525 + 1013904223) >>> 0;
+      return seed / 0x100000000;
+    };
+    const ticks = cycles * vt.ticksPerCycle;
+    const len = Math.round(0.0016 * sr);
+    for (let k = 0; k < ticks; k += 1) {
+      const pos = Math.round(((k + (r() - 0.5) * 0.12) * n) / ticks);
+      const amp = (k % 2 ? 0.7 : 1) * (0.6 + 0.4 * r());
+      for (let i = 0; i < len; i += 1) {
+        const idx = (pos + i + n) % n;
+        d[idx] = (d[idx] ?? 0) + amp * (r() * 2 - 1) * Math.exp(-i / (len / 5));
+      }
+    }
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    src.loop = true;
+    src.playbackRate.value = this.rpm / refRpm;
+    const band = ctx.createBiquadFilter();
+    band.type = "bandpass";
+    band.frequency.value = vt.bandHz;
+    band.Q.value = vt.q;
+    const gain = ctx.createGain();
+    gain.gain.value = vt.level * 0.7;
+    src.connect(band);
+    band.connect(gain);
+    gain.connect(loopBus);
+    src.start(ctx.currentTime);
+    this.valvetrain = { src, gain, refRpm };
+    this.toneNodes.push(band, gain);
+  }
+
+  private loadAfterfire(ctx: BaseAudioContext, url: string) {
+    fetchBank(url)
+      .then((bytes) => ctx.decodeAudioData(bytes.slice(0)))
+      .then(
+        (buffer) => {
+          if (!this.disposed) this.afterfireBuffer = buffer;
+        },
+        () => {
+          /* no afterfire: the Coyote pops still play */
+        },
+      );
+  }
+
+  /**
+   * O))) lift-off: one or two of the profile's deep afterfire bangs, scaled by rpm, before the
+   * pops. Returns when the pops should follow (unchanged when there is no afterfire).
+   */
+  private playAfterfire(rpm: number, at: number): number {
+    const af = this.voicing.afterfire;
+    const ctx = this.ctx;
+    const buf = this.afterfireBuffer;
+    if (!af || !ctx || !buf || !this.popBus) return at;
+    const s = afterfireStrength(af, rpm);
+    if (s <= 0 || at - this.afterfireLastAt < 1) return at;
+    this.afterfireLastAt = at;
+    const count = s > 0.5 && audioRandom() < 0.6 ? af.maxBangs : 1;
+    let t = at;
+    let level = af.level * (0.6 + 0.4 * s);
+    for (let k = 0; k < count; k += 1) {
+      const shot = af.bangs[Math.floor(audioRandom() * af.bangs.length) % af.bangs.length]!;
+      const src = ctx.createBufferSource();
+      src.buffer = buf;
+      src.playbackRate.value = af.rate * (0.94 + audioRandom() * 0.12);
+      const g = ctx.createGain();
+      g.gain.value = level;
+      src.connect(g);
+      g.connect(this.popBus);
+      const when = Math.max(t, ctx.currentTime);
+      src.start(when, shot.start, shot.end - shot.start);
+      this.live.add(src);
+      this.afterfireShots += 1;
+      this.shotLog.push(`afterfire@${when.toFixed(2)}`);
+      if (this.shotLog.length > 40) this.shotLog.shift();
+      src.onended = () => {
+        this.live.delete(src);
+        src.disconnect();
+        g.disconnect();
+      };
+      // Separate explosions, not one smeared bang.
+      t += 0.09 + audioRandom() * 0.16;
+      level *= 0.75;
+    }
+    return t + 0.06;
   }
 
   /* ---------------------------------------------------------------- fallback */
@@ -1134,6 +1335,22 @@ export class CoyoteV8Synth {
       }
       this.fallback = null;
     }
+    if (this.valvetrain) {
+      try {
+        this.valvetrain.src.stop();
+      } catch {
+        /* already stopped */
+      }
+      this.valvetrain = null;
+    }
+    for (const node of this.toneNodes) {
+      try {
+        node.disconnect();
+      } catch {
+        /* already disconnected */
+      }
+    }
+    this.toneNodes = [];
     for (const bus of [this.loopBus, this.shotBus, this.popBus]) {
       try {
         bus?.disconnect();

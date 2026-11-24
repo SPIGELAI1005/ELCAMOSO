@@ -164,12 +164,14 @@ import { fetchSoundAssetManifest } from "@/lib/sound-assets/client-loader";
 import { getSharedSampleLoader } from "@/lib/sound/realism/samples";
 import { loadRecordedLoopBuffers } from "@/lib/sound/realism/v2/recorded-loops-loader";
 import { getRecordedBed, RecordedBed } from "@/lib/sound/recorded-beds";
-import { CoyoteV8Synth, isCoyoteV8ProfileId } from "@/lib/sound/coyote-v8/coyote-synth";
+import { CoyoteV8Synth } from "@/lib/sound/coyote-v8/coyote-synth";
+import { coyoteVoicingFor } from "@/lib/sound/coyote-v8/voicing";
 import { HorseSnorts, isHorseSnortProfile } from "@/lib/sound/horse-snorts";
 import { HorseWhinnies } from "@/lib/sound/horse-whinnies";
 import { CaravanStreetCalls, isCaravanStreetCallProfile } from "@/lib/sound/caravan-street-calls";
 import { DEFAULT_TIMELINE_GAP_FLUSH_MS } from "@/lib/sound/realism/shift-events";
 import { resolvePersonalityId } from "@/lib/drive/drivetrain-resolve";
+import { getDrivetrainPersonality } from "@/lib/drive/drivetrain-personalities";
 
 export interface MeterReading {
   prePeak: number;
@@ -1350,8 +1352,14 @@ export class SoundEngine {
    * Latest selection wins; failed builds leave the previous sound usable.
    */
   setProfile(requested: SoundProfile, force = false) {
-    // Internal rebuilds may pass the resolved base back in - keep the alias then.
-    if (this.requestedProfile && SOUND_ALIASES[this.requestedProfile.id]?.base === requested.id) {
+    // Internal rebuilds (always forced) may pass the resolved base back in - keep the alias
+    // then. A user's pick is never remapped: Private Jet -> Ge-Squared O))) or Police Patrol ->
+    // American Muscle V8 mid-drive must switch to the picked sound.
+    if (
+      force &&
+      this.requestedProfile &&
+      SOUND_ALIASES[this.requestedProfile.id]?.base === requested.id
+    ) {
       requested = this.requestedProfile;
     }
     this.requestedProfile = requested;
@@ -1590,7 +1598,10 @@ export class SoundEngine {
 
     // American Muscle V8 (Coyote v2, Nov 2026): one pre-rendered loop bank replaces the
     // live V8 + Big Twin engines that overloaded the Tesla browser. Police Patrol reuses it.
-    if (isCoyoteV8ProfileId(profile.id) && strategyBuses) {
+    // Ge-Squared O))) / '90 (Nov 2026): the same Coyote with their own voicing; Private Jet
+    // (alias of Ge-Squared) keeps the previous Ge-Squared engine (coyoteVoicingFor).
+    const coyoteVoicing = coyoteVoicingFor(profile.id, this.requestedProfile?.id);
+    if (coyoteVoicing && strategyBuses) {
       // Startup is a once-per-drive event (spec: never replay the flare when the car stops
       // or the graph is rebuilt for a settings change); a new start() makes a new context.
       // Mark the context only once the flare really plays: drive start often builds the
@@ -1603,6 +1614,8 @@ export class SoundEngine {
         onStartup: () => {
           this.coyoteStartupCtx = ctx;
         },
+        voicing: coyoteVoicing,
+        redlineRpm: getDrivetrainPersonality(resolvePersonalityId(profile)).engine.redlineRpm,
       });
       coyote.build(ctx, strategyBuses);
       coyote.setShiftIntensity(this.shiftIntensity / 0.72);
