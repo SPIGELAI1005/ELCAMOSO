@@ -17,7 +17,7 @@ export const PUBLIC_PROFILE_IDS = [
   "maglev-train", "high-speed-train", "submarine", "jet-ski", "motorcycle-superbike", "big-twin",
   "snowmobile", "tank", "construction-monster", "horse-gallop", "dragon", "thunder-beast",
   "retro-arcade", "synthwave-drive", "deep-bass-pulse", "zen-drive", "rain-drive", "ocean-drive",
-  "heartbeat", "rocket-car", "time-machine", "f1-v10", "traby", "ge-squared", "ge-squared-90", "police-patrol", "bollywood-rickshaw", "classic-vespa", "caravan-carriage", "symphony-cinematic-rock", "symphony-motion-orchestra", "symphony-neon-run", "symphony-latino-fiesta", "symphony-piano-flow", "symphony-jazz-cruise", "symphony-viral-mix",
+  "heartbeat", "rocket-car", "time-machine", "f1-v10", "traby", "ge-squared", "ge-squared-90", "police-patrol", "bollywood-rickshaw", "classic-vespa", "caravan-carriage", "santa-christmas-sleigh", "symphony-cinematic-rock", "symphony-motion-orchestra", "symphony-neon-run", "symphony-latino-fiesta", "symphony-piano-flow", "symphony-jazz-cruise", "symphony-viral-mix",
   "world-space-drive", "world-cyber-city", "world-storm-run", "fusion-road-anthem",
   "fusion-mechanical-symphony", "fusion-midnight-boost", "fusion-future-pulse",
 ] as const;
@@ -192,6 +192,7 @@ export const PROFILE_EXPERIENCE_CONFIG = {
   "bollywood-rickshaw": combustion({ aspiration: "naturally-aspirated", availableRoles: ["combustion", "exhaust", "mechanical", "music", "event"], transitionTauSeconds: 0.16, phases: { idleCharacter: 1.05, pullAwayTexture: 0.9, accelerationTexture: 1.08, cruiseIntrusiveScale: 0.62, releaseCharacter: 0.76, stopTail: 0.35 }, variation: { minEventCooldownSeconds: 8 } }),
   "classic-vespa": combustion({ aspiration: "naturally-aspirated", availableRoles: ["combustion", "intake", "exhaust", "mechanical", "event"], transitionTauSeconds: 0.09, phases: { idleCharacter: 0.72, pullAwayTexture: 1.08, accelerationTexture: 1.14, cruiseIntrusiveScale: 0.7, releaseCharacter: 0.42, stopTail: 0.2 }, variation: { depth: 0.01, minEventCooldownSeconds: 6 } }),
   "caravan-carriage": motion({ physics: "physical-inspired", pitchDriver: "cadence", aspiration: "not-applicable", availableRoles: ["core", "mechanical", "environment", "event"], transitionTauSeconds: 0.22, phases: { accelerationTexture: 1.06, cruiseIntrusiveScale: 0.72, releaseCharacter: 0.7 } }),
+  "santa-christmas-sleigh": motion({ physics: "physical-inspired", pitchDriver: "cadence", aspiration: "not-applicable", availableRoles: ["core", "mechanical", "environment", "event"], transitionTauSeconds: 0.22, phases: { accelerationTexture: 1.06, cruiseIntrusiveScale: 0.72, releaseCharacter: 0.7 } }),
   "symphony-cinematic-rock": musical(["music", "event"], { transitionTauSeconds: 0.22, physics: "intentional-design", phases: { cruiseIntrusiveScale: 0.5, accelerationTexture: 1.2, releaseCharacter: 0.78, stopTail: 0.35 }, variation: { minEventCooldownSeconds: 8 } }),
   "symphony-motion-orchestra": musical(["music", "event"], { transitionTauSeconds: 0.22, physics: "intentional-design", phases: { cruiseIntrusiveScale: 0.58, accelerationTexture: 1.12 } }),
   "symphony-neon-run": musical(["music", "event"], { transitionTauSeconds: 0.14, physics: "intentional-design", phases: { cruiseIntrusiveScale: 0.54, accelerationTexture: 1.12 } }),

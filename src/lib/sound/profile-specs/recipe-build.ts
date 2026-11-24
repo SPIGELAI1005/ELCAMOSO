@@ -84,6 +84,7 @@ const AMBIENT_IDS = new Set([
   "dracula-carriage",
   "romanian-85-carriage",
   "caravan-carriage",
+  "santa-christmas-sleigh",
 ]);
 
 const FORCED_INDUCTION_IDS = new Set(["turbo-inline-6", "rally-car"]);

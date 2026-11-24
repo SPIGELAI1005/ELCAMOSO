@@ -2474,6 +2474,37 @@ export const CATALOG_TUNING_BY_PROFILE: Record<PublicProfileId, CatalogTuningRec
       transitionTauSeconds: 0.24,
     },
   },
+  "santa-christmas-sleigh": {
+    profileId: "santa-christmas-sleigh",
+    family: familyForProfile("santa-christmas-sleigh"),
+    intendedIdentity: "Santa's reindeer sleigh — Romanian '85 carriage gait without the wagon, runners on snow, bells",
+    previousSource: "romanian-85-carriage gait (wagon removed)",
+    diagnosedProblem: "New profile identity; audio reused, not retuned",
+    chosenRenderer: "improved-strategy",
+    layerOrderBalance: "Hooves + runner slide + occasional bells and snorts",
+    rpmLoadShaping: "Slower cadence feel",
+    bassBodyAdjustment: "Heavier cruise bed",
+    harshnessTreatment: "Softer accel",
+    transmissionEvents: "Few events; bells every 15-40 s, reindeer brrr snorts",
+    sampleStatus: "asset-pending",
+    changedCode: ["by-profile.ts:santa-christmas-sleigh", "applyExperienceCatalogTuning"],
+    baselineCapturePath: "artifacts/audio-lab/prompt-07-catalog/santa-christmas-sleigh__baseline",
+    afterCapturePath: "artifacts/audio-lab/prompt-07-catalog/santa-christmas-sleigh__after",
+    automatedCheck: "pending",
+    humanListeningStatus: "unverified",
+    deviceStatus: "unverified",
+    outcome: "experience-tuned",
+    audibleRationale: "Same experience overlay as romanian-85-carriage",
+    designFamilyHint: "creature-cinematic",
+    experienceOverlay: {
+      phases: {
+        accelerationTexture: 1.04,
+        cruiseIntrusiveScale: 0.74,
+        releaseCharacter: 0.72,
+      },
+      transitionTauSeconds: 0.24,
+    },
+  },
 };
 
 export function catalogTuningForProfile(profileId: string): CatalogTuningRecord | null {

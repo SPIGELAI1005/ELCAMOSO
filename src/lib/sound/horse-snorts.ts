@@ -14,6 +14,8 @@ export const HORSE_SNORT_PROFILES = new Set([
   "romanian-85-carriage",
   "caravan-carriage",
   "horse-gallop",
+  // Santa Christmas Sleigh: the reindeer get the carriage "brrr" snorts (never whinnies).
+  "santa-christmas-sleigh",
 ]);
 
 export function isHorseSnortProfile(id: string | null | undefined): boolean {
@@ -31,7 +33,13 @@ export const CARRIAGE_SNORT_URLS = {
   accel: `${BASE_V2}/brrr_a.m4a`,
   idle: `${BASE_V2}/brrr_b.m4a`,
 } as const;
-export const CARRIAGE_SNORT_PROFILES = new Set(["wild-west-carriage", "dracula-carriage", "romanian-85-carriage", "caravan-carriage"]);
+export const CARRIAGE_SNORT_PROFILES = new Set([
+  "wild-west-carriage",
+  "dracula-carriage",
+  "romanian-85-carriage",
+  "caravan-carriage",
+  "santa-christmas-sleigh",
+]);
 
 export interface SnortTiming {
   idleMin: number;
@@ -266,7 +274,7 @@ export const HORSE_SNORT_CREDITS: RecordedCredit[] = [
     licence: "CC0 1.0",
     licenceUrl: "https://creativecommons.org/publicdomain/zero/1.0/",
     sourceUrl: "https://freesound.org/s/437111/",
-    usedIn: "Carriages (brrr snort)",
+    usedIn: "Carriages and Santa Christmas Sleigh reindeer (brrr snort)",
     attribution: "G38-16-Four Horse Snorts by craigsmith (Freesound #437111), CC0 1.0",
   },
   {
@@ -284,7 +292,8 @@ export const HORSE_SNORT_CREDITS: RecordedCredit[] = [
     licence: "CC0 1.0",
     licenceUrl: "https://creativecommons.org/publicdomain/zero/1.0/",
     sourceUrl: "https://freesound.org/s/538697/",
-    usedIn: "Horse profiles (idle and settling snort), Carriages (brrr snort)",
+    usedIn:
+      "Horse profiles (idle and settling snort), Carriages and Santa Christmas Sleigh reindeer (brrr snort)",
     attribution: "Horse snort by bruno.auzet (Freesound #538697), CC0 1.0",
   },
 ];

@@ -107,6 +107,19 @@ const BY_PROFILE: Record<string, DriveShiftPersona> = {
       { id: "rooftop-express", label: "Rooftop Express" },
     ],
   }),
+  "santa-christmas-sleigh": persona({
+    ladderCount: 5,
+    ladderNoun: "Ho",
+    simulatedCaption: "Simulated reindeer spirit",
+    stageNames: ["Trot", "Dash", "Roof", "Chimney", "Orbit"],
+    modes: [
+      { id: "nice-list", label: "Nice List" },
+      { id: "naughty-list", label: "Naughty List" },
+      { id: "cookie-boost", label: "Cookie Boost" },
+      { id: "silent-night", label: "Silent Night" },
+      { id: "rooftop-express", label: "Rooftop Express" },
+    ],
+  }),
   "space-ship": persona({
     ladderCount: 5,
     ladderNoun: "Deck",

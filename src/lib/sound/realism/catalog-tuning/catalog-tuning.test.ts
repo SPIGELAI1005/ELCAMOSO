@@ -20,12 +20,12 @@ import { LISTENING_RUBRIC_DIMENSIONS } from "@/lib/sound/realism/catalog-tuning/
 
 describe("Prompt 07 catalog tuning", () => {
   it("covers the live public catalog (71) with one distinct row per ID", () => {
-    expect(PUBLIC_PROFILE_IDS).toHaveLength(72);
+    expect(PUBLIC_PROFILE_IDS).toHaveLength(73);
     const entries = allCatalogTuningEntries();
-    expect(entries).toHaveLength(72);
+    expect(entries).toHaveLength(73);
     expect(Object.keys(CATALOG_TUNING_BY_PROFILE).sort()).toEqual([...PUBLIC_PROFILE_IDS].sort());
     const ids = new Set(entries.map((e) => e.profileId));
-    expect(ids.size).toBe(72);
+    expect(ids.size).toBe(73);
   });
 
   it("gives every row a concrete outcome or explicit blocker", () => {

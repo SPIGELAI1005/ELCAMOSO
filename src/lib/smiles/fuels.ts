@@ -217,6 +217,16 @@ export const FUELS: Record<string, FuelSpec> = {
     co2: 0.05,
     quip: "The caravan horse needs {a} of hay — plus a carrot as a thank-you.",
   },
+  "santa-christmas-sleigh": {
+    name: "Carrots",
+    emoji: "🦌",
+    unit: { one: "carrot", many: "carrots" },
+    perKm: 1,
+    priceEur: 0.1,
+    co2: 0.02,
+    fun: true,
+    quip: "Two reindeer, {a}. The one with the bells gets the big one.",
+  },
   "santa-sleigh": {
     name: "Carrots",
     emoji: "🦌",

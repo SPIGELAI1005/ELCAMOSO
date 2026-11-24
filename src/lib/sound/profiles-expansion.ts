@@ -1040,4 +1040,35 @@ export const EXPANSION_PROFILES: SoundProfile[] = [
       ],
     },
   },
+  {
+    id: "santa-christmas-sleigh",
+    name: "Santa Christmas Sleigh 🛷",
+    category: "Festive",
+    traits: ["Reindeer", "Christmas Bells", "Snow"],
+    description:
+      "Santa's sleigh behind two reindeer: hooves in the snow, runners swishing softly as you pick up speed, a happy brrr from the reindeer and warm sleigh bells ringing out now and then.",
+    drivetrainMode: "continuous",
+    motionModel: "cadence",
+    sourceMode: "procedural",
+    // Romanian '85 Carriage gait with the wagon taken out (beds-v2/sleigh.m4a, no wheel
+    // rattle), a runner slide (dsp/sleigh-runner.ts), the Santa V8 Sleigh bells
+    // (dsp/sleigh-bells-overlay.ts) and the carriage "brrr" snorts. No neighs.
+    voice: {
+      baseFrequency: 46,
+      harmonics: [1, 2.02, 2.98],
+      waveResponse: 0.7,
+      filterBase: 200,
+      filterRange: 1100,
+      noise: 0.07,
+      detune: 13,
+      wave: "triangle",
+      rhythm: { kind: "clack", baseRate: 1.4, rateScale: 4.2, level: 0.26, tone: 720 },
+      rhythmB: { kind: "creak", baseRate: 0.34, rateScale: 1.1, level: 0.12, tone: 150 },
+      textures: [
+        { kind: "wind", level: 0.12, tone: 1100, speedScale: 0.9, surge: 0.4 },
+        { kind: "rumble", level: 0.1, tone: 95, speedScale: 0.7, surge: 0.7 },
+      ],
+      signals: [],
+    },
+  },
 ];
