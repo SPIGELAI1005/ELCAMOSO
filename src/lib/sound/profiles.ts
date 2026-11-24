@@ -246,9 +246,9 @@ export const PRIVATE_JET_TURBOFAN_PROFILE: SoundProfile = {
  */
 export const PRIVATE_JET_OBERPFAFFENHOFEN: SoundProfile = {
   ...PRIVATE_JET_TURBOFAN_PROFILE,
-  traits: ["Ge-Squared Power", "Take-off Whistle", "Wing Check"],
+  traits: ["Thumping Pull", "Take-off Whistle", "Wing Check"],
   description:
-    "Parked on the Oberpfaffenhofen apron: a slow turbofan wind and the wing flaps being checked before departure. Roll out and the Ge-Squared O))) sound takes over for acceleration and cruise, with a turbo whistle that climbs through every take-off.",
+    "Parked on the Oberpfaffenhofen apron: a slow turbofan wind and the wing flaps being checked before departure. Roll out and a deep, thumping pull carries you through acceleration and cruise, with a turbo whistle on every take-off and a crackle when you lift.",
   ...GE_SQUARED_DRIVETRAIN,
 };
 
