@@ -58,7 +58,6 @@ export interface RecordedBedConfig {
   oneShots?: BedOneShot[];
 }
 
-
 /**
  * Carriage bed (beds-v2/carriage.m4a, all CC0 Freesound): idle breathing, then walk / trot /
  * canter / gallop hoof loops crossfaded by speed, each with the wagon wheel rattle mixed in
@@ -91,11 +90,27 @@ function carriageBed(profileId: string, level: number): RecordedBedConfig {
   };
 }
 
+/**
+ * Santa Christmas Sleigh bed (beds-v2/sleigh.m4a): the carriage loops with the wagon taken
+ * out - same sources, windows, lengths and level as carriage.m4a, but no wheel rattle
+ * (Freesound 437077) and no "Horse and Wagon" (438194) under the trot. The sleigh runners are
+ * a separate procedural swish (dsp/sleigh-runner.ts). The hooves are softened a little
+ * (lower lowpass) as if on packed snow; same gait crossfade as the carriages.
+ */
+function sleighBed(profileId: string, level: number): RecordedBedConfig {
+  return {
+    ...carriageBed(profileId, level),
+    url: "/sample-packs/recorded/beds-v2/sleigh.m4a",
+    lowpassHz: 7000,
+  };
+}
+
 export const RECORDED_BEDS: Record<string, RecordedBedConfig> = {
   "wild-west-carriage": carriageBed("wild-west-carriage", HORSE_LEVEL),
   "dracula-carriage": carriageBed("dracula-carriage", HORSE_LEVEL),
   "romanian-85-carriage": carriageBed("romanian-85-carriage", HORSE_LEVEL),
   "caravan-carriage": carriageBed("caravan-carriage", HORSE_LEVEL),
+  "santa-christmas-sleigh": sleighBed("santa-christmas-sleigh", HORSE_LEVEL),
   "horse-gallop": {
     profileId: "horse-gallop",
     url: `${BASE}/horse.m4a`,
@@ -372,8 +387,9 @@ export const RECORDED_BED_CREDITS: RecordedCredit[] = [
     licence: "CC0 1.0",
     licenceUrl: "https://creativecommons.org/publicdomain/zero/1.0/",
     sourceUrl: "https://freesound.org/s/574094/",
-    usedIn: "Carriages (idle breathing)",
-    attribution: "Horse outside eating breathing stomping quiet by TRP (Freesound #574094), CC0 1.0, edited (trimmed, filtered, looped).",
+    usedIn: "Carriages and Santa Christmas Sleigh (idle breathing)",
+    attribution:
+      "Horse outside eating breathing stomping quiet by TRP (Freesound #574094), CC0 1.0, edited (trimmed, filtered, looped).",
   },
   {
     title: "Horse breathing (Freesound #619069)",
@@ -381,8 +397,9 @@ export const RECORDED_BED_CREDITS: RecordedCredit[] = [
     licence: "CC0 1.0",
     licenceUrl: "https://creativecommons.org/publicdomain/zero/1.0/",
     sourceUrl: "https://freesound.org/s/619069/",
-    usedIn: "Carriages (idle breathing)",
-    attribution: "Horse breathing by mrrap4food (Freesound #619069), CC0 1.0, edited (trimmed, filtered, looped).",
+    usedIn: "Carriages and Santa Christmas Sleigh (idle breathing)",
+    attribution:
+      "Horse breathing by mrrap4food (Freesound #619069), CC0 1.0, edited (trimmed, filtered, looped).",
   },
   {
     title: "G38-10-Horse Walks on Pavement (Freesound #437103)",
@@ -390,8 +407,9 @@ export const RECORDED_BED_CREDITS: RecordedCredit[] = [
     licence: "CC0 1.0",
     licenceUrl: "https://creativecommons.org/publicdomain/zero/1.0/",
     sourceUrl: "https://freesound.org/s/437103/",
-    usedIn: "Carriages (walk)",
-    attribution: "G38-10-Horse Walks on Pavement by craigsmith (Freesound #437103), CC0 1.0, edited (trimmed, filtered, looped).",
+    usedIn: "Carriages and Santa Christmas Sleigh (walk)",
+    attribution:
+      "G38-10-Horse Walks on Pavement by craigsmith (Freesound #437103), CC0 1.0, edited (trimmed, filtered, looped).",
   },
   {
     title: "trotting horse in rural road (Freesound #139325)",
@@ -399,8 +417,9 @@ export const RECORDED_BED_CREDITS: RecordedCredit[] = [
     licence: "CC0 1.0",
     licenceUrl: "https://creativecommons.org/publicdomain/zero/1.0/",
     sourceUrl: "https://freesound.org/s/139325/",
-    usedIn: "Carriages (trot)",
-    attribution: "trotting horse in rural road by Oscar de Ávila (Freesound #139325), CC0 1.0, edited (trimmed, filtered, looped).",
+    usedIn: "Carriages and Santa Christmas Sleigh (trot)",
+    attribution:
+      "trotting horse in rural road by Oscar de Ávila (Freesound #139325), CC0 1.0, edited (trimmed, filtered, looped).",
   },
   {
     title: "G18-16- Horse and Wagon (Freesound #438194)",
@@ -409,7 +428,8 @@ export const RECORDED_BED_CREDITS: RecordedCredit[] = [
     licenceUrl: "https://creativecommons.org/publicdomain/zero/1.0/",
     sourceUrl: "https://freesound.org/s/438194/",
     usedIn: "Carriages (trot)",
-    attribution: "G18-16- Horse and Wagon by craigsmith (Freesound #438194), CC0 1.0, edited (trimmed, filtered, looped).",
+    attribution:
+      "G18-16- Horse and Wagon by craigsmith (Freesound #438194), CC0 1.0, edited (trimmed, filtered, looped).",
   },
   {
     title: "R14-05-Horses Gallop By (Freesound #479742)",
@@ -417,8 +437,9 @@ export const RECORDED_BED_CREDITS: RecordedCredit[] = [
     licence: "CC0 1.0",
     licenceUrl: "https://creativecommons.org/publicdomain/zero/1.0/",
     sourceUrl: "https://freesound.org/s/479742/",
-    usedIn: "Carriages (canter)",
-    attribution: "R14-05-Horses Gallop By by craigsmith (Freesound #479742), CC0 1.0, edited (trimmed, filtered, looped).",
+    usedIn: "Carriages and Santa Christmas Sleigh (canter)",
+    attribution:
+      "R14-05-Horses Gallop By by craigsmith (Freesound #479742), CC0 1.0, edited (trimmed, filtered, looped).",
   },
   {
     title: "G52-06-Buckboard Wagon (Freesound #437077)",
@@ -427,7 +448,8 @@ export const RECORDED_BED_CREDITS: RecordedCredit[] = [
     licenceUrl: "https://creativecommons.org/publicdomain/zero/1.0/",
     sourceUrl: "https://freesound.org/s/437077/",
     usedIn: "Carriages (wheel rattle)",
-    attribution: "G52-06-Buckboard Wagon by craigsmith (Freesound #437077), CC0 1.0, edited (trimmed, filtered, looped).",
+    attribution:
+      "G52-06-Buckboard Wagon by craigsmith (Freesound #437077), CC0 1.0, edited (trimmed, filtered, looped).",
   },
   {
     title: "Horse Galloping (Freesound #175356)",
@@ -435,7 +457,7 @@ export const RECORDED_BED_CREDITS: RecordedCredit[] = [
     licence: "CC0 1.0",
     licenceUrl: "https://creativecommons.org/publicdomain/zero/1.0/",
     sourceUrl: "https://freesound.org/s/175356/",
-    usedIn: "Horse Gallop (gallop bed), Carriages (high-speed gallop)",
+    usedIn: "Horse Gallop (gallop bed), Carriages and Santa Christmas Sleigh (high-speed gallop)",
     attribution:
       "Horse Galloping by Max_Headroom (Freesound #175356), CC0 1.0, edited (trimmed, filtered, looped).",
   },

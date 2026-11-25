@@ -19,7 +19,12 @@ export const WHINNY_URLS = [
   `${BASE}/whinny_d.m4a`,
 ] as const;
 
-export const isHorseWhinnyProfile = isHorseSnortProfile;
+/** Snort profiles whose animals never neigh (Santa Christmas Sleigh: reindeer, "brrr" only). */
+export const NO_WHINNY_PROFILES: ReadonlySet<string> = new Set(["santa-christmas-sleigh"]);
+
+export function isHorseWhinnyProfile(id: string | null | undefined): boolean {
+  return isHorseSnortProfile(id) && !NO_WHINNY_PROFILES.has(id!);
+}
 
 export const WHINNY_TIMING = {
   minGap: 45,
@@ -168,12 +173,31 @@ export class HorseWhinnies {
   }
 }
 
-const CC0 = { licence: "CC0 1.0", licenceUrl: "https://creativecommons.org/publicdomain/zero/1.0/" };
+const CC0 = {
+  licence: "CC0 1.0",
+  licenceUrl: "https://creativecommons.org/publicdomain/zero/1.0/",
+};
 export const HORSE_WHINNY_CREDITS: RecordedCredit[] = [
-  { title: "G38-15-Perfect Horse Whinny (Freesound #437110)", author: "craigsmith", sourceUrl: "https://freesound.org/s/437110/" },
-  { title: "Horse's whinny (Freesound #347036)", author: "Kubuzz", sourceUrl: "https://freesound.org/s/347036/" },
-  { title: "Horse_Whinny (Freesound #149024)", author: "foxen10", sourceUrl: "https://freesound.org/s/149024/" },
-  { title: "Horse neigh shortened (Freesound #269571)", author: "shadoWisp", sourceUrl: "https://freesound.org/s/269571/" },
+  {
+    title: "G38-15-Perfect Horse Whinny (Freesound #437110)",
+    author: "craigsmith",
+    sourceUrl: "https://freesound.org/s/437110/",
+  },
+  {
+    title: "Horse's whinny (Freesound #347036)",
+    author: "Kubuzz",
+    sourceUrl: "https://freesound.org/s/347036/",
+  },
+  {
+    title: "Horse_Whinny (Freesound #149024)",
+    author: "foxen10",
+    sourceUrl: "https://freesound.org/s/149024/",
+  },
+  {
+    title: "Horse neigh shortened (Freesound #269571)",
+    author: "shadoWisp",
+    sourceUrl: "https://freesound.org/s/269571/",
+  },
 ].map((c) => ({
   ...c,
   ...CC0,

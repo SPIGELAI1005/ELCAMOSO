@@ -2,6 +2,11 @@ import type { DriveState } from "@/lib/drive/model";
 import { fireSpooky, isSpookyKind } from "@/lib/sound/dsp/spooky";
 import { createSirenOverlay, type SirenOverlay } from "@/lib/sound/dsp/siren-overlay";
 import {
+  createSleighBellsOverlay,
+  type SleighBellsOverlay,
+} from "@/lib/sound/dsp/sleigh-bells-overlay";
+import { createSleighRunner, type SleighRunner } from "@/lib/sound/dsp/sleigh-runner";
+import {
   PRIVATE_JET_AIRFIELD,
   createJetAirfield,
   type AirfieldConfig,
@@ -103,9 +108,13 @@ const ADAPTIVE_MUSIC_PROFILE_IDS: ReadonlySet<string> = new Set(["deep-bass-puls
 /**
  * Profiles that reuse another profile's sound unchanged and add an overlay
  * (Police Patrol = American Muscle V8 + siren; Private Jet Oberpfaffenhofen =
- * Ge-Squared O))) + airfield frame).
+ * Ge-Squared O))) + airfield frame; Santa V8 Sleigh = American Muscle V8 + Christmas bells).
  */
-export type SoundAliasOverlay = "siren" | "jet-airfield";
+/** Santa Christmas Sleigh: carriage gait without the wagon, runners on snow and bells. */
+export const SANTA_CHRISTMAS_SLEIGH_ID = "santa-christmas-sleigh";
+/** Bells for the sleigh: lower than over the V8 because the carriage catalog makeup (+8.8 dB) also lifts them; calibrated offline to the same +2..+4 dB over the sound underneath. */
+export const SANTA_CHRISTMAS_SLEIGH_BELLS_LEVEL = 0.2;
+export type SoundAliasOverlay = "siren" | "jet-airfield" | "sleigh-bells";
 export const SOUND_ALIASES: Readonly<
   Record<string, { base: string; overlay: SoundAliasOverlay; engineGainDb?: number }>
 > = {
@@ -115,6 +124,9 @@ export const SOUND_ALIASES: Readonly<
   // Ge-Squared graph + samples unchanged for acceleration and cruise. Parked: the old
   // Private Jet wind bed + wing checks instead of the V8-based idle; take-off turbo whistle.
   "private-jet": { base: "ge-squared", overlay: "jet-airfield" },
+  // Santa V8 Sleigh: the American Muscle V8 unchanged in every phase (idle included, same
+  // level), with Christmas bells now and then on top.
+  "santa-sleigh": { base: "american-muscle-v8", overlay: "sleigh-bells" },
   // Fighter Jet (Turbine Jet): Rocket Car graph unchanged while moving, a bit louder;
   // parked = its own turbofan idle + control-surface checks; take-off afterburner + whistle.
   "turbine-jet": {
@@ -164,12 +176,14 @@ import { fetchSoundAssetManifest } from "@/lib/sound-assets/client-loader";
 import { getSharedSampleLoader } from "@/lib/sound/realism/samples";
 import { loadRecordedLoopBuffers } from "@/lib/sound/realism/v2/recorded-loops-loader";
 import { getRecordedBed, RecordedBed } from "@/lib/sound/recorded-beds";
-import { CoyoteV8Synth, isCoyoteV8ProfileId } from "@/lib/sound/coyote-v8/coyote-synth";
+import { CoyoteV8Synth } from "@/lib/sound/coyote-v8/coyote-synth";
+import { coyoteVoicingFor } from "@/lib/sound/coyote-v8/voicing";
 import { HorseSnorts, isHorseSnortProfile } from "@/lib/sound/horse-snorts";
-import { HorseWhinnies } from "@/lib/sound/horse-whinnies";
+import { HorseWhinnies, isHorseWhinnyProfile } from "@/lib/sound/horse-whinnies";
 import { CaravanStreetCalls, isCaravanStreetCallProfile } from "@/lib/sound/caravan-street-calls";
 import { DEFAULT_TIMELINE_GAP_FLUSH_MS } from "@/lib/sound/realism/shift-events";
 import { resolvePersonalityId } from "@/lib/drive/drivetrain-resolve";
+import { getDrivetrainPersonality } from "@/lib/drive/drivetrain-personalities";
 
 export interface MeterReading {
   prePeak: number;
@@ -354,6 +368,8 @@ export class SoundEngine {
   /** Profile as the user picked it (keeps aliases like police-patrol so rebuilds keep the overlay). */
   private requestedProfile: SoundProfile | null = null;
   private siren: SirenOverlay | null = null;
+  private sleighBells: SleighBellsOverlay | null = null;
+  private sleighRunner: SleighRunner | null = null;
   private jetAirfield: JetAirfield | null = null;
   private fusion: FusionSynth | null = null;
   private world: WorldSynth | null = null;
@@ -1336,6 +1352,16 @@ export class SoundEngine {
     };
   }
 
+  /** Diagnostics/tests: Santa Christmas Sleigh runners (null for other sounds). */
+  sleighRunnerDiagnostics(): ReturnType<SleighRunner["diagnostics"]> | null {
+    return this.sleighRunner?.diagnostics() ?? null;
+  }
+
+  /** Diagnostics/tests: Santa V8 Sleigh bells (null for other sounds). */
+  sleighBellsDiagnostics(): ReturnType<SleighBellsOverlay["diagnostics"]> | null {
+    return this.sleighBells?.diagnostics() ?? null;
+  }
+
   /** Diagnostics/tests: Private Jet Oberpfaffenhofen airfield frame (null for other sounds). */
   jetAirfieldDiagnostics(): ReturnType<JetAirfield["diagnostics"]> | null {
     return this.jetAirfield?.diagnostics() ?? null;
@@ -1350,8 +1376,14 @@ export class SoundEngine {
    * Latest selection wins; failed builds leave the previous sound usable.
    */
   setProfile(requested: SoundProfile, force = false) {
-    // Internal rebuilds may pass the resolved base back in - keep the alias then.
-    if (this.requestedProfile && SOUND_ALIASES[this.requestedProfile.id]?.base === requested.id) {
+    // Internal rebuilds (always forced) may pass the resolved base back in - keep the alias
+    // then. A user's pick is never remapped: Private Jet -> Ge-Squared O))) or Police Patrol ->
+    // American Muscle V8 mid-drive must switch to the picked sound.
+    if (
+      force &&
+      this.requestedProfile &&
+      SOUND_ALIASES[this.requestedProfile.id]?.base === requested.id
+    ) {
       requested = this.requestedProfile;
     }
     this.requestedProfile = requested;
@@ -1509,6 +1541,18 @@ export class SoundEngine {
       // Straight into the cabin bus (stable level, not tied to throttle or the user accents mix).
       this.siren = createSirenOverlay(ctx, this.cabinIn ?? this.accents);
     }
+    // Santa V8 Sleigh: bells into the cabin bus, like the siren (own random stream).
+    if (this.overlayKind === "sleigh-bells" && this.accents) {
+      this.sleighBells = createSleighBellsOverlay(ctx, this.cabinIn ?? this.accents);
+    }
+    // Santa Christmas Sleigh (own profile, not an alias): the same bells plus runners on snow.
+    if (profile.id === SANTA_CHRISTMAS_SLEIGH_ID && this.accents) {
+      const dest = this.cabinIn ?? this.accents;
+      this.sleighBells = createSleighBellsOverlay(ctx, dest, {
+        level: SANTA_CHRISTMAS_SLEIGH_BELLS_LEVEL,
+      });
+      this.sleighRunner = createSleighRunner(ctx, dest);
+    }
 
     // Background music bed under the profile's own sound (e.g. Dracula Carriage).
     const bgLevel = BACKGROUND_MUSIC_LEVELS[profile.id];
@@ -1590,7 +1634,10 @@ export class SoundEngine {
 
     // American Muscle V8 (Coyote v2, Nov 2026): one pre-rendered loop bank replaces the
     // live V8 + Big Twin engines that overloaded the Tesla browser. Police Patrol reuses it.
-    if (isCoyoteV8ProfileId(profile.id) && strategyBuses) {
+    // Ge-Squared O))) / '90 (Nov 2026): the same Coyote with their own voicing; Private Jet
+    // (alias of Ge-Squared) keeps the previous Ge-Squared engine (coyoteVoicingFor).
+    const coyoteVoicing = coyoteVoicingFor(profile.id, this.requestedProfile?.id);
+    if (coyoteVoicing && strategyBuses) {
       // Startup is a once-per-drive event (spec: never replay the flare when the car stops
       // or the graph is rebuilt for a settings change); a new start() makes a new context.
       // Mark the context only once the flare really plays: drive start often builds the
@@ -1603,6 +1650,8 @@ export class SoundEngine {
         onStartup: () => {
           this.coyoteStartupCtx = ctx;
         },
+        voicing: coyoteVoicing,
+        redlineRpm: getDrivetrainPersonality(resolvePersonalityId(profile)).engine.redlineRpm,
       });
       coyote.build(ctx, strategyBuses);
       coyote.setShiftIntensity(this.shiftIntensity / 0.72);
@@ -2138,14 +2187,17 @@ export class SoundEngine {
       const snorts = new HorseSnorts(this.ctx, this.cabinIn, profile.id);
       this.snorts = snorts;
       snorts.load().catch((error) => console.warn("[elcamoso] snorts unavailable", error));
-      const whinnies = new HorseWhinnies(
-        this.ctx,
-        this.cabinIn,
-        profile.id,
-        snorts.scheduler ?? null,
-      );
-      this.whinnies = whinnies;
-      whinnies.load().catch((error) => console.warn("[elcamoso] whinnies unavailable", error));
+      // No neighs for snort-only animals (Santa Christmas Sleigh reindeer).
+      if (isHorseWhinnyProfile(profile.id)) {
+        const whinnies = new HorseWhinnies(
+          this.ctx,
+          this.cabinIn,
+          profile.id,
+          snorts.scheduler ?? null,
+        );
+        this.whinnies = whinnies;
+        whinnies.load().catch((error) => console.warn("[elcamoso] whinnies unavailable", error));
+      }
     }
     if (isCaravanStreetCallProfile(profile.id) && this.ctx && this.cabinIn) {
       const calls = new CaravanStreetCalls(this.ctx, this.cabinIn);
@@ -2204,7 +2256,8 @@ export class SoundEngine {
     this.updateRecordedBed(state, t);
     if (this.snorts && isHorseSnortProfile(profile.id)) this.snorts.update(state, t);
     if (this.whinnies && isHorseSnortProfile(profile.id)) this.whinnies.update(state, t);
-    if (this.streetCalls && isCaravanStreetCallProfile(profile.id)) this.streetCalls.update(state, t);
+    if (this.streetCalls && isCaravanStreetCallProfile(profile.id))
+      this.streetCalls.update(state, t);
     if (this.backgroundMusic) {
       this.backgroundMusic.update(state, t);
       const boost = BACKGROUND_MUSIC_SPEED_BOOST[profile.id];
@@ -2222,6 +2275,8 @@ export class SoundEngine {
       }
     }
     if (this.siren) this.siren.update(state, t);
+    if (this.sleighBells) this.sleighBells.update(state, t);
+    if (this.sleighRunner) this.sleighRunner.update(state, t);
     if (this.jetAirfield) this.jetAirfield.update(state, t);
 
     if (
@@ -3028,6 +3083,10 @@ export class SoundEngine {
     this.backgroundMusic = null;
     this.siren?.dispose();
     this.siren = null;
+    this.sleighBells?.dispose();
+    this.sleighBells = null;
+    this.sleighRunner?.dispose();
+    this.sleighRunner = null;
     this.jetAirfield?.dispose();
     this.jetAirfield = null;
     this.fusion?.dispose();

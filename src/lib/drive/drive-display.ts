@@ -23,11 +23,11 @@ const CADENCE_IDS = new Set([
   "dracula-carriage",
   "romanian-85-carriage",
   "caravan-carriage",
+  "santa-christmas-sleigh",
   "steam-train",
   "laughing-machine",
   "farting-car",
   "kazoo-kart",
-  "santa-sleigh",
 ]);
 
 export function driveDisplayKind(profile: SoundProfile): DriveDisplayKind {

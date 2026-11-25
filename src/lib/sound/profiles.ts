@@ -1,5 +1,9 @@
 import type { LayerMix } from "@/lib/sound/environments";
-import { EXPANSION_PROFILES, GE_SQUARED_DRIVETRAIN } from "@/lib/sound/profiles-expansion";
+import {
+  EXPANSION_PROFILES,
+  GE_SQUARED_DRIVETRAIN,
+  MUSCLE_BOX,
+} from "@/lib/sound/profiles-expansion";
 import { SYMPHONY_SOUND_PROFILES } from "@/lib/symphony/symphony-profiles";
 import { FUSION_SOUND_PROFILES } from "@/lib/fusion/fusion-profiles";
 import { WORLD_SOUND_PROFILES } from "@/lib/worlds/world-profiles";
@@ -41,7 +45,8 @@ export type RhythmKind =
   "clack" | "bell" | "blat" | "chug" | "gallop" | "splash" | "creak" | "laugh" | "rotor" | "putt";
 
 /** Continuous atmospheric beds layered under the main voice. */
-export type TextureKind = "water" | "wind" | "gravel" | "steam" | "crowd" | "rumble" | "sizzle" | "siren";
+export type TextureKind =
+  "water" | "wind" | "gravel" | "steam" | "crowd" | "rumble" | "sizzle" | "siren";
 
 /** Occasional signature one-shots that give a profile personality. */
 export type SignalKind =
@@ -246,9 +251,9 @@ export const PRIVATE_JET_TURBOFAN_PROFILE: SoundProfile = {
  */
 export const PRIVATE_JET_OBERPFAFFENHOFEN: SoundProfile = {
   ...PRIVATE_JET_TURBOFAN_PROFILE,
-  traits: ["Ge-Squared Power", "Take-off Whistle", "Wing Check"],
+  traits: ["Thumping Pull", "Take-off Whistle", "Wing Check"],
   description:
-    "Parked on the Oberpfaffenhofen apron: a slow turbofan wind and the wing flaps being checked before departure. Roll out and the Ge-Squared O))) sound takes over for acceleration and cruise, with a turbo whistle that climbs through every take-off.",
+    "Parked on the Oberpfaffenhofen apron: a slow turbofan wind and the wing flaps being checked before departure. Roll out and a deep, thumping pull carries you through acceleration and cruise, with a turbo whistle on every take-off and a crackle when you lift.",
   ...GE_SQUARED_DRIVETRAIN,
 };
 
@@ -491,25 +496,29 @@ const BUILT_IN_SOUND_PROFILES: SoundProfile[] = [
   },
   {
     id: "santa-sleigh",
-    name: "Santa Sleigh",
+    name: "Santa V8 Sleigh",
     category: "Festive",
-    traits: ["Bells", "Snow", "Joyful"],
-    description: "Sleigh bells that ring faster the quicker you glide, with a warm ho ho ho.",
-    drivetrainMode: "continuous",
+    traits: ["V8", "Christmas Bells", "Joyful"],
+    description:
+      "Santa's sleigh with the American Muscle V8 under the hood: the same lumpy idle and thunderous pulls, with warm sleigh bells and a soft chime ringing out now and then.",
+    drivetrainMode: "virtual-transmission",
+    motionModel: "virtual-transmission",
+    sourceMode: "procedural",
+    // Sound = American Muscle V8 unchanged (SOUND_ALIASES in engine.ts) + Christmas bells.
+    // Id kept as "santa-sleigh" so saved settings, favourites and the Garage keep working.
+    drivetrainPersonalityId: "american-v8",
     voice: {
-      baseFrequency: 96,
-      harmonics: [1, 2.02, 3.5],
-      waveResponse: 1.1,
-      filterBase: 600,
-      filterRange: 3800,
-      noise: 0.1,
-      detune: 8,
-      wave: "triangle",
-      rhythm: { kind: "bell", baseRate: 2.4, rateScale: 10, level: 0.16, tone: 2100 },
-      rhythmB: { kind: "clack", baseRate: 0.9, rateScale: 3.4, level: 0.07, tone: 260 },
-      textures: [{ kind: "wind", level: 0.2, tone: 1100, speedScale: 0.9, surge: 0.4 }],
-      signals: [{ kind: "hohoho", everySeconds: 19, jitter: 8, level: 0.14, tone: 150 }],
+      baseFrequency: 24,
+      harmonics: [1, 2, 2.98, 4],
+      waveResponse: 0.75,
+      filterBase: 180,
+      filterRange: 2200,
+      noise: 0.17,
+      detune: 14,
+      wave: "sawtooth",
+      textures: [{ kind: "rumble", level: 0.36, tone: 95, speedScale: 0.6, surge: 0.7 }],
     },
+    transmission: MUSCLE_BOX,
   },
   {
     id: "wild-west-carriage",

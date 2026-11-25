@@ -111,7 +111,7 @@ export function normalizeOgCardData(
     accent: partial.accent || tpl.accent,
     experienceName: sanitizeOgText(partial.experienceName ?? "", 48),
     archetype: sanitizeOgText(partial.archetype ?? "", 40),
-    imageSeed: sanitizeOgText(partial.imageSeed ?? partial.variant, 64),
+    imageSeed: sanitizeOgText(partial.imageSeed ?? partial.variant, 64, { keepEmoji: true }),
     locale: partial.locale === "de" || partial.locale === "ro" ? partial.locale : "en",
   };
   if (partial.driveDna) out.driveDna = partial.driveDna;
@@ -123,17 +123,14 @@ export function normalizeOgCardData(
   }
   // Per-variant static footer defaults for the six-card family
   if (!out.footer) {
-    if (partial.variant === "engine")
-      out.footer = sanitizeOgText(partial.experienceName || "GT V8", 48);
-    else if (partial.variant === "symphony")
-      out.footer = sanitizeOgText(partial.experienceName || "CINEMATIC ROCK", 48);
-    else if (partial.variant === "world")
-      out.footer = sanitizeOgText(partial.experienceName || "SPACE DRIVE", 48);
+    if (partial.variant === "engine") out.footer = out.experienceName || "GT V8";
+    else if (partial.variant === "symphony") out.footer = out.experienceName || "CINEMATIC ROCK";
+    else if (partial.variant === "world") out.footer = out.experienceName || "SPACE DRIVE";
     else if (partial.variant === "fusion")
-      out.footer = sanitizeOgText(
-        partial.experienceName || partial.subtitle || "GT V8 × CINEMATIC ROCK",
-        48,
-      );
+      out.footer =
+        out.experienceName ||
+        sanitizeOgText(partial.subtitle ?? "", 48) ||
+        "GT V8 × CINEMATIC ROCK";
   }
   // Marketing cards keep experience in footer only - clear redundant subtitle
   if (
@@ -175,7 +172,7 @@ export function toPublicDriveShareMetadata(input: {
   const experienceName = sanitizeOgText(input.experienceName, 48);
   const driveDnaArchetype = sanitizeOgText(input.driveDnaArchetype, 40);
   const durationCategory = sanitizeOgText(input.durationCategory, 24);
-  const seed = sanitizeOgText(input.seed, 64) || "0";
+  const seed = sanitizeOgText(input.seed, 64, { keepEmoji: true }) || "0";
   if (!songTitle && !experienceName) return null;
 
   let publicDriveDnaValues: PublicDriveShareMetadata["publicDriveDnaValues"];

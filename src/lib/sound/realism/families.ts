@@ -58,6 +58,7 @@ const FAMILY_BY_ID: Record<string, ProfileFamily> = {
   "dracula-carriage": "environmental",
   "romanian-85-carriage": "environmental",
   "caravan-carriage": "environmental",
+  "santa-christmas-sleigh": "environmental",
   "open-wind": "environmental",
   "storm-glider": "environmental",
   "santa-sleigh": "environmental",

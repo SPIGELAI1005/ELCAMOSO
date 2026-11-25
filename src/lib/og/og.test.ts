@@ -75,6 +75,36 @@ describe("OG social card system", () => {
     expect(clampLines("ă â î ș ț ä ö ü ß", 40, 2).length).toBeGreaterThan(0);
   });
 
+  it("strips emoji from card text (Outfit has no emoji glyphs) and trims the gap", () => {
+    expect(sanitizeOgText("Santa Christmas Sleigh 🛷", 48)).toBe("Santa Christmas Sleigh");
+    expect(sanitizeOgText("Night 🎵 Motion", 40)).toBe("Night Motion");
+    expect(sanitizeOgText("🚀 Rocket Car", 40)).toBe("Rocket Car");
+    // ZWJ sequences, skin tones, flags, keycaps and variation selectors leave nothing behind
+    expect(sanitizeOgText("A 👨‍👩‍👧 B 👍🏽 C 🇷🇴 D 1️⃣ E ❤️ F", 60)).toBe("A B C D 1 E F");
+    // text the font can draw stays
+    expect(sanitizeOgText("Romanian '85 Carriage", 40)).toBe("Romanian '85 Carriage");
+    expect(sanitizeOgText("ELCAMOSO™ © ® – “ok” #1 ↑", 60)).toBe("ELCAMOSO™ © ® – “ok” #1 ↑");
+    expect(sanitizeOgText("Șoseaua București × 2", 40)).toBe("Șoseaua București × 2");
+    // the image seed keeps emoji so existing card layouts do not shift
+    expect(sanitizeOgText("seed 🛷", 40, { keepEmoji: true })).toBe("seed 🛷");
+  });
+
+  it("drive-song cards render the profile name without the emoji", () => {
+    const card = ogCardFromPublicShare(
+      toPublicDriveShareMetadata({
+        songTitle: "Snow run 🎄",
+        experienceName: "Santa Christmas Sleigh 🛷",
+        seed: "abc",
+      } as never),
+    );
+    const text = JSON.stringify(card);
+    expect(text).toContain("Santa Christmas Sleigh");
+    expect(text).not.toMatch(/\p{Extended_Pictographic}/u);
+    const all = normalizeOgCardData({ variant: "engine", title: "🛷🎄", experienceName: "🛷" });
+    expect(all.title).toBe(SOCIAL_CARD_TEMPLATES.engine.defaultTitle);
+    expect(all.footer).toBe("GT V8");
+  });
+
   it("rejects private journey fields from public OG metadata", () => {
     expect(
       toPublicDriveShareMetadata({

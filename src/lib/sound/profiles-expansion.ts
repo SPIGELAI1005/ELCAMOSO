@@ -7,7 +7,8 @@ const SPORT_BOX = {
   shiftSmoothing: 0.11,
 };
 
-const MUSCLE_BOX = {
+/** American Muscle V8 gearbox (shared by reference with Police Patrol and Santa V8 Sleigh). */
+export const MUSCLE_BOX = {
   gearRatios: [12.5, 7.8, 5.2, 3.9, 3.1],
   idleRpm: 680,
   redlineRpm: 6000,
@@ -840,9 +841,11 @@ export const EXPANSION_PROFILES: SoundProfile[] = [
     id: "ge-squared",
     name: "Ge-Squared O)))",
     category: "Classic",
-    traits: ["Double Big Twin", "Modern", "Brutal"],
+    // Sound: the Coyote V8 with the brutal O))) voicing (coyote-v8/voicing.ts). The voice
+    // below is the previous engine, still played by Private Jet Oberpfaffenhofen.
+    traits: ["Raw V8", "Explosive", "Brutal"],
     description:
-      "The modern boxy 4x4, voiced like two big twins bolted together: a deep uneven lope at idle, hard thumping hits under load, a fast aggressive build and a raw crackle when you lift.",
+      "The modern boxy 4x4 on a raw, brutal V8: a heavy gritty lope at idle, hard thumping pulls with race-car gear shifts, and deep explosive bangs with crackle when you lift.",
     ...GE_SQUARED_DRIVETRAIN,
     voice: {
       baseFrequency: 23,
@@ -872,9 +875,10 @@ export const EXPANSION_PROFILES: SoundProfile[] = [
     id: "ge-squared-90",
     name: "Ge-Squared '90",
     category: "Classic",
-    traits: ["Double Big Twin", "Off-Road", "Relaxed"],
+    // Sound: the Coyote V8 with the classic mechanical '90 voicing (coyote-v8/voicing.ts).
+    traits: ["Classic V8", "Mechanical", "Relaxed"],
     description:
-      "The classic 1990s boxy 4x4, voiced like two big twins side by side: a slow, soft potato-potato lope, relaxed torque and unhurried, mechanical acceleration.",
+      "The classic 1990s boxy 4x4 on an old-school V8: a smooth, muffled lope with the lifters ticking, an intake growl under load and only a mild burble when you lift.",
     drivetrainMode: "virtual-transmission",
     motionModel: "virtual-transmission",
     sourceMode: "procedural",
@@ -1034,6 +1038,37 @@ export const EXPANSION_PROFILES: SoundProfile[] = [
         { kind: "neigh", everySeconds: 20, jitter: 10, level: 0.13, tone: 380 },
         { kind: "whistle", everySeconds: 30, jitter: 14, level: 0.05, tone: 1900 },
       ],
+    },
+  },
+  {
+    id: "santa-christmas-sleigh",
+    name: "Santa Christmas Sleigh 🛷",
+    category: "Festive",
+    traits: ["Reindeer", "Christmas Bells", "Snow"],
+    description:
+      "Santa's sleigh behind two reindeer: hooves in the snow, runners swishing softly as you pick up speed, a happy brrr from the reindeer and warm sleigh bells ringing out now and then.",
+    drivetrainMode: "continuous",
+    motionModel: "cadence",
+    sourceMode: "procedural",
+    // Romanian '85 Carriage gait with the wagon taken out (beds-v2/sleigh.m4a, no wheel
+    // rattle), a runner slide (dsp/sleigh-runner.ts), the Santa V8 Sleigh bells
+    // (dsp/sleigh-bells-overlay.ts) and the carriage "brrr" snorts. No neighs.
+    voice: {
+      baseFrequency: 46,
+      harmonics: [1, 2.02, 2.98],
+      waveResponse: 0.7,
+      filterBase: 200,
+      filterRange: 1100,
+      noise: 0.07,
+      detune: 13,
+      wave: "triangle",
+      rhythm: { kind: "clack", baseRate: 1.4, rateScale: 4.2, level: 0.26, tone: 720 },
+      rhythmB: { kind: "creak", baseRate: 0.34, rateScale: 1.1, level: 0.12, tone: 150 },
+      textures: [
+        { kind: "wind", level: 0.12, tone: 1100, speedScale: 0.9, surge: 0.4 },
+        { kind: "rumble", level: 0.1, tone: 95, speedScale: 0.7, surge: 0.7 },
+      ],
+      signals: [],
     },
   },
 ];

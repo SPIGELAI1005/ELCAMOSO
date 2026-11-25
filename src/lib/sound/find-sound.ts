@@ -56,6 +56,16 @@ const ALIASES: Record<string, string[]> = {
   "thunder-beast": ["beast", "thunder", "dark pressure"],
   "steam-train": ["steam", "chuff", "locomotive"],
   tank: ["tank", "tracks", "armor"],
+  "santa-christmas-sleigh": [
+    "santa",
+    "christmas",
+    "xmas",
+    "sleigh",
+    "reindeer",
+    "bells",
+    "jingle",
+    "snow",
+  ],
   "caravan-carriage": [
     "caravan",
     "wagon",

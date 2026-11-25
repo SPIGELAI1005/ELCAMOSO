@@ -22,10 +22,10 @@ describe("admin-only sound profiles", () => {
     expect(isAdminOnlyProfile(null)).toBe(false);
     const publicCatalog = visibleProfileList(SOUND_PROFILES, false);
     expect(publicCatalog.some((p) => p.id === CARAVAN)).toBe(false);
-    expect(publicCatalog).toHaveLength(71);
+    expect(publicCatalog).toHaveLength(72);
     expect(visibleProfileList(SOUND_PROFILES, true).some((p) => p.id === CARAVAN)).toBe(true);
     expect(visibleProfileList(SOUND_PROFILES, true)).toHaveLength(SOUND_PROFILES.length);
-    expect(SOUND_PROFILES).toHaveLength(72);
+    expect(SOUND_PROFILES).toHaveLength(73);
   });
 
   it("falls back to the default profile for non-admins and keeps the id for admins", () => {
