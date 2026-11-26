@@ -13,7 +13,8 @@
  * DRIVE_MUSIC_PACKAGE_ENTITLEMENTS for 30 minutes per Berlin day.
  * Logged-out users never get that 30-minute grant. Drive+ is NOT included.
  * Paying users and Founders who already own the music are not capped.
- * Landing Start Drive opens Midnight Dark Rave during the window, then Racing V10.
+ * The Black Friday welcome-modal Start Drive still opens Midnight Dark Rave during the window, then Racing V10.
+ * The home-page Start Drive mark uses LANDING_START_DRIVE_PROFILE_ID (American Muscle V8) instead.
  *
  * The purple banner is a short teaser; full terms live on
  * /legal/terms#black-friday-special.
@@ -73,7 +74,20 @@ export function isMidnightDarkRaveProfile(profileId: string): boolean {
   return profileId === MIDNIGHT_DARK_RAVE_PROFILE_ID || profileId === MIDNIGHT_DARK_RAVE_MENU_ID;
 }
 
-/** Landing/home Start Drive profile: Midnight Dark Rave in-window, Racing V10 after. */
+/**
+ * Profile the home-page Start Drive mark selects. American Muscle V8 (the Coyote V8,
+ * same engine Police Patrol reuses) — a better promo for the app than the previous
+ * Midnight Dark Rave "song" sound. Only applied while the special is active, which is
+ * when the hero used to pin a profile; after the window it leaves the user's current sound.
+ */
+export const LANDING_START_DRIVE_PROFILE_ID = "american-muscle-v8";
+
+/** True when the home-page Start Drive mark should pin LANDING_START_DRIVE_PROFILE_ID. */
+export function landingHeroPinsStartProfile(now: number = Date.now()): boolean {
+  return isDriveSpecialActive(now);
+}
+
+/** Welcome-modal Start Drive profile: Midnight Dark Rave in-window, Racing V10 after. */
 export function landingStartDriveProfileId(now: number = Date.now()): string {
   return isDriveSpecialActive(now) ? MIDNIGHT_DARK_RAVE_PROFILE_ID : FALLBACK_SOUND_PROFILE_ID;
 }

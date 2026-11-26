@@ -7,6 +7,8 @@ import {
   driveSpecialAppliesTo,
   driveSpecialCapApplies,
   isDriveSpecialActive,
+  LANDING_START_DRIVE_PROFILE_ID,
+  landingHeroPinsStartProfile,
   landingStartDriveProfileId,
   remainingDriveSpecialSeconds,
   userOwnsDriveTheMusicIndependently,
@@ -178,8 +180,15 @@ describe("Black Friday Special banner copy", () => {
 });
 
 describe("landing Start Drive profile", () => {
-  it("is Midnight Dark Rave during the window and Racing V10 after", () => {
+  it("welcome-modal Start Drive is still Midnight Dark Rave during the window and Racing V10 after", () => {
     expect(landingStartDriveProfileId(NOW)).toBe(MIDNIGHT_DARK_RAVE_PROFILE_ID);
     expect(landingStartDriveProfileId(AFTER)).toBe("racing-v10");
+  });
+
+  it("home-page Start Drive pins the American Muscle V8 during the window, then leaves the current sound", () => {
+    expect(LANDING_START_DRIVE_PROFILE_ID).toBe("american-muscle-v8");
+    expect(LANDING_START_DRIVE_PROFILE_ID).not.toBe(MIDNIGHT_DARK_RAVE_PROFILE_ID);
+    expect(landingHeroPinsStartProfile(NOW)).toBe(true);
+    expect(landingHeroPinsStartProfile(AFTER)).toBe(false);
   });
 });
