@@ -178,12 +178,12 @@ function Terms() {
           November 2026 23:59 Europe/Berlin.
         </p>
         <p>
-          Start Drive on the home page opens Midnight Dark Rave during the offer. Visitors without
+          Start Drive on the home page opens American Muscle V8 during the offer. Visitors without
           an account may use Midnight Dark Rave for 15 minutes per calendar day. The daily allowance
           resets at midnight Europe/Berlin. Minutes do not carry over. Signed-in drivers may use
           Midnight Dark Rave with no daily limit until 27 November 2026 23:59 Europe/Berlin.
           Midnight Dark Rave does not count against the 30-minute Drive the Music allowance. After
-          the offer ends, Start Drive falls back to Racing V10.
+          the offer ends, Start Drive on the home page leaves the current sound.
         </p>
         <p>
           Separately, Drive the Music may be offered with 4 months included at checkout as a Black

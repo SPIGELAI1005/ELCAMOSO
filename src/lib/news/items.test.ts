@@ -30,4 +30,13 @@ describe("news items", () => {
     expect(v).toHaveLength(32);
     expect(v[0]?.id).toBe("black-friday-special-2026");
   });
+  it("says home-page Start Drive opens American Muscle V8, and keeps the Rave allowance separate", () => {
+    const item = NEWS_ITEMS.find((i) => i.id === "black-friday-special-2026")!;
+    for (const text of [item.text, item.textDe, item.textRo]) {
+      expect(text).toMatch(/Start Drive/);
+      expect(text).toContain("American Muscle V8");
+      expect(text).not.toMatch(/Start Drive[^.]{0,80}Midnight Dark Rave/);
+      expect(text).toMatch(/Midnight Dark Rave/);
+    }
+  });
 });

@@ -174,11 +174,11 @@ const FAQ_ENTRIES: FaqEntry[] = [
         </p>
         <p className="mt-3">
           Until 27 November 2026 23:59 Europe/Berlin (Black Friday Special), Start Drive on the home
-          page opens Midnight Dark Rave. Visitors without an account can play it for 15 minutes a
-          day (Berlin). Sign in to keep driving Midnight Dark Rave with no daily limit until the end
-          of Black Friday, and to use other Drive the Music sounds for 30 minutes a day. After the
-          offer, Start Drive falls back to Racing V10. Logged-out visitors also keep the separate
-          7-minute guest trial on a small set of sounds.
+          page opens American Muscle V8. Visitors without an account can play Midnight Dark Rave for
+          15 minutes a day (Berlin). Sign in to keep driving Midnight Dark Rave with no daily limit
+          until the end of Black Friday, and to use other Drive the Music sounds for 30 minutes a
+          day. After the offer, Start Drive on the home page leaves the current sound. Logged-out
+          visitors also keep the separate 7-minute guest trial on a small set of sounds.
         </p>
       </>
     ),
