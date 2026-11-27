@@ -1,10 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { requestGeolocationPermission, requestMotionPermission, motionRequiresUserGesture, PHONE_GPS_WATCH_OPTIONS } from "@/lib/motion/phone-sensor-permissions";
-import { keepScreenAwake, type KeepAwake } from "@/lib/phone-sync/wake-lock";
+import {
+  SCREEN_LOCK_LIMIT_NOTE,
+  WAKE_LOCK_UNSUPPORTED_HINT,
+  RumosoWakeLockSession,
+  isScreenWakeLockSupported,
+} from "@/lib/rumoso/wake-lock";
 import { CadenceDetector } from "@/lib/rumoso/cadence";
 import { RumosoDebugLog } from "@/lib/rumoso/debug-log";
 import { EffortMapper, WARMUP_MS } from "@/lib/rumoso/effort";
+import { zoneForEffort } from "@/lib/rumoso/colors";
 import { PaceFilter, formatDistanceKm, formatDuration, formatPace } from "@/lib/rumoso/gps-pace";
 import { publishRumosoMediaSession, setRumosoPlaybackState } from "@/lib/rumoso/media-session";
 import { RUMOSO_MUSIC_PROFILES, RumosoMusicPlayer } from "@/lib/rumoso/music";
@@ -46,8 +52,9 @@ import { RumosoMap } from "./RumosoMap";
 import { RunSummary } from "./RunSummary";
 import { ReadyBackdrop } from "./ReadyBackdrop";
 import { RumosoIcon, RumosoLockup, type RumosoUiIconName } from "./RumosoIcon";
+import { PocketMode } from "./PocketMode";
 
-export type RumosoDemoView = "ready" | "running" | "summary" | "diagnostics";
+export type RumosoDemoView = "ready" | "running" | "summary" | "diagnostics" | "pocket" | "map";
 
 
 function initialDemoPoints(): TrackPoint[] {
@@ -67,20 +74,20 @@ export function RumosoApp({
   dev?: boolean;
   demo?: RumosoDemoView;
 }) {
+  const liveDemo = demo === "running" || demo === "diagnostics" || demo === "pocket" || demo === "map";
   const [phase, setPhase] = useState<RunPhase>(() =>
-    demo === "summary" ? "summary" : demo === "running" || demo === "diagnostics" ? "running" : "ready",
+    demo === "summary" ? "summary" : liveDemo ? "running" : "ready",
   );
-  const [points, setPoints] = useState<TrackPoint[]>(() =>
-    demo === "running" || demo === "diagnostics" ? initialDemoPoints() : [],
-  );
+  const [points, setPoints] = useState<TrackPoint[]>(() => (liveDemo ? initialDemoPoints() : []));
   const [effort, setEffort] = useState(() => points[points.length - 1]?.effort ?? 0);
   const [cadence, setCadence] = useState(() => points[points.length - 1]?.cadenceSpm ?? 0);
   const [paceSec, setPaceSec] = useState<number | null>(() => currentPaceSecPerKm(points));
   const [speedMps, setSpeedMps] = useState(() => points[points.length - 1]?.speedMps ?? 0);
   const [distanceM, setDistanceM] = useState(() => pathDistanceM(points));
-  const [elapsedMs, setElapsedMs] = useState(
-    demo === "running" || demo === "diagnostics" ? 12 * 60_000 : 0,
-  );
+  const [elapsedMs, setElapsedMs] = useState(liveDemo ? 12 * 60_000 : 0);
+  const [pocketMode, setPocketMode] = useState(demo === "pocket");
+  const [mapExpanded, setMapExpanded] = useState(demo === "map");
+  const [wakeSupported, setWakeSupported] = useState(false);
   const [musicId, setMusicId] = useState(RUMOSO_MUSIC_PROFILES[0]!.id);
   const [coachMode, setCoachMode] = useState<CoachMode>("hype");
   const [wakeOn, setWakeOn] = useState(true);
@@ -106,13 +113,13 @@ export function RumosoApp({
   const log = useRef(new RumosoDebugLog());
   const ctxRef = useRef<AudioContext | null>(null);
   const voiceBuf = useRef<Map<CoachLineId, AudioBuffer>>(new Map());
-  const wakeRef = useRef<KeepAwake | null>(null);
+  const wakeSession = useRef(new RumosoWakeLockSession());
   const watchRef = useRef<number | null>(null);
   const releaseMedia = useRef<(() => void) | null>(null);
   const runningRef = useRef(false);
   const pausedRef = useRef(false);
   const startedAtRef = useRef(
-    demo === "running" || demo === "diagnostics" ? Date.now() - 12 * 60_000 : 0,
+    liveDemo ? Date.now() - 12 * 60_000 : 0,
   );
   const pausedAccumRef = useRef(0);
   const pauseStartedRef = useRef(0);
@@ -141,6 +148,10 @@ export function RumosoApp({
     void listRuns().then(setRecent);
   }, []);
 
+  useEffect(() => {
+    setWakeSupported(isScreenWakeLockSupported());
+  }, []);
+
   const refreshDiag = useCallback(() => setDiagTick((n) => n + 1), []);
 
   const stopSensors = useCallback(() => {
@@ -154,8 +165,10 @@ export function RumosoApp({
   const teardown = useCallback(async () => {
     runningRef.current = false;
     stopSensors();
-    wakeRef.current?.release();
-    wakeRef.current = null;
+    void wakeSession.current.setActive(false);
+    setWakeMode("off");
+    setPocketMode(false);
+    setMapExpanded(false);
     releaseMedia.current?.();
     releaseMedia.current = null;
     setRumosoPlaybackState("none");
@@ -322,9 +335,8 @@ export function RumosoApp({
       setEffort(nextEffort);
     }
 
-    const dEffort = dt > 0 ? (nextEffort - lastEffortRef.current) / dt : 0;
     lastEffortRef.current = nextEffort;
-    music.current.setEffort(nextEffort, dEffort);
+    music.current.setRunningPace(spd || null, cad || null, dt);
     if (ctxRef.current) log.current.onAudio(ctxRef.current.state);
 
     const coach = coachStateRef.current;
@@ -347,6 +359,14 @@ export function RumosoApp({
 
   const startRun = useCallback(async () => {
     setError(null);
+    setPocketMode(false);
+    setMapExpanded(false);
+    music.current.resetIntensity();
+    if (wakeOn) {
+      const mode = await wakeSession.current.setActive(true);
+      setWakeMode(mode);
+      log.current.note("wakelock", { mode });
+    }
     cadenceDet.current.reset();
     paceFilt.current.reset();
     effortMap.current.reset();
@@ -373,7 +393,7 @@ export function RumosoApp({
 
     try {
       await music.current.start(ctx, musicId);
-      music.current.setEffort(simulateOn ? simulateEffort : 20, 0);
+      music.current.setRunningPace(simulateOn ? (1.2 + (simulateEffort / 100) * 3) : 1.4, 110, 0.2);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Music failed to start");
       log.current.note("music-failed");
@@ -395,13 +415,6 @@ export function RumosoApp({
       }),
     );
     if (loaded === 0) setVoiceFallback(true);
-
-    if (wakeOn) {
-      const lock = await keepScreenAwake();
-      wakeRef.current = lock;
-      setWakeMode(lock.mode);
-      log.current.note("wakelock", { mode: lock.mode });
-    }
 
     releaseMedia.current = publishRumosoMediaSession({
       onPause: () => setPhase("paused"),
@@ -518,8 +531,13 @@ export function RumosoApp({
   }, [phase]);
 
   const onPauseToggle = () => {
-    if (phase === "paused") setPhase("running");
-    else if (phase === "running" || phase === "warming") setPhase("paused");
+    if (phase === "paused") {
+      setPhase("running");
+      if (wakeOn) void wakeSession.current.setActive(true).then((mode) => setWakeMode(mode));
+    } else if (phase === "running" || phase === "warming") {
+      setPhase("paused");
+      void wakeSession.current.setActive(false).then((mode) => setWakeMode(mode));
+    }
   };
 
   const onReset = () => {
@@ -538,7 +556,7 @@ export function RumosoApp({
 
   return (
     <div className="flex h-[100dvh] flex-col bg-background text-foreground" data-testid="rumoso-app">
-      <header className="relative z-[2] flex items-center justify-between gap-3 px-5 pt-[max(0.75rem,env(safe-area-inset-top))] pb-2">
+      <header className={`relative z-[2] flex items-center justify-between gap-3 px-5 pt-[max(0.75rem,env(safe-area-inset-top))] pb-2 ${mapExpanded ? "hidden" : ""}`}>
         <h1 className="m-0 min-w-0">
           <RumosoLockup className="h-9 w-auto max-w-[min(100%,13.5rem)]" />
         </h1>
@@ -567,31 +585,75 @@ export function RumosoApp({
         />
       ) : (
         <>
-          <div className="rumoso-map-hud relative min-h-[46vh] flex-1">
+          <div
+            className={
+              mapExpanded
+                ? "fixed inset-0 z-40 bg-black"
+                : "rumoso-map-hud relative min-h-[46vh] flex-1"
+            }
+            data-testid={mapExpanded ? "rumoso-map-expanded" : undefined}
+          >
             <RumosoMap
               points={points}
-              follow={live && !diagnostics && points.length < 8}
-              fitRoute={points.length >= 8}
+              follow={live && !diagnostics && !mapExpanded && points.length < 8}
+              fitRoute={points.length >= 8 || mapExpanded}
+              expanded={mapExpanded}
+              onDoubleTap={() => setMapExpanded((v) => !v)}
               className="size-full"
             />
-            {phase === "ready" ? <ReadyBackdrop /> : null}
-            <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex items-start justify-between p-3">
-              <div className="pointer-events-none rounded-2xl border border-white/10 bg-black/55 px-3 py-2 backdrop-blur-md">
-                <p className="font-mono text-3xl font-light tabular-nums leading-none">
-                  {formatDuration(elapsedMs)}
-                </p>
-                <p className="mt-1 text-[9px] tracking-[0.2em] text-muted-foreground uppercase">Time</p>
+            {phase === "ready" && !mapExpanded ? <ReadyBackdrop /> : null}
+            {mapExpanded ? (
+              <div className="pointer-events-none absolute inset-0 z-10 flex flex-col justify-between p-3 pt-[max(0.75rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))]">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="rounded-2xl border border-white/10 bg-black/55 px-3 py-2 backdrop-blur-md">
+                    <p className="font-mono text-2xl font-light tabular-nums leading-none">{formatDuration(elapsedMs)}</p>
+                    <p className="mt-1 text-[9px] tracking-[0.2em] text-muted-foreground uppercase">Time</p>
+                  </div>
+                  <button
+                    type="button"
+                    className="pointer-events-auto inline-flex size-10 items-center justify-center rounded-full border border-white/20 bg-black/60 text-lg text-white/80 backdrop-blur-md"
+                    aria-label="Exit full-screen map"
+                    data-testid="rumoso-map-close"
+                    onClick={() => setMapExpanded(false)}
+                  >
+                    ×
+                  </button>
+                </div>
+                <div>
+                  <div className="pointer-events-none mb-3 grid grid-cols-3 gap-1.5">
+                    <LiveStat icon="distance" label="Distance" value={`${formatDistanceKm(distanceM)}`} unit="km" />
+                    <LiveStat icon="pace" label="Pace" value={formatPace(paceSec)} />
+                    <LiveStat icon="effort-gauge" label="Effort" value={zoneForEffort(effort).label} />
+                  </div>
+                  <p className="text-center text-[10px] tracking-[0.16em] text-white/45 uppercase">Double-tap to exit</p>
+                </div>
               </div>
-              <EffortLegend compact />
-            </div>
-            <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 grid grid-cols-4 items-stretch gap-1.5 p-3">
-              <LiveStat icon="distance" label="Distance" value={`${formatDistanceKm(distanceM)}`} unit="km" />
-              <LiveStat icon="pace" label="Pace" value={formatPace(paceSec)} />
-              <LiveStat icon="cadence" label="Cadence" value={cadence > 0 ? `${Math.round(cadence)}` : "—"} unit="spm" />
-              <div className="flex items-center justify-center rounded-xl border border-white/10 bg-black/55 px-1 py-1 backdrop-blur-md">
-                <EffortGauge effort={effort} compact />
-              </div>
-            </div>
+            ) : (
+              <>
+                <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex items-start justify-between p-3">
+                  <div className="pointer-events-none rounded-2xl border border-white/10 bg-black/55 px-3 py-2 backdrop-blur-md">
+                    <p className="font-mono text-3xl font-light tabular-nums leading-none">
+                      {formatDuration(elapsedMs)}
+                    </p>
+                    <p className="mt-1 text-[9px] tracking-[0.2em] text-muted-foreground uppercase">Time</p>
+                  </div>
+                  <EffortLegend compact />
+                </div>
+                <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 grid grid-cols-4 items-stretch gap-1.5 p-3">
+                  <LiveStat icon="distance" label="Distance" value={`${formatDistanceKm(distanceM)}`} unit="km" />
+                  <LiveStat icon="pace" label="Pace" value={formatPace(paceSec)} />
+                  <LiveStat icon="cadence" label="Cadence" value={cadence > 0 ? `${Math.round(cadence)}` : "—"} unit="spm" />
+                  <div className="flex items-center justify-center rounded-xl border border-white/10 bg-black/55 px-1 py-1 backdrop-blur-md">
+                    <EffortGauge effort={effort} compact />
+                  </div>
+                </div>
+                {live ? (
+                  <p className="pointer-events-none absolute bottom-[5.6rem] left-0 right-0 z-10 text-center text-[9px] tracking-[0.16em] text-white/35 uppercase">
+                    Double-tap to expand
+                  </p>
+                ) : null}
+              </>
+            )}
           </div>
 
           {phase === "warming" ? (
@@ -604,29 +666,43 @@ export function RumosoApp({
           ) : null}
           {error ? <p className="px-5 text-center text-sm text-[#e53935]">{error}</p> : null}
 
-          <div className="space-y-3 px-5 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))]">
-            {live ? (
-              <div className="flex gap-2">
+          <div className={`space-y-3 px-5 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] ${mapExpanded ? "hidden" : ""}`}>
+            {live && !mapExpanded ? (
+              <>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={onPauseToggle}
+                    className="inline-flex h-14 flex-1 items-center justify-center gap-2 rounded-full border border-white/20 text-sm tracking-[0.2em] uppercase"
+                    data-testid="rumoso-pause"
+                  >
+                    <RumosoIcon name={phase === "paused" ? "run-start" : "pause"} className="size-4" />
+                    {phase === "paused" ? "Resume" : "Pause"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void finishRun()}
+                    className="inline-flex h-14 flex-1 items-center justify-center gap-2 rounded-full bg-foreground text-sm tracking-[0.2em] text-background uppercase"
+                    data-testid="rumoso-stop"
+                  >
+                    <RumosoIcon name="stop" className="size-4" />
+                    Stop
+                  </button>
+                </div>
                 <button
                   type="button"
-                  onClick={onPauseToggle}
-                  className="inline-flex h-14 flex-1 items-center justify-center gap-2 rounded-full border border-white/20 text-sm tracking-[0.2em] uppercase"
-                  data-testid="rumoso-pause"
+                  onClick={() => setPocketMode(true)}
+                  className="inline-flex h-11 w-full items-center justify-center rounded-full border border-white/15 text-[11px] tracking-[0.2em] text-muted-foreground uppercase"
+                  data-testid="rumoso-pocket-open"
                 >
-                  <RumosoIcon name={phase === "paused" ? "run-start" : "pause"} className="size-4" />
-                  {phase === "paused" ? "Resume" : "Pause"}
+                  Pocket mode
                 </button>
-                <button
-                  type="button"
-                  onClick={() => void finishRun()}
-                  className="inline-flex h-14 flex-1 items-center justify-center gap-2 rounded-full bg-foreground text-sm tracking-[0.2em] text-background uppercase"
-                  data-testid="rumoso-stop"
-                >
-                  <RumosoIcon name="stop" className="size-4" />
-                  Stop
-                </button>
-              </div>
-            ) : (
+                {wakeOn && (wakeMode === "none" || wakeMode === "off") ? (
+                  <p className="text-center text-[11px] leading-relaxed text-muted-foreground">{WAKE_LOCK_UNSUPPORTED_HINT}</p>
+                ) : null}
+                <p className="text-center text-[11px] leading-relaxed text-muted-foreground">{SCREEN_LOCK_LIMIT_NOTE}</p>
+              </>
+            ) : live && mapExpanded ? null : (
               <>
                 <ReadySettings
                   musicId={musicId}
@@ -656,6 +732,11 @@ export function RumosoApp({
                   <RumosoIcon name="run-start" className="size-4" />
                   Start run
                 </button>
+                <p className="text-center text-[11px] leading-relaxed text-muted-foreground">
+                  {wakeSupported
+                    ? `The screen stays on during a run. ${SCREEN_LOCK_LIMIT_NOTE}`
+                    : `${WAKE_LOCK_UNSUPPORTED_HINT} ${SCREEN_LOCK_LIMIT_NOTE}`}
+                </p>
                 {recent.length > 0 ? (
                   <RecentRuns
                     runs={recent}
@@ -702,6 +783,15 @@ export function RumosoApp({
           </div>
         </>
       )}
+      {pocketMode && live ? (
+        <PocketMode
+          elapsedMs={elapsedMs}
+          distanceM={distanceM}
+          paceSec={paceSec}
+          effort={effort}
+          onUnlock={() => setPocketMode(false)}
+        />
+      ) : null}
     </div>
   );
 }
@@ -802,7 +892,7 @@ function ReadySettings(props: {
         </div>
       </div>
       <div className="flex flex-wrap gap-2">
-        <TogglePill label="Wake lock" on={props.wakeOn} onToggle={props.onWake} />
+        <TogglePill label="Keep screen on" on={props.wakeOn} onToggle={props.onWake} />
         <TogglePill label="60s warm-up" on={props.warmupOn} onToggle={props.onWarmup} />
         {props.motionNeedsGesture ? (
           <button

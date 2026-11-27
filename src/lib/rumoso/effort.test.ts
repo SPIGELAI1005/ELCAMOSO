@@ -20,9 +20,12 @@ describe("instantEffort", () => {
     expect(e).toBeLessThan(56);
   });
 
-  it("is high for a hard push", () => {
-    const e = instantEffort({ cadenceSpm: 190, speedMps: 4.2, accelMps2: 1.2 });
-    expect(e).toBeGreaterThan(85);
+  it("stays in Push for a strong tempo and only reaches Hard at a sprint pace", () => {
+    const tempo = instantEffort({ cadenceSpm: 175, speedMps: 14 / 3.6, accelMps2: 0.4 });
+    expect(tempo).toBeGreaterThan(65);
+    expect(tempo).toBeLessThan(80);
+    const sprint = instantEffort({ cadenceSpm: 190, speedMps: 18 / 3.6, accelMps2: 1.2 });
+    expect(sprint).toBeGreaterThanOrEqual(80);
   });
 
   it("drops missing cues instead of treating them as zero", () => {
