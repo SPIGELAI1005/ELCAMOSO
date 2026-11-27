@@ -210,6 +210,17 @@ export const NEWS_ITEMS: NewsItem[] = [
       "Black Friday Special până pe 27 noiembrie 2026 23:59 Berlin: Start Drive de pe pagina de start deschide American Muscle V8. Midnight Dark Rave: 15 minute pe zi fără cont; nelimitat dacă ești autentificat. Autentifică-te pentru Drive the Music 30 minute pe zi. Drive+ nu este inclus.",
     link: { href: "/sounds", label: "Open sounds" },
   },
+  {
+    id: "black-friday-tonight-2026",
+    publishAt: "2026-11-27T11:47:00+01:00",
+    text: "Last hours of Black Friday Special on ELCAMOSO run until tonight, 27.11. 23:59 Berlin time. I made this for my Tesla Model Y, but you can actually try it in any car… even for free. Start Drive opens the V8.",
+    textDe:
+      "Die letzten Stunden des Black Friday Special auf ELCAMOSO laufen bis heute Nacht, 27.11. 23:59 Berliner Zeit. Ich habe das für meinen Tesla Model Y gemacht, aber du kannst es tatsächlich in jedem Auto ausprobieren… sogar kostenlos. Start Drive öffnet den V8.",
+    textRo:
+      "Ultimele ore ale Black Friday Special pe ELCAMOSO țin până în noaptea asta, 27.11. 23:59, ora Berlinului. Am făcut asta pentru Tesla-ul meu Model Y, dar poți să îl încerci de fapt în orice mașină… chiar și gratuit. Start Drive deschide V8-ul.",
+    image: "/news/black-friday/black-friday-special-v8.png",
+    link: { href: "/drive?sound=american-muscle-v8&start=true", label: "Start Drive" },
+  },
 ];
 
 /** Items already published at `now`, newest first. */
