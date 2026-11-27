@@ -39,13 +39,22 @@ describe("news items", () => {
   });
   it("says the last-hours Black Friday item is try-free until tonight and Start Drive opens the V8", () => {
     const item = NEWS_ITEMS.find((i) => i.id === "black-friday-tonight-2026")!;
-    expect(item.text).toMatch(/Last hours/);
-    expect(item.textDe).toMatch(/Letzte Stunden/);
+    expect(item.text).toBe(
+      "Last hours of Black Friday Special on ELCAMOSO run until tonight, 27.11. 23:59 Berlin time. I made this for my Tesla Model Y, but you can actually try it in any car… even for free. Start Drive opens the V8.",
+    );
+    expect(item.textDe).toMatch(/letzten Stunden/);
+    expect(item.textDe).toMatch(/Tesla Model Y/);
+    expect(item.textDe).toMatch(/jedem Auto/);
+    expect(item.textDe).toMatch(/sogar kostenlos/);
     expect(item.textRo).toMatch(/Ultimele ore/);
+    expect(item.textRo).toMatch(/Model Y/);
+    expect(item.textRo).toMatch(/orice mașină/);
+    expect(item.textRo).toMatch(/gratuit/);
     for (const text of [item.text, item.textDe, item.textRo]) {
       expect(text).toMatch(/Start Drive/);
-      expect(text).toContain("American Muscle V8");
-      expect(text).toMatch(/23:59 Berlin/);
+      expect(text).toMatch(/V8/);
+      expect(text).toMatch(/27\.11\./);
+      expect(text).toMatch(/23:59/);
     }
   });
   it("says home-page Start Drive opens American Muscle V8, and keeps the Rave allowance separate", () => {

@@ -213,11 +213,11 @@ export const NEWS_ITEMS: NewsItem[] = [
   {
     id: "black-friday-tonight-2026",
     publishAt: "2026-11-27T11:47:00+01:00",
-    text: "Last hours. The Black Friday Special on ELCAMOSO runs until tonight, 27 November 2026 23:59 Berlin. I built this for the Tesla I drive. You can try it free: Start Drive on the home page opens American Muscle V8. Sign in for Drive the Music 30 minutes a day, and for Midnight Dark Rave with no daily limit, until tonight. Set up while parked.",
+    text: "Last hours of Black Friday Special on ELCAMOSO run until tonight, 27.11. 23:59 Berlin time. I made this for my Tesla Model Y, but you can actually try it in any car… even for free. Start Drive opens the V8.",
     textDe:
-      "Letzte Stunden. Das Black Friday Special auf ELCAMOSO läuft bis heute Nacht, 27. November 2026 23:59 Berlin. Ich habe das für den Tesla gebaut, den ich fahre. Du kannst es kostenlos ausprobieren: Start Drive auf der Startseite öffnet American Muscle V8. Melde dich an für Drive the Music 30 Minuten am Tag, und für Midnight Dark Rave ohne Tageslimit, bis heute Nacht. Einrichten im Stand.",
+      "Die letzten Stunden des Black Friday Special auf ELCAMOSO laufen bis heute Nacht, 27.11. 23:59 Berliner Zeit. Ich habe das für meinen Tesla Model Y gemacht, aber du kannst es tatsächlich in jedem Auto ausprobieren… sogar kostenlos. Start Drive öffnet den V8.",
     textRo:
-      "Ultimele ore. Black Friday Special pe ELCAMOSO ține până în noaptea asta, 27 noiembrie 2026 23:59 Berlin. Am construit asta pentru Tesla pe care o conduc. Poți încerca gratuit: Start Drive de pe pagina de start deschide American Muscle V8. Autentifică-te pentru Drive the Music 30 de minute pe zi, și pentru Midnight Dark Rave fără limită zilnică, până în noaptea asta. Configurează când ești parcat.",
+      "Ultimele ore ale Black Friday Special pe ELCAMOSO țin până în noaptea asta, 27.11. 23:59, ora Berlinului. Am făcut asta pentru Tesla-ul meu Model Y, dar poți să îl încerci de fapt în orice mașină… chiar și gratuit. Start Drive deschide V8-ul.",
     image: "/news/black-friday/black-friday-special-v8.png",
     link: { href: "/drive?sound=american-muscle-v8&start=true", label: "Start Drive" },
   },
