@@ -60,9 +60,10 @@ function NewsPage() {
           <ul className="mt-16 grid gap-8 border-t border-border pt-16 sm:grid-cols-2 lg:grid-cols-3">
             {items.map((item) => (
               <li
+                id={item.id}
                 key={item.id}
                 data-testid="news-item"
-                className="flex flex-col overflow-hidden border border-border/70 bg-surface-1/30"
+                className="flex scroll-mt-24 flex-col overflow-hidden border border-border/70 bg-surface-1/30"
               >
                 {item.image ? (
                   <img
