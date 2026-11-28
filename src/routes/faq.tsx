@@ -185,8 +185,8 @@ const FAQ_ENTRIES: FaqEntry[] = [
           November 2026 23:59 Europe/Berlin, with the same conditions: Start Drive on the home page
           opens American Muscle V8, Midnight Dark Rave is 15 minutes a day without an account and
           unlimited when signed in, and signed-in drivers get other Drive the Music sounds for 30
-          minutes a day. Drive+ is not included, and the Black Friday Founders Pack and 4-month
-          music deal are not part of it. See the{" "}
+          minutes a day. Drive+ is not included. The Founders Pack and the 4-month Drive the Music
+          checkout deal also run until 30 November 2026 23:59 Europe/Berlin. See the{" "}
           <Link
             to="/legal/terms"
             hash="cyber-monday-special"
@@ -236,8 +236,8 @@ const FAQ_ENTRIES: FaqEntry[] = [
     answer: (
       <>
         <p>
-          The Founders Pack is a yearly Drive+ or yearly Drive the Music subscription until Black
-          Friday, 27.11.2026 23:59 Berlin. You get the package you buy, Drive Unlimited for 4 months
+          The Founders Pack is a yearly Drive+ or yearly Drive the Music subscription until Cyber
+          Monday, 30.11.2026 23:59 Berlin. You get the package you buy, Drive Unlimited for 4 months
           from purchase (then that package), and 4 sounds you choose that stay yours forever.
           Founders can join the Founders Test Crew.
         </p>

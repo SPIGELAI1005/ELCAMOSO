@@ -23,13 +23,14 @@
  * The purple banner is a short teaser; full terms live on
  * /legal/terms#black-friday-special and /legal/terms#cyber-monday-special.
  *
- * Independent of the Black Friday Drive the Music 4-month checkout trial and the Founders
- * Pack in `black-friday.ts` / `founders.ts` — those deals ended on Black Friday, are NOT part
- * of the Cyber Monday Special, and must not double-count here.
+ * Independent of the 4-month Drive the Music checkout trial and the Founders Pack in
+ * `black-friday.ts` / `founders.ts`. Those deals now also run through Cyber Monday
+ * (until 30 Nov 2026 23:59 Europe/Berlin) and must not be double-counted here.
  *
  * Client-safe: pure date math, shared by the server snapshot and the client.
  */
 import { DRIVE_MUSIC_PACKAGE_ENTITLEMENTS } from "@/lib/entitlements/plans";
+import { isFoundersPackPurchaseOpen } from "@/lib/founders/founders";
 import type { Entitlement, Plan } from "@/lib/entitlements/types";
 import { FALLBACK_SOUND_PROFILE_ID } from "@/lib/sound/profile-access-config";
 
@@ -552,8 +553,8 @@ export type DriveSpecialWelcomeCopy = {
   startDrive: string;
   terms: string;
   /**
-   * Second button. Black Friday offers the Founders Pack; Cyber Monday has no Founders
-   * Pack, so it links to the plans instead.
+   * Second button. Founders Pack while that purchase window is open (Black Friday and
+   * Cyber Monday); otherwise a link to the plans.
    */
   secondary: { kind: "founders" | "plans"; label: string };
   /** Anchor on /legal/terms for the "terms" link. */
@@ -569,7 +570,7 @@ export function driveSpecialWelcomeCopy(
   const lang = langKey(language);
   const full = driveSpecialLastDayLabel(w, lang, { year: true });
   const short = driveSpecialLastDayLabel(w, lang);
-  const founders = w.id === "black-friday";
+  const founders = isFoundersPackPurchaseOpen(now);
   const hyphenated = w.event.replace(/ /g, "-");
   if (lang === "de") {
     return {

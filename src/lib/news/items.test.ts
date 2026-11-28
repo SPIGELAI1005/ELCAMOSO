@@ -89,5 +89,11 @@ describe("news items", () => {
     }
     expect(item.textDe).toMatch(/28\. November bis 30\. November 2026/);
     expect(item.textRo).toMatch(/28 noiembrie până pe 30 noiembrie 2026/);
+    expect(item.text).toMatch(/Founders Pack/);
+    expect(item.text).toMatch(/4-month Drive the Music trial/);
+    expect(item.textDe).toMatch(/Founders Pack/);
+    expect(item.textDe).toMatch(/4-monatige/);
+    expect(item.textRo).toMatch(/Founders Pack/);
+    expect(item.textRo).toMatch(/4 luni/);
   });
 });

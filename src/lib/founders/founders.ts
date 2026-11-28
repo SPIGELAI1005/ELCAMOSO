@@ -8,15 +8,17 @@
  * after that cutover.
  *
  * Founders Pack purchase: a YEARLY Drive+ or YEARLY Drive the Music subscription
- * (existing Stripe yearly prices — no new product) bought until Black Friday
- * 27.11.2026 23:59:59 Europe/Berlin. Buying mints a Founder seat, grants Drive
- * Unlimited for 4 months from the purchase date, then falls back to the paid
- * package, and lets the buyer pick 4 catalog sounds that stay theirs forever
- * even after cancel. Display amount is €33.60/year (same as Drive+ / Drive the
- * Music yearly). STRIPE_PRICE_FOUNDERS_PACK is unused.
+ * (existing Stripe yearly prices — no new product) bought until Cyber Monday
+ * 30.11.2026 23:59:59 Europe/Berlin (first offered through Black Friday, then
+ * extended). Buying mints a Founder seat, grants Drive Unlimited for 4 months
+ * from the purchase date, then falls back to the paid package, and lets the
+ * buyer pick 4 catalog sounds that stay theirs forever even after cancel.
+ * Display amount is €33.60/year (same as Drive+ / Drive the Music yearly).
+ * STRIPE_PRICE_FOUNDERS_PACK is unused.
  *
- * Founders also receive the Black Friday Special while that window is open.
- * Drive Unlimited already uncaps the special's 30-minute Drive the Music limit.
+ * Founders also receive the Black Friday Special and the Cyber Monday Special
+ * while those windows are open. Drive Unlimited already uncaps the special's
+ * 30-minute Drive the Music limit.
  */
 
 import { addMonthsUtc } from "@/lib/billing/black-friday";
@@ -25,8 +27,8 @@ import { addMonthsUtc } from "@/lib/billing/black-friday";
 export const FOUNDERS_PACK_PURCHASE_START_ISO = "2026-11-09T00:00:00+01:00";
 export const FOUNDERS_PACK_PURCHASE_START_MS = Date.parse(FOUNDERS_PACK_PURCHASE_START_ISO);
 
-/** Black Friday 27.11.2026 23:59:59 Europe/Berlin (CET, UTC+1). */
-export const FOUNDERS_SIGNUP_DEADLINE_ISO = "2026-11-27T23:59:59+01:00";
+/** Inclusive end: Cyber Monday 30.11.2026 23:59:59 Europe/Berlin (CET, UTC+1). */
+export const FOUNDERS_SIGNUP_DEADLINE_ISO = "2026-11-30T23:59:59+01:00";
 export const FOUNDERS_SIGNUP_DEADLINE_MS = Date.parse(FOUNDERS_SIGNUP_DEADLINE_ISO);
 
 /** 27.05.2027 23:59:59 Europe/Berlin (CEST, UTC+2) — legacy Founder Drive Unlimited end. */
@@ -81,8 +83,8 @@ export function isFounderSignupOpen(now = Date.now()): boolean {
 }
 
 /**
- * True while the Founders Pack can still be purchased (through Black Friday
- * 27.11.2026 23:59:59 Berlin). Independent of free seat claims.
+ * True while the Founders Pack can still be purchased (through Cyber Monday
+ * 30.11.2026 23:59:59 Berlin). Independent of free seat claims.
  */
 export function isFoundersPackPurchaseOpen(now = Date.now()): boolean {
   return now <= FOUNDERS_SIGNUP_DEADLINE_MS;
@@ -123,7 +125,7 @@ export function isFoundersPackQualifyingPlan(
   return plan === "DRIVE_PLUS" || plan === "DRIVE_MUSIC";
 }
 
-/** True when this timestamp is inside the Founders Pack purchase window (9–27 Nov 2026 Berlin). */
+/** True when this timestamp is inside the Founders Pack purchase window (9 Nov–30 Nov 2026 Berlin). */
 export function isFoundersPackQualifyingPurchaseTime(ts: number): boolean {
   return (
     Number.isFinite(ts) &&
@@ -244,35 +246,35 @@ export function founderPerkLine(founderAt: number | null | undefined, language =
 
 export const FOUNDERS_OFFER_COPY = {
   en: {
-    compact: "Buy until 27.11.",
+    compact: "Buy until 30.11.",
     compactPerk: " · yearly Drive+ or Drive the Music",
     fullPerk:
-      " Buy yearly Drive+ or Drive the Music until 27.11. Drive Unlimited for 4 months, then your package. 4 sounds forever.",
+      " Buy yearly Drive+ or Drive the Music until 30.11. Drive Unlimited for 4 months, then your package. 4 sounds forever.",
     claimTitle: "Claim your Founder seat",
     claimBody:
-      "Free Founder seats closed on 9.11. Buy yearly Drive+ or Drive the Music until 27.11. to become a Founder: Drive Unlimited for 4 months from purchase and 4 sounds forever.",
+      "Free Founder seats closed on 9.11. Buy yearly Drive+ or Drive the Music until 30.11. to become a Founder: Drive Unlimited for 4 months from purchase and 4 sounds forever.",
     buy: "Buy Founders Pack",
     claim: "Claim it",
   },
   de: {
-    compact: "Kaufen bis 27.11.",
+    compact: "Kaufen bis 30.11.",
     compactPerk: " · jährliches Drive+ oder Drive the Music",
     fullPerk:
-      " Kaufe jährliches Drive+ oder Drive the Music bis 27.11. Drive Unlimited für 4 Monate, dann dein Paket. 4 Sounds für immer.",
+      " Kaufe jährliches Drive+ oder Drive the Music bis 30.11. Drive Unlimited für 4 Monate, dann dein Paket. 4 Sounds für immer.",
     claimTitle: "Founder-Platz sichern",
     claimBody:
-      "Kostenlose Founder-Plätze endeten am 9.11. Kaufe jährliches Drive+ oder Drive the Music bis 27.11., um Founder zu werden: Drive Unlimited 4 Monate ab Kauf und 4 Sounds für immer.",
+      "Kostenlose Founder-Plätze endeten am 9.11. Kaufe jährliches Drive+ oder Drive the Music bis 30.11., um Founder zu werden: Drive Unlimited 4 Monate ab Kauf und 4 Sounds für immer.",
     buy: "Founders Pack kaufen",
     claim: "Sichern",
   },
   ro: {
-    compact: "Cumpara pana pe 27.11.",
+    compact: "Cumpara pana pe 30.11.",
     compactPerk: " · Drive+ sau Drive the Music anual",
     fullPerk:
-      " Cumpara Drive+ sau Drive the Music anual pana pe 27.11. Drive Unlimited 4 luni, apoi pachetul platit. 4 sunete pentru totdeauna.",
+      " Cumpara Drive+ sau Drive the Music anual pana pe 30.11. Drive Unlimited 4 luni, apoi pachetul platit. 4 sunete pentru totdeauna.",
     claimTitle: "Rezerva locul Founder",
     claimBody:
-      "Locurile Founder gratuite s-au inchis pe 9.11. Cumpara Drive+ sau Drive the Music anual pana pe 27.11. ca sa devii Founder: Drive Unlimited 4 luni de la achizitie si 4 sunete pentru totdeauna.",
+      "Locurile Founder gratuite s-au inchis pe 9.11. Cumpara Drive+ sau Drive the Music anual pana pe 30.11. ca sa devii Founder: Drive Unlimited 4 luni de la achizitie si 4 sunete pentru totdeauna.",
     buy: "Cumpara Founders Pack",
     claim: "Rezerva",
   },

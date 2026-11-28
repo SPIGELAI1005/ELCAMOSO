@@ -9,11 +9,15 @@ import {
 } from "@/lib/billing/black-friday";
 
 describe("Black Friday music trial", () => {
-  it("is 4 months and ends 27.11.2026 23:59:59 Berlin", () => {
+  it("is 4 months and ends 30.11.2026 23:59:59 Berlin (through Cyber Monday)", () => {
     expect(MUSIC_TRIAL_MONTHS).toBe(4);
-    expect(BLACK_FRIDAY_END_MS).toBe(Date.parse("2026-11-27T22:59:59Z"));
+    expect(BLACK_FRIDAY_END_MS).toBe(Date.parse("2026-11-30T22:59:59Z"));
+    expect(isMusicTrialOfferActive(Date.parse("2026-11-27T23:59:59+01:00"))).toBe(true);
+    expect(isMusicTrialOfferActive(Date.parse("2026-11-28T00:00:00+01:00"))).toBe(true);
+    expect(isMusicTrialOfferActive(Date.parse("2026-11-30T23:59:59+01:00"))).toBe(true);
     expect(isMusicTrialOfferActive(BLACK_FRIDAY_END_MS)).toBe(true);
     expect(isMusicTrialOfferActive(BLACK_FRIDAY_END_MS + 1)).toBe(false);
+    expect(isMusicTrialOfferActive(Date.parse("2026-12-01T00:00:00+01:00"))).toBe(false);
   });
 
   it("adds calendar months and clamps month ends", () => {

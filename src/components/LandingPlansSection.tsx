@@ -257,7 +257,7 @@ export function PlansOverview({
                 className="rounded-full border border-[#e53935] px-2.5 py-0.5 text-[10px] tracking-[0.16em] text-[#e53935] uppercase"
                 data-testid="music-trial-badge"
               >
-                Black Friday · {MUSIC_TRIAL_MONTHS} months free
+                Until {BLACK_FRIDAY_LABEL} · {MUSIC_TRIAL_MONTHS} months free
               </span>
             ) : null}
           </div>

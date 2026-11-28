@@ -224,11 +224,11 @@ export const NEWS_ITEMS: NewsItem[] = [
   {
     id: "cyber-monday-special-2026",
     publishAt: "2026-11-28T00:00:00+01:00",
-    text: "Cyber Monday Special on ELCAMOSO: from 28 November until 30 November 2026, 23:59 Berlin time. Same conditions as Black Friday. Start Drive on the home page opens American Muscle V8. Midnight Dark Rave: 15 minutes a day without an account, unlimited when you sign in. Sign in for Drive the Music 30 minutes a day. Drive+ is not included.",
+    text: "Cyber Monday Special on ELCAMOSO: from 28 November until 30 November 2026, 23:59 Berlin time. Same conditions as Black Friday. Start Drive on the home page opens American Muscle V8. Midnight Dark Rave: 15 minutes a day without an account, unlimited when you sign in. Sign in for Drive the Music 30 minutes a day. Drive+ is not included. The Founders Pack and the 4-month Drive the Music trial also run until 30 November 2026, 23:59 Berlin time.",
     textDe:
-      "Cyber Monday Special auf ELCAMOSO: vom 28. November bis 30. November 2026, 23:59 Berliner Zeit. Dieselben Bedingungen wie am Black Friday. Start Drive auf der Startseite öffnet den American Muscle V8. Midnight Dark Rave: 15 Minuten am Tag ohne Konto, unbegrenzt mit Anmeldung. Melde dich an für Drive the Music 30 Minuten am Tag. Drive+ ist nicht enthalten.",
+      "Cyber Monday Special auf ELCAMOSO: vom 28. November bis 30. November 2026, 23:59 Berliner Zeit. Dieselben Bedingungen wie am Black Friday. Start Drive auf der Startseite öffnet den American Muscle V8. Midnight Dark Rave: 15 Minuten am Tag ohne Konto, unbegrenzt mit Anmeldung. Melde dich an für Drive the Music 30 Minuten am Tag. Drive+ ist nicht enthalten. Das Founders Pack und die 4-monatige Drive-the-Music-Testphase laufen ebenfalls bis 30. November 2026, 23:59 Berliner Zeit.",
     textRo:
-      "Cyber Monday Special pe ELCAMOSO: de pe 28 noiembrie până pe 30 noiembrie 2026, 23:59, ora Berlinului. Aceleași condiții ca la Black Friday. Start Drive de pe prima pagină deschide American Muscle V8. Midnight Dark Rave: 15 minute pe zi fără cont, nelimitat cu autentificare. Autentifică-te pentru Drive the Music 30 de minute pe zi. Drive+ nu este inclus.",
+      "Cyber Monday Special pe ELCAMOSO: de pe 28 noiembrie până pe 30 noiembrie 2026, 23:59, ora Berlinului. Aceleași condiții ca la Black Friday. Start Drive de pe prima pagină deschide American Muscle V8. Midnight Dark Rave: 15 minute pe zi fără cont, nelimitat cu autentificare. Autentifică-te pentru Drive the Music 30 de minute pe zi. Drive+ nu este inclus. Founders Pack și perioada de probă de 4 luni la Drive the Music țin și ele până pe 30 noiembrie 2026, 23:59, ora Berlinului.",
     link: { href: "/sounds", label: "See the sounds" },
   },
 ];

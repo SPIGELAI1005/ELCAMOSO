@@ -45,7 +45,7 @@ export const users = pgTable(
     email: text("email"),
     stripeCustomerId: text("stripe_customer_id"),
     role: userRoleEnum("role").notNull().default("user"),
-    /** Founder seat: free claims on/before 09.11.2026 23:59 Berlin; yearly Drive+/Music purchase until 27.11.2026 23:59:59 Berlin. Null = not a Founder. */
+    /** Founder seat: free claims on/before 09.11.2026 23:59 Berlin; yearly Drive+/Music purchase until 30.11.2026 23:59:59 Berlin. Null = not a Founder. */
     founderAt: timestamp("founder_at", { withTimezone: true, mode: "date" }),
     /** 1-based Founder seat number (unique; capped by FOUNDER_SEAT_LIMIT). */
     founderSeat: integer("founder_seat"),

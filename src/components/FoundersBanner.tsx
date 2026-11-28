@@ -24,7 +24,7 @@ const pad = (n: number) => String(n).padStart(2, "0");
 
 /**
  * Founders Pack ticker strip: thin red-accent "special promotion" bar with live countdown
- * to 27.11.2026 23:59:59 Berlin (Black Friday), live seats left, and Claim / Buy. Disappears after the
+ * to 30.11.2026 23:59:59 Berlin (Cyber Monday), live seats left, and Claim / Buy. Disappears after the
  * deadline, can be dismissed (localStorage). Founders see a "You're a Founder" state.
  */
 export function FoundersBanner({

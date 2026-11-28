@@ -300,24 +300,23 @@ describe("Black Friday Special banner copy", () => {
     expect(driveSpecialBannerText("en", BF_END - 1).teaser).toMatch(/27th of November/);
     expect(driveSpecialName(CM_NOW)).toBe("Cyber Monday Special");
   });
-  it("Cyber Monday welcome copy: same benefits, ends 30 Nov, plans instead of Founders Pack", async () => {
+  it("Cyber Monday welcome copy: same benefits, ends 30 Nov, Founders Pack as the second button", async () => {
     const { driveSpecialWelcomeCopy } = await import("./drive-special");
     const en = driveSpecialWelcomeCopy("en", CM_NOW);
     expect(en.title).toBe("Congratulations!");
     expect(en.body).toBe(
-      "Your Cyber Monday benefits are unlocked: Midnight Dark Rave unlimited and Drive the Music 30 minutes a day, until 30 November 2026. This offer has limited availability until 30 November. To keep access, get Drive+ or Drive the Music.",
+      "Your Cyber Monday benefits are unlocked: Midnight Dark Rave unlimited and Drive the Music 30 minutes a day, until 30 November 2026. This offer has limited availability until 30 November. To keep access, purchase the Founders Pack — a yearly Drive+ or Drive the Music subscription.",
     );
-    expect(en.secondary).toEqual({ kind: "plans", label: "See plans" });
+    expect(en.secondary).toEqual({ kind: "founders", label: "Founders Pack" });
     expect(en.termsHash).toBe("cyber-monday-special");
-    expect(en.body).not.toMatch(/Founders/);
     const de = driveSpecialWelcomeCopy("de", CM_NOW);
     expect(de.body).toMatch(/Cyber-Monday-Vorteile/);
     expect(de.body).toMatch(/30\. November 2026/);
-    expect(de.secondary.kind).toBe("plans");
+    expect(de.secondary).toEqual({ kind: "founders", label: "Founders Pack" });
     const ro = driveSpecialWelcomeCopy("ro", CM_NOW);
     expect(ro.body).toMatch(/Cyber Monday/);
     expect(ro.body).toMatch(/30 noiembrie 2026/);
-    expect(ro.secondary.kind).toBe("plans");
+    expect(ro.secondary).toEqual({ kind: "founders", label: "Founders Pack" });
   });
   it("sign-up description and guest copy follow the open special's last day", async () => {
     const { driveSpecialSignUpDescription, midnightDarkRaveGuestCopy } =

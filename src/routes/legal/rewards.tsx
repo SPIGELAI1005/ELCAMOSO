@@ -44,7 +44,7 @@ function RewardsTerms() {
         </p>
         <p>
           The Founders Pack is a yearly Drive+ or yearly Drive the Music subscription at the price
-          shown at checkout (currently €33.60 per year). It may be purchased until 27 November 2026
+          shown at checkout (currently €33.60 per year). It may be purchased until 30 November 2026
           23:59 Europe/Berlin. Checkout uses the existing yearly Drive+ and Drive the Music prices.
           The Black Friday Special does not grant a free Founder seat.
         </p>
@@ -139,7 +139,7 @@ function RewardsTerms() {
           Founder seats are limited and allocated on a first come, first served basis. Free Founder
           seats required a confirmed email address on or before 9 November 2026 23:59 Europe/Berlin.
           After that, a Founder seat is granted when a yearly Drive+ or yearly Drive the Music
-          subscription is purchased on or before 27.11.2026 at 23:59 (Berlin time). The number of
+          subscription is purchased on or before 30.11.2026 at 23:59 (Berlin time). The number of
           seats shown in the app or on the website is for information only and may be approximate or
           delayed.
         </p>

@@ -148,7 +148,7 @@ function Terms() {
           The Founders Pack is a yearly Drive+ or yearly Drive the Music subscription at the price
           shown at checkout (currently €33.60 per year, early-adopter display). Checkout uses those
           existing yearly prices; there is no separate Founders Pack Stripe product. Anyone who
-          purchases one of those yearly packages from 9 November 2026 until 27 November 2026 23:59
+          purchases one of those yearly packages from 9 November 2026 until 30 November 2026 23:59
           Europe/Berlin becomes a Founder.
         </p>
         <p>
@@ -188,12 +188,12 @@ function Terms() {
         <p>
           Separately, Drive the Music may be offered with 4 months included at checkout as a Black
           Friday deal, as shown at purchase. That deal is independent of the daily Black Friday
-          Special minutes and of Midnight Dark Rave, and runs until 27 November 2026 23:59
-          Europe/Berlin.
+          Special minutes and of Midnight Dark Rave, and runs until 30 November 2026 23:59
+          Europe/Berlin (through Cyber Monday).
         </p>
         <p>
           The Black Friday Special does not grant free Founder status. Signed-in Black Friday
-          Special users may purchase the Founders Pack until 27 November 2026 23:59 Europe/Berlin by
+          Special users may purchase the Founders Pack until 30 November 2026 23:59 Europe/Berlin by
           buying yearly Drive+ or yearly Drive the Music at the prices shown at checkout. Buying
           grants Drive Unlimited for 4 months from the purchase date (then the paid package), four
           forever sounds chosen in the app, and the Black Friday Special benefits while the special
@@ -232,9 +232,9 @@ function Terms() {
           the offer ends, Start Drive on the home page leaves the current sound.
         </p>
         <p>
-          The Cyber Monday Special does not include the Founders Pack, the 4-month Drive the Music
-          checkout deal or any other discount: those Black Friday deals ended on 27 November 2026
-          23:59 Europe/Berlin. The Cyber Monday Special does not grant free Founder status. Plans
+          The Founders Pack and the 4-month Drive the Music checkout deal also run through the Cyber
+          Monday Special, until 30 November 2026 23:59 Europe/Berlin, on the same conditions as
+          during Black Friday. The Cyber Monday Special does not grant free Founder status. Plans
           and prices are as shown on the{" "}
           <Link to="/pricing" className="text-foreground underline-offset-2 hover:underline">
             Pricing

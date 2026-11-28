@@ -66,9 +66,9 @@ const STRINGS: Record<Locale, Record<string, string>> = {
     "pricing.earlyAccessTitle": "Early access — test drive ELCAMOSO for free",
     "pricing.earlyAccessBody":
       "We're fine-tuning every sound profile on real roads before launch. Racing V10, American Muscle V8, Dracula Carriage and Latino Fiesta are free to drive now. Help shape the final experience.",
-    "pricing.founders.title": "Founders Pack — yearly Drive+ or Drive the Music until 27.11.",
+    "pricing.founders.title": "Founders Pack — yearly Drive+ or Drive the Music until 30.11.",
     "pricing.founders.body":
-      "Buy a yearly Drive+ or Drive the Music subscription until 27.11.2026 23:59 (Berlin) and you become a Founder. You get that package, Drive Unlimited for 4 months from purchase, then you fall back to the package you paid for, plus 4 sounds you choose that stay yours forever. Existing Founders who signed in before 9.11.2026 23:59 Berlin keep Racing V10, American Muscle V8 and GT V8 forever and access until 27.05.2027. The Black Friday Special does not grant a free Founder seat.",
+      "Buy a yearly Drive+ or Drive the Music subscription until 30.11.2026 23:59 (Berlin) and you become a Founder. You get that package, Drive Unlimited for 4 months from purchase, then you fall back to the package you paid for, plus 4 sounds you choose that stay yours forever. Existing Founders who signed in before 9.11.2026 23:59 Berlin keep Racing V10, American Muscle V8 and GT V8 forever and access until 27.05.2027. The Black Friday Special does not grant a free Founder seat.",
     "pricing.founders.perk1": "4 sounds of your choice, free forever",
     "pricing.founders.perk2":
       "Yearly Drive+ or Drive the Music: Drive Unlimited for 4 months, then your package",
@@ -141,9 +141,9 @@ const STRINGS: Record<Locale, Record<string, string>> = {
     "pricing.earlyAccessTitle": "Early Access — ELCAMOSO kostenlos testen",
     "pricing.earlyAccessBody":
       "Wir feilen noch an jedem Soundprofil auf echten Strassen vor dem Launch. Racing V10, American Muscle V8, Dracula Carriage und Latino Fiesta sind kostenlos. Hilf mit, das finale Erlebnis zu formen.",
-    "pricing.founders.title": "Founders Pack — jährliches Drive+ oder Drive the Music bis 27.11.",
+    "pricing.founders.title": "Founders Pack — jährliches Drive+ oder Drive the Music bis 30.11.",
     "pricing.founders.body":
-      "Kaufe bis 27.11.2026 23:59 (Berlin) ein jährliches Drive+ oder Drive the Music Abo und du wirst Founder. Du bekommst dieses Paket, Drive Unlimited für 4 Monate ab Kauf, danach dein bezahltes Paket, plus 4 Sounds deiner Wahl für immer. Bestehende Founder mit Anmeldung vor dem 9.11.2026 23:59 Berlin behalten Racing V10, American Muscle V8 und GT V8 für immer und Zugang bis 27.05.2027. Das Black-Friday-Special vergibt keinen kostenlosen Founder-Platz.",
+      "Kaufe bis 30.11.2026 23:59 (Berlin) ein jährliches Drive+ oder Drive the Music Abo und du wirst Founder. Du bekommst dieses Paket, Drive Unlimited für 4 Monate ab Kauf, danach dein bezahltes Paket, plus 4 Sounds deiner Wahl für immer. Bestehende Founder mit Anmeldung vor dem 9.11.2026 23:59 Berlin behalten Racing V10, American Muscle V8 und GT V8 für immer und Zugang bis 27.05.2027. Das Black-Friday-Special vergibt keinen kostenlosen Founder-Platz.",
     "pricing.founders.perk1": "4 Sounds deiner Wahl, für immer gratis",
     "pricing.founders.perk2":
       "Jährliches Drive+ oder Drive the Music: 4 Monate Drive Unlimited, dann dein Paket",
@@ -217,9 +217,9 @@ const STRINGS: Record<Locale, Record<string, string>> = {
     "pricing.earlyAccessTitle": "Acces early — testeaza ELCAMOSO gratuit",
     "pricing.earlyAccessBody":
       "Rafinam fiecare profil de sunet pe drumuri reale inainte de lansare. Racing V10, American Muscle V8, Dracula Carriage si Latino Fiesta sunt gratuite. Ajuta-ne sa modelam experienta finala.",
-    "pricing.founders.title": "Founders Pack — Drive+ sau Drive the Music anual până pe 27.11.",
+    "pricing.founders.title": "Founders Pack — Drive+ sau Drive the Music anual până pe 30.11.",
     "pricing.founders.body":
-      "Cumpără un abonament anual Drive+ sau Drive the Music până pe 27.11.2026 23:59 (Berlin) și devii Founder. Primești pachetul, Drive Unlimited 4 luni de la achiziție, apoi pachetul plătit, plus 4 sunete alese de tine pentru totdeauna. Founderii existenți conectați înainte de 9.11.2026 23:59 Berlin păstrează Racing V10, American Muscle V8 și GT V8 pentru totdeauna și acces până pe 27.05.2027. Oferta Black Friday nu acordă un loc Founder gratuit.",
+      "Cumpără un abonament anual Drive+ sau Drive the Music până pe 30.11.2026 23:59 (Berlin) și devii Founder. Primești pachetul, Drive Unlimited 4 luni de la achiziție, apoi pachetul plătit, plus 4 sunete alese de tine pentru totdeauna. Founderii existenți conectați înainte de 9.11.2026 23:59 Berlin păstrează Racing V10, American Muscle V8 și GT V8 pentru totdeauna și acces până pe 27.05.2027. Oferta Black Friday nu acordă un loc Founder gratuit.",
     "pricing.founders.perk1": "4 sunete alese de tine, gratuite pentru totdeauna",
     "pricing.founders.perk2":
       "Drive+ sau Drive the Music anual: Drive Unlimited 4 luni, apoi pachetul tău",
