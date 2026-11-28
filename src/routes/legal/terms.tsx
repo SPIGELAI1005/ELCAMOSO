@@ -209,6 +209,40 @@ function Terms() {
         </p>
       </LegalSection>
 
+      <LegalSection id="cyber-monday-special" title="7c. Cyber Monday Special">
+        <p>
+          The Cyber Monday Special runs from 28 November 2026 00:00 until 30 November 2026 23:59
+          Europe/Berlin, directly after the Black Friday Special. Drive+ is not included.
+        </p>
+        <p>
+          The conditions are the same as for the Black Friday Special. A login (sign in or sign up)
+          is required to receive the Cyber Monday Special Drive the Music minutes. During the offer,
+          signed-in drivers may use Drive the Music for 30 minutes per calendar day per account. The
+          daily allowance resets at midnight Europe/Berlin. Minutes do not carry over. Paying users
+          and Founders who already own Drive the Music (including existing Founders with Drive
+          Unlimited) are not limited by this daily allowance — they keep Drive the Music without the
+          30-minute cap.
+        </p>
+        <p>
+          Start Drive on the home page opens American Muscle V8 during the offer. Visitors without
+          an account may use Midnight Dark Rave for 15 minutes per calendar day. The daily allowance
+          resets at midnight Europe/Berlin. Minutes do not carry over. Signed-in drivers may use
+          Midnight Dark Rave with no daily limit until 30 November 2026 23:59 Europe/Berlin.
+          Midnight Dark Rave does not count against the 30-minute Drive the Music allowance. After
+          the offer ends, Start Drive on the home page leaves the current sound.
+        </p>
+        <p>
+          The Cyber Monday Special does not include the Founders Pack, the 4-month Drive the Music
+          checkout deal or any other discount: those Black Friday deals ended on 27 November 2026
+          23:59 Europe/Berlin. The Cyber Monday Special does not grant free Founder status. Plans
+          and prices are as shown on the{" "}
+          <Link to="/pricing" className="text-foreground underline-offset-2 hover:underline">
+            Pricing
+          </Link>{" "}
+          page.
+        </p>
+      </LegalSection>
+
       <LegalSection title="8. Third-party services">
         <p>
           Optional AI, hosting, or Cloud backends may be provided by processors. Their outages or

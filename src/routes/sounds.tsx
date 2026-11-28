@@ -20,13 +20,18 @@ import { t } from "@/lib/i18n";
 import { FindSoundPanel } from "@/components/FindSoundPanel";
 import { useFeatureAccess } from "@/lib/entitlements/selectors";
 import { useAccount } from "@/lib/account/AccountProvider";
-import { isAdminOnlyProfile, resolveVisibleProfileId, visibleProfileList } from "@/lib/sound/admin-only-profiles";
+import {
+  isAdminOnlyProfile,
+  resolveVisibleProfileId,
+  visibleProfileList,
+} from "@/lib/sound/admin-only-profiles";
 import { isMusicPackageProfileId } from "@/lib/entitlements/plans";
 import {
   DRIVE_SPECIAL_BADGE,
-  DRIVE_SPECIAL_NAME,
   DRIVE_SPECIAL_PURPLE,
   driveSpecialBannerText,
+  driveSpecialName,
+  driveSpecialSignUpDescription,
   driveSpecialSoundsHint,
   isDriveSpecialActive,
 } from "@/lib/billing/drive-special";
@@ -56,6 +61,7 @@ function Sounds() {
   const access = useFeatureAccess();
   const { isAuthenticated, isAdmin } = useAccount();
   const specialActive = isDriveSpecialActive();
+  const specialName = driveSpecialName();
   const signUpLabel = driveSpecialBannerText(settings.language).signup;
   const [signUpOpen, setSignUpOpen] = useState(false);
   const [signUpReturnTo, setSignUpReturnTo] = useState("/drive");
@@ -89,7 +95,7 @@ function Sounds() {
       ? driveSpecialPinned(profiles).pinned.filter((p) => !p.id.startsWith(GENRE_ITEM_PREFIX))
       : [];
     const specialIds = new Set(special.map((p) => p.id));
-    const specialSection = special.length ? [{ section: DRIVE_SPECIAL_NAME, items: special }] : [];
+    const specialSection = special.length ? [{ section: specialName, items: special }] : [];
     const remaining = profiles.filter((p) => !specialIds.has(p.id));
     const free = remaining.filter((p) => canDrive(p.id));
     if (free.length === remaining.length)
@@ -108,7 +114,7 @@ function Sounds() {
       })),
     ];
     return [...specialSection, ...(free.length ? [{ section: "Free", items: free }] : []), ...rest];
-  }, [profiles, canDrive, specialActive]);
+  }, [profiles, canDrive, specialActive, specialName]);
   const specialGenres = useMemo(
     () =>
       specialActive
@@ -282,10 +288,10 @@ function Sounds() {
           {sections.map(({ section, items }) => (
             <section
               key={section}
-              data-testid={section === DRIVE_SPECIAL_NAME ? "sounds-special-section" : undefined}
-              className={section === DRIVE_SPECIAL_NAME ? "rounded-sm border-l-2 pl-4" : undefined}
+              data-testid={section === specialName ? "sounds-special-section" : undefined}
+              className={section === specialName ? "rounded-sm border-l-2 pl-4" : undefined}
               style={
-                section === DRIVE_SPECIAL_NAME
+                section === specialName
                   ? {
                       borderColor: DRIVE_SPECIAL_PURPLE,
                       background: `linear-gradient(90deg, ${DRIVE_SPECIAL_PURPLE}14, transparent)`,
@@ -295,13 +301,13 @@ function Sounds() {
             >
               <h2
                 className={`text-[11px] tracking-[0.28em] uppercase ${
-                  section === DRIVE_SPECIAL_NAME ? "font-semibold" : "text-muted-foreground"
+                  section === specialName ? "font-semibold" : "text-muted-foreground"
                 }`}
-                style={section === DRIVE_SPECIAL_NAME ? { color: DRIVE_SPECIAL_PURPLE } : undefined}
+                style={section === specialName ? { color: DRIVE_SPECIAL_PURPLE } : undefined}
               >
                 {section}
               </h2>
-              {section === DRIVE_SPECIAL_NAME ? (
+              {section === specialName ? (
                 <p
                   data-testid="special-hint"
                   className="mt-2 text-xs"
@@ -320,7 +326,7 @@ function Sounds() {
                   )}
                 </p>
               ) : null}
-              {section === DRIVE_SPECIAL_NAME && specialGenres.length ? (
+              {section === specialName && specialGenres.length ? (
                 <div
                   data-testid="special-genres"
                   className="mt-4 flex flex-wrap gap-2"
@@ -646,13 +652,7 @@ function Sounds() {
         onOpenChange={setSignUpOpen}
         returnTo={signUpReturnTo}
         title={signUpLabel}
-        description={
-          settings.language.slice(0, 2).toLowerCase() === "de"
-            ? "Lege ein Konto an, um Midnight Dark Rave unbegrenzt und Drive the Music 30 Minuten am Tag bis zum 27. November zu nutzen."
-            : settings.language.slice(0, 2).toLowerCase() === "ro"
-              ? "Creează un cont ca să ai Midnight Dark Rave nelimitat și Drive the Music 30 de minute pe zi până pe 27 noiembrie."
-              : "Create an account to keep Midnight Dark Rave unlimited and Drive the Music 30 minutes a day until 27 November."
-        }
+        description={driveSpecialSignUpDescription(settings.language)}
       />
     </main>
   );

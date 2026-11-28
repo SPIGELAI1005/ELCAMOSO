@@ -103,9 +103,9 @@ function Privacy() {
         <p>
           <strong className="font-normal text-foreground">Account and Founder picks.</strong> If you
           create an account, we store your email, session, Founder status, whether we have shown you
-          the Black Friday congratulations (so it appears only once per account), and — if you buy
-          the Founders Pack — the four forever-sound identifiers you confirm (sound id and time of
-          pick). We use this to unlock those sounds on your account.
+          the Black Friday and Cyber Monday congratulations (so each appears only once per account),
+          and — if you buy the Founders Pack — the four forever-sound identifiers you confirm (sound
+          id and time of pick). We use this to unlock those sounds on your account.
         </p>
         <p>
           <strong className="font-normal text-foreground">Drive+ billing (optional).</strong> If you

@@ -56,9 +56,9 @@ function RewardsTerms() {
           <Link to="/legal/withdrawal" className={linkCls}>
             withdrawal information
           </Link>
-          ). Founders (existing seats and Pack buyers) receive the Black Friday Special benefits
-          while that offer runs; Drive Unlimited already includes Drive the Music without the
-          special's 30-minute cap.
+          ). Founders (existing seats and Pack buyers) receive the Black Friday Special and Cyber
+          Monday Special benefits while those offers run; Drive Unlimited already includes Drive the
+          Music without the special's 30-minute cap.
         </p>
         <p>
           Forever-sound picks: a Founders Pack buyer chooses 4 sounds from any library (Drive+

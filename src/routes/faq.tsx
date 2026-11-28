@@ -180,6 +180,22 @@ const FAQ_ENTRIES: FaqEntry[] = [
           day. After the offer, Start Drive on the home page leaves the current sound. Logged-out
           visitors also keep the separate 7-minute guest trial on a small set of sounds.
         </p>
+        <p className="mt-3">
+          The Cyber Monday Special follows directly after, from 28 November 2026 00:00 until 30
+          November 2026 23:59 Europe/Berlin, with the same conditions: Start Drive on the home page
+          opens American Muscle V8, Midnight Dark Rave is 15 minutes a day without an account and
+          unlimited when signed in, and signed-in drivers get other Drive the Music sounds for 30
+          minutes a day. Drive+ is not included, and the Black Friday Founders Pack and 4-month
+          music deal are not part of it. See the{" "}
+          <Link
+            to="/legal/terms"
+            hash="cyber-monday-special"
+            className="text-foreground underline underline-offset-4"
+          >
+            Cyber Monday Special terms
+          </Link>
+          .
+        </p>
       </>
     ),
   },
@@ -230,8 +246,8 @@ const FAQ_ENTRIES: FaqEntry[] = [
           Friday Special does not grant a free Founder seat. Existing Founders who signed in before
           9 November 2026 23:59 Europe/Berlin keep Racing V10, American Muscle V8 and GT V8 forever
           and Drive Unlimited until 27.05.2027 23:59 Europe/Berlin. Founders also receive the Black
-          Friday Special while that offer runs; Drive Unlimited already includes Drive the Music
-          without the 30-minute cap.
+          Friday Special and the Cyber Monday Special while those offers run; Drive Unlimited
+          already includes Drive the Music without the 30-minute cap.
         </p>
       </>
     ),
