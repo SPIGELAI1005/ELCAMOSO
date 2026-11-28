@@ -89,7 +89,7 @@ export async function beginDrivePlusCheckout(
 
   if (isFoundersPack) {
     throw new Error(
-      "The Founders Pack is a yearly Drive+ or Drive the Music subscription. Choose that package on Pricing until 27 November 2026 23:59 Europe/Berlin.",
+      "The Founders Pack is a yearly Drive+ or Drive the Music subscription. Choose that package on Pricing until 30 November 2026 23:59 Europe/Berlin.",
     );
   }
 
@@ -196,7 +196,7 @@ export async function beginDrivePlusCheckout(
     ...buildCheckoutSessionTaxParams(),
   };
 
-  // Black Friday special: Drive the Music starts with a 4-month free trial
+  // Black Friday / Cyber Monday: Drive the Music starts with a 4-month free trial
   // (first music subscription per account only), then bills the selected interval.
   if (
     (described.commercialPlanId === "drive_music_monthly" ||

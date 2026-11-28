@@ -34,7 +34,7 @@ import {
 } from "@/lib/founders/founders.server";
 import { resetFounderSoundPicksForTests } from "@/lib/founders/sound-picks.server";
 
-const DEADLINE = Date.parse("2026-11-27T22:59:59Z");
+const DEADLINE = Date.parse("2026-11-30T22:59:59Z");
 const UNTIL = Date.parse("2027-05-27T21:59:59Z");
 const LEGACY = FOUNDER_PAID_UNLIMITED_CUTOVER_MS - 60_000;
 
@@ -46,16 +46,25 @@ describe("founders eligibility", () => {
     resetFounderSoundPicksForTests();
   });
 
-  it("deadline is 27.11.2026 (Black Friday) 23:59:59 Berlin and legacy perk ends 27.05.2027 23:59:59 Berlin", () => {
+  it("deadline is 30.11.2026 (Cyber Monday) 23:59:59 Berlin and legacy perk ends 27.05.2027 23:59:59 Berlin", () => {
     expect(FOUNDERS_SIGNUP_DEADLINE_MS).toBe(DEADLINE);
     expect(FOUNDER_DRIVE_PLUS_UNTIL_MS).toBe(UNTIL);
   });
 
-  it("free signup closes after 09.11 23:59 Berlin; purchase stays open through Black Friday", () => {
+  it("free signup closes after 09.11 23:59 Berlin; purchase stays open through Cyber Monday", () => {
     expect(isFounderSignupOpen(FOUNDER_PAID_UNLIMITED_CUTOVER_MS)).toBe(true);
     expect(isFounderSignupOpen(FOUNDER_PAID_UNLIMITED_CUTOVER_MS + 1)).toBe(false);
     expect(isFoundersPackPurchaseOpen(DEADLINE)).toBe(true);
     expect(isFoundersPackPurchaseOpen(DEADLINE + 1)).toBe(false);
+    expect(isFoundersPackPurchaseOpen(Date.parse("2026-11-28T00:00:00+01:00"))).toBe(true);
+    expect(isFoundersPackPurchaseOpen(Date.parse("2026-11-30T23:59:59+01:00"))).toBe(true);
+    expect(isFoundersPackPurchaseOpen(Date.parse("2026-12-01T00:00:00+01:00"))).toBe(false);
+    expect(isFoundersPackQualifyingPurchaseTime(Date.parse("2026-11-29T12:00:00+01:00"))).toBe(
+      true,
+    );
+    expect(isFoundersPackQualifyingPurchaseTime(Date.parse("2026-12-01T00:00:00+01:00"))).toBe(
+      false,
+    );
   });
 
   it("requires created AND confirmed before the 09.11 cutover for a free seat", () => {
@@ -140,7 +149,7 @@ describe("founders eligibility", () => {
     await expect(setTestCrewOptIn("c", true)).rejects.toThrow();
   });
 
-  it("paid purchase can still mint a seat after free signup closed, until Black Friday", async () => {
+  it("paid purchase can still mint a seat after free signup closed, until Cyber Monday", async () => {
     const duringBf = Date.parse("2026-11-20T12:00:00+01:00");
     expect(isFounderSignupOpen(duringBf)).toBe(false);
     expect((await claimFounderSeat("bf-free", null, duringBf)).founderAt).toBeNull();

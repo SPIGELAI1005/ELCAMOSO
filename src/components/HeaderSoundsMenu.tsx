@@ -29,9 +29,11 @@ import { cn } from "@/lib/utils";
 import { HALLOWEEN_ORANGE, HALLOWEEN_TAG, halloweenPinned } from "@/lib/halloween/halloween";
 import {
   DRIVE_SPECIAL_BADGE,
-  DRIVE_SPECIAL_NAME,
   DRIVE_SPECIAL_PURPLE,
+  type DriveSpecialName,
   driveSpecialBannerText,
+  driveSpecialName,
+  driveSpecialSignUpDescription,
   isDriveSpecialActive,
 } from "@/lib/billing/drive-special";
 import { isMusicPackageProfileId } from "@/lib/entitlements/plans";
@@ -46,7 +48,7 @@ import { driveSpecialGenreItem } from "@/lib/billing/drive-special-genres";
 import { getGenreChoice, setGenreChoice } from "@/lib/symphony/adaptive/genre-store";
 
 type MenuGroup = {
-  category: ProfileCategory | typeof HALLOWEEN_TAG | typeof DRIVE_SPECIAL_NAME;
+  category: ProfileCategory | typeof HALLOWEEN_TAG | DriveSpecialName;
   profiles: SoundProfile[];
   halloween?: boolean;
   special?: boolean;
@@ -67,7 +69,7 @@ export function profilesByCategory(now?: number, isAdmin = false): MenuGroup[] {
   })).filter((group) => group.profiles.length > 0);
   const head: MenuGroup[] = [];
   if (special?.pinned.length)
-    head.push({ category: DRIVE_SPECIAL_NAME, profiles: special.pinned, special: true });
+    head.push({ category: driveSpecialName(now), profiles: special.pinned, special: true });
   if (pinned.length) head.push({ category: HALLOWEEN_TAG, profiles: pinned, halloween: true });
   return [...head, ...groups];
 }
@@ -162,13 +164,7 @@ export function HeaderSoundsMenu({
       onOpenChange={setSignUpOpen}
       returnTo={signUpReturnTo}
       title={signUpLabel}
-      description={
-        language.slice(0, 2).toLowerCase() === "de"
-          ? "Lege ein Konto an, um Midnight Dark Rave unbegrenzt und Drive the Music 30 Minuten am Tag bis zum 27. November zu nutzen."
-          : language.slice(0, 2).toLowerCase() === "ro"
-            ? "Creează un cont ca să ai Midnight Dark Rave nelimitat și Drive the Music 30 de minute pe zi până pe 27 noiembrie."
-            : "Create an account to keep Midnight Dark Rave unlimited and Drive the Music 30 minutes a day until 27 November."
-      }
+      description={driveSpecialSignUpDescription(language)}
     />
   );
 

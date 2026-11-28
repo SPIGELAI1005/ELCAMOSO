@@ -4,7 +4,8 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 
 import {
-  blackFridayWelcomeCopy,
+  driveSpecialWelcomeCopy,
+  driveSpecialWindowForCopy,
   isDriveSpecialActive,
   landingStartDriveProfileId,
 } from "@/lib/billing/drive-special";
@@ -23,8 +24,9 @@ import {
 } from "@/lib/drive-special-cap/server-fns";
 
 /**
- * After sign-in during the Black Friday window: congratulations, once per account
- * (server-side). localStorage is a cache so the same browser does not flash the modal.
+ * After sign-in during the Black Friday or Cyber Monday window: congratulations, once per
+ * account and special (server-side). localStorage is a cache so the same browser does not
+ * flash the modal. The copy follows whichever special is open.
  */
 export function BlackFridayWelcomeModal() {
   const { session, isAuthenticated, isLoading } = useAccount();
@@ -75,11 +77,12 @@ export function BlackFridayWelcomeModal() {
   }
 
   if (!open) return null;
-  const copy = blackFridayWelcomeCopy(settings.language);
+  const copy = driveSpecialWelcomeCopy(settings.language);
 
   return (
     <div
       data-testid="black-friday-welcome"
+      data-special={driveSpecialWindowForCopy().id}
       role="dialog"
       aria-modal="true"
       aria-labelledby="bf-welcome-title"
@@ -98,18 +101,28 @@ export function BlackFridayWelcomeModal() {
           >
             {copy.startDrive}
           </button>
-          <Link
-            to="/pricing"
-            search={FOUNDERS_PRICING_SEARCH}
-            hash={FOUNDERS_PRICING_HASH}
-            className="rounded-full border border-white/30 px-4 py-2.5 text-sm font-semibold text-white"
-            onClick={dismiss}
-          >
-            {copy.foundersPack}
-          </Link>
+          {copy.secondary.kind === "founders" ? (
+            <Link
+              to="/pricing"
+              search={FOUNDERS_PRICING_SEARCH}
+              hash={FOUNDERS_PRICING_HASH}
+              className="rounded-full border border-white/30 px-4 py-2.5 text-sm font-semibold text-white"
+              onClick={dismiss}
+            >
+              {copy.secondary.label}
+            </Link>
+          ) : (
+            <Link
+              to="/pricing"
+              className="rounded-full border border-white/30 px-4 py-2.5 text-sm font-semibold text-white"
+              onClick={dismiss}
+            >
+              {copy.secondary.label}
+            </Link>
+          )}
           <Link
             to="/legal/terms"
-            hash="black-friday-special"
+            hash={copy.termsHash}
             className="rounded-full px-4 py-2 text-sm text-white/70"
             onClick={dismiss}
           >

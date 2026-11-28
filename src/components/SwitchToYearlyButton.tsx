@@ -66,7 +66,7 @@ export function SwitchToYearlyButton({ className }: { className?: string }) {
       </button>
       {founders ? (
         <p className="text-xs text-muted-foreground">
-          Switching to yearly before 27 November 2026 23:59 Berlin is the Founders Pack (subject to
+          Switching to yearly before 30 November 2026 23:59 Berlin is the Founders Pack (subject to
           remaining seats).
         </p>
       ) : null}

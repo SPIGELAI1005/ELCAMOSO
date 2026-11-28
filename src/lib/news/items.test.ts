@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import { NEWS_ITEMS, getVisibleNewsItems } from "./items";
 
 describe("news items", () => {
-  it("has 28 week posts plus the safety, 7-day special, 50+ sounds and Black Friday Special items with Berlin offsets", () => {
-    expect(NEWS_ITEMS).toHaveLength(33);
+  it("has 28 week posts plus the safety, 7-day special, 50+ sounds Black Friday Special and Cyber Monday Special items with Berlin offsets", () => {
+    expect(NEWS_ITEMS).toHaveLength(34);
     expect(NEWS_ITEMS.some((i) => i.id === "black-friday-special-2026")).toBe(true);
     for (const item of NEWS_ITEMS) expect(item.publishAt).toMatch(/\+01:00$/);
   });
@@ -65,5 +65,35 @@ describe("news items", () => {
       expect(text).not.toMatch(/Start Drive[^.]{0,80}Midnight Dark Rave/);
       expect(text).toMatch(/Midnight Dark Rave/);
     }
+  });
+  it("shows the Cyber Monday Special from 28 Nov 00:00", () => {
+    expect(getVisibleNewsItems(Date.parse("2026-11-27T23:59:59+01:00"))).toHaveLength(33);
+    const v = getVisibleNewsItems(Date.parse("2026-11-28T00:00:00+01:00"));
+    expect(v).toHaveLength(34);
+    expect(v[0]?.id).toBe("cyber-monday-special-2026");
+    expect(v[0]?.link?.href).toBe("/sounds");
+  });
+  it("Cyber Monday item names the dates, the same conditions and excludes Drive+ in EN/DE/RO", () => {
+    const item = NEWS_ITEMS.find((i) => i.id === "cyber-monday-special-2026")!;
+    for (const text of [item.text, item.textDe!, item.textRo!]) {
+      expect(text).toContain("Cyber Monday");
+      expect(text).toContain("28");
+      expect(text).toMatch(/30/);
+      expect(text).toMatch(/2026/);
+      expect(text).toMatch(/23:59/);
+      expect(text).toContain("American Muscle V8");
+      expect(text).toContain("Midnight Dark Rave");
+      expect(text).toMatch(/15/);
+      expect(text).toMatch(/Drive\+/);
+      expect(text).not.toMatch(/Start Drive[^.]{0,80}Midnight Dark Rave/);
+    }
+    expect(item.textDe).toMatch(/28\. November bis 30\. November 2026/);
+    expect(item.textRo).toMatch(/28 noiembrie până pe 30 noiembrie 2026/);
+    expect(item.text).toMatch(/Founders Pack/);
+    expect(item.text).toMatch(/4-month Drive the Music trial/);
+    expect(item.textDe).toMatch(/Founders Pack/);
+    expect(item.textDe).toMatch(/4-monatige/);
+    expect(item.textRo).toMatch(/Founders Pack/);
+    expect(item.textRo).toMatch(/4 luni/);
   });
 });

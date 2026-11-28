@@ -148,7 +148,7 @@ function Terms() {
           The Founders Pack is a yearly Drive+ or yearly Drive the Music subscription at the price
           shown at checkout (currently €33.60 per year, early-adopter display). Checkout uses those
           existing yearly prices; there is no separate Founders Pack Stripe product. Anyone who
-          purchases one of those yearly packages from 9 November 2026 until 27 November 2026 23:59
+          purchases one of those yearly packages from 9 November 2026 until 30 November 2026 23:59
           Europe/Berlin becomes a Founder.
         </p>
         <p>
@@ -188,12 +188,12 @@ function Terms() {
         <p>
           Separately, Drive the Music may be offered with 4 months included at checkout as a Black
           Friday deal, as shown at purchase. That deal is independent of the daily Black Friday
-          Special minutes and of Midnight Dark Rave, and runs until 27 November 2026 23:59
-          Europe/Berlin.
+          Special minutes and of Midnight Dark Rave, and runs until 30 November 2026 23:59
+          Europe/Berlin (through Cyber Monday).
         </p>
         <p>
           The Black Friday Special does not grant free Founder status. Signed-in Black Friday
-          Special users may purchase the Founders Pack until 27 November 2026 23:59 Europe/Berlin by
+          Special users may purchase the Founders Pack until 30 November 2026 23:59 Europe/Berlin by
           buying yearly Drive+ or yearly Drive the Music at the prices shown at checkout. Buying
           grants Drive Unlimited for 4 months from the purchase date (then the paid package), four
           forever sounds chosen in the app, and the Black Friday Special benefits while the special
@@ -206,6 +206,40 @@ function Terms() {
             Founders, Crew &amp; Rewards Terms
           </Link>
           .
+        </p>
+      </LegalSection>
+
+      <LegalSection id="cyber-monday-special" title="7c. Cyber Monday Special">
+        <p>
+          The Cyber Monday Special runs from 28 November 2026 00:00 until 30 November 2026 23:59
+          Europe/Berlin, directly after the Black Friday Special. Drive+ is not included.
+        </p>
+        <p>
+          The conditions are the same as for the Black Friday Special. A login (sign in or sign up)
+          is required to receive the Cyber Monday Special Drive the Music minutes. During the offer,
+          signed-in drivers may use Drive the Music for 30 minutes per calendar day per account. The
+          daily allowance resets at midnight Europe/Berlin. Minutes do not carry over. Paying users
+          and Founders who already own Drive the Music (including existing Founders with Drive
+          Unlimited) are not limited by this daily allowance — they keep Drive the Music without the
+          30-minute cap.
+        </p>
+        <p>
+          Start Drive on the home page opens American Muscle V8 during the offer. Visitors without
+          an account may use Midnight Dark Rave for 15 minutes per calendar day. The daily allowance
+          resets at midnight Europe/Berlin. Minutes do not carry over. Signed-in drivers may use
+          Midnight Dark Rave with no daily limit until 30 November 2026 23:59 Europe/Berlin.
+          Midnight Dark Rave does not count against the 30-minute Drive the Music allowance. After
+          the offer ends, Start Drive on the home page leaves the current sound.
+        </p>
+        <p>
+          The Founders Pack and the 4-month Drive the Music checkout deal also run through the Cyber
+          Monday Special, until 30 November 2026 23:59 Europe/Berlin, on the same conditions as
+          during Black Friday. The Cyber Monday Special does not grant free Founder status. Plans
+          and prices are as shown on the{" "}
+          <Link to="/pricing" className="text-foreground underline-offset-2 hover:underline">
+            Pricing
+          </Link>{" "}
+          page.
         </p>
       </LegalSection>
 

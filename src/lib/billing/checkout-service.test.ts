@@ -130,7 +130,7 @@ describe("beginDrivePlusCheckout", () => {
     );
   });
 
-  it("gives Drive the Music a 4-month Black Friday trial before 27.11.2026", async () => {
+  it("gives Drive the Music a 4-month trial before 30.11.2026", async () => {
     process.env.STRIPE_PRICE_DRIVE_MUSIC_YEARLY = "price_music_test";
     vi.useFakeTimers({ toFake: ["Date"] });
     const now = Date.parse("2026-11-20T12:00:00Z");
@@ -154,10 +154,32 @@ describe("beginDrivePlusCheckout", () => {
     }
   });
 
-  it("does not add the music trial after Black Friday", async () => {
+  it("still adds the music trial during Cyber Monday", async () => {
     process.env.STRIPE_PRICE_DRIVE_MUSIC_YEARLY = "price_music_test";
     vi.useFakeTimers({ toFake: ["Date"] });
-    vi.setSystemTime(Date.parse("2026-11-28T00:00:01+01:00"));
+    const now = Date.parse("2026-11-30T12:00:00+01:00");
+    vi.setSystemTime(now);
+    try {
+      await beginDrivePlusCheckout({
+        userId,
+        email: "driver@example.com",
+        origin: "http://localhost:5173",
+        immediateStartConsent: true,
+        request: { plan: "drive_music", interval: "yearly" },
+      });
+      const params = checkoutCreate.mock.calls[0]![0];
+      expect(params.subscription_data.trial_end).toBe(
+        Math.floor(Date.parse("2027-03-30T11:00:00Z") / 1000),
+      );
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("does not add the music trial after Cyber Monday", async () => {
+    process.env.STRIPE_PRICE_DRIVE_MUSIC_YEARLY = "price_music_test";
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(Date.parse("2026-12-01T00:00:00+01:00"));
     try {
       await beginDrivePlusCheckout({
         userId,

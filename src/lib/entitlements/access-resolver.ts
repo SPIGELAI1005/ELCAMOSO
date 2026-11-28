@@ -24,6 +24,7 @@ import { entitlementsForPlan, isMusicPackageProfileId } from "@/lib/entitlements
 import { isTrialActive } from "@/lib/entitlements/trial";
 import {
   DRIVE_SPECIAL_END_MS,
+  driveSpecialRunEndMs,
   DRIVE_SPECIAL_ENTITLEMENTS,
   driveSpecialAppliesTo,
 } from "@/lib/billing/drive-special";
@@ -317,7 +318,11 @@ export function resolveCapabilityAccess(
     DRIVE_SPECIAL_ENTITLEMENTS.includes(entitlement) &&
     driveSpecialAppliesTo(input.user.accountId, now)
   ) {
-    return { allowed: true, source: "drive_special", expiresAtUtc: DRIVE_SPECIAL_END_MS };
+    return {
+      allowed: true,
+      source: "drive_special",
+      expiresAtUtc: driveSpecialRunEndMs(now) ?? DRIVE_SPECIAL_END_MS,
+    };
   }
 
   if (isTrialActive(input.user, now) && input.user.trialEntitlements?.includes(entitlement)) {
@@ -364,7 +369,7 @@ export function resolveEffectiveEntitlements(input: AccessResolverInput): Readon
     for (const e of input.leaseEntitlements ?? []) granted.add(e);
   }
 
-  // Black Friday Special: Drive the Music for signed-in accounts (30 min/day cap is overlayed client/server).
+  // Black Friday / Cyber Monday Special: Drive the Music for signed-in accounts (30 min/day cap is overlayed client/server).
   if (driveSpecialAppliesTo(input.user.accountId, now)) {
     for (const e of DRIVE_SPECIAL_ENTITLEMENTS) granted.add(e);
   }

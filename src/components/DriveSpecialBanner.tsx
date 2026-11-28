@@ -2,29 +2,36 @@ import { Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { AccountSignInDialog } from "@/components/AccountSignInDialog";
 import {
-  DRIVE_SPECIAL_NAME,
   DRIVE_SPECIAL_PURPLE,
   driveSpecialBannerText,
+  driveSpecialName,
+  driveSpecialSignUpDescription,
+  driveSpecialWindowForCopy,
   isDriveSpecialActive,
 } from "@/lib/billing/drive-special";
 import { useAccount } from "@/lib/account/AccountProvider";
 import { useSettings } from "@/lib/drive/useSettings";
 import { cn } from "@/lib/utils";
 
-/** Purple promo strip for the Black Friday Special. Only shown inside the special window. */
+/**
+ * Purple promo strip for the Black Friday Special, then the Cyber Monday Special.
+ * Only shown inside a special window; name, dates and terms link follow the open window.
+ */
 export function DriveSpecialBanner({ className }: { className?: string }) {
   const { settings } = useSettings();
   const { isAuthenticated } = useAccount();
-  const [show, setShow] = useState(false);
+  // Ticking `now` (not just a boolean) so the name/dates switch from Black Friday to Cyber
+  // Monday at the boundary without a reload. Null until mounted (SSR renders nothing).
+  const [now, setNow] = useState<number | null>(null);
   const [signUpOpen, setSignUpOpen] = useState(false);
   useEffect(() => {
-    const check = () => setShow(isDriveSpecialActive());
+    const check = () => setNow(Date.now());
     check();
     const id = window.setInterval(check, 60_000);
     return () => window.clearInterval(id);
   }, []);
-  if (!show) return null;
-  const copy = driveSpecialBannerText(settings.language);
+  if (now === null || !isDriveSpecialActive(now)) return null;
+  const copy = driveSpecialBannerText(settings.language, now);
   return (
     <>
       <div
@@ -42,7 +49,7 @@ export function DriveSpecialBanner({ className }: { className?: string }) {
           className="font-semibold tracking-[0.18em] uppercase"
           style={{ color: DRIVE_SPECIAL_PURPLE }}
         >
-          {DRIVE_SPECIAL_NAME}
+          {driveSpecialName(now)}
         </span>
         <span className="text-foreground/90">{copy.teaser}</span>
         <span className="flex flex-wrap items-center justify-center gap-2">
@@ -68,7 +75,7 @@ export function DriveSpecialBanner({ className }: { className?: string }) {
           )}
           <Link
             to="/legal/terms"
-            hash="black-friday-special"
+            hash={driveSpecialWindowForCopy(now).termsHash}
             className="rounded-sm px-2.5 py-1 text-[10px] font-semibold tracking-[0.16em] uppercase"
             style={{ color: DRIVE_SPECIAL_PURPLE, border: `1px solid ${DRIVE_SPECIAL_PURPLE}99` }}
           >
@@ -81,13 +88,7 @@ export function DriveSpecialBanner({ className }: { className?: string }) {
         onOpenChange={setSignUpOpen}
         returnTo="/drive"
         title={copy.signup}
-        description={
-          settings.language.slice(0, 2).toLowerCase() === "de"
-            ? "Lege ein Konto an, um Midnight Dark Rave unbegrenzt und Drive the Music 30 Minuten am Tag bis zum 27. November zu nutzen."
-            : settings.language.slice(0, 2).toLowerCase() === "ro"
-              ? "Creează un cont ca să ai Midnight Dark Rave nelimitat și Drive the Music 30 de minute pe zi până pe 27 noiembrie."
-              : "Create an account to keep Midnight Dark Rave unlimited and Drive the Music 30 minutes a day until 27 November."
-        }
+        description={driveSpecialSignUpDescription(settings.language, now)}
       />
     </>
   );

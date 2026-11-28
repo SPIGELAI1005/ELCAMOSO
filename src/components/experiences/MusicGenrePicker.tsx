@@ -13,7 +13,11 @@ import { useFeatureAccess } from "@/lib/entitlements/selectors";
 import { cn } from "@/lib/utils";
 import { PremiumBadge } from "@/components/premium/PremiumBadge";
 import { useAccount } from "@/lib/account/AccountProvider";
-import { driveSpecialBannerText, isDriveSpecialActive } from "@/lib/billing/drive-special";
+import {
+  driveSpecialBannerText,
+  driveSpecialSignUpDescription,
+  isDriveSpecialActive,
+} from "@/lib/billing/drive-special";
 import { AccountSignInDialog } from "@/components/AccountSignInDialog";
 import { useSettings } from "@/lib/drive/useSettings";
 
@@ -127,13 +131,7 @@ export function MusicGenrePicker({
         onOpenChange={setSignUpOpen}
         returnTo="/drive?sound=symphony-motion-orchestra"
         title={signUpLabel}
-        description={
-          settings.language.slice(0, 2).toLowerCase() === "de"
-            ? "Lege ein Konto an, um Midnight Dark Rave unbegrenzt und Drive the Music 30 Minuten am Tag bis zum 27. November zu nutzen."
-            : settings.language.slice(0, 2).toLowerCase() === "ro"
-              ? "Creează un cont ca să ai Midnight Dark Rave nelimitat și Drive the Music 30 de minute pe zi până pe 27 noiembrie."
-              : "Create an account to keep Midnight Dark Rave unlimited and Drive the Music 30 minutes a day until 27 November."
-        }
+        description={driveSpecialSignUpDescription(settings.language)}
       />
     </div>
   );

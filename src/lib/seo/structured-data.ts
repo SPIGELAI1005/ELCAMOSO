@@ -78,7 +78,7 @@ export function softwareApplicationJsonLd(description: string): Record<string, u
         price: "33.60",
         priceCurrency: "EUR",
         description:
-          "Yearly music package: every music profile and Auto DJ. Black Friday: 4 months free. Opens on 2026-11-09.",
+          "Yearly music package: every music profile and Auto DJ. Until 30.11.2026: 4 months free. Opens on 2026-11-09.",
         availability: "https://schema.org/PreOrder",
         availabilityStarts: "2026-11-09",
         url: absoluteSeoUrl("/pricing"),

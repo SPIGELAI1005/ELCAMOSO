@@ -53,7 +53,7 @@ export interface BillingPublicConfig {
   /** True when the yearly Drive Unlimited price is set, even if monthly is not. */
   unlimitedYearlyAvailable: boolean;
   /**
-   * Founders Pack is yearly Drive+ or yearly Drive the Music until 27 Nov 2026.
+   * Founders Pack is yearly Drive+ or yearly Drive the Music until 30 Nov 2026.
    * True when billing is on, the purchase window is open, and a yearly price id is set.
    */
   foundersPackAvailable: boolean;
